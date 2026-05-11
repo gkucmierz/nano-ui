@@ -1,6 +1,6 @@
 {
   "name": "nano-ui",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "High-performance, minimal footprint Vue 3 UI library and directives.",
   "type": "module",
   "main": "./dist/nano-ui.js",
@@ -9,7 +9,7 @@
     ".": {
       "import": "./dist/nano-ui.js"
     },
-    "./style.css": "./dist/style.css"
+    "./style.css": "./dist/nano-ui.css"
   },
   "files": [
     "dist"
