@@ -1,0 +1,47 @@
+name: Build and Publish Nano UI
+
+on:
+  push:
+    branches:
+      - main
+    tags:
+      - 'v*'
+
+jobs:
+  publish:
+    runs-on: self-hosted
+    steps:
+      - name: Check out repository code
+        uses: actions/checkout@v4
+
+      - name: Install dependencies and build
+        run: |
+          npm install --legacy-peer-deps
+          npm run build
+
+      - name: Deploy Playground with Docker Compose
+        run: |
+          docker compose down --remove-orphans || true
+          docker compose up -d --build
+
+      # -------------- PUBLISH TO NPMJS.ORG ----------------
+      - name: Setup Node for NPM Registry
+        uses: actions/setup-node@v3
+        with:
+          registry-url: 'https://registry.npmjs.org'
+
+      - name: Publish to Native Global Registry
+        run: npm publish --access public || echo "Version already exists, skipping NPM publish."
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_AUTH_TOKEN }}
+
+      # -------------- PUBLISH TO GITEA.7U.PL --------------
+      - name: Setup Node for Gitea Packages
+        uses: actions/setup-node@v3
+        with:
+          registry-url: 'https://gitea.7u.pl/api/packages/gkucmierz/npm/'
+
+      - name: Publish to Internal Registry
+        run: npm publish || echo "Version already exists, skipping Gitea publish."
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.LOCAL_PACKAGE_REGISTRY }}

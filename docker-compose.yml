@@ -1,0 +1,19 @@
+name: nano-ui
+
+services:
+  nano-ui:
+    container_name: nano-ui
+    build:
+      context: .
+      dockerfile: Dockerfile
+    # Port mapping is intentionally left out to avoid host collisions.
+    # The reverse proxy (Nginx Proxy Manager) will route traffic to port 80 via the npm_public network.
+    expose:
+      - "80"
+    restart: unless-stopped
+    networks:
+      - npm_public
+
+networks:
+  npm_public:
+    external: true

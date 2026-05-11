@@ -1,0 +1,44 @@
+{
+  "name": "nano-ui",
+  "version": "1.0.0",
+  "description": "High-performance, minimal footprint Vue 3 UI library and directives.",
+  "type": "module",
+  "main": "./dist/nano-ui.js",
+  "module": "./dist/nano-ui.js",
+  "exports": {
+    ".": {
+      "import": "./dist/nano-ui.js"
+    },
+    "./style.css": "./dist/style.css"
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "build:app": "vite build -c vite.config.app.js"
+  },
+  "peerDependencies": {
+    "vue": "^3.0.0"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-vue": "^5.2.0",
+    "vite": "^8.0.12",
+    "vue": "^3.4.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://gitea.7u.pl/gkucmierz/nano-ui.git"
+  },
+  "homepage": "https://gitea.7u.pl/gkucmierz/nano-ui",
+  "keywords": [
+    "vue",
+    "ui",
+    "components",
+    "directives",
+    "ripple",
+    "nano",
+    "glassmorphism"
+  ]
+}
