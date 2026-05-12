@@ -2,8 +2,14 @@
   <div class="playground-layout">
     <aside class="sidebar">
       <div class="sidebar-header">
-        <h1>Nano UI</h1>
-        <div class="version">v1.1.0</div>
+        <div class="header-title">
+          <h1>Nano UI</h1>
+          <div class="version">v{{ version }}</div>
+        </div>
+        <button class="theme-toggle" @click="toggleTheme">
+          <span v-if="isDark">☀️</span>
+          <span v-else>🌙</span>
+        </button>
       </div>
       
       <nav class="sidebar-nav">
@@ -13,10 +19,6 @@
           <router-link to="/docs/tooltip" class="nav-link" active-class="active">v-tooltip</router-link>
         </div>
         <!-- Future sections go here -->
-        <div class="nav-section">
-          <h3>Components</h3>
-          <span class="nav-link disabled">GlobalTooltip</span>
-        </div>
       </nav>
     </aside>
     
@@ -40,14 +42,47 @@
 </template>
 
 <script setup>
-// Main layout component
+import { ref, onMounted } from 'vue';
+import pkg from '../../package.json';
+
+const version = pkg.version;
+const isDark = ref(true);
+
+const toggleTheme = () => {
+  isDark.value = !isDark.value;
+  if (isDark.value) {
+    document.documentElement.removeAttribute('data-theme');
+  } else {
+    document.documentElement.setAttribute('data-theme', 'light');
+  }
+};
+
+onMounted(() => {
+  // Check system preference on load
+  if (window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches) {
+    isDark.value = false;
+    document.documentElement.setAttribute('data-theme', 'light');
+  }
+});
 </script>
 
 <style scoped>
+/* Global resets */
+:global(body) {
+  margin: 0;
+  background: #09090b; /* bg-zinc-950 */
+  color: #f4f4f5;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  transition: background 0.3s ease, color 0.3s ease;
+}
+
+:global(*:focus), :global(*:focus-visible) {
+  outline: none !important;
+}
+
 .playground-layout {
   display: flex;
   min-height: 100vh;
-  background: #09090b; /* bg-zinc-950 */
 }
 
 .sidebar {
@@ -64,6 +99,13 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
+  transition: border-color 0.3s ease;
+}
+
+.header-title {
+  display: flex;
+  align-items: center;
+  gap: 12px;
 }
 
 .sidebar-header h1 {
@@ -82,6 +124,36 @@
   padding: 2px 8px;
   border-radius: 12px;
   color: #a1a1aa;
+  transition: all 0.3s ease;
+}
+
+.theme-toggle {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: inherit;
+  font-size: 1.2rem;
+  cursor: pointer;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border-radius: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+}
+
+.theme-toggle:hover {
+  background: rgba(255, 255, 255, 0.1);
+  transform: scale(1.05);
+}
+
+.theme-toggle:active {
+  transform: scale(0.95);
+}
+
+.theme-toggle:focus-visible {
+  box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.5);
 }
 
 .sidebar-nav {
@@ -131,6 +203,10 @@
   cursor: not-allowed;
 }
 
+.nav-link:focus-visible {
+  box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.5);
+}
+
 .content {
   flex-grow: 1;
   padding: 3rem;
@@ -171,5 +247,70 @@
 .fade-leave-to {
   opacity: 0;
   transform: translateY(5px);
+}
+
+</style>
+
+<style>
+/* Light Mode Overrides */
+:root[data-theme="light"] body {
+  background: #f8fafc !important;
+  color: #0f172a !important;
+}
+
+:root[data-theme="light"] .playground-layout {
+  background: #f8fafc;
+}
+
+:root[data-theme="light"] .sidebar {
+  background: #ffffff;
+  border-right-color: #e2e8f0;
+}
+
+:root[data-theme="light"] .sidebar-header {
+  border-bottom-color: #e2e8f0;
+}
+
+:root[data-theme="light"] .version {
+  background: #e2e8f0;
+  color: #475569;
+}
+
+:root[data-theme="light"] .nav-section h3 {
+  color: #64748b;
+}
+
+:root[data-theme="light"] .nav-link {
+  color: #334155;
+  font-weight: 500;
+}
+
+:root[data-theme="light"] .nav-link:hover:not(.disabled) {
+  background: #f1f5f9;
+  color: #0f172a;
+}
+
+:root[data-theme="light"] .nav-link.active {
+  background: #e0e7ff; /* indigo-100 */
+  color: #4338ca;
+}
+
+:root[data-theme="light"] .content-header p {
+  color: #475569;
+}
+
+:root[data-theme="light"] .component-section {
+  background: #ffffff;
+  border-color: #e2e8f0;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.03);
+}
+
+:root[data-theme="light"] .theme-toggle {
+  background: #f1f5f9;
+  border-color: #e2e8f0;
+}
+
+:root[data-theme="light"] .theme-toggle:hover {
+  background: #e2e8f0;
 }
 </style>

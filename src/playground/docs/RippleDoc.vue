@@ -96,7 +96,12 @@ const copyCode = async (text) => {
   align-items: center;
   gap: 12px;
   cursor: pointer;
-  transition: background 0.2s ease, border-color 0.2s ease;
+  outline: none !important;
+  transition: background 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.code-snippet:focus-visible {
+  box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.5);
 }
 
 .code-snippet:hover {
@@ -126,9 +131,13 @@ const copyCode = async (text) => {
   border: none;
   border-radius: 12px;
   cursor: pointer;
-  outline: none;
+  outline: none !important;
   color: white;
   transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.2s ease;
+}
+
+.btn:focus-visible {
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.6);
 }
 
 .btn:active {
@@ -180,5 +189,41 @@ const copyCode = async (text) => {
 
 .glass-card:active {
   transform: scale(0.97);
+}
+
+</style>
+
+<style>
+/* Light Mode Overrides */
+:root[data-theme="light"] .doc-page h2 {
+  color: #0f172a;
+}
+:root[data-theme="light"] .desc {
+  color: #475569;
+}
+
+:root[data-theme="light"] .code-snippet {
+  background: #f1f5f9;
+  border-color: #cbd5e1;
+  color: #1e293b;
+}
+:root[data-theme="light"] .code-snippet:hover {
+  background: #e2e8f0;
+  border-color: #cbd5e1;
+}
+:root[data-theme="light"] .copy-icon {
+  color: #64748b;
+}
+
+:root[data-theme="light"] .glass-card {
+  background: rgba(0, 0, 0, 0.03);
+  border-color: rgba(0, 0, 0, 0.1);
+  color: #0f172a;
+}
+:root[data-theme="light"] .glass-card:hover {
+  background: rgba(0, 0, 0, 0.05);
+}
+:root[data-theme="light"] .glass-card small {
+  color: #475569;
 }
 </style>

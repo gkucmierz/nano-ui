@@ -38,6 +38,16 @@
           <span class="copy-icon">📋</span>
         </div>
       </div>
+
+      <div class="example">
+        <button v-tooltip="{ text: 'Critical error occurred!', class: 'tooltip-error' }" class="btn error">
+          Error Action
+        </button>
+        <div class="code-snippet" @click="copyCode(codeError)" v-tooltip="'Click to copy'">
+          <code>&lt;button v-tooltip="{ text: '...', class: 'tooltip-error' }"&gt;...&lt;/button&gt;</code>
+          <span class="copy-icon">📋</span>
+        </div>
+      </div>
       
       <div class="example">
         <button v-tooltip="{ text: 'Everything is fine', class: 'tooltip-success' }" class="btn success">
@@ -70,6 +80,7 @@
 const codeSimple = '<button v-tooltip="\'This is a simple tooltip\'">...</button>';
 const codeLong = `<button v-tooltip="'Tooltips can be much longer...'">...</button>`;
 const codeObject = `<button v-tooltip="{ text: '...', class: 'tooltip-danger' }">...</button>`;
+const codeError = `<button v-tooltip="{ text: '...', class: 'tooltip-error' }">...</button>`;
 const codeSuccess = `<button v-tooltip="{ text: '...', class: 'tooltip-success' }">...</button>`;
 
 const copyCode = async (text) => {
@@ -129,7 +140,12 @@ const copyCode = async (text) => {
   align-items: center;
   gap: 12px;
   cursor: pointer;
-  transition: background 0.2s ease, border-color 0.2s ease;
+  outline: none !important;
+  transition: background 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.code-snippet:focus-visible {
+  box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.5);
 }
 
 .code-snippet:hover {
@@ -159,9 +175,13 @@ const copyCode = async (text) => {
   border: none;
   border-radius: 12px;
   cursor: pointer;
-  outline: none;
+  outline: none !important;
   color: white;
   transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.2s ease;
+}
+
+.btn:focus-visible {
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.6);
 }
 
 .btn:active {
@@ -185,10 +205,18 @@ const copyCode = async (text) => {
 }
 
 .btn.danger {
+  background: linear-gradient(135deg, #f97316, #c2410c);
+  box-shadow: 0 4px 15px rgba(249, 115, 22, 0.3);
+}
+.btn.danger:hover {
+  box-shadow: 0 6px 20px rgba(249, 115, 22, 0.5);
+}
+
+.btn.error {
   background: linear-gradient(135deg, #ef4444, #b91c1c);
   box-shadow: 0 4px 15px rgba(239, 68, 68, 0.3);
 }
-.btn.danger:hover {
+.btn.error:hover {
   box-shadow: 0 6px 20px rgba(239, 68, 68, 0.5);
 }
 
@@ -215,6 +243,47 @@ const copyCode = async (text) => {
   color: #e4e4e7;
 }
 
+</style>
+
+<style>
+/* Light Mode Overrides */
+:root[data-theme="light"] .doc-page h2,
+:root[data-theme="light"] .section-title {
+  color: #0f172a;
+}
+:root[data-theme="light"] .desc {
+  color: #475569;
+}
+
+:root[data-theme="light"] .code-snippet {
+  background: #f1f5f9;
+  border-color: #cbd5e1;
+  color: #1e293b;
+}
+:root[data-theme="light"] .code-snippet:hover {
+  background: #e2e8f0;
+  border-color: #cbd5e1;
+}
+:root[data-theme="light"] .copy-icon {
+  color: #64748b;
+}
+
+:root[data-theme="light"] .css-vars-block {
+  background: #f1f5f9;
+  border-color: #e2e8f0;
+}
+:root[data-theme="light"] .css-vars-block pre {
+  color: #334155;
+}
+
+:root[data-theme="light"] .btn.outline {
+  border-color: #cbd5e1;
+  color: #0f172a;
+}
+:root[data-theme="light"] .btn.outline:hover {
+  background: #f1f5f9;
+}
+
 /* 
   Global styles for our custom tooltips!
   Normally these would be in your app's global css (like style.css).
@@ -224,6 +293,12 @@ const copyCode = async (text) => {
 
 <style>
 .tooltip-danger {
+  --nu-tooltip-bg: rgba(234, 88, 12, 0.95) !important;
+  --nu-tooltip-border: 1px solid rgba(253, 186, 116, 0.3) !important;
+  --nu-tooltip-arrow-border: rgba(253, 186, 116, 0.3) !important;
+}
+
+.tooltip-error {
   --nu-tooltip-bg: rgba(220, 38, 38, 0.95) !important;
   --nu-tooltip-border: 1px solid rgba(255, 100, 100, 0.3) !important;
   --nu-tooltip-arrow-border: rgba(255, 100, 100, 0.3) !important;

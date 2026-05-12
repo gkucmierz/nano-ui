@@ -155,12 +155,4 @@ watch(() => tooltipState.isVisible, async (visible) => {
   visibility: visible;
   /* Transform returns to natural pos defined by inline styles when visible */
 }
-
-:root[data-theme="light"] .global-tooltip {
-  --nu-tooltip-bg: rgba(255, 255, 255, 0.95);
-  --nu-tooltip-color: #0f172a;
-  --nu-tooltip-border: 1px solid rgba(15, 23, 42, 0.1);
-  --nu-tooltip-arrow-border: rgba(15, 23, 42, 0.1);
-  --nu-tooltip-shadow: 0 4px 12px rgba(15, 23, 42, 0.1);
-}
 </style>
