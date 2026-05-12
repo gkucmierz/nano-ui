@@ -7,7 +7,7 @@ High-performance, minimal footprint Vue 3 UI library and directives designed for
 ## 📦 Installation
 
 ```bash
-npm install nano-ui
+npm install @gkucmierz/nano-ui
 ```
 
 ## 🛠️ Usage
@@ -19,8 +19,8 @@ You can register Nano UI globally in your Vue 3 application:
 ```javascript
 import { createApp } from 'vue';
 import App from './App.vue';
-import NanoUI from 'nano-ui';
-import 'nano-ui/style.css'; // Import core animations and styles
+import NanoUI from '@gkucmierz/nano-ui';
+import '@gkucmierz/nano-ui/style.css'; // Import core animations and styles
 
 const app = createApp(App);
 
