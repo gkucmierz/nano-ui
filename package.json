@@ -1,6 +1,6 @@
 {
   "name": "@gkucmierz/nano-ui",
-  "version": "1.0.2",
+  "version": "1.2.0",
   "description": "High-performance, minimal footprint Vue 3 UI library and directives.",
   "type": "module",
   "main": "./dist/nano-ui.js",
@@ -40,5 +40,8 @@
     "ripple",
     "nano",
     "glassmorphism"
-  ]
+  ],
+  "dependencies": {
+    "vue-router": "^5.0.6"
+  }
 }

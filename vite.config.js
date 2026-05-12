@@ -5,7 +5,7 @@ import { resolve } from 'path';
 export default defineConfig({
   plugins: [vue()],
   server: {
-    port: 19211,
+    port: 33164,
     strictPort: true
   },
   build: {

@@ -1,207 +1,175 @@
 <template>
-  <div class="playground">
-    <div class="header">
-      <h1>Nano UI Playground</h1>
-      <p>Testing ground for all library components and directives.</p>
-    </div>
-    
-    <div class="component-section">
-      <h2>v-ripple Directive</h2>
-      
-      <div class="test-row">
-        <div class="example">
-          <!-- Default Ripple -->
-          <button v-ripple class="btn primary">
-            Default Ripple
-          </button>
-          <div class="code-snippet" @click="copyCode(codeDefault)" title="Click to copy">
-            <code>&lt;button v-ripple&gt;...&lt;/button&gt;</code>
-            <span class="copy-icon">📋</span>
-          </div>
-        </div>
-
-        <div class="example">
-          <!-- Custom Color Ripple -->
-          <button v-ripple="'rgba(0, 255, 100, 0.4)'" class="btn success">
-            Custom Color Ripple
-          </button>
-          <div class="code-snippet" @click="copyCode(codeCustom)" title="Click to copy">
-            <code>&lt;button v-ripple="'rgba(...) '"&gt;...&lt;/button&gt;</code>
-            <span class="copy-icon">📋</span>
-          </div>
-        </div>
-        
-        <div class="example">
-          <!-- Glassmorphism Card Ripple -->
-          <div v-ripple class="glass-card">
-            Glassmorphism Card<br>
-            <small>(Click anywhere inside)</small>
-          </div>
-          <div class="code-snippet" @click="copyCode(codeGlass)" title="Click to copy">
-            <code>&lt;div v-ripple class="glass-card"&gt;...&lt;/div&gt;</code>
-            <span class="copy-icon">📋</span>
-          </div>
-        </div>
+  <div class="playground-layout">
+    <aside class="sidebar">
+      <div class="sidebar-header">
+        <h1>Nano UI</h1>
+        <div class="version">v1.1.0</div>
       </div>
-    </div>
+      
+      <nav class="sidebar-nav">
+        <div class="nav-section">
+          <h3>Directives</h3>
+          <router-link to="/docs/ripple" class="nav-link" active-class="active">v-ripple</router-link>
+          <router-link to="/docs/tooltip" class="nav-link" active-class="active">v-tooltip</router-link>
+        </div>
+        <!-- Future sections go here -->
+        <div class="nav-section">
+          <h3>Components</h3>
+          <span class="nav-link disabled">GlobalTooltip</span>
+        </div>
+      </nav>
+    </aside>
+    
+    <main class="content">
+      <div class="content-header">
+        <h1>Playground</h1>
+        <p>Testing ground for all library components and directives.</p>
+      </div>
+      
+      <div class="component-section">
+        <router-view v-slot="{ Component }">
+          <transition name="fade" mode="out-in">
+            <component :is="Component" />
+          </transition>
+        </router-view>
+      </div>
+    </main>
+
+    <GlobalTooltip />
   </div>
 </template>
 
 <script setup>
-const codeDefault = '<button v-ripple>...</button>';
-const codeCustom = `<button v-ripple="'rgba(...)'">...</button>`;
-const codeGlass = '<div v-ripple class="glass-card">...</div>';
-
-const copyCode = async (text) => {
-  try {
-    await navigator.clipboard.writeText(text);
-    // Optional: could add a tiny toast notification here
-  } catch (err) {
-    console.error('Failed to copy', err);
-  }
-};
+// Main layout component
 </script>
 
 <style scoped>
-.playground {
-  max-width: 900px;
-  margin: 0 auto;
+.playground-layout {
+  display: flex;
+  min-height: 100vh;
+  background: #09090b; /* bg-zinc-950 */
 }
 
-.header {
-  margin-bottom: 3rem;
+.sidebar {
+  width: 280px;
+  background: #18181b; /* bg-zinc-900 */
+  border-right: 1px solid rgba(255, 255, 255, 0.05);
+  display: flex;
+  flex-direction: column;
 }
 
-.header h1 {
+.sidebar-header {
+  padding: 2rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.sidebar-header h1 {
+  font-weight: 800;
+  letter-spacing: -0.5px;
+  font-size: 1.5rem;
+  margin: 0;
+  background: linear-gradient(135deg, #6366f1, #a855f7);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.version {
+  font-size: 0.75rem;
+  background: rgba(255, 255, 255, 0.1);
+  padding: 2px 8px;
+  border-radius: 12px;
+  color: #a1a1aa;
+}
+
+.sidebar-nav {
+  padding: 1.5rem;
+  flex-grow: 1;
+}
+
+.nav-section {
+  margin-bottom: 2rem;
+}
+
+.nav-section h3 {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: #52525b; /* zinc-600 */
+  font-weight: 700;
+  margin-bottom: 0.75rem;
+  padding-left: 0.5rem;
+}
+
+.nav-link {
+  display: block;
+  padding: 8px 12px;
+  color: #a1a1aa;
+  text-decoration: none;
+  border-radius: 8px;
+  font-size: 0.95rem;
+  font-weight: 500;
+  transition: all 0.2s ease;
+  margin-bottom: 4px;
+}
+
+.nav-link:hover:not(.disabled) {
+  background: rgba(255, 255, 255, 0.05);
+  color: #f4f4f5;
+}
+
+.nav-link.active {
+  background: rgba(99, 102, 241, 0.15);
+  color: #818cf8;
+  font-weight: 600;
+}
+
+.nav-link.disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+.content {
+  flex-grow: 1;
+  padding: 3rem;
+  max-width: 1000px;
+}
+
+.content-header {
+  margin-bottom: 2rem;
+}
+
+.content-header h1 {
   font-weight: 800;
   letter-spacing: -0.5px;
   margin-bottom: 0.5rem;
+  font-size: 2.2rem;
 }
 
-.header p {
+.content-header p {
   color: #a1a1aa;
+  font-size: 1.1rem;
 }
 
 .component-section {
-  padding-top: 2rem;
-  border-top: 1px solid rgba(255, 255, 255, 0.1);
-}
-
-.component-section h2 {
-  font-weight: 600;
-  margin-bottom: 1.5rem;
-}
-
-.test-row {
-  display: flex;
-  gap: 2rem;
-  align-items: flex-start;
-  flex-wrap: wrap;
-}
-
-.example {
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
-  align-items: flex-start;
-}
-
-.code-snippet {
-  background: rgba(255, 255, 255, 0.08);
-  border: 1px solid rgba(255, 255, 255, 0.15);
-  padding: 8px 12px;
-  border-radius: 8px;
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-  font-size: 13px;
-  color: #e4e4e7;
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  cursor: pointer;
-  transition: background 0.2s ease, border-color 0.2s ease;
-}
-
-.code-snippet:hover {
-  background: rgba(255, 255, 255, 0.12);
-  border-color: rgba(255, 255, 255, 0.3);
-}
-
-.code-snippet:active {
-  transform: scale(0.98);
-}
-
-.copy-icon {
-  font-size: 14px;
-  opacity: 0.5;
-  transition: opacity 0.2s ease;
-}
-
-.code-snippet:hover .copy-icon {
-  opacity: 1;
-}
-
-/* Beautiful Premium Buttons */
-.btn {
-  padding: 14px 28px;
-  font-size: 16px;
-  font-weight: 600;
-  border: none;
-  border-radius: 12px;
-  cursor: pointer;
-  outline: none;
-  color: white;
-  transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.2s ease;
-}
-
-.btn:active {
-  transform: scale(0.95);
-}
-
-.btn.primary {
-  background: linear-gradient(135deg, #6366f1, #a855f7);
-  box-shadow: 0 4px 15px rgba(99, 102, 241, 0.3);
-}
-.btn.primary:hover {
-  box-shadow: 0 6px 20px rgba(99, 102, 241, 0.5);
-}
-
-.btn.success {
-  background: linear-gradient(135deg, #10b981, #3b82f6);
-  box-shadow: 0 4px 15px rgba(16, 185, 129, 0.3);
-}
-.btn.success:hover {
-  box-shadow: 0 6px 20px rgba(16, 185, 129, 0.5);
-}
-
-/* Premium Glass Card */
-.glass-card {
-  padding: 30px;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.05);
   border-radius: 16px;
-  background: rgba(255, 255, 255, 0.03);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  cursor: pointer;
-  /* translateZ(0) forces hardware acceleration which fixes overflow: hidden clipping issues on rounded corners in Safari/Chrome */
-  transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1), background 0.2s ease;
-  transform: translateZ(0);
-  user-select: none;
-  text-align: center;
-  font-weight: 500;
+  padding: 2rem;
+  min-height: 400px;
 }
 
-.glass-card small {
-  display: block;
-  margin-top: 0.5rem;
-  color: #a1a1aa;
-  font-weight: 400;
+/* Transitions */
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity 0.2s ease, transform 0.2s ease;
 }
 
-.glass-card:hover {
-  background: rgba(255, 255, 255, 0.08);
-}
-
-.glass-card:active {
-  transform: scale(0.97);
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
+  transform: translateY(5px);
 }
 </style>
