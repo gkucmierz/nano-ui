@@ -1,6 +1,7 @@
 {
   "name": "@gkucmierz/nano-ui",
-  "version": "1.2.0",
+  "version": "1.2.1",
+  "license": "ISC",
   "description": "High-performance, minimal footprint Vue 3 UI library and directives.",
   "type": "module",
   "main": "./dist/nano-ui.js",
@@ -23,7 +24,7 @@
     "vue": "^3.0.0"
   },
   "devDependencies": {
-    "@vitejs/plugin-vue": "^5.2.0",
+    "@vitejs/plugin-vue": "^6.0.5",
     "vite": "^8.0.12",
     "vue": "^3.4.0"
   },
