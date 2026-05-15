@@ -1,6 +1,7 @@
 import { createRouter, createWebHashHistory } from 'vue-router';
 import RippleDoc from '../docs/RippleDoc.vue';
 import TooltipDoc from '../docs/TooltipDoc.vue';
+import ModalDoc from '../docs/ModalDoc.vue';
 
 const routes = [
   {
@@ -16,6 +17,11 @@ const routes = [
     path: '/docs/tooltip',
     name: 'Tooltip',
     component: TooltipDoc
+  },
+  {
+    path: '/docs/modal',
+    name: 'Modal',
+    component: ModalDoc
   }
 ];
 

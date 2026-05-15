@@ -18,7 +18,10 @@
           <router-link to="/docs/ripple" class="nav-link" active-class="active">v-ripple</router-link>
           <router-link to="/docs/tooltip" class="nav-link" active-class="active">v-tooltip</router-link>
         </div>
-        <!-- Future sections go here -->
+        <div class="nav-section">
+          <h3>Components</h3>
+          <router-link to="/docs/modal" class="nav-link" active-class="active">NanoModal</router-link>
+        </div>
       </nav>
     </aside>
     
