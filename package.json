@@ -1,6 +1,6 @@
 {
   "name": "@gkucmierz/nano-ui",
-  "version": "1.2.1",
+  "version": "1.2.2",
   "license": "ISC",
   "description": "High-performance, minimal footprint Vue 3 UI library and directives.",
   "type": "module",
