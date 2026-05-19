@@ -24,24 +24,24 @@ jobs:
           docker compose down --remove-orphans || true
           docker compose up -d --build
 
-      # -------------- PUBLISH TO NPMJS.ORG ----------------
-      - name: Setup Node for NPM Registry
+      # -------------- PUBLISH TO NPMJS.COM ----------------
+      - name: Setup Node for npmjs.com
         uses: actions/setup-node@v3
         with:
           registry-url: 'https://registry.npmjs.org'
 
-      - name: Publish to Native Global Registry
+      - name: Publish to npmjs.com
         run: npm publish --access public || echo "Version already exists, skipping NPM publish."
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_AUTH_TOKEN }}
 
       # -------------- PUBLISH TO GITEA.7U.PL --------------
-      - name: Setup Node for Gitea Packages
+      - name: Setup Node for gitea.7u.pl
         uses: actions/setup-node@v3
         with:
           registry-url: 'https://gitea.7u.pl/api/packages/gkucmierz/npm/'
 
-      - name: Publish to Internal Registry
+      - name: Publish to gitea.7u.pl
         run: npm publish || echo "Version already exists, skipping Gitea publish."
         env:
           NODE_AUTH_TOKEN: ${{ secrets.LOCAL_PACKAGE_REGISTRY }}
