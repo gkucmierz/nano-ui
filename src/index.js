@@ -1,3 +1,6 @@
+import { tracker } from '@gkucmierz/analytics'
+tracker.init('nano-ui', 'https://analytics.7u.pl')
+
 import Ripple from './directives/ripple.js';
 import { tooltipDirective } from './directives/tooltip.js';
 import { showTooltip, hideTooltip, tooltipState } from './composables/useTooltip.js';
