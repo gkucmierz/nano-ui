@@ -142,7 +142,7 @@
         </g>
 
         <!-- Center Hole Text details (sandwiched inside the Z-index stack) -->
-        <g :transform="`translate(${animCx}, ${animCy})`" class="center-text-group">
+        <g v-if="props.showCenterText" :transform="`translate(${animCx}, ${animCy})`" class="center-text-group">
           <text 
             x="0" 
             y="-3" 
@@ -428,6 +428,19 @@ const props = defineProps({
   showLabels: {
     type: Boolean,
     default: true
+  },
+  thickness: {
+    type: Number,
+    default: 0.5,
+    validator: (val) => val >= 0 && val <= 1
+  },
+  showCenterText: {
+    type: Boolean,
+    default: true
+  },
+  centerValueFormatter: {
+    type: Function,
+    default: null
   }
 })
 
@@ -692,7 +705,13 @@ const displayCenterValue = computed(() => {
   }
   const hovered = sortedSlices.value.find(s => s.item.id === effectiveActiveId.value)
   if (hovered) {
+    if (props.centerValueFormatter) {
+      return props.centerValueFormatter(hovered.item.value, hovered.item)
+    }
     return formatValue(hovered.item.value)
+  }
+  if (props.centerValueFormatter) {
+    return props.centerValueFormatter(totalValue.value, null)
   }
   return props.valueDecimals !== undefined ? formatValue(totalValue.value) : Math.round(totalValue.value)
 })
@@ -837,10 +856,13 @@ const animRy = ref(props.isExpanded
   ? (is3DMode ? 180 * props.slopeRatio : 180) 
   : (is3DMode ? 48 * props.slopeRatio : 48)
 )
-const animIrx = ref(props.isExpanded ? 95 : 31)
+const animIrx = ref(props.isExpanded 
+  ? 180 * (1 - props.thickness) 
+  : 48 * (1 - props.thickness)
+)
 const animIry = ref(props.isExpanded 
-  ? (is3DMode ? 95 * props.slopeRatio : 95) 
-  : (is3DMode ? 31 * props.slopeRatio : 31)
+  ? (is3DMode ? 180 * (1 - props.thickness) * props.slopeRatio : 180 * (1 - props.thickness)) 
+  : (is3DMode ? 48 * (1 - props.thickness) * props.slopeRatio : 48 * (1 - props.thickness))
 )
 
 const initialBaseDepth = (props.isExpanded && is3DMode) ? 32 : 0
@@ -1329,10 +1351,12 @@ const animateChart = (duration = 450) => {
     animRy.value = props.isExpanded 
       ? (is3DMode ? 180 * props.slopeRatio : 180) 
       : (is3DMode ? 48 * props.slopeRatio : 48)
-    animIrx.value = props.isExpanded ? 95 : 31
+    animIrx.value = props.isExpanded 
+      ? 180 * (1 - props.thickness) 
+      : 48 * (1 - props.thickness)
     animIry.value = props.isExpanded 
-      ? (is3DMode ? 95 * props.slopeRatio : 95) 
-      : (is3DMode ? 31 * props.slopeRatio : 31)
+      ? (is3DMode ? 180 * (1 - props.thickness) * props.slopeRatio : 180 * (1 - props.thickness)) 
+      : (is3DMode ? 48 * (1 - props.thickness) * props.slopeRatio : 48 * (1 - props.thickness))
     
     const baseDepth = (props.isExpanded && is3DMode) ? 32 : 0
     animDepth.value = (is3DMode && props.slopeRatio > 0.5) 
@@ -1374,10 +1398,12 @@ const animateChart = (duration = 450) => {
   const targetRy = props.isExpanded 
     ? (is3DMode ? 180 * props.slopeRatio : 180) 
     : (is3DMode ? 48 * props.slopeRatio : 48)
-  const targetIrx = props.isExpanded ? 95 : 31
+  const targetIrx = props.isExpanded 
+    ? 180 * (1 - props.thickness) 
+    : 48 * (1 - props.thickness)
   const targetIry = props.isExpanded 
-    ? (is3DMode ? 95 * props.slopeRatio : 95) 
-    : (is3DMode ? 31 * props.slopeRatio : 31)
+    ? (is3DMode ? 180 * (1 - props.thickness) * props.slopeRatio : 180 * (1 - props.thickness)) 
+    : (is3DMode ? 48 * (1 - props.thickness) * props.slopeRatio : 48 * (1 - props.thickness))
   
   const targetBaseDepth = (props.isExpanded && is3DMode) ? 32 : 0
   const targetDepth = (is3DMode && props.slopeRatio > 0.5) 
@@ -1504,13 +1530,28 @@ watch(() => props.showLabels, () => {
 watch(() => props.slopeRatio, (newSlope) => {
   if (props.is3D) {
     animRy.value = props.isExpanded ? 180 * newSlope : 48
-    animIry.value = props.isExpanded ? 95 * newSlope : 31
+    
+    const baseRx = props.isExpanded ? 180 : 48
+    const baseRy = props.isExpanded ? 180 * newSlope : 48
+    animIrx.value = baseRx * (1 - props.thickness)
+    animIry.value = baseRy * (1 - props.thickness)
     
     const baseDepth = props.isExpanded ? 32 : 0
     animDepth.value = newSlope > 0.5 
       ? baseDepth * (2 - 2 * newSlope) 
       : baseDepth
   }
+})
+
+watch(() => props.thickness, (newThickness) => {
+  const is3DMode = props.is3D
+  const baseRx = props.isExpanded ? 180 : 48
+  const baseRy = props.isExpanded 
+    ? (is3DMode ? 180 * props.slopeRatio : 180) 
+    : (is3DMode ? 48 * props.slopeRatio : 48)
+
+  animIrx.value = baseRx * (1 - newThickness)
+  animIry.value = baseRy * (1 - newThickness)
 })
 
 watch(() => props.hoveredItemId, (newId) => {

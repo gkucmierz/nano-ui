@@ -101,6 +101,7 @@ const chartData = ref([
 | `selectedItemId` | `String \| Number` | `null` | The ID of the currently locked slice (supports `v-model:selectedItemId`). |
 | `centerValue` | `String \| Number` | `''` | Value displayed inside the donut hole (defaults to sum of all items). |
 | `centerLabel` | `String` | `''` | Sub-label text displayed below the center value. |
+| `centerValueFormatter` | `Function` | `null` | Custom formatter function for the center value: `(value, item) => string`. |
 | `valueDecimals` | `Number` | `undefined` | Decimals to round slice values to on label callouts. |
 | `aggregateOthers` | `Boolean` | `false` | Merges small items below a threshold into an "Other" slice. |
 | `othersThreshold`| `Number` | `0.01` | Fraction threshold (e.g. `0.05` for 5%) below which items are aggregated. |

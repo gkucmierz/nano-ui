@@ -8,10 +8,12 @@ const showLabels = ref(true);
 const rotationAngle = ref(-90);
 const autoRotate = ref(true);
 const slopeRatio = ref(0.5);
+const thickness = ref(0.5);
+const showCenterText = ref(true);
 
 // Aggregation settings
 const aggregateOthers = ref(true);
-const othersThreshold = ref(0.05); // 5%
+const othersThreshold = ref(0.01); // 1%
 const othersLabel = ref('Other');
 const othersColor = ref('#64748b');
 
@@ -54,15 +56,14 @@ const computedChartData = computed(() => {
   });
 });
 
-const computedCenterValue = computed(() => {
-  const total = computedChartData.value.reduce((sum, item) => sum + item.value, 0);
-  const hovered = computedChartData.value.find(item => item.id === hoveredItemId.value);
+const centerValueFormatter = (val, item) => {
   const decs = valueDecimals.value !== undefined ? valueDecimals.value : 1;
-  if (hovered) {
-    return hovered.value.toFixed(decs);
+  const formatted = val.toFixed(decs);
+  if (item) {
+    return `${formatted} ${item.unit || 'M km²'}`;
   }
-  return total.toFixed(decs);
-});
+  return `${formatted}`;
+};
 
 const addItem = () => {
   const colorsList = ['#ec4899', '#a855f7', '#14b8a6', '#f43f5e', '#6366f1'];
@@ -138,6 +139,14 @@ const setSingleDatapoint = () => {
           </div>
 
           <div class="switch-row" style="margin-top: 10px;">
+            <span class="switch-label">Show Center Value Text</span>
+            <label class="switch">
+              <input type="checkbox" v-model="showCenterText" />
+              <span class="switch-slider"></span>
+            </label>
+          </div>
+
+          <div class="switch-row" style="margin-top: 10px;">
             <span class="switch-label">Compact (Mini) Layout</span>
             <label class="switch">
               <input type="checkbox" :checked="!isExpanded" @change="isExpanded = !$event.target.checked" />
@@ -188,6 +197,11 @@ const setSingleDatapoint = () => {
           </div>
 
           <div class="slider-row">
+            <span class="slider-label">Donut Thickness (Pie-to-Donut): {{ (thickness * 100).toFixed(0) }}%</span>
+            <input type="range" v-model.number="thickness" min="0.0" max="1.0" step="0.01" />
+          </div>
+
+          <div class="slider-row">
             <span class="slider-label">Label Decimals: {{ valueDecimalsRange === -1 ? 'Auto' : valueDecimalsRange }}</span>
             <input type="range" v-model.number="valueDecimalsRange" min="-1" max="10" step="1" />
           </div>
@@ -230,12 +244,14 @@ const setSingleDatapoint = () => {
             :rotationAngle="rotationAngle"
             :autoRotate="autoRotate"
             :slopeRatio="slopeRatio"
+            :thickness="thickness"
+            :showCenterText="showCenterText"
             :aggregateOthers="aggregateOthers"
             :othersThreshold="othersThreshold"
             :othersLabel="othersLabel"
             :othersColor="othersColor"
             :valueDecimals="valueDecimals"
-            :centerValue="computedCenterValue"
+            :centerValueFormatter="centerValueFormatter"
             centerLabel="Total Area (M km²)"
             emptyText="Add countries to render the 3D donut chart!"
           />
@@ -253,6 +269,7 @@ const setSingleDatapoint = () => {
         is3D: Boolean (default: true) - Enables 3D perspective (depth & tilt)<br>
         centerValue: String | Number (default: '') - Value shown in center hole (defaults to sum)<br>
         centerLabel: String (default: '') - Label shown below center value<br>
+        centerValueFormatter: Function (default: null) - Custom formatter function: (value, item) => string<br>
         rotationAngle: Number (default: -90) - Starting rotation of the donut chart<br>
         autoRotate: Boolean (default: false) - Balances labels evenly across left & right columns<br>
         slopeRatio: Number (default: 0.5) - Vertical tilt of the chart (0.2 to 1.0)<br>
@@ -262,7 +279,9 @@ const setSingleDatapoint = () => {
         othersColor: String (default: '#64748b') - Color code of the merged slice<br>
         valueDecimals: Number (default: undefined) - Decimal places to round slice values on labels (e.g. 2)<br>
         selectable: Boolean (default: false) - Enables locking of items on click/tap<br>
-        selectedItemId: String | Number (default: null) - Currently selected/locked item ID (supports v-model:selectedItemId)
+        selectedItemId: String | Number (default: null) - Currently selected/locked item ID (supports v-model:selectedItemId)<br>
+        thickness: Number (default: 0.5) - Thickness from 0.0 (thin ring) to 1.0 (full pie chart)<br>
+        showCenterText: Boolean (default: true) - Show/hide center value and label texts
       </code>
     </div>
   </div>
