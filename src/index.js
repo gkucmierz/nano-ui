@@ -6,9 +6,10 @@ import { tooltipDirective } from './directives/tooltip.js';
 import { showTooltip, hideTooltip, tooltipState } from './composables/useTooltip.js';
 import GlobalTooltip from './components/GlobalTooltip.vue';
 import NanoModal from './components/NanoModal.vue';
+import ThreeDDonutChart from './components/ThreeDDonutChart.vue';
 import './assets/style.css';
 
-export { Ripple, tooltipDirective, showTooltip, hideTooltip, tooltipState, GlobalTooltip, NanoModal };
+export { Ripple, tooltipDirective, showTooltip, hideTooltip, tooltipState, GlobalTooltip, NanoModal, ThreeDDonutChart };
 
 export default {
   install(app) {
@@ -16,5 +17,6 @@ export default {
     app.directive('tooltip', tooltipDirective);
     app.component('GlobalTooltip', GlobalTooltip);
     app.component('NanoModal', NanoModal);
+    app.component('ThreeDDonutChart', ThreeDDonutChart);
   }
 };

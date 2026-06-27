@@ -1,4 +1,6 @@
 node_modules
 dist
+dist-app
+test-results
 .DS_Store
 *.local

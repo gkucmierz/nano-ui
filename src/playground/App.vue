@@ -21,6 +21,7 @@
         <div class="nav-section">
           <h3>Components</h3>
           <router-link to="/docs/modal" class="nav-link" active-class="active">NanoModal</router-link>
+          <router-link to="/docs/3d-donut-chart" class="nav-link" active-class="active">ThreeDDonutChart</router-link>
         </div>
       </nav>
     </aside>
@@ -55,14 +56,24 @@ const toggleTheme = () => {
   isDark.value = !isDark.value;
   if (isDark.value) {
     document.documentElement.removeAttribute('data-theme');
+    localStorage.setItem('nano-ui-theme', 'dark');
   } else {
     document.documentElement.setAttribute('data-theme', 'light');
+    localStorage.setItem('nano-ui-theme', 'light');
   }
 };
 
 onMounted(() => {
-  // Check system preference on load
-  if (window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches) {
+  const savedTheme = localStorage.getItem('nano-ui-theme');
+  if (savedTheme) {
+    if (savedTheme === 'light') {
+      isDark.value = false;
+      document.documentElement.setAttribute('data-theme', 'light');
+    } else {
+      isDark.value = true;
+      document.documentElement.removeAttribute('data-theme');
+    }
+  } else if (window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches) {
     isDark.value = false;
     document.documentElement.setAttribute('data-theme', 'light');
   }
@@ -213,7 +224,8 @@ onMounted(() => {
 .content {
   flex-grow: 1;
   padding: 3rem;
-  max-width: 1000px;
+  width: calc(100% - 280px);
+  box-sizing: border-box;
 }
 
 .content-header {

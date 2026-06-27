@@ -2,6 +2,7 @@ import { createRouter, createWebHashHistory } from 'vue-router';
 import RippleDoc from '../docs/RippleDoc.vue';
 import TooltipDoc from '../docs/TooltipDoc.vue';
 import ModalDoc from '../docs/ModalDoc.vue';
+import ThreeDDonutChartDoc from '../docs/ThreeDDonutChartDoc.vue';
 
 const routes = [
   {
@@ -22,6 +23,11 @@ const routes = [
     path: '/docs/modal',
     name: 'Modal',
     component: ModalDoc
+  },
+  {
+    path: '/docs/3d-donut-chart',
+    name: 'ThreeDDonutChart',
+    component: ThreeDDonutChartDoc
   }
 ];
 

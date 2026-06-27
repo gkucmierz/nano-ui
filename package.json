@@ -1,8 +1,8 @@
 {
   "name": "@gkucmierz/nano-ui",
-  "version": "1.2.2",
+  "version": "1.4.0",
   "license": "ISC",
-  "description": "High-performance, minimal footprint Vue 3 UI library and directives.",
+  "description": "High-performance, minimal footprint Vue 3 UI library, interactive 3D charts, and directives.",
   "type": "module",
   "main": "./dist/nano-ui.js",
   "module": "./dist/nano-ui.js",
@@ -18,12 +18,14 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "build:app": "vite build -c vite.config.app.js"
+    "build:app": "vite build -c vite.config.app.js",
+    "test:e2e": "playwright test"
   },
   "peerDependencies": {
     "vue": "^3.0.0"
   },
   "devDependencies": {
+    "@playwright/test": "^1.61.1",
     "@vitejs/plugin-vue": "^6.0.5",
     "vite": "^8.0.12",
     "vue": "^3.4.0"
@@ -40,10 +42,16 @@
     "directives",
     "ripple",
     "nano",
-    "glassmorphism"
+    "glassmorphism",
+    "chart",
+    "donut-chart",
+    "pie-chart",
+    "3d-chart",
+    "svg-chart",
+    "interactive-charts"
   ],
   "dependencies": {
-    "vue-router": "^5.0.6",
-    "@gkucmierz/analytics": "^1.0.1"
+    "@gkucmierz/analytics": "^1.0.1",
+    "vue-router": "^5.0.6"
   }
 }
