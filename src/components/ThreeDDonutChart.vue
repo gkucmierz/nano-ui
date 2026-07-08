@@ -4,7 +4,7 @@
     class="donut-canvas-wrapper" 
     :class="{ 
       'is-expanded': isExpanded,
-      'no-transitions': isAnimating || isRotationChanging
+      'no-transitions': isAnimating || isRotationChanging || immediate
     }"
   >
     <svg 
