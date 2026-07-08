@@ -42,6 +42,6 @@ jobs:
           registry-url: 'https://gitea.7u.pl/api/packages/gkucmierz/npm/'
 
       - name: Publish to gitea.7u.pl
-        run: npm publish || echo "Version already exists, skipping Gitea publish."
+        run: npm publish --registry=https://gitea.7u.pl/api/packages/gkucmierz/npm/ || echo "Version already exists, skipping Gitea publish."
         env:
           NODE_AUTH_TOKEN: ${{ secrets.LOCAL_PACKAGE_REGISTRY }}
