@@ -1,6 +1,6 @@
 {
   "name": "@gkucmierz/nano-ui",
-  "version": "1.4.0",
+  "version": "1.5.0",
   "license": "ISC",
   "description": "High-performance, minimal footprint Vue 3 UI library, interactive 3D charts, and directives.",
   "type": "module",
@@ -48,7 +48,12 @@
     "pie-chart",
     "3d-chart",
     "svg-chart",
-    "interactive-charts"
+    "interactive-charts",
+    "scrubber",
+    "precision-scrubber",
+    "high-precision",
+    "slider",
+    "jog-dial"
   ],
   "dependencies": {
     "@gkucmierz/analytics": "^1.0.1",

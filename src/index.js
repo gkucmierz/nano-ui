@@ -7,9 +7,10 @@ import { showTooltip, hideTooltip, tooltipState } from './composables/useTooltip
 import GlobalTooltip from './components/GlobalTooltip.vue';
 import NanoModal from './components/NanoModal.vue';
 import ThreeDDonutChart from './components/ThreeDDonutChart.vue';
+import PrecisionScrubber from './components/PrecisionScrubber.vue';
 import './assets/style.css';
 
-export { Ripple, tooltipDirective, showTooltip, hideTooltip, tooltipState, GlobalTooltip, NanoModal, ThreeDDonutChart };
+export { Ripple, tooltipDirective, showTooltip, hideTooltip, tooltipState, GlobalTooltip, NanoModal, ThreeDDonutChart, PrecisionScrubber };
 
 export default {
   install(app) {
@@ -18,5 +19,6 @@ export default {
     app.component('GlobalTooltip', GlobalTooltip);
     app.component('NanoModal', NanoModal);
     app.component('ThreeDDonutChart', ThreeDDonutChart);
+    app.component('PrecisionScrubber', PrecisionScrubber);
   }
 };

@@ -3,6 +3,7 @@ import RippleDoc from '../docs/RippleDoc.vue';
 import TooltipDoc from '../docs/TooltipDoc.vue';
 import ModalDoc from '../docs/ModalDoc.vue';
 import ThreeDDonutChartDoc from '../docs/ThreeDDonutChartDoc.vue';
+import PrecisionScrubberDoc from '../docs/PrecisionScrubberDoc.vue';
 
 const routes = [
   {
@@ -28,6 +29,11 @@ const routes = [
     path: '/docs/3d-donut-chart',
     name: 'ThreeDDonutChart',
     component: ThreeDDonutChartDoc
+  },
+  {
+    path: '/docs/precision-scrubber',
+    name: 'PrecisionScrubber',
+    component: PrecisionScrubberDoc
   }
 ];
 

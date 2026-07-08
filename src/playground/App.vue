@@ -22,6 +22,7 @@
           <h3>Components</h3>
           <router-link to="/docs/modal" class="nav-link" active-class="active">NanoModal</router-link>
           <router-link to="/docs/3d-donut-chart" class="nav-link" active-class="active">ThreeDDonutChart</router-link>
+          <router-link to="/docs/precision-scrubber" class="nav-link" active-class="active">PrecisionScrubber</router-link>
         </div>
       </nav>
     </aside>
