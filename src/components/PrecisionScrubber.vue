@@ -104,7 +104,13 @@ const startScrubbing = (e) => {
   isScrubbingRelative.value = false
   
   const rect = e.currentTarget.getBoundingClientRect()
-  scrubTrackRect.value = { left: rect.left, width: rect.width }
+  scrubTrackRect.value = { 
+    left: rect.left, 
+    width: rect.width, 
+    top: rect.top, 
+    bottom: rect.bottom, 
+    height: rect.height 
+  }
   
   const clickX = e.clientX
   mousedownClientX.value = clickX
@@ -131,14 +137,26 @@ const handleScrubMove = (e) => {
   scrubCurrentX.value = e.clientX
   scrubCurrentY.value = e.clientY
   
-  const deltaY = e.clientY - scrubStartY.value
-  const yOffset = Math.abs(deltaY)
   const range = props.max - props.min
   if (range <= 0) return
   
-  if (!isScrubbingRelative.value && yOffset >= 15) {
+  const rect = scrubTrackRect.value
+  let yOffset = 0
+  let isOutside = false
+  
+  if (e.clientY < rect.top) {
+    isOutside = true
+    yOffset = rect.top - e.clientY
+  } else if (e.clientY > rect.bottom) {
+    isOutside = true
+    yOffset = e.clientY - rect.bottom
+  }
+  
+  if (!isScrubbingRelative.value && isOutside) {
     isScrubbingRelative.value = true
     scrubStartX.value = e.clientX
+    // Set the anchor dot visually exactly on the border of the track
+    scrubStartY.value = (e.clientY > rect.bottom) ? rect.bottom : rect.top
     
     // If the horizontal drag is small, use originalValue to avoid accidental coarse drift.
     // Otherwise, lock to the current modelValue (the coarse value they dragged to).
@@ -151,16 +169,16 @@ const handleScrubMove = (e) => {
   }
   
   if (isScrubbingRelative.value) {
-    // Relative fine-tuning mode: vertical drag adjusts value, horizontal is locked
-    const absDeltaY = Math.abs(deltaY)
-    const activeDeltaY = Math.max(0, absDeltaY - 15)
+    // Relative fine-tuning mode: vertical drag outside track adjusts value, horizontal is locked
+    const activeDeltaY = yOffset
     
     const baseStep = 0.25
     const b = 1.08
     const multiplier = activeDeltaY + (Math.pow(b, activeDeltaY) - 1)
     
     // Dragging UP (negative deltaY) increases the value, dragging DOWN decreases it
-    const valChange = Math.round(-Math.sign(deltaY) * baseStep * multiplier)
+    const sign = (e.clientY < rect.top) ? -1 : 1
+    const valChange = Math.round(-sign * baseStep * multiplier)
     
     let nextVal = scrubStartIndex.value + valChange
     if (nextVal > props.max) nextVal = props.max
@@ -180,7 +198,6 @@ const handleScrubMove = (e) => {
     }
   } else {
     // Coarse absolute mode (0 to MAX mapped to borders with 8px deadzone snapping)
-    const rect = scrubTrackRect.value
     const padding = 8
     const trackWidth = rect.width - 2 * padding
     const ratio = Math.min(1, Math.max(0, (e.clientX - rect.left - padding) / trackWidth))
@@ -217,7 +234,7 @@ const formatNum = (num) => {
 <style scoped>
 .nano-scrub-track {
   width: 100%;
-  height: 32px;
+  height: 44px;
   background: rgba(0, 229, 255, 0.02);
   border: 1px dashed rgba(0, 229, 255, 0.25);
   border-radius: 8px;
