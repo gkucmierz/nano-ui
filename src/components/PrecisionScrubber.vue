@@ -3,6 +3,7 @@
     class="nano-scrub-track"
     @mousedown="startScrubbing"
     ref="trackRef"
+    v-bind="$attrs"
   >
     <!-- Visual progress bar inside the track -->
     <div 
@@ -42,6 +43,12 @@
     </div>
   </Teleport>
 </template>
+
+<script>
+export default {
+  inheritAttrs: false
+}
+</script>
 
 <script setup>
 import { ref, computed } from 'vue'
