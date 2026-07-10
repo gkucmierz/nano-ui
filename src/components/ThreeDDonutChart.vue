@@ -1215,10 +1215,6 @@ const sortedSlices = computed(() => {
   })
 
   return list.sort((a, b) => {
-    const aActive = effectiveActiveId.value === a.item.id
-    const bActive = effectiveActiveId.value === b.item.id
-    if (aActive && !bActive) return 1
-    if (!aActive && bActive) return -1
     return a.midY - b.midY
   })
 })
