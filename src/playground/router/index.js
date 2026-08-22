@@ -4,6 +4,7 @@ import TooltipDoc from '../docs/TooltipDoc.vue';
 import ModalDoc from '../docs/ModalDoc.vue';
 import ThreeDDonutChartDoc from '../docs/ThreeDDonutChartDoc.vue';
 import PrecisionScrubberDoc from '../docs/PrecisionScrubberDoc.vue';
+import TopologyRadarDoc from '../docs/TopologyRadarDoc.vue';
 
 const routes = [
   {
@@ -34,6 +35,11 @@ const routes = [
     path: '/docs/precision-scrubber',
     name: 'PrecisionScrubber',
     component: PrecisionScrubberDoc
+  },
+  {
+    path: '/docs/topology-radar',
+    name: 'TopologyRadar',
+    component: TopologyRadarDoc
   }
 ];
 
