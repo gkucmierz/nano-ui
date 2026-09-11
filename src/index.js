@@ -8,10 +8,11 @@ import GlobalTooltip from './components/GlobalTooltip.vue';
 import NanoModal from './components/NanoModal.vue';
 import ThreeDDonutChart from './components/ThreeDDonutChart.vue';
 import PrecisionScrubber from './components/PrecisionScrubber.vue';
+import MutatingHeader from './components/MutatingHeader.vue';
 import TopologyRadar from './components/TopologyRadar.vue';
 import './assets/style.css';
 
-export { Ripple, tooltipDirective, showTooltip, hideTooltip, tooltipState, GlobalTooltip, NanoModal, ThreeDDonutChart, PrecisionScrubber, TopologyRadar };
+export { Ripple, tooltipDirective, showTooltip, hideTooltip, tooltipState, GlobalTooltip, NanoModal, ThreeDDonutChart, PrecisionScrubber, TopologyRadar, MutatingHeader };
 
 export default {
   install(app) {
@@ -22,5 +23,6 @@ export default {
     app.component('ThreeDDonutChart', ThreeDDonutChart);
     app.component('PrecisionScrubber', PrecisionScrubber);
     app.component('TopologyRadar', TopologyRadar);
+    app.component('MutatingHeader', MutatingHeader);
   }
 };

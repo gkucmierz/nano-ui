@@ -5,6 +5,7 @@ import ModalDoc from '../docs/ModalDoc.vue';
 import ThreeDDonutChartDoc from '../docs/ThreeDDonutChartDoc.vue';
 import PrecisionScrubberDoc from '../docs/PrecisionScrubberDoc.vue';
 import TopologyRadarDoc from '../docs/TopologyRadarDoc.vue';
+import MutatingHeaderDoc from '../docs/MutatingHeaderDoc.vue';
 
 const routes = [
   {
@@ -40,6 +41,11 @@ const routes = [
     path: '/docs/topology-radar',
     name: 'TopologyRadar',
     component: TopologyRadarDoc
+  },
+  {
+    path: '/docs/mutating-header',
+    name: 'MutatingHeader',
+    component: MutatingHeaderDoc
   }
 ];
 
