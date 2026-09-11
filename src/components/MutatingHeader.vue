@@ -216,7 +216,7 @@ onUnmounted(() => {
 }
 
 /* Light Theme Support */
-:global([data-theme="light"]) .nano-mutating-header,
+:root[data-theme="light"] .nano-mutating-header,
 [data-theme="light"] .nano-mutating-header {
   background: var(--bg-card, rgba(255, 255, 255, 0.85));
   border-color: var(--border-subtle, rgba(0, 0, 0, 0.08));
@@ -224,7 +224,7 @@ onUnmounted(() => {
   color: #0f172a;
 }
 
-:global([data-theme="light"]) .nano-mutating-header.is-stuck,
+:root[data-theme="light"] .nano-mutating-header.is-stuck,
 [data-theme="light"] .nano-mutating-header.is-stuck {
   border-color: transparent transparent var(--border-subtle, rgba(0, 0, 0, 0.08)) transparent;
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.04);
