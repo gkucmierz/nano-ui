@@ -55,6 +55,17 @@ pre {
   cursor: text;
 }
 
+/* Branded Text Selection Highlight (SSoT) */
+::selection {
+  background-color: var(--nano-selection-bg);
+  color: var(--nano-selection-text);
+}
+
+::-moz-selection {
+  background-color: var(--nano-selection-bg);
+  color: var(--nano-selection-text);
+}
+
 /* Zero-FOUC: Freeze all CSS transitions during initial page load & dynamic theme switching */
 html.preload,
 html.preload *,
