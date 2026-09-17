@@ -37,9 +37,12 @@ const handleKeyDown = (e) => {
   if (e.metaKey || e.ctrlKey || e.altKey) {
     return;
   }
-  if (e.key === 'l' || e.key === 'L') {
+  if (e.key === 'l' || e.key === 'L' || e.key === 't' || e.key === 'T') {
     e.preventDefault();
     toggleTheme();
+  } else if (e.key === 'j' || e.key === 'J' || e.key === 'i' || e.key === 'I') {
+    e.preventDefault();
+    toggleLang();
   }
 };
 
@@ -84,10 +87,8 @@ onUnmounted(() => {
             <circle cx="23.5" cy="8.5" r="1.2" fill="#ffffff"/>
           </svg>
           <div class="brand-info">
-            <div class="brand-heading">
-              <h1 class="brand-title">Nano UI</h1>
-              <span class="version">v{{ version }}</span>
-            </div>
+            <h1 class="brand-title">Nano UI</h1>
+            <span class="version">v{{ version }}</span>
           </div>
         </router-link>
         <div class="header-controls desktop-toggle">

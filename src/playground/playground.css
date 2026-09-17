@@ -111,22 +111,15 @@ pre {
   display: flex;
   flex-direction: column;
   justify-content: center;
-  gap: 2px;
+  gap: 4px;
   min-width: 0;
-}
-
-.brand-heading {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  white-space: nowrap;
 }
 
 .brand-title {
   font-weight: 800;
   letter-spacing: -0.5px;
-  font-size: 1.25rem;
-  line-height: 1;
+  font-size: 1.18rem;
+  line-height: 1.1;
   margin: 0;
   white-space: nowrap;
   background: linear-gradient(135deg, #6366f1, #a855f7);
@@ -138,14 +131,15 @@ pre {
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  align-self: flex-start;
   font-family: var(--font-mono, monospace);
-  font-size: 0.72rem;
+  font-size: 0.68rem;
   font-weight: 700;
   line-height: 1;
   background: var(--nano-bg-muted);
   border: 1px solid var(--nano-border-subtle);
-  padding: 3px 8px;
-  border-radius: 9999px;
+  padding: 2px 6px;
+  border-radius: 6px;
   color: var(--nano-text-muted);
   white-space: nowrap;
   flex-shrink: 0;
