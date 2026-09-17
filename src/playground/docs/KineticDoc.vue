@@ -40,13 +40,13 @@ const liveElapsedSec = ref(0);
 const MAX_SAMPLES = 200;
 const historySamples = ref([]);
 
-// Speed base presets (duration in ms for 90deg)
+// Speed base presets (duration in ms for 90deg, from 4x to 1/4x)
 const speedPresets = [
+  { label: '0.25s (4x)', duration: 250 },
   { label: '0.5s (2x)', duration: 500 },
   { label: '1s (1x)', duration: 1000 },
   { label: '2s (1/2x)', duration: 2000 },
-  { label: '4s (1/4x)', duration: 4000 },
-  { label: '8s (1/8x)', duration: 8000 }
+  { label: '4s (1/4x)', duration: 4000 }
 ];
 
 const normalizedAngle = computed(() => {
@@ -458,40 +458,39 @@ onUnmounted(() => {
           </KineticRotator>
         </div>
 
-        <!-- Live Angular Readout Badge -->
-        <div class="angle-badge-strip">
-          <div class="badge-item">
-            <span class="badge-label">CURRENT</span>
-            <span class="badge-val active">{{ formatAngle(normalizedAngle, selectedUnit, 1) }}</span>
+        <!-- Live Telemetry Matrix (2x2 Grid + Fixed Status Bar) -->
+        <div class="telemetry-box">
+          <div class="telemetry-matrix">
+            <div class="matrix-cell">
+              <span class="matrix-lbl">CURRENT</span>
+              <span class="matrix-val active">{{ formatAngle(normalizedAngle, selectedUnit, 1) }}</span>
+            </div>
+            <div class="matrix-cell">
+              <span class="matrix-lbl">TARGET</span>
+              <span class="matrix-val target">{{ formatAngle(normalizedTarget, selectedUnit, 1) }}</span>
+            </div>
+            <div class="matrix-cell">
+              <span class="matrix-lbl">VELOCITY (ω)</span>
+              <span class="matrix-val vel">{{ formatVelocity(velocity, selectedUnit, 1) }}</span>
+            </div>
+            <div class="matrix-cell">
+              <span class="matrix-lbl">ACCEL (α)</span>
+              <span class="matrix-val acc">{{ formatAcceleration(acceleration, selectedUnit, 0) }}</span>
+            </div>
           </div>
-          <div class="badge-divider"></div>
-          <div class="badge-item">
-            <span class="badge-label">TARGET</span>
-            <span class="badge-val target">{{ formatAngle(normalizedTarget, selectedUnit, 1) }}</span>
-          </div>
-          <div class="badge-divider"></div>
-          <div class="badge-item">
-            <span class="badge-label">VELOCITY (ω)</span>
-            <span class="badge-val vel">{{ formatVelocity(velocity, selectedUnit, 0) }}</span>
-          </div>
-          <div class="badge-divider"></div>
-          <div class="badge-item">
-            <span class="badge-label">ACCEL (α)</span>
-            <span class="badge-val acc">{{ formatAcceleration(acceleration, selectedUnit, 0) }}</span>
-          </div>
-          <div class="badge-divider"></div>
-          <div class="badge-item">
-            <span class="badge-label">STATUS</span>
-            <span class="badge-val status" :class="{ moving: isMoving }">
-              {{ isMoving ? `IN MOTION (${liveElapsedSec.toFixed(2)}s)` : 'SETTLED' }}
-            </span>
-          </div>
-        </div>
 
-        <!-- Cumulative Revolutions Banner (shown when non-modular or >1 cycle) -->
-        <div v-if="!isShortestPath && Math.abs(targetAngle) >= 360" class="cumulative-banner">
-          <span class="cum-label">Cumulative Revolutions:</span>
-          <span class="cum-val">{{ cumulativeTurns.toFixed(2) }} turns ({{ targetAngle.toFixed(0) }}°)</span>
+          <!-- Fixed Status & Revolutions Bar -->
+          <div class="stage-status-bar">
+            <div class="status-left">
+              <span class="status-pulse-dot" :class="{ moving: isMoving }"></span>
+              <span class="status-text font-mono" :class="{ moving: isMoving }">
+                {{ isMoving ? `IN MOTION (+${liveElapsedSec.toFixed(2)}s)` : 'SETTLED (0.00s)' }}
+              </span>
+            </div>
+            <div class="status-right font-mono" v-if="!isShortestPath && Math.abs(targetAngle) >= 360">
+              <span class="cum-turns-pill">{{ cumulativeTurns.toFixed(2) }} turns</span>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -974,8 +973,9 @@ isMoving - Boolean motion status ref
 /* Stage Layout */
 .stage-container {
   display: grid;
-  grid-template-columns: 320px 1fr;
+  grid-template-columns: 340px 1fr;
   gap: var(--nano-space-md, 16px);
+  align-items: start;
 }
 
 @media (max-width: 768px) {
@@ -988,22 +988,27 @@ isMoving - Boolean motion status ref
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-start;
   gap: var(--nano-space-md, 16px);
   padding: var(--nano-space-lg, 24px);
   background: var(--nano-bg-card-elevated, rgba(16, 22, 34, 0.9));
   border: 1px solid var(--nano-border-card, rgba(255, 255, 255, 0.12));
   border-radius: var(--nano-radius-lg, 16px);
   box-shadow: var(--nano-shadow-elevated, 0 8px 24px -6px rgba(0, 0, 0, 0.35));
+  box-sizing: border-box;
 }
 
 .visual-tabs {
+  height: 36px;
   display: flex;
+  align-items: center;
   gap: 6px;
   background: var(--nano-bg-input, rgba(0, 0, 0, 0.25));
   padding: 4px;
   border-radius: var(--nano-radius-full, 9999px);
   border: 1px solid var(--nano-border-subtle, rgba(255, 255, 255, 0.08));
+  flex-shrink: 0;
+  box-sizing: border-box;
 }
 
 .tab-btn {
@@ -1012,7 +1017,7 @@ isMoving - Boolean motion status ref
   color: var(--nano-text-muted, #94a3b8);
   font-size: 0.78rem;
   font-weight: 700;
-  padding: 6px 12px;
+  padding: 5px 12px;
   border-radius: var(--nano-radius-full, 9999px);
   cursor: pointer;
   outline: none !important;
@@ -1032,97 +1037,130 @@ isMoving - Boolean motion status ref
 }
 
 .rotator-viewport {
+  width: 260px;
+  height: 260px;
   padding: 8px;
   display: flex;
   align-items: center;
   justify-content: center;
+  flex-shrink: 0;
+  box-sizing: border-box;
 }
 
-.angle-badge-strip {
+.telemetry-box {
   width: 100%;
   display: flex;
-  align-items: center;
-  justify-content: space-around;
-  padding: 8px 12px;
-  border-radius: var(--nano-radius-md, 8px);
-  background: var(--nano-bg-input, rgba(0, 0, 0, 0.25));
-  border: 1px solid var(--nano-border-subtle, rgba(255, 255, 255, 0.08));
+  flex-direction: column;
+  gap: 8px;
+  flex-shrink: 0;
 }
 
-.badge-item {
+.telemetry-matrix {
+  width: 100%;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+}
+
+.matrix-cell {
   display: flex;
   flex-direction: column;
-  align-items: center;
   gap: 2px;
+  padding: 6px 10px;
+  background: var(--nano-bg-input, rgba(0, 0, 0, 0.25));
+  border: 1px solid var(--nano-border-subtle, rgba(255, 255, 255, 0.08));
+  border-radius: var(--nano-radius-md, 8px);
 }
 
-.badge-label {
+.matrix-lbl {
   font-size: 0.62rem;
   font-weight: 700;
   color: var(--nano-text-muted, #94a3b8);
   letter-spacing: 0.5px;
 }
 
-.badge-val {
+.matrix-val {
   font-family: var(--font-mono, monospace);
   font-size: 0.85rem;
   font-weight: 700;
   color: var(--nano-text-main, #ffffff);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
-.badge-val.active {
+.matrix-val.active {
   color: var(--nano-state-active, #00f2fe);
 }
 
-.badge-val.target {
+.matrix-val.target {
   color: var(--nano-accent-secondary, #ec4899);
 }
 
-.badge-val.vel {
+.matrix-val.vel {
   color: #10b981;
 }
 
-.badge-val.acc {
+.matrix-val.acc {
   color: #f59e0b;
 }
 
-.badge-val.status {
-  font-size: 0.72rem;
-  color: #10b981;
-}
-
-.badge-val.status.moving {
-  color: #f59e0b;
-}
-
-.badge-divider {
-  width: 1px;
-  height: 20px;
-  background: var(--nano-border-subtle, rgba(255, 255, 255, 0.08));
-}
-
-.cumulative-banner {
+.stage-status-bar {
   width: 100%;
+  height: 32px;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 8px 12px;
-  background: rgba(99, 102, 241, 0.12);
-  border: 1px solid rgba(99, 102, 241, 0.3);
+  padding: 0 10px;
+  background: var(--nano-bg-input, rgba(0, 0, 0, 0.25));
+  border: 1px solid var(--nano-border-subtle, rgba(255, 255, 255, 0.08));
   border-radius: var(--nano-radius-md, 8px);
+  box-sizing: border-box;
+  flex-shrink: 0;
 }
 
-.cum-label {
+.status-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.status-pulse-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #10b981;
+  flex-shrink: 0;
+}
+
+.status-pulse-dot.moving {
+  background: #f59e0b;
+  box-shadow: 0 0 8px #f59e0b;
+  animation: pulse 1s infinite alternate;
+}
+
+@keyframes pulse {
+  from { opacity: 0.6; }
+  to { opacity: 1; }
+}
+
+.status-text {
   font-size: 0.72rem;
   font-weight: 700;
-  color: var(--nano-text-muted, #94a3b8);
+  color: #10b981;
 }
 
-.cum-val {
-  font-family: var(--font-mono, monospace);
-  font-size: 0.82rem;
+.status-text.moving {
+  color: #f59e0b;
+}
+
+.cum-turns-pill {
+  font-size: 0.7rem;
   font-weight: 700;
   color: #818cf8;
+  background: rgba(99, 102, 241, 0.15);
+  padding: 2px 6px;
+  border-radius: 4px;
 }
 
 /* Controls Panel */
