@@ -22,14 +22,14 @@ async function getSharp() {
 
 async function main() {
   const sharp = await getSharp();
-  const svgPath = path.resolve(rootDir, 'public/logo.svg');
-  const outPath512 = path.resolve(rootDir, 'public/logo-512.png');
+  const svgPath = path.resolve(rootDir, 'public/nano-ui.svg');
+  const outPath512 = path.resolve(rootDir, 'public/nano-ui-512.png');
 
   if (!fs.existsSync(svgPath)) {
     throw new Error(`SVG source not found at: ${svgPath}`);
   }
 
-  console.log('Generating 512x512 Open Graph & app icon from public/logo.svg...');
+  console.log('Generating 512x512 Open Graph & app icon from public/nano-ui.svg...');
   await sharp(svgPath)
     .resize(512, 512)
     .png()
