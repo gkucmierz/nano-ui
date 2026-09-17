@@ -18,69 +18,82 @@ defineProps({
       class="logo-svg"
     >
       <defs>
+        <!-- Dynamic Glow adapted for dark/light -->
         <radialGradient id="logoBgGlow" cx="50%" cy="50%" r="50%">
-          <stop offset="0%" stop-color="#6366f1" stop-opacity="0.25" />
-          <stop offset="65%" stop-color="#00f2fe" stop-opacity="0.08" />
+          <stop offset="0%" stop-color="#6366f1" stop-opacity="0.35" />
+          <stop offset="60%" stop-color="#00f2fe" stop-opacity="0.12" />
           <stop offset="100%" stop-color="#000000" stop-opacity="0" />
         </radialGradient>
 
-        <linearGradient id="stemGrad" x1="60" y1="60" x2="200" y2="200" gradientUnits="userSpaceOnUse">
+        <!-- Stems Gradient -->
+        <linearGradient id="stemGrad" x1="60" y1="50" x2="200" y2="210" gradientUnits="userSpaceOnUse">
           <stop offset="0%" stop-color="#818cf8" />
           <stop offset="50%" stop-color="#6366f1" />
-          <stop offset="100%" stop-color="#4f46e5" />
+          <stop offset="100%" stop-color="#4338ca" />
         </linearGradient>
 
-        <linearGradient id="beamGrad" x1="80" y1="80" x2="180" y2="180" gradientUnits="userSpaceOnUse">
+        <!-- Kinetic Diagonal Beam Gradient -->
+        <linearGradient id="beamGrad" x1="70" y1="60" x2="190" y2="200" gradientUnits="userSpaceOnUse">
           <stop offset="0%" stop-color="#00f2fe" />
+          <stop offset="45%" stop-color="#38bdf8" />
           <stop offset="100%" stop-color="#6366f1" />
         </linearGradient>
       </defs>
 
-      <!-- Background Glow -->
-      <circle cx="130" cy="130" r="110" fill="url(#logoBgGlow)" />
+      <!-- Ambient Glow Core -->
+      <circle cx="130" cy="130" r="115" fill="url(#logoBgGlow)" />
 
-      <!-- Coordinate Grid & Subtle Reticle -->
-      <circle cx="130" cy="130" r="108" stroke="rgba(255, 255, 255, 0.08)" stroke-width="1" stroke-dasharray="6 8" />
-      <circle cx="130" cy="130" r="80" stroke="rgba(99, 102, 241, 0.15)" stroke-width="1" />
+      <!-- High-Precision Reticle Rings -->
+      <circle cx="130" cy="130" r="108" stroke="var(--nano-border-subtle, rgba(255, 255, 255, 0.12))" stroke-width="1.2" stroke-dasharray="6 8" />
+      <circle cx="130" cy="130" r="82" stroke="var(--nano-border-subtle, rgba(255, 255, 255, 0.08))" stroke-width="1" />
 
-      <!-- Diagonal Cross-Hair Guide Lines -->
-      <line x1="45" y1="45" x2="215" y2="215" stroke="rgba(255, 255, 255, 0.05)" stroke-width="1" stroke-dasharray="3 6" />
-      <line x1="215" y1="45" x2="45" y2="215" stroke="rgba(255, 255, 255, 0.05)" stroke-width="1" stroke-dasharray="3 6" />
+      <!-- Diagonal Alignment Axis -->
+      <line x1="42" y1="42" x2="218" y2="218" stroke="var(--nano-border-subtle, rgba(255, 255, 255, 0.06))" stroke-width="1" stroke-dasharray="4 6" />
 
-      <!-- Minimalist Precision 'N' -->
-      <!-- Left Stem -->
+      <!-- BOLD KINETIC 'N' MONOGRAM (Stroke width: 34px - 2.5x bolder!) -->
+      <!-- Left Vertical Stem -->
       <path
-        d="M80 180 V80"
+        d="M72 192 V68"
         stroke="url(#stemGrad)"
-        stroke-width="14"
+        stroke-width="34"
         stroke-linecap="round"
       />
 
-      <!-- Kinetic Diagonal Light Beam -->
+      <!-- Diagonal Crossing Beam -->
       <path
-        d="M80 80 L180 180"
+        d="M72 68 L188 192"
         stroke="url(#beamGrad)"
-        stroke-width="14"
+        stroke-width="34"
         stroke-linecap="round"
       />
 
-      <!-- Right Stem -->
+      <!-- Right Vertical Stem -->
       <path
-        d="M180 180 V80"
+        d="M188 192 V68"
         stroke="url(#stemGrad)"
-        stroke-width="14"
+        stroke-width="34"
         stroke-linecap="round"
       />
 
-      <!-- Quantum Pulsar in Upper Right -->
-      <circle cx="180" cy="80" r="16" fill="rgba(0, 242, 254, 0.2)" />
-      <circle cx="180" cy="80" r="9" fill="#00f2fe" />
-      <circle cx="180" cy="80" r="4" fill="#ffffff" />
+      <!-- Prominent Quantum Pulsar (Upper Right) -->
+      <circle cx="188" cy="68" r="26" fill="rgba(0, 242, 254, 0.22)" />
+      <circle cx="188" cy="68" r="15" fill="#00f2fe" />
+      <circle cx="188" cy="68" r="6" fill="#ffffff" />
 
-      <!-- Quantum Core Pulse in Bottom Left -->
-      <circle cx="80" cy="180" r="6" fill="#6366f1" />
+      <!-- Secondary Anchor Core (Bottom Left) -->
+      <circle cx="72" cy="192" r="7" fill="#6366f1" />
 
-      <text x="130" y="235" text-anchor="middle" font-family="monospace" font-size="10" font-weight="700" fill="rgba(255,255,255,0.45)" letter-spacing="2">
+      <!-- Subtitle spec text -->
+      <text
+        x="130"
+        y="238"
+        text-anchor="middle"
+        class="logo-spec-text"
+        font-family="monospace"
+        font-size="10"
+        font-weight="700"
+        letter-spacing="2"
+      >
         NANO UI // QUANTUM 8PX
       </text>
     </svg>
@@ -94,15 +107,26 @@ defineProps({
   align-items: center;
   justify-content: center;
   border-radius: var(--nano-radius-lg, 16px);
-  background: var(--nano-bg-card, #0f172a);
+  background: var(--nano-bg-card-elevated, #0f172a);
   border: 1px solid var(--nano-border-card, rgba(255, 255, 255, 0.15));
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.45);
+  box-shadow: var(--nano-shadow-elevated, 0 8px 32px rgba(0, 0, 0, 0.45));
   overflow: hidden;
+}
+
+:root[data-theme="light"] .nano-logo-card,
+[data-theme="light"] .nano-logo-card {
+  background: #f8fafc;
+  border-color: rgba(0, 0, 0, 0.12);
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.08);
 }
 
 .logo-svg {
   display: block;
   user-select: none;
   -webkit-user-select: none;
+}
+
+.logo-spec-text {
+  fill: var(--nano-text-muted, #94a3b8);
 }
 </style>
