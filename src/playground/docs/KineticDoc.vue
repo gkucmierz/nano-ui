@@ -942,45 +942,55 @@ isMoving - Boolean motion status ref
           </thead>
           <tbody>
             <tr>
-              <td class="fn-cell">
-                <span class="dot-badge cyan"></span>
-                <strong>Kąt θ(t)</strong>
+              <td>
+                <div class="fn-badge">
+                  <span class="dot-badge cyan"></span>
+                  <strong>Kąt θ(t)</strong>
+                </div>
               </td>
               <td>Funkcja ciągła i gładka</td>
               <td><span class="class-pill c1">C¹</span></td>
               <td>Ciągła na całej dziedzinie, bez skoków i teleportacji. Ciągła pierwsza pochodna (brak ostrych załamań).</td>
             </tr>
             <tr>
-              <td class="fn-cell">
-                <span class="dot-badge emerald"></span>
-                <strong>Prędkość ω(t)</strong>
+              <td>
+                <div class="fn-badge">
+                  <span class="dot-badge emerald"></span>
+                  <strong>Prędkość ω(t)</strong>
+                </div>
               </td>
               <td>Funkcja kawałkami gładka</td>
               <td><span class="class-pill c0">C⁰</span></td>
               <td>Ciągła, lecz w momentach impulsów posiada punkty nieróżniczkowalności (ostrza / załamania).</td>
             </tr>
             <tr>
-              <td class="fn-cell">
-                <span class="dot-badge amber"></span>
-                <strong>Przyspieszenie α(t)</strong>
+              <td>
+                <div class="fn-badge">
+                  <span class="dot-badge amber"></span>
+                  <strong>Przyspieszenie α(t)</strong>
+                </div>
               </td>
               <td>Funkcja nieciągła (przedziałami ciągła)</td>
               <td><span class="class-pill disc">Skokowa</span></td>
               <td>Posiada nieciągłości skokowe I rodzaju (jump discontinuities). W momentach impulsów przyspieszenie zmienia się skokowo.</td>
             </tr>
             <tr>
-              <td class="fn-cell">
-                <span class="dot-badge pink"></span>
-                <strong>Cel θ_target(t)</strong>
+              <td>
+                <div class="fn-badge">
+                  <span class="dot-badge pink"></span>
+                  <strong>Cel θ_target(t)</strong>
+                </div>
               </td>
               <td>Funkcja schodkowa</td>
               <td><span class="class-pill step">Heaviside</span></td>
               <td>Suma skoków jednostkowych Heaviside'a Θ(t). Zadana orientacja przeskakuje natychmiast o kwant kąta.</td>
             </tr>
             <tr>
-              <td class="fn-cell">
-                <span class="dot-badge purple"></span>
-                <strong>Zryw j(t) & Impulsy</strong>
+              <td>
+                <div class="fn-badge">
+                  <span class="dot-badge purple"></span>
+                  <strong>Zryw j(t) & Impulsy</strong>
+                </div>
               </td>
               <td>Pochodna przyspieszenia / Impuls Diraca</td>
               <td><span class="class-pill dirac">δ(t)</span></td>
@@ -1583,12 +1593,15 @@ isMoving - Boolean motion status ref
   border-radius: var(--nano-radius-md, 8px);
   background: var(--nano-bg-code, #0f172a);
   border: 1px solid var(--nano-border-card, rgba(255, 255, 255, 0.12));
+  overflow-x: auto;
 }
 
 .api-reference pre {
   margin: 0;
   padding: 0;
   background: transparent;
+  white-space: pre-wrap;
+  word-break: break-word;
 }
 
 .api-reference code {
@@ -1640,8 +1653,8 @@ isMoving - Boolean motion status ref
   border-bottom: none;
 }
 
-.fn-cell {
-  display: flex;
+.fn-badge {
+  display: inline-flex;
   align-items: center;
   gap: 8px;
   white-space: nowrap;
@@ -1982,5 +1995,35 @@ isMoving - Boolean motion status ref
 [data-theme="light"] .mode-formula,
 :root[data-theme="light"] .mode-formula {
   color: #64748b;
+}
+
+[data-theme="light"] .class-pill.c1,
+:root[data-theme="light"] .class-pill.c1 {
+  background: rgba(2, 132, 199, 0.12);
+  color: #0284c7;
+}
+
+[data-theme="light"] .class-pill.c0,
+:root[data-theme="light"] .class-pill.c0 {
+  background: rgba(4, 120, 87, 0.12);
+  color: #047857;
+}
+
+[data-theme="light"] .class-pill.disc,
+:root[data-theme="light"] .class-pill.disc {
+  background: rgba(180, 83, 9, 0.12);
+  color: #b45309;
+}
+
+[data-theme="light"] .class-pill.step,
+:root[data-theme="light"] .class-pill.step {
+  background: rgba(190, 24, 93, 0.12);
+  color: #be185d;
+}
+
+[data-theme="light"] .class-pill.dirac,
+:root[data-theme="light"] .class-pill.dirac {
+  background: rgba(126, 34, 206, 0.12);
+  color: #7e22ce;
 }
 </style>
