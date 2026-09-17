@@ -25,6 +25,7 @@
     "dev": "vite",
     "build": "vite build",
     "build:app": "vite build -c vite.config.app.js",
+    "icons": "node scripts/generate-icons.mjs",
     "test:e2e": "playwright test"
   },
   "peerDependencies": {
