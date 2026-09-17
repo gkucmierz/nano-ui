@@ -1,7 +1,8 @@
 {
   "name": "@gkucmierz/nano-ui",
-  "version": "1.5.5",
+  "version": "1.6.0",
   "license": "ISC",
+  "author": "Grzegorz Kućmierz",
   "description": "High-performance, minimal footprint Vue 3 UI library, interactive 3D charts, and directives.",
   "type": "module",
   "main": "./dist/nano-ui.js",
@@ -10,7 +11,12 @@
     ".": {
       "import": "./dist/nano-ui.js"
     },
-    "./style.css": "./dist/nano-ui.css"
+    "./style.css": "./dist/nano-ui.css",
+    "./nano-ui.css": "./dist/nano-ui.css",
+    "./dist/*": "./dist/*"
+  },
+  "publishConfig": {
+    "access": "public"
   },
   "files": [
     "dist"
