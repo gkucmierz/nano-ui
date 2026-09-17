@@ -356,6 +356,34 @@ const reset = () => {
   emit('settled', { angle: 0, normalizedAngle: 0 });
 };
 
+/**
+ * Update duration of an in-flight animation on the normalized time axis without spatial jumps.
+ * Invariant: normalized progress p(now) remains unchanged, while velocity dp/dt scales with new duration.
+ */
+const updateActiveDuration = () => {
+  if (!animRecord || !isMoving.value) return;
+
+  const now = performance.now();
+  const { p } = sampleKinematics(now);
+
+  if (p >= 1) return;
+
+  const totalDelta = animRecord.targetAngle - animRecord.startAngle;
+  const effectiveSpeedMultiplier = Math.max(0.01, props.speedMultiplier);
+  const newDuration = props.timingMode === 'fixed'
+    ? (props.duration / effectiveSpeedMultiplier)
+    : (props.duration / effectiveSpeedMultiplier) * Math.max(0.2, Math.abs(totalDelta) / props.step);
+
+  animRecord.duration = newDuration;
+  animRecord.startTime = now - p * newDuration;
+};
+
+// Watch speed, duration, and timing mode changes to adjust in-flight motion dynamically
+watch(
+  [() => props.duration, () => props.speedMultiplier, () => props.timingMode],
+  updateActiveDuration
+);
+
 // Watch modelValue updates from parent
 watch(() => props.modelValue, (newVal) => {
   if (Math.abs(newVal - targetAngle.value) > 0.01) {
@@ -384,7 +412,8 @@ defineExpose({
   v0: initialVelocityParam,
   rotateBy,
   setAngle,
-  reset
+  reset,
+  updateActiveDuration
 });
 </script>
 
