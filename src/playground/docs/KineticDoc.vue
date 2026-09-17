@@ -1,5 +1,6 @@
 <script setup>
 import { ref, computed, onMounted, onUnmounted } from 'vue';
+import { t } from '../../locales.js';
 import KineticRotator from '../../components/KineticRotator.vue';
 import NanoSwitch from '../../components/NanoSwitch.vue';
 import InstaCatCanvas from '../components/InstaCatCanvas.vue';
@@ -395,10 +396,9 @@ onUnmounted(() => {
 <template>
   <div class="doc-page">
     <div class="header-section">
-      <h2>KineticRotator Component</h2>
+      <h2>{{ t('kinetic.title') }}</h2>
       <p class="desc">
-        Continuous velocity-preserving Hermite kinematics with modular geodesic shortest-path interpolation.
-        Chaining mid-flight rotations seamlessly absorbs momentum (<em>C¹ velocity continuity</em>) without jerky snaps or excess revolutions.
+        {{ t('kinetic.desc') }}
       </p>
     </div>
 
@@ -458,19 +458,19 @@ onUnmounted(() => {
         <div class="telemetry-box">
           <div class="telemetry-matrix">
             <div class="matrix-cell">
-              <span class="matrix-lbl">CURRENT</span>
+              <span class="matrix-lbl">{{ t('kinetic.telemetryCurrent') }}</span>
               <span class="matrix-val active">{{ formatAngle(normalizedAngle, selectedUnit, 1) }}</span>
             </div>
             <div class="matrix-cell">
-              <span class="matrix-lbl">TARGET</span>
+              <span class="matrix-lbl">{{ t('kinetic.telemetryTarget') }}</span>
               <span class="matrix-val target">{{ formatAngle(normalizedTarget, selectedUnit, 1) }}</span>
             </div>
             <div class="matrix-cell">
-              <span class="matrix-lbl">VELOCITY (ω)</span>
+              <span class="matrix-lbl">{{ t('kinetic.telemetryVelocity') }}</span>
               <span class="matrix-val vel">{{ formatVelocity(velocity, selectedUnit, 1) }}</span>
             </div>
             <div class="matrix-cell">
-              <span class="matrix-lbl">ACCEL (α)</span>
+              <span class="matrix-lbl">{{ t('kinetic.telemetryAccel') }}</span>
               <span class="matrix-val acc">{{ formatAcceleration(acceleration, selectedUnit, 0) }}</span>
             </div>
           </div>
@@ -928,16 +928,16 @@ isMoving - Boolean motion status ref
     </div>
 
     <!-- Kinematic & Mathematical Foundations -->
-    <h3 class="section-title">Kinematics & Smoothness Classes (Cᵏ)</h3>
+    <h3 class="section-title">{{ t('kinetic.theoryTitle') }}</h3>
     <div class="math-reference">
       <div class="math-table-container">
         <table class="math-table">
           <thead>
             <tr>
-              <th>Funkcja / Sygnał</th>
-              <th>Nazwa matematyczna</th>
-              <th>Klasa gładkości</th>
-              <th>Opis fizyczny & zachowanie</th>
+              <th>{{ t('kinetic.thQuantity') }}</th>
+              <th>{{ t('kinetic.thSymbol') }}</th>
+              <th>{{ t('kinetic.thClass') }}</th>
+              <th>{{ t('kinetic.thDescription') }}</th>
             </tr>
           </thead>
           <tbody>
@@ -945,56 +945,56 @@ isMoving - Boolean motion status ref
               <td>
                 <div class="fn-badge">
                   <span class="dot-badge cyan"></span>
-                  <strong>Kąt θ(t)</strong>
+                  <strong>θ(t)</strong>
                 </div>
               </td>
-              <td>Funkcja ciągła i gładka</td>
+              <td>Angle</td>
               <td><span class="class-pill c1">C¹</span></td>
-              <td>Ciągła na całej dziedzinie, bez skoków i teleportacji. Ciągła pierwsza pochodna (brak ostrych załamań).</td>
+              <td>{{ t('kinetic.rowAngleDesc') }}</td>
             </tr>
             <tr>
               <td>
                 <div class="fn-badge">
                   <span class="dot-badge emerald"></span>
-                  <strong>Prędkość ω(t)</strong>
+                  <strong>ω(t)</strong>
                 </div>
               </td>
-              <td>Funkcja kawałkami gładka</td>
+              <td>Velocity</td>
               <td><span class="class-pill c0">C⁰</span></td>
-              <td>Ciągła, lecz w momentach impulsów posiada punkty nieróżniczkowalności (ostrza / załamania).</td>
+              <td>{{ t('kinetic.rowVelDesc') }}</td>
             </tr>
             <tr>
               <td>
                 <div class="fn-badge">
                   <span class="dot-badge amber"></span>
-                  <strong>Przyspieszenie α(t)</strong>
+                  <strong>α(t)</strong>
                 </div>
               </td>
-              <td>Funkcja nieciągła (przedziałami ciągła)</td>
-              <td><span class="class-pill disc">Skokowa</span></td>
-              <td>Posiada nieciągłości skokowe I rodzaju (jump discontinuities). W momentach impulsów przyspieszenie zmienia się skokowo.</td>
+              <td>Acceleration</td>
+              <td><span class="class-pill disc">Jump</span></td>
+              <td>{{ t('kinetic.rowAccelDesc') }}</td>
             </tr>
             <tr>
               <td>
                 <div class="fn-badge">
                   <span class="dot-badge pink"></span>
-                  <strong>Cel θ_target(t)</strong>
+                  <strong>θ_target(t)</strong>
                 </div>
               </td>
-              <td>Funkcja schodkowa</td>
+              <td>Target</td>
               <td><span class="class-pill step">Heaviside</span></td>
-              <td>Suma skoków jednostkowych Heaviside'a Θ(t). Zadana orientacja przeskakuje natychmiast o kwant kąta.</td>
+              <td>{{ t('kinetic.rowTargetDesc') }}</td>
             </tr>
             <tr>
               <td>
                 <div class="fn-badge">
                   <span class="dot-badge purple"></span>
-                  <strong>Zryw j(t) & Impulsy</strong>
+                  <strong>j(t) & δ(t)</strong>
                 </div>
               </td>
-              <td>Pochodna przyspieszenia / Impuls Diraca</td>
+              <td>Jerk & Dirac</td>
               <td><span class="class-pill dirac">δ(t)</span></td>
-              <td>W punktach uskoków przyspieszenia zryw (jerk) dąży do nieskończoności, modelowany jako impulsy Diraca.</td>
+              <td>{{ t('kinetic.rowJerkDesc') }}</td>
             </tr>
           </tbody>
         </table>
@@ -1003,23 +1003,20 @@ isMoving - Boolean motion status ref
       <div class="timing-modes-grid">
         <div class="mode-card">
           <div class="mode-header">
-            <span class="mode-badge">Proportional</span>
+            <span class="mode-badge">{{ t('kinetic.timingModeProp') }}</span>
             <span class="mode-formula font-mono">v ≈ const (ω ≈ const)</span>
           </div>
           <p class="mode-desc">
-            Ruch <strong>izokinetyczny</strong>. Czas trwania animacji skaluje się proporcjonalnie do odległości kątowej:
-            <code class="font-mono">T ∝ |Δθ|</code>. Prędkość kątowa pozostaje stała, więc dłuższy obrót trwa odpowiednio dłużej.
+            {{ t('kinetic.isokineticDesc') }}
           </p>
         </div>
         <div class="mode-card">
           <div class="mode-header">
-            <span class="mode-badge isochronous">Fixed Duration</span>
+            <span class="mode-badge isochronous">{{ t('kinetic.timingModeFixed') }}</span>
             <span class="mode-formula font-mono">T = const (1T)</span>
           </div>
           <p class="mode-desc">
-            Ruch <strong>izochroniczny</strong>. Każdy impuls kończy się dokładnie po upływie stałego czasu bazowego:
-            <code class="font-mono">t_end = now + T</code>. Prędkość kątowa skaluje się z dystansem:
-            <code class="font-mono">ω ∝ |Δθ|</code>.
+            {{ t('kinetic.isochronousDesc') }}
           </p>
         </div>
       </div>

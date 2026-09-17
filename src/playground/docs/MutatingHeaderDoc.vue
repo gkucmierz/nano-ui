@@ -1,6 +1,7 @@
 <script setup>
 import { ref } from 'vue';
 import MutatingHeader from '../../components/MutatingHeader.vue';
+import { t } from '../../locales.js';
 
 const isHeaderStuck = ref(false);
 const thresholdVal = ref(24);
@@ -9,8 +10,8 @@ const hysteresisVal = ref(8);
 
 <template>
   <div class="doc-page">
-    <h2>MutatingHeader Component</h2>
-    <p>A reactive, high-performance adaptive sticky navbar that floats as an elevated card when at the top of the view, and smoothly morphs (via cubic-bezier easing) into a seamless edge-to-edge docked bar as the user scrolls.</p>
+    <h2>{{ t('mutatingHeader.title') }}</h2>
+    <p>{{ t('mutatingHeader.desc') }}</p>
 
     <div class="demo-section">
       <h3>Interactive Scroll Simulation</h3>
@@ -65,27 +66,27 @@ const hysteresisVal = ref(8);
     </div>
 
     <div class="api-reference">
-      <h3>API Reference</h3>
-      <pre><code>// Props
-threshold: Number (default: 24) - Scroll distance in px to trigger docking
-hysteresis: Number (default: 8) - Scroll distance in px below which header undocks
-scrollContainer: String | HTMLElement (default: null -> window) - Target scroller
-height: String (default: '60px') - Height of header
-floatingMargin: String (default: '12px 24px 0 24px') - Top/side margin when floating
-floatingRadius: String (default: '16px') - Corner radius when floating
-glassmorphism: Boolean (default: true) - Backdrop blur effect
-stuck: Boolean (v-model:stuck) - Two-way controlled docking state
+      <h3>{{ t('common.apiReference') }}</h3>
+      <pre><code>// {{ t('common.props') }}
+threshold: Number (default: 24) - {{ t('mutatingHeader.props.threshold') }}
+hysteresis: Number (default: 8) - {{ t('mutatingHeader.props.hysteresis') }}
+scrollContainer: String | HTMLElement (default: null -> window) - {{ t('mutatingHeader.props.scrollContainer') }}
+height: String (default: '60px') - {{ t('mutatingHeader.props.height') }}
+floatingMargin: String (default: '12px 24px 0 24px') - {{ t('mutatingHeader.props.floatingMargin') }}
+floatingRadius: String (default: '16px') - {{ t('mutatingHeader.props.floatingRadius') }}
+glassmorphism: Boolean (default: true) - {{ t('mutatingHeader.props.glassmorphism') }}
+stuck: Boolean (v-model:stuck) - {{ t('mutatingHeader.props.stuck') }}
 
-// Slots
-#left - Brand, logo, back buttons
-#center - Search inputs, telemetry metrics, tabs
-#right - Actions, buttons, avatars, theme toggles
-#default - Full custom layout fallback
+// {{ t('common.slots') }}
+#left - {{ t('mutatingHeader.slots.left') }}
+#center - {{ t('mutatingHeader.slots.center') }}
+#right - {{ t('mutatingHeader.slots.right') }}
+#default - {{ t('mutatingHeader.slots.default') }}
 
-// Events
-@update:stuck - Emits boolean docking state
-@stuck - Emitted when docking activates
-@unstick - Emitted when header returns to floating card</code></pre>
+// {{ t('common.events') }}
+@update:stuck - {{ t('mutatingHeader.events.updateStuck') }}
+@stuck - {{ t('mutatingHeader.events.stuck') }}
+@unstick - {{ t('mutatingHeader.events.unstick') }}</code></pre>
     </div>
   </div>
 </template>

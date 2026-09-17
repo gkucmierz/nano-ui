@@ -1,6 +1,7 @@
 <script setup>
 import { ref, onMounted, onUnmounted } from 'vue';
 import pkg from '../../package.json';
+import { currentLang, toggleLang, t } from '../locales.js';
 import './playground.css';
 
 const version = pkg.version;
@@ -89,74 +90,79 @@ onUnmounted(() => {
             </div>
           </div>
         </router-link>
-        <button class="theme-toggle desktop-toggle" @click="toggleTheme" aria-label="Toggle theme" v-tooltip="'Toggle Theme (L)'">
-          <svg v-if="isDark" class="theme-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <circle cx="12" cy="12" r="5"></circle>
-            <line x1="12" y1="1" x2="12" y2="3"></line>
-            <line x1="12" y1="21" x2="12" y2="23"></line>
-            <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
-            <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
-            <line x1="1" y1="12" x2="3" y2="12"></line>
-            <line x1="21" y1="12" x2="23" y2="12"></line>
-            <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
-            <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
-          </svg>
-          <svg v-else class="theme-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
-          </svg>
-        </button>
+        <div class="header-controls desktop-toggle">
+          <button class="lang-toggle-btn" @click="toggleLang" :aria-label="t('common.toggleLang')" v-tooltip="t('common.toggleLang')">
+            {{ currentLang.toUpperCase() }}
+          </button>
+          <button class="theme-toggle" @click="toggleTheme" :aria-label="t('common.toggleTheme')" v-tooltip="t('common.toggleTheme')">
+            <svg v-if="isDark" class="theme-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="5"></circle>
+              <line x1="12" y1="1" x2="12" y2="3"></line>
+              <line x1="12" y1="21" x2="12" y2="23"></line>
+              <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+              <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+              <line x1="1" y1="12" x2="3" y2="12"></line>
+              <line x1="21" y1="12" x2="23" y2="12"></line>
+              <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+              <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+            </svg>
+            <svg v-else class="theme-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+            </svg>
+          </button>
+        </div>
       </div>
       
       <nav class="sidebar-nav">
         <div class="nav-section">
-          <h3>Directives</h3>
-          <router-link to="/docs/ripple" class="nav-link" active-class="active" v-tooltip="isNarrow ? 'v-ripple' : undefined">
+          <h3>{{ t('nav.directives') }}</h3>
+          <router-link to="/docs/ripple" class="nav-link" active-class="active" v-tooltip="isNarrow ? t('nav.ripple') : undefined">
             <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <circle cx="12" cy="12" r="9"/>
               <circle cx="12" cy="12" r="5"/>
               <circle cx="12" cy="12" r="1"/>
             </svg>
-            <span class="nav-label">v-ripple</span>
+            <span class="nav-label">{{ t('nav.ripple') }}</span>
           </router-link>
-          <router-link to="/docs/tooltip" class="nav-link" active-class="active" v-tooltip="isNarrow ? 'v-tooltip' : undefined">
+          <router-link to="/docs/tooltip" class="nav-link" active-class="active" v-tooltip="isNarrow ? t('nav.tooltip') : undefined">
             <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
             </svg>
-            <span class="nav-label">v-tooltip</span>
+            <span class="nav-label">{{ t('nav.tooltip') }}</span>
           </router-link>
         </div>
         <div class="nav-section">
-          <h3>Components</h3>
-          <router-link to="/docs/kinetic" class="nav-link" active-class="active" v-tooltip="isNarrow ? 'KineticRotator' : undefined">
+          <h3>{{ t('nav.components') }}</h3>
+          <router-link to="/docs/kinetic" class="nav-link" active-class="active" v-tooltip="isNarrow ? t('nav.rotator') : undefined">
             <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.8 1.04 6.44 2.73L21 8"/>
               <polyline points="21 3 21 8 16 8"/>
             </svg>
-            <span class="nav-label">KineticRotator</span>
+            <span class="nav-label">{{ t('nav.rotator') }}</span>
           </router-link>
-          <router-link to="/docs/switch" class="nav-link" active-class="active" v-tooltip="isNarrow ? 'NanoSwitch' : undefined">
+          <router-link to="/docs/switch" class="nav-link" active-class="active" v-tooltip="isNarrow ? t('nav.switch') : undefined">
             <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <rect x="1" y="5" width="22" height="14" rx="7"/>
               <circle cx="16" cy="12" r="3"/>
             </svg>
-            <span class="nav-label">NanoSwitch</span>
+            <span class="nav-label">{{ t('nav.switch') }}</span>
           </router-link>
-          <router-link to="/docs/modal" class="nav-link" active-class="active" v-tooltip="isNarrow ? 'NanoModal' : undefined">
+          <router-link to="/docs/modal" class="nav-link" active-class="active" v-tooltip="isNarrow ? t('nav.modal') : undefined">
             <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <rect x="3" y="3" width="18" height="18" rx="2"/>
               <line x1="3" y1="9" x2="21" y2="9"/>
               <line x1="9" y1="21" x2="9" y2="9"/>
             </svg>
-            <span class="nav-label">NanoModal</span>
+            <span class="nav-label">{{ t('nav.modal') }}</span>
           </router-link>
-          <router-link to="/docs/3d-donut-chart" class="nav-link" active-class="active" v-tooltip="isNarrow ? 'ThreeDDonutChart' : undefined">
+          <router-link to="/docs/3d-donut-chart" class="nav-link" active-class="active" v-tooltip="isNarrow ? t('nav.donut') : undefined">
             <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <path d="M21.21 15.89A10 10 0 1 1 8 2.83"/>
               <path d="M22 12A10 10 0 0 0 12 2v10z"/>
             </svg>
-            <span class="nav-label">ThreeDDonutChart</span>
+            <span class="nav-label">{{ t('nav.donut') }}</span>
           </router-link>
-          <router-link to="/docs/precision-scrubber" class="nav-link" active-class="active" v-tooltip="isNarrow ? 'PrecisionScrubber' : undefined">
+          <router-link to="/docs/precision-scrubber" class="nav-link" active-class="active" v-tooltip="isNarrow ? t('nav.scrubber') : undefined">
             <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <line x1="4" y1="21" x2="4" y2="14"/>
               <line x1="4" y1="10" x2="4" y2="3"/>
@@ -168,29 +174,32 @@ onUnmounted(() => {
               <line x1="9" y1="8" x2="15" y2="8"/>
               <line x1="17" y1="16" x2="23" y2="16"/>
             </svg>
-            <span class="nav-label">PrecisionScrubber</span>
+            <span class="nav-label">{{ t('nav.scrubber') }}</span>
           </router-link>
-          <router-link to="/docs/topology-radar" class="nav-link" active-class="active" v-tooltip="isNarrow ? 'TopologyRadar' : undefined">
+          <router-link to="/docs/topology-radar" class="nav-link" active-class="active" v-tooltip="isNarrow ? t('nav.radar') : undefined">
             <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <circle cx="12" cy="12" r="10"/>
               <circle cx="12" cy="12" r="6"/>
               <line x1="12" y1="2" x2="12" y2="22"/>
               <line x1="2" y1="12" x2="22" y2="12"/>
             </svg>
-            <span class="nav-label">TopologyRadar</span>
+            <span class="nav-label">{{ t('nav.radar') }}</span>
           </router-link>
-          <router-link to="/docs/mutating-header" class="nav-link" active-class="active" v-tooltip="isNarrow ? 'MutatingHeader' : undefined">
+          <router-link to="/docs/mutating-header" class="nav-link" active-class="active" v-tooltip="isNarrow ? t('nav.mutatingHeader') : undefined">
             <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <rect x="2" y="4" width="20" height="6" rx="2"/>
               <rect x="2" y="14" width="20" height="6" rx="2"/>
             </svg>
-            <span class="nav-label">MutatingHeader</span>
+            <span class="nav-label">{{ t('nav.mutatingHeader') }}</span>
           </router-link>
         </div>
       </nav>
 
       <div class="sidebar-footer">
-        <button class="theme-toggle mobile-toggle" @click="toggleTheme" aria-label="Toggle theme" v-tooltip="'Toggle Theme (L)'">
+        <button class="lang-toggle-btn mobile-toggle" @click="toggleLang" :aria-label="t('common.toggleLang')" v-tooltip="t('common.toggleLang')">
+          {{ currentLang.toUpperCase() }}
+        </button>
+        <button class="theme-toggle mobile-toggle" @click="toggleTheme" :aria-label="t('common.toggleTheme')" v-tooltip="t('common.toggleTheme')">
           <svg v-if="isDark" class="theme-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <circle cx="12" cy="12" r="5"></circle>
             <line x1="12" y1="1" x2="12" y2="3"></line>
@@ -212,7 +221,7 @@ onUnmounted(() => {
     <main class="content">
       <div class="content-header">
         <h1>Playground</h1>
-        <p>Testing ground for all library components and directives.</p>
+        <p>{{ t('app.playgroundDesc') }}</p>
       </div>
       
       <div class="component-section">
