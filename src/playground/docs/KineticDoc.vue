@@ -12,14 +12,29 @@ const rotatorRef = ref(null);
 const activeVisual = ref('cat'); // 'cat' | 'banana' | 'logo'
 const baseDuration = ref(1000); // 1000ms default
 const isShortestPath = ref(true);
+const timingMode = ref('proportional'); // 'proportional' | 'fixed'
+const inertiaThreshold = ref(0.25); // seconds of momentum bias
+
+// Units state: 'deg' | 'rad' | 'turn'
+const selectedUnit = ref('deg');
+
+// Waveform channels visibility
+const showAngle = ref(true);
+const showVelocity = ref(true);
+const showAcceleration = ref(true);
 
 // Realtime Telemetry state
 const currentAngle = ref(0);
 const targetAngle = ref(0);
 const velocity = ref(0);
+const acceleration = ref(0);
 const isMoving = ref(false);
 const initialV0 = ref(0);
 const clickEvents = ref([]);
+
+// Motion timing tracking
+const motionStartTime = ref(null);
+const liveElapsedSec = ref(0);
 
 // Rolling buffer for waveform graph
 const MAX_SAMPLES = 200;
@@ -42,13 +57,66 @@ const normalizedTarget = computed(() => {
   return ((targetAngle.value % 360) + 360) % 360;
 });
 
+const cumulativeTurns = computed(() => {
+  return targetAngle.value / 360;
+});
+
+// Unit conversion helpers
+const formatAngle = (deg, unit = selectedUnit.value, decimals = 1) => {
+  if (unit === 'rad') {
+    const rad = (deg * Math.PI) / 180;
+    return `${rad.toFixed(decimals + 1)} rad`;
+  }
+  if (unit === 'turn') {
+    const turn = deg / 360;
+    return `${turn.toFixed(decimals + 1)} turn`;
+  }
+  return `${deg.toFixed(decimals)}°`;
+};
+
+const formatVelocity = (degPerSec, unit = selectedUnit.value, decimals = 0) => {
+  if (unit === 'rad') {
+    const rad = (degPerSec * Math.PI) / 180;
+    return `${rad.toFixed(1)} rad/s`;
+  }
+  if (unit === 'turn') {
+    const turn = degPerSec / 360;
+    return `${turn.toFixed(2)} turn/s`;
+  }
+  return `${degPerSec.toFixed(decimals)}°/s`;
+};
+
+const formatAcceleration = (degPerSec2, unit = selectedUnit.value, decimals = 0) => {
+  if (unit === 'rad') {
+    const rad = (degPerSec2 * Math.PI) / 180;
+    return `${rad.toFixed(1)} rad/s²`;
+  }
+  if (unit === 'turn') {
+    const turn = degPerSec2 / 360;
+    return `${turn.toFixed(2)} turn/s²`;
+  }
+  return `${degPerSec2.toFixed(decimals)}°/s²`;
+};
+
 // Telemetry frame handler emitted by KineticRotator on each rAF
 const onKineticFrame = (data) => {
   currentAngle.value = data.currentAngle;
   targetAngle.value = data.targetAngle;
   velocity.value = data.velocity;
+  acceleration.value = data.acceleration || 0;
   isMoving.value = data.isMoving;
   initialV0.value = data.v0;
+
+  if (data.isMoving) {
+    if (motionStartTime.value === null) {
+      motionStartTime.value = data.timestamp;
+    }
+    liveElapsedSec.value = Math.max(0, (data.timestamp - motionStartTime.value) / 1000);
+  } else {
+    // Settled: reset timer to 0 so it doesn't run to infinity
+    motionStartTime.value = null;
+    liveElapsedSec.value = 0;
+  }
 
   const sample = {
     time: data.timestamp,
@@ -57,6 +125,7 @@ const onKineticFrame = (data) => {
     rawAngle: data.currentAngle,
     rawTarget: data.targetAngle,
     vel: data.velocity,
+    acc: data.acceleration || 0,
     isMoving: data.isMoving
   };
 
@@ -66,11 +135,21 @@ const onKineticFrame = (data) => {
   }
 };
 
+const onSettled = () => {
+  motionStartTime.value = null;
+  liveElapsedSec.value = 0;
+};
+
 // Record click event for timeline markers
 const registerClickEvent = (label) => {
   const now = performance.now();
+  if (!isMoving.value || motionStartTime.value === null) {
+    motionStartTime.value = now;
+  }
+  const relTime = Math.max(0, (now - motionStartTime.value) / 1000);
   clickEvents.value.push({
     time: now,
+    relTime,
     label
   });
 
@@ -105,6 +184,20 @@ const triggerSpam = () => {
   }, 360);
 };
 
+const triggerInertiaTest = () => {
+  registerClickEvent('179° + 180°');
+  if (!rotatorRef.value) return;
+  // Step 1: Rotate quickly toward 179°
+  rotatorRef.value.setAngle(179);
+  // Step 2: Trigger +180° mid-motion
+  setTimeout(() => {
+    if (rotatorRef.value) {
+      registerClickEvent('+180° Burst');
+      rotatorRef.value.rotateBy(180);
+    }
+  }, 160);
+};
+
 const triggerReset = () => {
   registerClickEvent('Reset');
   if (rotatorRef.value) {
@@ -112,49 +205,143 @@ const triggerReset = () => {
   }
   historySamples.value = [];
   clickEvents.value = [];
+  motionStartTime.value = null;
+  liveElapsedSec.value = 0;
 };
 
 // SVG Telemetry Graph rendering math
 const svgWidth = 720;
-const svgHeight = 220;
-const padding = { top: 20, right: 30, bottom: 30, left: 50 };
+const svgHeight = 240;
+const padding = { top: 24, right: 65, bottom: 32, left: 65 };
 const plotWidth = svgWidth - padding.left - padding.right;
 const plotHeight = svgHeight - padding.top - padding.bottom;
 
+// Left Y maps 0° at bottom (plotHeight) to 360° at top (0)
 const mapAngleToY = (deg) => {
-  // Y maps 0° at bottom (plotHeight) to 360° at top (0)
-  const norm = ((deg % 360) + 360) % 360;
-  return padding.top + (1 - norm / 360) * plotHeight;
+  return padding.top + (1 - deg / 360) * plotHeight;
 };
 
-// Generate SVG polyline path for history
+// Dynamic scale limits for velocity and acceleration
+const maxVel = computed(() => {
+  const maxSample = historySamples.value.reduce((acc, p) => Math.max(acc, Math.abs(p.vel || 0)), 0);
+  return Math.max(360, Math.ceil(maxSample / 180) * 180);
+});
+
+const maxAcc = computed(() => {
+  const maxSample = historySamples.value.reduce((acc, p) => Math.max(acc, Math.abs(p.acc || 0)), 0);
+  return Math.max(1200, Math.ceil(maxSample / 600) * 600);
+});
+
+const mapVelToY = (v) => {
+  const norm = Math.max(-1, Math.min(1, v / maxVel.value));
+  return padding.top + (0.5 - norm * 0.5) * plotHeight;
+};
+
+const mapAccToY = (a) => {
+  const norm = Math.max(-1, Math.min(1, a / maxAcc.value));
+  return padding.top + (0.5 - norm * 0.5) * plotHeight;
+};
+
+// Y-Axis Ticks according to selected unit
+const yAxisTicks = computed(() => {
+  if (selectedUnit.value === 'rad') {
+    return [
+      { deg: 360, label: '2π rad' },
+      { deg: 270, label: '1.5π' },
+      { deg: 180, label: 'π' },
+      { deg: 90, label: '0.5π' },
+      { deg: 0, label: '0 rad' }
+    ];
+  }
+  if (selectedUnit.value === 'turn') {
+    return [
+      { deg: 360, label: '1.0 turn' },
+      { deg: 270, label: '0.75' },
+      { deg: 180, label: '0.50' },
+      { deg: 90, label: '0.25' },
+      { deg: 0, label: '0.0 turn' }
+    ];
+  }
+  return [
+    { deg: 360, label: '360°' },
+    { deg: 270, label: '270°' },
+    { deg: 180, label: '180°' },
+    { deg: 90, label: '90°' },
+    { deg: 0, label: '0°' }
+  ];
+});
+
+// Generate SVG polyline paths
 const actualPathD = computed(() => {
   const pts = historySamples.value;
   if (pts.length < 2) return '';
 
-  return pts.map((pt, idx) => {
-    const x = padding.left + (idx / (MAX_SAMPLES - 1)) * plotWidth;
-    const y = mapAngleToY(pt.angle);
-    return `${idx === 0 ? 'M' : 'L'} ${x.toFixed(1)} ${y.toFixed(1)}`;
-  }).join(' ');
+  let d = '';
+  for (let i = 0; i < pts.length; i++) {
+    const x = padding.left + (i / (MAX_SAMPLES - 1)) * plotWidth;
+    const y = mapAngleToY(pts[i].angle);
+    if (i === 0) {
+      d += `M ${x.toFixed(1)} ${y.toFixed(1)}`;
+    } else {
+      const prev = pts[i - 1];
+      if (Math.abs(pts[i].angle - prev.angle) > 180) {
+        d += ` M ${x.toFixed(1)} ${y.toFixed(1)}`;
+      } else {
+        d += ` L ${x.toFixed(1)} ${y.toFixed(1)}`;
+      }
+    }
+  }
+  return d;
 });
 
 const targetPathD = computed(() => {
   const pts = historySamples.value;
   if (pts.length < 2) return '';
 
+  let d = '';
+  for (let i = 0; i < pts.length; i++) {
+    const x = padding.left + (i / (MAX_SAMPLES - 1)) * plotWidth;
+    const y = mapAngleToY(pts[i].target);
+    if (i === 0) {
+      d += `M ${x.toFixed(1)} ${y.toFixed(1)}`;
+    } else {
+      const prev = pts[i - 1];
+      if (Math.abs(pts[i].target - prev.target) > 180) {
+        d += ` M ${x.toFixed(1)} ${y.toFixed(1)}`;
+      } else {
+        d += ` L ${x.toFixed(1)} ${y.toFixed(1)}`;
+      }
+    }
+  }
+  return d;
+});
+
+const velPathD = computed(() => {
+  const pts = historySamples.value;
+  if (pts.length < 2) return '';
+
   return pts.map((pt, idx) => {
     const x = padding.left + (idx / (MAX_SAMPLES - 1)) * plotWidth;
-    const y = mapAngleToY(pt.target);
+    const y = mapVelToY(pt.vel || 0);
     return `${idx === 0 ? 'M' : 'L'} ${x.toFixed(1)} ${y.toFixed(1)}`;
   }).join(' ');
 });
 
-// Discrete tick dots on recent points (quantized visualization)
+const accPathD = computed(() => {
+  const pts = historySamples.value;
+  if (pts.length < 2) return '';
+
+  return pts.map((pt, idx) => {
+    const x = padding.left + (idx / (MAX_SAMPLES - 1)) * plotWidth;
+    const y = mapAccToY(pt.acc || 0);
+    return `${idx === 0 ? 'M' : 'L'} ${x.toFixed(1)} ${y.toFixed(1)}`;
+  }).join(' ');
+});
+
+// Discrete tick dots on recent points
 const recentTicks = computed(() => {
   const pts = historySamples.value;
   if (pts.length === 0) return [];
-  // Sample every 4th point or last 30 points to show rAF evaluation ticks
   const stride = Math.max(1, Math.floor(pts.length / 40));
   const dots = [];
   for (let i = 0; i < pts.length; i += stride) {
@@ -180,7 +367,7 @@ const activeMarkers = computed(() => {
     .map(c => {
       const rel = (c.time - minTime) / timeSpan;
       const x = padding.left + rel * plotWidth;
-      return { x, label: c.label };
+      return { x, label: c.label, relTime: c.relTime || 0 };
     });
 });
 
@@ -194,6 +381,7 @@ onMounted(() => {
         currentAngle: currentAngle.value,
         targetAngle: targetAngle.value,
         velocity: 0,
+        acceleration: 0,
         progress: 1,
         isMoving: false,
         v0: 0,
@@ -258,8 +446,11 @@ onUnmounted(() => {
             ref="rotatorRef"
             :duration="baseDuration"
             :shortest-path="isShortestPath"
+            :timing-mode="timingMode"
+            :inertia-threshold="inertiaThreshold"
             :size="240"
             @frame="onKineticFrame"
+            @settled="onSettled"
           >
             <InstaCatCanvas v-if="activeVisual === 'cat'" :size="240" />
             <NanoBanana v-else-if="activeVisual === 'banana'" :size="240" />
@@ -271,25 +462,36 @@ onUnmounted(() => {
         <div class="angle-badge-strip">
           <div class="badge-item">
             <span class="badge-label">CURRENT</span>
-            <span class="badge-val active">{{ Math.round(normalizedAngle) }}°</span>
+            <span class="badge-val active">{{ formatAngle(normalizedAngle, selectedUnit, 1) }}</span>
           </div>
           <div class="badge-divider"></div>
           <div class="badge-item">
             <span class="badge-label">TARGET</span>
-            <span class="badge-val target">{{ Math.round(normalizedTarget) }}°</span>
+            <span class="badge-val target">{{ formatAngle(normalizedTarget, selectedUnit, 1) }}</span>
           </div>
           <div class="badge-divider"></div>
           <div class="badge-item">
-            <span class="badge-label">VELOCITY</span>
-            <span class="badge-val">{{ Math.round(velocity) }}°/s</span>
+            <span class="badge-label">VELOCITY (ω)</span>
+            <span class="badge-val vel">{{ formatVelocity(velocity, selectedUnit, 0) }}</span>
+          </div>
+          <div class="badge-divider"></div>
+          <div class="badge-item">
+            <span class="badge-label">ACCEL (α)</span>
+            <span class="badge-val acc">{{ formatAcceleration(acceleration, selectedUnit, 0) }}</span>
           </div>
           <div class="badge-divider"></div>
           <div class="badge-item">
             <span class="badge-label">STATUS</span>
             <span class="badge-val status" :class="{ moving: isMoving }">
-              {{ isMoving ? 'IN MOTION' : 'SETTLED' }}
+              {{ isMoving ? `IN MOTION (${liveElapsedSec.toFixed(2)}s)` : 'SETTLED' }}
             </span>
           </div>
+        </div>
+
+        <!-- Cumulative Revolutions Banner (shown when non-modular or >1 cycle) -->
+        <div v-if="!isShortestPath && Math.abs(targetAngle) >= 360" class="cumulative-banner">
+          <span class="cum-label">Cumulative Revolutions:</span>
+          <span class="cum-val">{{ cumulativeTurns.toFixed(2) }} turns ({{ targetAngle.toFixed(0) }}°)</span>
         </div>
       </div>
 
@@ -297,39 +499,110 @@ onUnmounted(() => {
       <div class="controls-card">
         <h3 class="panel-title">Kinetic Controls</h3>
 
+        <!-- Angular Units Switcher -->
+        <div class="control-group">
+          <label class="group-label">
+            <span>Angular Units</span>
+            <span class="unit-indicator">{{ selectedUnit.toUpperCase() }}</span>
+          </label>
+          <div class="preset-pills">
+            <button
+              type="button"
+              class="preset-pill"
+              :class="{ active: selectedUnit === 'deg' }"
+              @click="selectedUnit = 'deg'"
+              v-ripple
+            >
+              Degrees (°)
+            </button>
+            <button
+              type="button"
+              class="preset-pill"
+              :class="{ active: selectedUnit === 'rad' }"
+              @click="selectedUnit = 'rad'"
+              v-ripple
+            >
+              Radians (rad)
+            </button>
+            <button
+              type="button"
+              class="preset-pill"
+              :class="{ active: selectedUnit === 'turn' }"
+              @click="selectedUnit = 'turn'"
+              v-ripple
+            >
+              Turns (turn)
+            </button>
+          </div>
+        </div>
+
+        <!-- Timing Mode Switcher -->
+        <div class="control-group">
+          <label class="group-label">
+            <span>Timing Mode</span>
+            <span class="unit-indicator">{{ timingMode === 'fixed' ? 'Fixed 1T' : 'Proportional' }}</span>
+          </label>
+          <div class="preset-pills">
+            <button
+              type="button"
+              class="preset-pill"
+              :class="{ active: timingMode === 'proportional' }"
+              @click="timingMode = 'proportional'"
+              v-ripple
+            >
+              Proportional (v ~ const)
+            </button>
+            <button
+              type="button"
+              class="preset-pill"
+              :class="{ active: timingMode === 'fixed' }"
+              @click="timingMode = 'fixed'"
+              v-ripple
+            >
+              Fixed 1T (Rubik's Cube)
+            </button>
+          </div>
+        </div>
+
         <!-- Angular Stepping Actions -->
         <div class="control-group">
           <label class="group-label">Step Rotations</label>
           <div class="actions-grid">
-            <button type="button" class="btn btn-action" @click="triggerRotate(90)" v-ripple>
-              +90° CW
+            <button type="button" class="btn btn-action" @click="triggerRotate(90, '+90°')" v-ripple>
+              {{ selectedUnit === 'turn' ? '+0.25 turn' : selectedUnit === 'rad' ? '+0.5π rad' : '+90° CW' }}
             </button>
-            <button type="button" class="btn btn-action" @click="triggerRotate(-90)" v-ripple>
-              -90° CCW
+            <button type="button" class="btn btn-action" @click="triggerRotate(-90, '-90°')" v-ripple>
+              {{ selectedUnit === 'turn' ? '-0.25 turn' : selectedUnit === 'rad' ? '-0.5π rad' : '-90° CCW' }}
             </button>
-            <button type="button" class="btn btn-action" @click="triggerRotate(180)" v-ripple>
-              +180° Flip
+            <button type="button" class="btn btn-action" @click="triggerRotate(180, '+180°')" v-ripple>
+              {{ selectedUnit === 'turn' ? '+0.50 turn' : selectedUnit === 'rad' ? '+π rad' : '+180° Flip' }}
             </button>
             <button
               type="button"
               class="btn btn-action highlight"
-              @click="triggerRotate(450, '+450° (+360+90)')"
+              @click="triggerRotate(450, '+450° (+1.25t)')"
               v-ripple
-              v-tooltip="'Test geodesic modular reduction: queues +360°+90°!'"
             >
-              +450° (+360+90)
+              {{ selectedUnit === 'turn' ? '+1.25 turn' : selectedUnit === 'rad' ? '+2.5π rad' : '+450° (+360+90)' }}
             </button>
             <button
               type="button"
               class="btn btn-action warning"
               @click="triggerSpam"
               v-ripple
-              v-tooltip="'Sends 4 quick +90° bursts to test velocity preservation'"
             >
               ⚡ Spam 4x
             </button>
+            <button
+              type="button"
+              class="btn btn-action inertia-btn"
+              @click="triggerInertiaTest"
+              v-ripple
+            >
+              🎯 179° + 180°
+            </button>
             <button type="button" class="btn btn-reset" @click="triggerReset" v-ripple>
-              Reset (0°)
+              Reset
             </button>
           </div>
         </div>
@@ -365,6 +638,52 @@ onUnmounted(() => {
           </div>
           <NanoSwitch v-model="isShortestPath" size="compact" color="cyan" />
         </div>
+
+        <!-- Inertia Reversal Threshold -->
+        <div class="control-group" v-if="isShortestPath">
+          <label class="group-label">
+            <span>Inertia Reversal Threshold</span>
+            <span class="unit-indicator">{{ inertiaThreshold > 0 ? `${inertiaThreshold}s` : 'Disabled (Strict)' }}</span>
+          </label>
+          <div class="preset-pills">
+            <button
+              type="button"
+              class="preset-pill"
+              :class="{ active: inertiaThreshold === 0 }"
+              @click="inertiaThreshold = 0"
+              v-ripple
+            >
+              0.0s (Strict)
+            </button>
+            <button
+              type="button"
+              class="preset-pill"
+              :class="{ active: inertiaThreshold === 0.15 }"
+              @click="inertiaThreshold = 0.15"
+              v-ripple
+            >
+              0.15s
+            </button>
+            <button
+              type="button"
+              class="preset-pill"
+              :class="{ active: inertiaThreshold === 0.25 }"
+              @click="inertiaThreshold = 0.25"
+              v-ripple
+            >
+              0.25s (Default)
+            </button>
+            <button
+              type="button"
+              class="preset-pill"
+              :class="{ active: inertiaThreshold === 0.4 }"
+              @click="inertiaThreshold = 0.4"
+              v-ripple
+            >
+              0.40s (High)
+            </button>
+          </div>
+        </div>
       </div>
     </div>
 
@@ -373,17 +692,28 @@ onUnmounted(() => {
       <div class="telemetry-header">
         <div class="title-wrap">
           <h3>Real-Time Kinematic Waveform</h3>
-          <span class="telemetry-desc">Y = Angle (0°–360°), X = Rolling Time Buffer (rAF quantized discrete frames)</span>
+          <span class="telemetry-desc">
+            Left Y = Angle θ ({{ selectedUnit }}), Right Y = Velocity ω & Accel α, X = Rolling Time Buffer
+          </span>
         </div>
         <div class="legend-wrap">
+          <label class="legend-channel">
+            <input type="checkbox" v-model="showAngle" class="channel-check" />
+            <span class="legend-line solid cyan"></span>
+            <span class="ch-name">Angle θ</span>
+          </label>
+          <label class="legend-channel">
+            <input type="checkbox" v-model="showVelocity" class="channel-check" />
+            <span class="legend-line solid emerald"></span>
+            <span class="ch-name">Velocity ω</span>
+          </label>
+          <label class="legend-channel">
+            <input type="checkbox" v-model="showAcceleration" class="channel-check" />
+            <span class="legend-line dashed amber"></span>
+            <span class="ch-name">Accel α</span>
+          </label>
           <span class="legend-item target">
-            <span class="legend-line dashed"></span> Target Input
-          </span>
-          <span class="legend-item actual">
-            <span class="legend-line solid"></span> Actual Angle
-          </span>
-          <span class="legend-item dots">
-            <span class="legend-dot"></span> rAF Quantized Ticks
+            <span class="legend-line dashed pink"></span> Target
           </span>
         </div>
       </div>
@@ -391,40 +721,140 @@ onUnmounted(() => {
       <!-- Waveform SVG Container -->
       <div class="waveform-card">
         <svg :viewBox="`0 0 ${svgWidth} ${svgHeight}`" class="telemetry-svg">
-          <!-- Horizontal 90° Grid Lines -->
+          <!-- Horizontal Grid Lines based on yAxisTicks -->
           <g class="grid-lines">
-            <line :x1="padding.left" :y1="mapAngleToY(0)" :x2="svgWidth - padding.right" :y2="mapAngleToY(0)" stroke="var(--nano-border-subtle, rgba(255,255,255,0.08))" stroke-width="1" />
-            <line :x1="padding.left" :y1="mapAngleToY(90)" :x2="svgWidth - padding.right" :y2="mapAngleToY(90)" stroke="var(--nano-border-subtle, rgba(255,255,255,0.08))" stroke-width="1" stroke-dasharray="3 3" />
-            <line :x1="padding.left" :y1="mapAngleToY(180)" :x2="svgWidth - padding.right" :y2="mapAngleToY(180)" stroke="var(--nano-border-subtle, rgba(255,255,255,0.08))" stroke-width="1" stroke-dasharray="3 3" />
-            <line :x1="padding.left" :y1="mapAngleToY(270)" :x2="svgWidth - padding.right" :y2="mapAngleToY(270)" stroke="var(--nano-border-subtle, rgba(255,255,255,0.08))" stroke-width="1" stroke-dasharray="3 3" />
-            <line :x1="padding.left" :y1="mapAngleToY(360)" :x2="svgWidth - padding.right" :y2="mapAngleToY(360)" stroke="var(--nano-border-subtle, rgba(255,255,255,0.08))" stroke-width="1" />
+            <line
+              v-for="tick in yAxisTicks"
+              :key="tick.deg"
+              :x1="padding.left"
+              :y1="mapAngleToY(tick.deg)"
+              :x2="svgWidth - padding.right"
+              :y2="mapAngleToY(tick.deg)"
+              stroke="var(--nano-border-subtle, rgba(255,255,255,0.08))"
+              :stroke-width="tick.deg === 0 || tick.deg === 360 ? 1.2 : 0.8"
+              :stroke-dasharray="tick.deg === 0 || tick.deg === 360 ? 'none' : '3 3'"
+            />
+            <!-- Zero reference line for velocity & acceleration -->
+            <line
+              v-if="showVelocity || showAcceleration"
+              :x1="padding.left"
+              :y1="padding.top + 0.5 * plotHeight"
+              :x2="svgWidth - padding.right"
+              :y2="padding.top + 0.5 * plotHeight"
+              stroke="rgba(16, 185, 129, 0.3)"
+              stroke-width="1"
+              stroke-dasharray="2 4"
+            />
           </g>
 
-          <!-- Y-Axis Labels -->
+          <!-- Left Y-Axis Labels (Angle θ) -->
           <g class="axis-labels" font-family="monospace" font-size="10" fill="var(--nano-text-muted, #94a3b8)">
-            <text :x="padding.left - 8" :y="mapAngleToY(360) + 4" text-anchor="end">360°</text>
-            <text :x="padding.left - 8" :y="mapAngleToY(270) + 4" text-anchor="end">270°</text>
-            <text :x="padding.left - 8" :y="mapAngleToY(180) + 4" text-anchor="end">180°</text>
-            <text :x="padding.left - 8" :y="mapAngleToY(90) + 4" text-anchor="end">90°</text>
-            <text :x="padding.left - 8" :y="mapAngleToY(0) + 4" text-anchor="end">0°</text>
+            <text
+              v-for="tick in yAxisTicks"
+              :key="tick.deg"
+              :x="padding.left - 8"
+              :y="mapAngleToY(tick.deg) + 4"
+              text-anchor="end"
+            >
+              {{ tick.label }}
+            </text>
           </g>
 
-          <!-- Vertical Click Markers -->
+          <!-- Right Y-Axis Labels (Velocity ω scale) -->
+          <g v-if="showVelocity" class="axis-labels" font-family="monospace" font-size="9" fill="#10b981">
+            <text :x="svgWidth - padding.right + 8" :y="padding.top + 10" text-anchor="start">
+              +{{ formatVelocity(maxVel, selectedUnit, 0) }}
+            </text>
+            <text :x="svgWidth - padding.right + 8" :y="padding.top + 0.5 * plotHeight + 3" text-anchor="start">
+              0
+            </text>
+            <text :x="svgWidth - padding.right + 8" :y="svgHeight - padding.bottom" text-anchor="start">
+              -{{ formatVelocity(maxVel, selectedUnit, 0) }}
+            </text>
+          </g>
+
+          <!-- Vertical Click Markers (Dirac Impulses) with Captured Timestamp -->
           <g class="click-markers" v-for="(marker, idx) in activeMarkers" :key="idx">
-            <line :x1="marker.x" :y1="padding.top" :x2="marker.x" :y2="svgHeight - padding.bottom" stroke="var(--nano-accent-secondary, #ec4899)" stroke-width="1.2" stroke-dasharray="2 4" opacity="0.8" />
-            <text :x="marker.x + 3" :y="padding.top + 12" font-family="monospace" font-size="9" font-weight="700" fill="var(--nano-accent-secondary, #ec4899)">
+            <line
+              :x1="marker.x"
+              :y1="padding.top"
+              :x2="marker.x"
+              :y2="svgHeight - padding.bottom"
+              stroke="var(--nano-accent-secondary, #ec4899)"
+              stroke-width="1.2"
+              stroke-dasharray="2 4"
+              opacity="0.85"
+            />
+            <text
+              :x="marker.x + 3"
+              :y="padding.top + 12"
+              font-family="monospace"
+              font-size="9"
+              font-weight="700"
+              fill="var(--nano-accent-secondary, #ec4899)"
+            >
               {{ marker.label }}
+            </text>
+            <text
+              :x="marker.x + 3"
+              :y="svgHeight - padding.bottom - 4"
+              font-family="monospace"
+              font-size="8.5"
+              fill="var(--nano-accent-secondary, #ec4899)"
+              opacity="0.9"
+            >
+              +{{ marker.relTime.toFixed(2) }}s
             </text>
           </g>
 
           <!-- Target Trajectory (Dashed step) -->
-          <path :d="targetPathD" fill="none" stroke="var(--nano-accent-secondary, #ec4899)" stroke-width="1.8" stroke-dasharray="4 4" opacity="0.85" />
+          <path
+            v-if="showAngle"
+            :d="targetPathD"
+            fill="none"
+            stroke="var(--nano-accent-secondary, #ec4899)"
+            stroke-width="1.8"
+            stroke-dasharray="4 4"
+            opacity="0.85"
+          />
 
-          <!-- Smooth Actual Kinetic Trajectory (Neon Curve) -->
-          <path :d="actualPathD" fill="none" stroke="var(--nano-state-active, #00f2fe)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" />
+          <!-- Acceleration Curve (2nd Derivative, Amber) -->
+          <path
+            v-if="showAcceleration"
+            :d="accPathD"
+            fill="none"
+            stroke="#f59e0b"
+            stroke-width="1.8"
+            stroke-dasharray="4 2"
+            opacity="0.9"
+            stroke-linecap="round"
+          />
+
+          <!-- Velocity Curve (1st Derivative, Emerald) -->
+          <path
+            v-if="showVelocity"
+            :d="velPathD"
+            fill="none"
+            stroke="#10b981"
+            stroke-width="2.2"
+            opacity="0.95"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          />
+
+          <!-- Smooth Actual Kinetic Trajectory (Neon Curve, Cyan) -->
+          <path
+            v-if="showAngle"
+            :d="actualPathD"
+            fill="none"
+            stroke="var(--nano-state-active, #00f2fe)"
+            stroke-width="2.5"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          />
 
           <!-- Discrete Evaluation Frame Dots (rAF quantization) -->
-          <g class="tick-dots">
+          <g v-if="showAngle" class="tick-dots">
             <circle
               v-for="(dot, dIdx) in recentTicks"
               :key="dIdx"
@@ -437,7 +867,7 @@ onUnmounted(() => {
           </g>
 
           <!-- Current Live Position Reticle -->
-          <g v-if="historySamples.length > 0">
+          <g v-if="showAngle && historySamples.length > 0">
             <circle
               :cx="padding.left + plotWidth"
               :cy="mapAngleToY(normalizedAngle)"
@@ -459,20 +889,29 @@ onUnmounted(() => {
         <!-- Live Telemetry Footer Bar -->
         <div class="waveform-footer">
           <div class="foot-col">
-            <span class="foot-lbl">Instantaneous Angle</span>
-            <span class="foot-val font-mono">{{ currentAngle.toFixed(1) }}° (mod {{ Math.round(normalizedAngle) }}°)</span>
+            <span class="foot-lbl">Instantaneous Angle θ</span>
+            <span class="foot-val font-mono">
+              {{ formatAngle(currentAngle, selectedUnit, 1) }}
+              <span class="foot-sub">({{ formatAngle(normalizedAngle, selectedUnit, 1) }} mod)</span>
+            </span>
           </div>
           <div class="foot-col">
-            <span class="foot-lbl">Initial Velocity (v₀)</span>
-            <span class="foot-val font-mono">{{ initialV0.toFixed(3) }}</span>
+            <span class="foot-lbl">Angular Velocity ω (θ')</span>
+            <span class="foot-val font-mono vel-val">
+              {{ formatVelocity(velocity, selectedUnit, 1) }}
+            </span>
           </div>
           <div class="foot-col">
-            <span class="foot-lbl">Angular Speed</span>
-            <span class="foot-val font-mono">{{ Math.abs(velocity).toFixed(1) }}°/s</span>
+            <span class="foot-lbl">Angular Accel α (θ'')</span>
+            <span class="foot-val font-mono acc-val">
+              {{ formatAcceleration(acceleration, selectedUnit, 0) }}
+            </span>
           </div>
           <div class="foot-col">
-            <span class="foot-lbl">C¹ Spline Continuity</span>
-            <span class="foot-val font-mono verified">✓ ACTIVE</span>
+            <span class="foot-lbl">Cumulative Target</span>
+            <span class="foot-val font-mono target-val">
+              {{ cumulativeTurns.toFixed(2) }} turns ({{ formatAngle(targetAngle, selectedUnit, 0) }})
+            </span>
           </div>
         </div>
       </div>
@@ -487,10 +926,12 @@ duration: Number (default: 1000) - Base duration in ms per 90° step
 speedMultiplier: Number (default: 1) - Time multiplier (e.g. 0.5 = 2x slower)
 step: Number (default: 90) - Angular step quantum in degrees
 shortestPath: Boolean (default: true) - Geodesic modulo 360° path optimization
+timingMode: String (default: 'proportional') - 'proportional' (v ~ const) or 'fixed' (1 click = now + 1T)
+inertiaThreshold: Number (default: 0.25) - Momentum reversal avoidance threshold in seconds (0 to disable)
 size: Number | String (default: 260) - Width/height dimension
 
 // Slots
-default - Content to rotate. Receives { currentAngle, targetAngle, normalizedAngle, velocity, isMoving, progress }
+default - Content to rotate. Receives { currentAngle, targetAngle, normalizedAngle, velocity, acceleration, isMoving, progress }
 
 // Exposed Methods (ref)
 rotateBy(delta: Number) - Increment target by delta degrees with continuous velocity chaining
@@ -498,13 +939,14 @@ setAngle(deg: Number) - Set absolute target orientation
 reset() - Immediate reset to 0°
 currentAngle - Reactive continuous angle ref
 velocity - Reactive angular speed ref (deg/sec)
+acceleration - Reactive angular acceleration ref (deg/sec²)
 isMoving - Boolean motion status ref
 
 // Events
 @update:modelValue - Emits settled target angle
 @change - Emits new target whenever commanded
 @settled - Emitted when movement completes: { angle, normalizedAngle }
-@frame - Emitted on every rAF tick with live kinematic telemetry</code></pre>
+@frame - Emitted on every rAF tick with live kinematic telemetry { currentAngle, targetAngle, velocity, acceleration, progress, isMoving, v0, timestamp }</code></pre>
     </div>
   </div>
 </template>
@@ -636,6 +1078,14 @@ isMoving - Boolean motion status ref
   color: var(--nano-accent-secondary, #ec4899);
 }
 
+.badge-val.vel {
+  color: #10b981;
+}
+
+.badge-val.acc {
+  color: #f59e0b;
+}
+
 .badge-val.status {
   font-size: 0.72rem;
   color: #10b981;
@@ -649,6 +1099,30 @@ isMoving - Boolean motion status ref
   width: 1px;
   height: 20px;
   background: var(--nano-border-subtle, rgba(255, 255, 255, 0.08));
+}
+
+.cumulative-banner {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  background: rgba(99, 102, 241, 0.12);
+  border: 1px solid rgba(99, 102, 241, 0.3);
+  border-radius: var(--nano-radius-md, 8px);
+}
+
+.cum-label {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--nano-text-muted, #94a3b8);
+}
+
+.cum-val {
+  font-family: var(--font-mono, monospace);
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: #818cf8;
 }
 
 /* Controls Panel */
@@ -757,6 +1231,17 @@ isMoving - Boolean motion status ref
   background: rgba(239, 68, 68, 0.08);
 }
 
+.btn-action.inertia-btn {
+  border-color: #8b5cf6;
+  color: #c4b5fd;
+  background: rgba(139, 92, 246, 0.08);
+}
+
+.btn-action.inertia-btn:hover {
+  background: rgba(139, 92, 246, 0.16);
+  border-color: #a78bfa;
+}
+
 /* Preset Pills */
 .preset-pills {
   display: flex;
@@ -849,7 +1334,30 @@ isMoving - Boolean motion status ref
 .legend-wrap {
   display: flex;
   align-items: center;
-  gap: 16px;
+  flex-wrap: wrap;
+  gap: 14px;
+}
+
+.legend-channel {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--nano-text-muted, #94a3b8);
+  cursor: pointer;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.channel-check {
+  cursor: pointer;
+  accent-color: var(--nano-accent-primary, #6366f1);
+}
+
+.ch-name {
+  user-select: none;
+  -webkit-user-select: none;
 }
 
 .legend-item {
@@ -867,11 +1375,19 @@ isMoving - Boolean motion status ref
   height: 2px;
 }
 
-.legend-line.solid {
+.legend-line.solid.cyan {
   background: var(--nano-state-active, #00f2fe);
 }
 
-.legend-line.dashed {
+.legend-line.solid.emerald {
+  background: #10b981;
+}
+
+.legend-line.dashed.amber {
+  background: repeating-linear-gradient(90deg, #f59e0b, #f59e0b 4px, transparent 4px, transparent 8px);
+}
+
+.legend-line.dashed.pink {
   background: repeating-linear-gradient(90deg, var(--nano-accent-secondary, #ec4899), var(--nano-accent-secondary, #ec4899) 4px, transparent 4px, transparent 8px);
 }
 
@@ -895,7 +1411,7 @@ isMoving - Boolean motion status ref
 
 .telemetry-svg {
   width: 100%;
-  height: 220px;
+  height: 240px;
   display: block;
 }
 
@@ -930,6 +1446,27 @@ isMoving - Boolean motion status ref
 .foot-val {
   font-size: 0.82rem;
   color: var(--nano-text-main, #ffffff);
+}
+
+.foot-val.vel-val {
+  color: #10b981;
+  font-weight: 700;
+}
+
+.foot-val.acc-val {
+  color: #f59e0b;
+  font-weight: 700;
+}
+
+.foot-val.target-val {
+  color: var(--nano-accent-secondary, #ec4899);
+  font-weight: 700;
+}
+
+.foot-sub {
+  font-size: 0.72rem;
+  color: var(--nano-text-muted, #94a3b8);
+  margin-left: 4px;
 }
 
 .foot-val.verified {

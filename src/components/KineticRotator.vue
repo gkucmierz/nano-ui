@@ -39,6 +39,25 @@ const props = defineProps({
     default: true
   },
   /**
+   * Timing mode: 'proportional' scales duration with deltaAngle (v ~ const).
+   * 'fixed' duration is always exactly 1T (1 click = now + 1T, Rubik's cube mode).
+   */
+  timingMode: {
+    type: String,
+    default: 'proportional',
+    validator: (v) => ['proportional', 'fixed'].includes(v)
+  },
+  /**
+   * Momentum threshold in seconds for modular shortest-path reversal avoidance.
+   * If > 0, continuing in current velocity direction is preferred over abrupt reversal
+   * if the extra distance (360 - 2*|diff|) < |vel| * inertiaThreshold.
+   * Set to 0 to disable and strictly pick static shortest geodesic.
+   */
+  inertiaThreshold: {
+    type: Number,
+    default: 0.25
+  },
+  /**
    * Dimension of the rotator container in px or css string.
    */
   size: {
@@ -65,6 +84,11 @@ const cubicEaseWithInitialVelocityDerivative = (t, v0) => {
   return 3 * (v0 - 2) * t * t + 2 * (3 - 2 * v0) * t + v0;
 };
 
+// Second derivative of the Hermite cubic polynomial for instantaneous acceleration
+const cubicEaseWithInitialVelocitySecondDerivative = (t, v0) => {
+  return 6 * (v0 - 2) * t + 2 * (3 - 2 * v0);
+};
+
 // Standard cubic ease-in-out for fresh starts from rest (v0 = 0)
 const easeInOutCubic = (t) => {
   if (t < 0.5) return 4 * t * t * t;
@@ -74,6 +98,11 @@ const easeInOutCubic = (t) => {
 const easeInOutCubicDerivative = (t) => {
   if (t < 0.5) return 12 * t * t;
   return 3 * Math.pow(-2 * t + 2, 2);
+};
+
+const easeInOutCubicSecondDerivative = (t) => {
+  if (t < 0.5) return 24 * t;
+  return 24 * t - 24;
 };
 
 // Modulo helper keeping degrees within [0, 360)
@@ -93,6 +122,7 @@ const shortestAngleDiff = (fromDeg, toOrientationDeg) => {
 const currentAngle = ref(props.modelValue);
 const targetAngle = ref(props.modelValue);
 const velocity = ref(0); // in degrees per second
+const acceleration = ref(0); // in degrees per second squared
 const isMoving = ref(false);
 const progress = ref(1);
 const initialVelocityParam = ref(0);
@@ -110,10 +140,10 @@ const containerStyle = computed(() => {
   };
 });
 
-// Calculate current angular position and velocity at given timestamp
+// Calculate current angular position, velocity, and acceleration at given timestamp
 const sampleKinematics = (now) => {
   if (!animRecord) {
-    return { angle: currentAngle.value, vel: 0, p: 1 };
+    return { angle: currentAngle.value, vel: 0, acc: 0, p: 1 };
   }
 
   const elapsed = now - animRecord.startTime;
@@ -133,7 +163,13 @@ const sampleKinematics = (now) => {
   // Velocity in degrees per millisecond * 1000 = deg/sec
   const vel = ((totalDelta * dEaseDp) / animRecord.duration) * 1000;
 
-  return { angle, vel, p };
+  const d2EaseDp2 = animRecord.v0 !== undefined
+    ? cubicEaseWithInitialVelocitySecondDerivative(p, animRecord.v0)
+    : easeInOutCubicSecondDerivative(p);
+  // Acceleration in deg/sec^2 = (totalDelta * d2EaseDp2 / duration^2) * 10^6
+  const acc = ((totalDelta * d2EaseDp2) / (animRecord.duration * animRecord.duration)) * 1000000;
+
+  return { angle, vel, acc, p };
 };
 
 // Core animation loop
@@ -141,19 +177,22 @@ const tick = (now) => {
   if (!animRecord) {
     isMoving.value = false;
     velocity.value = 0;
+    acceleration.value = 0;
     progress.value = 1;
     return;
   }
 
-  const { angle, vel, p } = sampleKinematics(now);
+  const { angle, vel, acc, p } = sampleKinematics(now);
   currentAngle.value = angle;
   velocity.value = vel;
+  acceleration.value = acc;
   progress.value = p;
 
   emit('frame', {
     currentAngle: angle,
     targetAngle: animRecord.targetAngle,
     velocity: vel,
+    acceleration: acc,
     progress: p,
     isMoving: true,
     v0: animRecord.v0 || 0,
@@ -166,6 +205,7 @@ const tick = (now) => {
     // Settled at target
     currentAngle.value = animRecord.targetAngle;
     velocity.value = 0;
+    acceleration.value = 0;
     progress.value = 1;
     isMoving.value = false;
     const settledAngle = animRecord.targetAngle;
@@ -181,6 +221,7 @@ const tick = (now) => {
       currentAngle: settledAngle,
       targetAngle: settledAngle,
       velocity: 0,
+      acceleration: 0,
       progress: 1,
       isMoving: false,
       v0: 0,
@@ -217,8 +258,26 @@ const startKineticTransition = (newTarget, { isRelative = false, delta = 0 } = {
       desiredOrientation = normalizeAngle(newTarget);
     }
 
-    const shortestDiff = shortestAngleDiff(currentPos, desiredOrientation);
-    finalTarget = currentPos + shortestDiff;
+    let diff = shortestAngleDiff(currentPos, desiredOrientation);
+
+    // Dynamic momentum & inertia preservation:
+    // If object is moving fast in the opposite direction of shortest diff,
+    // reversing causes sudden jarring deceleration jerk.
+    // If inertiaThreshold > 0 and extra distance (360 - 2*|diff|) < |vel| * inertiaThreshold,
+    // continue in the direction of current angular velocity along the alternate arc.
+    if (props.inertiaThreshold > 0 && Math.abs(currentVel) > 20) {
+      const isReversal = (currentVel > 0 && diff < 0) || (currentVel < 0 && diff > 0);
+      if (isReversal) {
+        const altDiff = diff > 0 ? diff - 360 : diff + 360;
+        const extraDistance = 360 - 2 * Math.abs(diff);
+        const momentumAllowance = Math.abs(currentVel) * props.inertiaThreshold;
+        if (extraDistance < momentumAllowance) {
+          diff = altDiff;
+        }
+      }
+    }
+
+    finalTarget = currentPos + diff;
   }
 
   targetAngle.value = finalTarget;
@@ -230,6 +289,7 @@ const startKineticTransition = (newTarget, { isRelative = false, delta = 0 } = {
   if (Math.abs(deltaAngle) < 0.05) {
     currentAngle.value = finalTarget;
     velocity.value = 0;
+    acceleration.value = 0;
     progress.value = 1;
     isMoving.value = false;
     animRecord = null;
@@ -237,9 +297,11 @@ const startKineticTransition = (newTarget, { isRelative = false, delta = 0 } = {
     return;
   }
 
-  // Base duration scaled by step proportion and speed multiplier
+  // Base duration scaled by timingMode, step proportion, and speed multiplier
   const effectiveSpeedMultiplier = Math.max(0.01, props.speedMultiplier);
-  const baseDuration = (props.duration / effectiveSpeedMultiplier) * Math.max(0.2, Math.abs(deltaAngle) / props.step);
+  const baseDuration = props.timingMode === 'fixed'
+    ? (props.duration / effectiveSpeedMultiplier)
+    : (props.duration / effectiveSpeedMultiplier) * Math.max(0.2, Math.abs(deltaAngle) / props.step);
 
   // Calculate normalized initial velocity v0
   // v0 = (instantaneous velocity in deg/ms * duration in ms) / total delta
@@ -286,6 +348,7 @@ const reset = () => {
   currentAngle.value = 0;
   targetAngle.value = 0;
   velocity.value = 0;
+  acceleration.value = 0;
   progress.value = 1;
   isMoving.value = false;
   initialVelocityParam.value = 0;
@@ -315,6 +378,7 @@ defineExpose({
   currentAngle,
   targetAngle,
   velocity,
+  acceleration,
   isMoving,
   progress,
   v0: initialVelocityParam,
@@ -337,6 +401,7 @@ defineExpose({
         :target-angle="targetAngle"
         :normalized-angle="normalizeAngle(currentAngle)"
         :velocity="velocity"
+        :acceleration="acceleration"
         :is-moving="isMoving"
         :progress="progress"
       >
