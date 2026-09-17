@@ -1,73 +1,90 @@
 <script setup>
-import { tooltipState } from '../composables/useTooltip.js'
-import { ref, watch, nextTick } from 'vue'
+import { tooltipState } from '../composables/useTooltip.js';
+import { ref, watch, nextTick, onMounted, onUnmounted } from 'vue';
 
-const tooltipRef = ref(null)
-const x = ref(0)
-const y = ref(0)
-const arrowX = ref(0)
-const isBottom = ref(false)
+const tooltipRef = ref(null);
+const x = ref(0);
+const y = ref(0);
+const arrowX = ref(0);
+const isBottom = ref(false);
 
-watch(() => tooltipState.isVisible, async (visible) => {
-  if (visible) {
-    // Wait for DOM update to ensure the text content affects height before measuring
-    await nextTick()
-    if (!tooltipRef.value || !tooltipState.targetRect) return
+const updatePosition = async () => {
+  if (!tooltipState.isVisible || !tooltipRef.value || !tooltipState.targetRect) return;
 
-    const rect = tooltipState.targetRect
-    const tooltipRect = tooltipRef.value.getBoundingClientRect()
-    const viewportWidth = window.innerWidth
-    const viewportHeight = window.innerHeight
+  // Wait for DOM to finish rendering text so width and height are 100% accurate
+  await nextTick();
+  if (!tooltipRef.value || !tooltipState.targetRect) return;
 
-    const spaceAbove = rect.top
-    const spaceBelow = viewportHeight - rect.bottom
+  const rect = tooltipState.targetRect;
+  const el = tooltipRef.value;
+  const tooltipWidth = el.offsetWidth || el.getBoundingClientRect().width;
+  const tooltipHeight = el.offsetHeight || el.getBoundingClientRect().height;
+  const viewportWidth = window.innerWidth;
+  const viewportHeight = window.innerHeight;
 
-    // Vertical positioning (prefer above, fallback to below)
-    let top = rect.top - tooltipRect.height - 8
-    isBottom.value = false
+  const spaceAbove = rect.top;
+  const spaceBelow = viewportHeight - rect.bottom;
 
-    // If it doesn't fit above, or there is significantly more space below and it fits there
-    if (top < 8 || (spaceAbove < tooltipRect.height + 8 && spaceBelow > spaceAbove)) {
-      top = rect.bottom + 8
-      isBottom.value = true
-    }
+  // Vertical positioning (prefer above, fallback to below)
+  let top = rect.top - tooltipHeight - 8;
+  isBottom.value = false;
 
-    // Clamp bottom to viewport if it still overflows
-    if (top + tooltipRect.height > viewportHeight - 8) {
-      top = viewportHeight - tooltipRect.height - 8
-    }
-
-    // Clamp top to viewport if it overflows (e.g. extremely tall tooltip)
-    if (top < 8) {
-      top = 8
-    }
-
-    // Horizontal positioning
-    let idealCenter = rect.left + (rect.width / 2)
-    let left = idealCenter - (tooltipRect.width / 2)
-
-    // Bounds checking for left/right
-    let actualLeft = left
-    if (actualLeft < 8) {
-      actualLeft = 8
-    } else if (actualLeft + tooltipRect.width > viewportWidth - 8) {
-      actualLeft = viewportWidth - tooltipRect.width - 8
-    }
-
-    // Calculate the difference between where the box is forced to be,
-    // and where it naturally wanted to be. We move the arrow by the opposite amount.
-    let calculatedArrowX = idealCenter - (actualLeft + (tooltipRect.width / 2))
-    
-    // Prevent arrow from overflowing the tooltip's corners (assuming 6px border-radius + some padding)
-    const maxArrowOffset = (tooltipRect.width / 2) - 12
-    if (calculatedArrowX > maxArrowOffset) calculatedArrowX = maxArrowOffset
-    if (calculatedArrowX < -maxArrowOffset) calculatedArrowX = -maxArrowOffset
-
-    arrowX.value = calculatedArrowX
-    x.value = actualLeft
-    y.value = top
+  if (top < 8 || (spaceAbove < tooltipHeight + 8 && spaceBelow > spaceAbove)) {
+    top = rect.bottom + 8;
+    isBottom.value = true;
   }
-})
+
+  // Clamp bottom to viewport if it still overflows
+  if (top + tooltipHeight > viewportHeight - 8) {
+    top = Math.max(8, viewportHeight - tooltipHeight - 8);
+  }
+  if (top < 8) {
+    top = 8;
+  }
+
+  // Horizontal positioning
+  const idealCenter = rect.left + (rect.width / 2);
+  const left = idealCenter - (tooltipWidth / 2);
+
+  // Bounds checking for left/right
+  const minLeft = 8;
+  const maxLeft = Math.max(minLeft, viewportWidth - tooltipWidth - 8);
+  const actualLeft = Math.max(minLeft, Math.min(maxLeft, left));
+
+  // Difference between ideal target center and actual tooltip box center
+  const calculatedArrowX = idealCenter - (actualLeft + (tooltipWidth / 2));
+
+  // The arrow is a 10x10 rotated box (diagonal ~14px, half-width ~7.1px)
+  // Border radius of tooltip is up to 10px.
+  // To strictly prevent the arrow from overflowing rounded corners or sticking out,
+  // safe inset = arrowHalfWidth (7px) + cornerRadius (10px) + padding (2px) = 19px.
+  const arrowSafeInset = 19;
+  const maxArrowOffset = Math.max(0, (tooltipWidth / 2) - arrowSafeInset);
+  const clampedArrowX = Math.max(-maxArrowOffset, Math.min(maxArrowOffset, calculatedArrowX));
+
+  arrowX.value = clampedArrowX;
+  x.value = actualLeft;
+  y.value = top;
+};
+
+// Reactively re-calculate position whenever visibility, text, or targetRect changes
+watch(
+  [() => tooltipState.isVisible, () => tooltipState.text, () => tooltipState.targetRect],
+  async ([visible]) => {
+    if (visible) {
+      await updatePosition();
+    }
+  },
+  { deep: true }
+);
+
+onMounted(() => {
+  window.addEventListener('resize', updatePosition, { passive: true });
+});
+
+onUnmounted(() => {
+  window.removeEventListener('resize', updatePosition);
+});
 </script>
 
 <template>
