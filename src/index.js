@@ -12,6 +12,7 @@ import MutatingHeader from './components/MutatingHeader.vue';
 import TopologyRadar from './components/TopologyRadar.vue';
 import NanoSwitch from './components/NanoSwitch.vue';
 import KineticRotator from './components/KineticRotator.vue';
+import NanoCodeBlock from './components/NanoCodeBlock.vue';
 import { transitions, durations, easings, transitionVariables } from './config/transitions.js';
 import './style.css';
 
@@ -29,6 +30,7 @@ export {
   MutatingHeader, 
   NanoSwitch,
   KineticRotator,
+  NanoCodeBlock,
   transitions,
   durations,
   easings,
@@ -47,5 +49,6 @@ export default {
     app.component('MutatingHeader', MutatingHeader);
     app.component('NanoSwitch', NanoSwitch);
     app.component('KineticRotator', KineticRotator);
+    app.component('NanoCodeBlock', NanoCodeBlock);
   }
 };

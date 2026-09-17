@@ -61,14 +61,13 @@
     </div>
 
     <!-- API Reference -->
-    <h3 class="section-title">API Reference</h3>
-    <div class="api-reference">
-      <pre><code>// Props
+    <NanoCodeBlock title="API Reference" lang="api">
+// Props
 size: Number (default: 200) - Chart width/height in px
 history: Array (required) - Array of history snapshot arrays [0-100]
 labels: Array (default: []) - Array of string axis names
-color: String (default: '#00e5ff') - Accent stroke and contour color</code></pre>
-    </div>
+color: String (default: '#00e5ff') - Accent stroke and contour color
+    </NanoCodeBlock>
   </div>
 </template>
 

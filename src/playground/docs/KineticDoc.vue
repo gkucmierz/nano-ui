@@ -896,9 +896,8 @@ onUnmounted(() => {
     </div>
 
     <!-- API Reference -->
-    <h3 class="section-title">API Reference</h3>
-    <div class="api-reference">
-      <pre><code>// Props
+    <NanoCodeBlock title="API Reference" lang="api">
+// Props
 modelValue: Number (default: 0) - Target angle in degrees (v-model support)
 duration: Number (default: 1000) - Base duration in ms per 90° step
 speedMultiplier: Number (default: 1) - Time multiplier (e.g. 0.5 = 2x slower)
@@ -924,8 +923,8 @@ isMoving - Boolean motion status ref
 @update:modelValue - Emits settled target angle
 @change - Emits new target whenever commanded
 @settled - Emitted when movement completes: { angle, normalizedAngle }
-@frame - Emitted on every rAF tick with live kinematic telemetry { currentAngle, targetAngle, velocity, acceleration, progress, isMoving, v0, timestamp }</code></pre>
-    </div>
+@frame - Emitted on every rAF tick with live kinematic telemetry { currentAngle, targetAngle, velocity, acceleration, progress, isMoving, v0, timestamp }
+    </NanoCodeBlock>
 
     <!-- Kinematic & Mathematical Foundations -->
     <h3 class="section-title">{{ t('kinetic.theoryTitle') }}</h3>

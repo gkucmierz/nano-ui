@@ -259,9 +259,8 @@ const setSingleDatapoint = () => {
       </div>
     </div>
 
-    <div class="api-reference">
-      <h3>API Reference</h3>
-      <pre><code>// Props
+    <NanoCodeBlock title="API Reference" lang="api">
+// Props
 data: Array (required) - Array of { id, name, value, percentage, color, unit }
 isExpanded: Boolean (default: false) - Expanded container layout (large viewBox) vs compact (120x120px viewBox)
 showLabels: Boolean (default: true) - Renders side labels &amp; callout lines (when isExpanded is true)
@@ -280,8 +279,8 @@ valueDecimals: Number (default: undefined) - Decimal places to round slice value
 selectable: Boolean (default: false) - Enables locking of items on click/tap
 selectedItemId: String | Number (default: null) - Currently selected/locked item ID (supports v-model:selectedItemId)
 thickness: Number (default: 0.5) - Thickness from 0.0 (thin ring) to 1.0 (full pie chart)
-showCenterText: Boolean (default: true) - Show/hide center value and label texts</code></pre>
-    </div>
+showCenterText: Boolean (default: true) - Show/hide center value and label texts
+    </NanoCodeBlock>
   </div>
 </template>
 

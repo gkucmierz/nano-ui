@@ -35,9 +35,8 @@ const formatCustomValue = (val) => {
       </div>
     </div>
 
-    <div class="api-reference">
-      <h3>API Reference</h3>
-      <pre><code>// Props
+    <NanoCodeBlock title="API Reference" lang="api">
+// Props
 modelValue: Number (required, v-model)
 min: Number (default: 0)
 max: Number (required)
@@ -45,8 +44,8 @@ label: String (default: 'â†” Hold &amp; Drag to Scrub (Pull Down to Fine-Tune) â
 formatValue: Function (default: val =&gt; String(val))
 
 // Events
-@update:modelValue - Emitted on drag or input change to update the model value</code></pre>
-    </div>
+@update:modelValue - Emitted on drag or input change to update the model value
+    </NanoCodeBlock>
   </div>
 </template>
 

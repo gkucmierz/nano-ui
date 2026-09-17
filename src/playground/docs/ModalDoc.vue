@@ -72,9 +72,8 @@ const showCustom = ref(false);
       </NanoModal>
     </div>
 
-    <div class="api-reference">
-      <h3>API Reference</h3>
-      <pre><code>// Props
+    <NanoCodeBlock title="API Reference" lang="api">
+// Props
 visible: Boolean (default: false)
 title: String
 width: String | Number (default: 600)
@@ -88,8 +87,8 @@ glassmorphism: Boolean (default: true)
 // Events
 @close - Emitted when modal is closed via UI (X btn, ESC, Backdrop)
 @cancel - Emitted on Cancel button. Automatically triggers closeModal().
-@ok - Emitted on OK button. Does NOT close the modal automatically (ideal for async operations).</code></pre>
-    </div>
+@ok - Emitted on OK button. Does NOT close the modal automatically (ideal for async operations).
+    </NanoCodeBlock>
   </div>
 </template>
 

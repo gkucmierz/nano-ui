@@ -31,7 +31,10 @@
     "langCode": "PL",
     "deg": "stopnie",
     "rad": "radiany",
-    "turn": "obroty"
+    "turn": "obroty",
+    "notFoundTitle": "404 - Nie znaleziono strony",
+    "notFoundDesc": "Podana ścieżka dokumentacji nie istnieje lub komponent został przeniesiony.",
+    "backToHome": "Wróć do początku"
   },
   "kinetic": {
     "title": "Komponent KineticRotator",

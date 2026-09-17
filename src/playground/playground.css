@@ -330,6 +330,26 @@ pre {
   padding: 2rem;
   min-height: 400px;
   box-shadow: var(--nano-shadow-card);
+  max-width: 100%;
+  box-sizing: border-box;
+  overflow: hidden;
+}
+
+/* Global Documentation Code & Pre Overflow Protection */
+.component-section pre,
+.api-reference pre {
+  margin: 0;
+  max-width: 100%;
+  overflow-x: auto;
+  box-sizing: border-box;
+  scrollbar-width: thin;
+  scrollbar-color: var(--nano-border-subtle) transparent;
+}
+
+.api-reference {
+  max-width: 100%;
+  box-sizing: border-box;
+  overflow-x: auto;
 }
 
 /* Selectable Code Snippets with Dedicated Copy Control */

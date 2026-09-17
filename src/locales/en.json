@@ -31,7 +31,10 @@
     "langCode": "EN",
     "deg": "deg",
     "rad": "rad",
-    "turn": "turn"
+    "turn": "turn",
+    "notFoundTitle": "404 - Page Not Found",
+    "notFoundDesc": "The requested documentation path does not exist or the component has moved.",
+    "backToHome": "Back to Home"
   },
   "kinetic": {
     "title": "KineticRotator Component",

@@ -8,6 +8,7 @@ import TopologyRadarDoc from '../docs/TopologyRadarDoc.vue';
 import MutatingHeaderDoc from '../docs/MutatingHeaderDoc.vue';
 import SwitchDoc from '../docs/SwitchDoc.vue';
 import KineticDoc from '../docs/KineticDoc.vue';
+import NotFoundDoc from '../docs/NotFoundDoc.vue';
 
 const routes = [
   {
@@ -58,6 +59,11 @@ const routes = [
     path: '/docs/kinetic',
     name: 'KineticRotator',
     component: KineticDoc
+  },
+  {
+    path: '/:pathMatch(.*)*',
+    name: 'NotFound',
+    component: NotFoundDoc
   }
 ];
 

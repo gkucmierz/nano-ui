@@ -129,9 +129,8 @@
     </div>
 
     <!-- API Reference -->
-    <h3 class="section-title">API Reference</h3>
-    <div class="api-reference">
-      <pre><code>// Props
+    <NanoCodeBlock title="API Reference" lang="api">
+// Props
 modelValue: Boolean | null (default: false, supports v-model)
 indeterminate: Boolean (default: false)
 label: String (default: '', also supports default &lt;slot&gt;)
@@ -144,8 +143,8 @@ id: String (optional, html id attribute)
 // Events
 @update:modelValue(value: Boolean) - Emitted on state change
 @update:indeterminate(value: Boolean) - Emitted when indeterminate state clears
-@change(value: Boolean, event: Event) - Emitted on user toggle</code></pre>
-    </div>
+@change(value: Boolean, event: Event) - Emitted on user toggle
+    </NanoCodeBlock>
   </div>
 </template>
 

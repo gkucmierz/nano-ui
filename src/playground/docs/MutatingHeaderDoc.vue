@@ -65,9 +65,8 @@ const hysteresisVal = ref(8);
       </div>
     </div>
 
-    <div class="api-reference">
-      <h3>{{ t('common.apiReference') }}</h3>
-      <pre><code>// {{ t('common.props') }}
+    <NanoCodeBlock :title="t('common.apiReference')" lang="api">
+// {{ t('common.props') }}
 threshold: Number (default: 24) - {{ t('mutatingHeader.props.threshold') }}
 hysteresis: Number (default: 8) - {{ t('mutatingHeader.props.hysteresis') }}
 scrollContainer: String | HTMLElement (default: null -> window) - {{ t('mutatingHeader.props.scrollContainer') }}
@@ -86,8 +85,8 @@ stuck: Boolean (v-model:stuck) - {{ t('mutatingHeader.props.stuck') }}
 // {{ t('common.events') }}
 @update:stuck - {{ t('mutatingHeader.events.updateStuck') }}
 @stuck - {{ t('mutatingHeader.events.stuck') }}
-@unstick - {{ t('mutatingHeader.events.unstick') }}</code></pre>
-    </div>
+@unstick - {{ t('mutatingHeader.events.unstick') }}
+    </NanoCodeBlock>
   </div>
 </template>
 
