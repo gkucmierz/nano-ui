@@ -66,28 +66,26 @@ const hysteresisVal = ref(8);
 
     <div class="api-reference">
       <h3>API Reference</h3>
-      <code>
-        // Props<br>
-        threshold: Number (default: 24) - Scroll distance in px to trigger docking<br>
-        hysteresis: Number (default: 8) - Scroll distance in px below which header undocks<br>
-        scrollContainer: String | HTMLElement (default: null -> window) - Target scroller<br>
-        height: String (default: '60px') - Height of header<br>
-        floatingMargin: String (default: '12px 24px 0 24px') - Top/side margin when floating<br>
-        floatingRadius: String (default: '16px') - Corner radius when floating<br>
-        glassmorphism: Boolean (default: true) - Backdrop blur effect<br>
-        stuck: Boolean (v-model:stuck) - Two-way controlled docking state<br>
-        <br>
-        // Slots<br>
-        #left - Brand, logo, back buttons<br>
-        #center - Search inputs, telemetry metrics, tabs<br>
-        #right - Actions, buttons, avatars, theme toggles<br>
-        #default - Full custom layout fallback<br>
-        <br>
-        // Events<br>
-        @update:stuck - Emits boolean docking state<br>
-        @stuck - Emitted when docking activates<br>
-        @unstick - Emitted when header returns to floating card
-      </code>
+      <pre><code>// Props
+threshold: Number (default: 24) - Scroll distance in px to trigger docking
+hysteresis: Number (default: 8) - Scroll distance in px below which header undocks
+scrollContainer: String | HTMLElement (default: null -> window) - Target scroller
+height: String (default: '60px') - Height of header
+floatingMargin: String (default: '12px 24px 0 24px') - Top/side margin when floating
+floatingRadius: String (default: '16px') - Corner radius when floating
+glassmorphism: Boolean (default: true) - Backdrop blur effect
+stuck: Boolean (v-model:stuck) - Two-way controlled docking state
+
+// Slots
+#left - Brand, logo, back buttons
+#center - Search inputs, telemetry metrics, tabs
+#right - Actions, buttons, avatars, theme toggles
+#default - Full custom layout fallback
+
+// Events
+@update:stuck - Emits boolean docking state
+@stuck - Emitted when docking activates
+@unstick - Emitted when header returns to floating card</code></pre>
     </div>
   </div>
 </template>
@@ -286,15 +284,17 @@ const hysteresisVal = ref(8);
 }
 
 .demo-card-placeholder h4 {
-  margin: 0 0 8px 0;
+  margin: 0 0 4px 0;
   font-size: 0.95rem;
   color: var(--card-title);
+  line-height: var(--nano-line-height-tight, 1.25);
 }
 
 .demo-card-placeholder p {
   margin: 0;
   font-size: 0.85rem;
   color: var(--card-text);
+  line-height: var(--nano-line-height-base, 1.5);
 }
 
 .api-reference {

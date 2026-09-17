@@ -131,22 +131,20 @@
     <!-- API Reference -->
     <h3 class="section-title">API Reference</h3>
     <div class="api-reference">
-      <code>
-        // Props<br>
-        modelValue: Boolean | null (default: false, supports v-model)<br>
-        indeterminate: Boolean (default: false)<br>
-        label: String (default: '', also supports default &lt;slot&gt;)<br>
-        size: 'default' | 'compact' | 'mini' (default: 'default')<br>
-        color: 'primary' | 'cyan' | 'purple' | 'emerald' | 'danger' | 'gold' (default: 'primary')<br>
-        disabled: Boolean (default: false)<br>
-        name: String (optional, form input name)<br>
-        id: String (optional, html id attribute)<br>
-        <br>
-        // Events<br>
-        @update:modelValue(value: Boolean) - Emitted on state change<br>
-        @update:indeterminate(value: Boolean) - Emitted when indeterminate state clears<br>
-        @change(value: Boolean, event: Event) - Emitted on user toggle
-      </code>
+      <pre><code>// Props
+modelValue: Boolean | null (default: false, supports v-model)
+indeterminate: Boolean (default: false)
+label: String (default: '', also supports default &lt;slot&gt;)
+size: 'default' | 'compact' | 'mini' (default: 'default')
+color: 'primary' | 'cyan' | 'purple' | 'emerald' | 'danger' | 'gold' (default: 'primary')
+disabled: Boolean (default: false)
+name: String (optional, form input name)
+id: String (optional, html id attribute)
+
+// Events
+@update:modelValue(value: Boolean) - Emitted on state change
+@update:indeterminate(value: Boolean) - Emitted when indeterminate state clears
+@change(value: Boolean, event: Event) - Emitted on user toggle</code></pre>
     </div>
   </div>
 </template>

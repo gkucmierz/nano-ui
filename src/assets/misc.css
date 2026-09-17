@@ -53,6 +53,17 @@ samp {
 code,
 pre {
   cursor: text;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+}
+
+pre {
+  margin: 0;
+  white-space: pre;
+}
+
+pre code {
+  white-space: inherit;
+  font-family: inherit;
 }
 
 /* Branded Text Selection Highlight (SSoT) */
@@ -84,5 +95,6 @@ body {
   background-color: var(--nano-bg-app);
   color: var(--nano-text-main);
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  line-height: var(--nano-line-height-base, 1.5);
   -webkit-font-smoothing: antialiased;
 }

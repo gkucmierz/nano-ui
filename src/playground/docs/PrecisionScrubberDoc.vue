@@ -37,17 +37,15 @@ const formatCustomValue = (val) => {
 
     <div class="api-reference">
       <h3>API Reference</h3>
-      <code>
-        // Props<br>
-        modelValue: Number (required, v-model)<br>
-        min: Number (default: 0)<br>
-        max: Number (required)<br>
-        label: String (default: '↔ Hold & Drag to Scrub (Pull Down to Fine-Tune) ↕')<br>
-        formatValue: Function (default: val => String(val))<br>
-        <br>
-        // Events<br>
-        @update:modelValue - Emitted on drag or input change to update the model value
-      </code>
+      <pre><code>// Props
+modelValue: Number (required, v-model)
+min: Number (default: 0)
+max: Number (required)
+label: String (default: '↔ Hold &amp; Drag to Scrub (Pull Down to Fine-Tune) ↕')
+formatValue: Function (default: val =&gt; String(val))
+
+// Events
+@update:modelValue - Emitted on drag or input change to update the model value</code></pre>
     </div>
   </div>
 </template>

@@ -33,4 +33,9 @@
   --nano-blur-md: var(--nano-unit);              /* 8px */
   --nano-blur-lg: calc(var(--nano-unit) * 2);    /* 16px */
   --nano-blur-xl: calc(var(--nano-unit) * 3);    /* 24px */
+
+  /* --- Typography Geometry --- */
+  --nano-line-height-tight: 1.25;
+  --nano-line-height-base: 1.5;
+  --nano-line-height-relaxed: 1.65;
 }

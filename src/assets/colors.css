@@ -92,6 +92,13 @@
   --nano-tooltip-shadow: 0 var(--nano-space-sm) var(--nano-space-lg) rgba(0, 0, 0, var(--nano-alpha-hover));
   --nano-tooltip-border: var(--nano-border-width) solid rgba(255, 255, 255, var(--nano-alpha-muted));
   --nano-tooltip-arrow-border: rgba(255, 255, 255, var(--nano-alpha-muted));
+
+  /* TopologyRadar Tokens - Dark Theme */
+  --nano-radar-grid-bg: rgba(15, 23, 42, var(--nano-alpha-glass));
+  --nano-radar-grid-stroke: rgba(255, 255, 255, var(--nano-alpha-muted));
+  --nano-radar-grid-subtle: rgba(255, 255, 255, var(--nano-alpha-subtle));
+  --nano-radar-text: var(--nano-text-muted);
+  --nano-radar-color: var(--nano-state-active);
 }
 
 :root[data-theme="light"],
@@ -173,4 +180,11 @@ html[data-theme="light"] {
   --nano-tooltip-shadow: 0 var(--nano-space-sm) var(--nano-space-lg) rgba(15, 23, 42, var(--nano-alpha-hover));
   --nano-tooltip-border: var(--nano-border-width) solid rgba(255, 255, 255, var(--nano-alpha-muted));
   --nano-tooltip-arrow-border: rgba(255, 255, 255, var(--nano-alpha-muted));
+
+  /* TopologyRadar Tokens - Light Theme */
+  --nano-radar-grid-bg: rgba(241, 245, 249, var(--nano-alpha-glass));
+  --nano-radar-grid-stroke: rgba(15, 23, 42, var(--nano-alpha-muted));
+  --nano-radar-grid-subtle: rgba(15, 23, 42, var(--nano-alpha-subtle));
+  --nano-radar-text: var(--nano-text-muted);
+  --nano-radar-color: var(--nano-state-active);
 }

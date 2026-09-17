@@ -2,10 +2,10 @@
   <div class="topology-radar-container" :style="{ width: size + 'px', height: size + 'px' }">
     <svg :viewBox="`0 0 ${size} ${size}`" :width="size" :height="size" style="overflow: visible;">
       <!-- Grid Lines -->
-      <polygon :points="getGridPolygon(1.0)" fill="rgba(15,23,42,0.8)" stroke="rgba(255,255,255,0.1)" stroke-width="1" />
-      <polygon :points="getGridPolygon(0.75)" fill="none" stroke="rgba(255,255,255,0.05)" stroke-width="1" />
-      <polygon :points="getGridPolygon(0.50)" fill="none" stroke="rgba(255,255,255,0.05)" stroke-width="1" />
-      <polygon :points="getGridPolygon(0.25)" fill="none" stroke="rgba(255,255,255,0.05)" stroke-width="1" />
+      <polygon :points="getGridPolygon(1.0)" fill="var(--nano-radar-grid-bg, rgba(15,23,42,0.8))" stroke="var(--nano-radar-grid-stroke, rgba(255,255,255,0.1))" stroke-width="1" />
+      <polygon :points="getGridPolygon(0.75)" fill="none" stroke="var(--nano-radar-grid-subtle, rgba(255,255,255,0.05))" stroke-width="1" />
+      <polygon :points="getGridPolygon(0.50)" fill="none" stroke="var(--nano-radar-grid-subtle, rgba(255,255,255,0.05))" stroke-width="1" />
+      <polygon :points="getGridPolygon(0.25)" fill="none" stroke="var(--nano-radar-grid-subtle, rgba(255,255,255,0.05))" stroke-width="1" />
 
       <!-- Axes -->
       <line 
@@ -14,7 +14,7 @@
         :x1="size/2" :y1="size/2"
         :x2="getPoint(100, i).x" 
         :y2="getPoint(100, i).y"
-        stroke="rgba(255,255,255,0.1)" 
+        stroke="var(--nano-radar-grid-stroke, rgba(255,255,255,0.1))" 
         stroke-width="1"
       />
 
@@ -24,7 +24,7 @@
         :key="'label-'+i"
         :x="getPoint(115, i).x" 
         :y="getPoint(115, i).y"
-        fill="rgba(255,255,255,0.5)"
+        fill="var(--nano-radar-text, rgba(255,255,255,0.6))"
         font-size="10"
         font-family="monospace"
         font-weight="bold"

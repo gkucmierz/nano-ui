@@ -67,7 +67,7 @@ const copyCode = async (text, id) => {
       <div class="example">
         <!-- Glassmorphism Card Ripple (Underneath on the left) -->
         <div v-ripple class="glass-card">
-          Glassmorphism Card<br>
+          <span>Glassmorphism Card</span>
           <small>(Click anywhere inside)</small>
         </div>
         <div class="code-snippet">

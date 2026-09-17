@@ -348,6 +348,72 @@ const toggle = (event) => {
   box-shadow: 0 0 6px rgba(251, 191, 36, 0.4);
 }
 
+/* Light Mode Indeterminate: Crisp, high-contrast borders & vivid knobs */
+:root[data-theme="light"] .nano-switch.is-indeterminate .nano-switch-slider,
+html[data-theme="light"] .nano-switch.is-indeterminate .nano-switch-slider {
+  background: rgba(100, 116, 139, 0.08);
+  border-color: rgba(100, 116, 139, 0.5);
+}
+
+:root[data-theme="light"] .color-primary.is-indeterminate .nano-switch-slider,
+:root[data-theme="light"] .color-cyan.is-indeterminate .nano-switch-slider,
+html[data-theme="light"] .color-primary.is-indeterminate .nano-switch-slider,
+html[data-theme="light"] .color-cyan.is-indeterminate .nano-switch-slider {
+  background: rgba(2, 132, 199, 0.08);
+  border-color: rgba(2, 132, 199, 0.65);
+}
+:root[data-theme="light"] .color-primary.is-indeterminate .nano-switch-slider::before,
+:root[data-theme="light"] .color-cyan.is-indeterminate .nano-switch-slider::before,
+html[data-theme="light"] .color-primary.is-indeterminate .nano-switch-slider::before,
+html[data-theme="light"] .color-cyan.is-indeterminate .nano-switch-slider::before {
+  background: #0284c7;
+  box-shadow: 0 0 6px rgba(2, 132, 199, 0.3);
+}
+
+:root[data-theme="light"] .color-purple.is-indeterminate .nano-switch-slider,
+html[data-theme="light"] .color-purple.is-indeterminate .nano-switch-slider {
+  background: rgba(124, 58, 237, 0.08);
+  border-color: rgba(124, 58, 237, 0.65);
+}
+:root[data-theme="light"] .color-purple.is-indeterminate .nano-switch-slider::before,
+html[data-theme="light"] .color-purple.is-indeterminate .nano-switch-slider::before {
+  background: #7c3aed;
+  box-shadow: 0 0 6px rgba(124, 58, 237, 0.3);
+}
+
+:root[data-theme="light"] .color-emerald.is-indeterminate .nano-switch-slider,
+html[data-theme="light"] .color-emerald.is-indeterminate .nano-switch-slider {
+  background: rgba(5, 150, 105, 0.08);
+  border-color: rgba(5, 150, 105, 0.65);
+}
+:root[data-theme="light"] .color-emerald.is-indeterminate .nano-switch-slider::before,
+html[data-theme="light"] .color-emerald.is-indeterminate .nano-switch-slider::before {
+  background: #059669;
+  box-shadow: 0 0 6px rgba(5, 150, 105, 0.3);
+}
+
+:root[data-theme="light"] .color-danger.is-indeterminate .nano-switch-slider,
+html[data-theme="light"] .color-danger.is-indeterminate .nano-switch-slider {
+  background: rgba(220, 38, 38, 0.08);
+  border-color: rgba(220, 38, 38, 0.65);
+}
+:root[data-theme="light"] .color-danger.is-indeterminate .nano-switch-slider::before,
+html[data-theme="light"] .color-danger.is-indeterminate .nano-switch-slider::before {
+  background: #dc2626;
+  box-shadow: 0 0 6px rgba(220, 38, 38, 0.3);
+}
+
+:root[data-theme="light"] .color-gold.is-indeterminate .nano-switch-slider,
+html[data-theme="light"] .color-gold.is-indeterminate .nano-switch-slider {
+  background: rgba(217, 119, 6, 0.08);
+  border-color: rgba(217, 119, 6, 0.65);
+}
+:root[data-theme="light"] .color-gold.is-indeterminate .nano-switch-slider::before,
+html[data-theme="light"] .color-gold.is-indeterminate .nano-switch-slider::before {
+  background: #d97706;
+  box-shadow: 0 0 6px rgba(217, 119, 6, 0.3);
+}
+
 /* --- Stationary Hover States --- */
 .nano-switch:not(.is-disabled):not(.is-checked):not(.is-indeterminate):hover .nano-switch-slider {
   border-color: var(--nano-border-hover);

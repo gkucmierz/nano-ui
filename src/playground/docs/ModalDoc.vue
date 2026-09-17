@@ -74,23 +74,21 @@ const showCustom = ref(false);
 
     <div class="api-reference">
       <h3>API Reference</h3>
-      <code>
-        // Props<br>
-        visible: Boolean (default: false)<br>
-        title: String<br>
-        width: String | Number (default: 600)<br>
-        height: String | Number (default: 'auto')<br>
-        draggable: Boolean (default: false)<br>
-        resizable: Boolean (default: false)<br>
-        showHeader/Body/Footer: Boolean (default: true)<br>
-        showOk/Cancel: Boolean (default: true)<br>
-        glassmorphism: Boolean (default: true)<br>
-        <br>
-        // Events<br>
-        @close - Emitted when modal is closed via UI (X btn, ESC, Backdrop)<br>
-        @cancel - Emitted on Cancel button. Automatically triggers closeModal().<br>
-        @ok - Emitted on OK button. Does NOT close the modal automatically (ideal for async operations).
-      </code>
+      <pre><code>// Props
+visible: Boolean (default: false)
+title: String
+width: String | Number (default: 600)
+height: String | Number (default: 'auto')
+draggable: Boolean (default: false)
+resizable: Boolean (default: false)
+showHeader/Body/Footer: Boolean (default: true)
+showOk/Cancel: Boolean (default: true)
+glassmorphism: Boolean (default: true)
+
+// Events
+@close - Emitted when modal is closed via UI (X btn, ESC, Backdrop)
+@cancel - Emitted on Cancel button. Automatically triggers closeModal().
+@ok - Emitted on OK button. Does NOT close the modal automatically (ideal for async operations).</code></pre>
     </div>
   </div>
 </template>

@@ -261,28 +261,26 @@ const setSingleDatapoint = () => {
 
     <div class="api-reference">
       <h3>API Reference</h3>
-      <code>
-        // Props<br>
-        data: Array (required) - Array of { id, name, value, percentage, color, unit }<br>
-        isExpanded: Boolean (default: false) - Expanded container layout (large viewBox) vs compact (120x120px viewBox)<br>
-        showLabels: Boolean (default: true) - Renders side labels & callout lines (when isExpanded is true)<br>
-        is3D: Boolean (default: true) - Enables 3D perspective (depth & tilt)<br>
-        centerValue: String | Number (default: '') - Value shown in center hole (defaults to sum)<br>
-        centerLabel: String (default: '') - Label shown below center value<br>
-        centerValueFormatter: Function (default: null) - Custom formatter function: (value, item) => string<br>
-        rotationAngle: Number (default: -90) - Starting rotation of the donut chart<br>
-        autoRotate: Boolean (default: false) - Balances labels evenly across left & right columns<br>
-        slopeRatio: Number (default: 0.5) - Vertical tilt of the chart (0.2 to 1.0)<br>
-        aggregateOthers: Boolean (default: false) - Aggregates small values below threshold<br>
-        othersThreshold: Number (default: 0.01) - Fraction below which values are merged (e.g. 0.05 for 5%)<br>
-        othersLabel: String (default: 'Other') - Merged slice label name<br>
-        othersColor: String (default: '#64748b') - Color code of the merged slice<br>
-        valueDecimals: Number (default: undefined) - Decimal places to round slice values on labels (e.g. 2)<br>
-        selectable: Boolean (default: false) - Enables locking of items on click/tap<br>
-        selectedItemId: String | Number (default: null) - Currently selected/locked item ID (supports v-model:selectedItemId)<br>
-        thickness: Number (default: 0.5) - Thickness from 0.0 (thin ring) to 1.0 (full pie chart)<br>
-        showCenterText: Boolean (default: true) - Show/hide center value and label texts
-      </code>
+      <pre><code>// Props
+data: Array (required) - Array of { id, name, value, percentage, color, unit }
+isExpanded: Boolean (default: false) - Expanded container layout (large viewBox) vs compact (120x120px viewBox)
+showLabels: Boolean (default: true) - Renders side labels &amp; callout lines (when isExpanded is true)
+is3D: Boolean (default: true) - Enables 3D perspective (depth &amp; tilt)
+centerValue: String | Number (default: '') - Value shown in center hole (defaults to sum)
+centerLabel: String (default: '') - Label shown below center value
+centerValueFormatter: Function (default: null) - Custom formatter function: (value, item) =&gt; string
+rotationAngle: Number (default: -90) - Starting rotation of the donut chart
+autoRotate: Boolean (default: false) - Balances labels evenly across left &amp; right columns
+slopeRatio: Number (default: 0.5) - Vertical tilt of the chart (0.2 to 1.0)
+aggregateOthers: Boolean (default: false) - Aggregates small values below threshold
+othersThreshold: Number (default: 0.01) - Fraction below which values are merged (e.g. 0.05 for 5%)
+othersLabel: String (default: 'Other') - Merged slice label name
+othersColor: String (default: '#64748b') - Color code of the merged slice
+valueDecimals: Number (default: undefined) - Decimal places to round slice values on labels (e.g. 2)
+selectable: Boolean (default: false) - Enables locking of items on click/tap
+selectedItemId: String | Number (default: null) - Currently selected/locked item ID (supports v-model:selectedItemId)
+thickness: Number (default: 0.5) - Thickness from 0.0 (thin ring) to 1.0 (full pie chart)
+showCenterText: Boolean (default: true) - Show/hide center value and label texts</code></pre>
     </div>
   </div>
 </template>
