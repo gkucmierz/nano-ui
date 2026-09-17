@@ -1772,8 +1772,8 @@ isMoving - Boolean motion status ref
 :root[data-theme="light"] .stage-status-bar,
 [data-theme="light"] .visual-tabs,
 :root[data-theme="light"] .visual-tabs,
-[data-theme="light"] .telemetry-foot,
-:root[data-theme="light"] .telemetry-foot {
+[data-theme="light"] .waveform-footer,
+:root[data-theme="light"] .waveform-footer {
   background: #f8fafc;
   border-color: #e2e8f0;
 }
