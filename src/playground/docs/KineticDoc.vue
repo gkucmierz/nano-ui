@@ -353,22 +353,32 @@ const recentTicks = computed(() => {
   return dots;
 });
 
-// Click markers on the rolling graph
+// Click markers locked to the exact sample frame index in the rolling buffer
 const activeMarkers = computed(() => {
   const pts = historySamples.value;
   if (pts.length < 2) return [];
 
-  const minTime = pts[0].time;
-  const maxTime = pts[pts.length - 1].time;
-  const timeSpan = Math.max(1, maxTime - minTime);
-
   return clickEvents.value
-    .filter(c => c.time >= minTime && c.time <= maxTime)
     .map(c => {
-      const rel = (c.time - minTime) / timeSpan;
-      const x = padding.left + rel * plotWidth;
-      return { x, label: c.label, relTime: c.relTime || 0 };
-    });
+      // Find the closest sample index to when the click occurred
+      let closestIdx = -1;
+      let minDiff = Infinity;
+      for (let i = 0; i < pts.length; i++) {
+        const diff = Math.abs(pts[i].time - c.time);
+        if (diff < minDiff) {
+          minDiff = diff;
+          closestIdx = i;
+        }
+      }
+      // Only show marker if within the current buffer time range
+      if (closestIdx === -1 || (minDiff > 200 && (c.time < pts[0].time || c.time > pts[pts.length - 1].time))) {
+        return null;
+      }
+
+      const x = padding.left + (closestIdx / (MAX_SAMPLES - 1)) * plotWidth;
+      return { x, label: c.label };
+    })
+    .filter(Boolean);
 });
 
 // Periodic passive ticker to keep rolling graph live even when stationary
@@ -793,16 +803,6 @@ onUnmounted(() => {
               fill="var(--nano-accent-secondary, #ec4899)"
             >
               {{ marker.label }}
-            </text>
-            <text
-              :x="marker.x + 3"
-              :y="svgHeight - padding.bottom - 4"
-              font-family="monospace"
-              font-size="8.5"
-              fill="var(--nano-accent-secondary, #ec4899)"
-              opacity="0.9"
-            >
-              +{{ marker.relTime.toFixed(2) }}s
             </text>
           </g>
 
