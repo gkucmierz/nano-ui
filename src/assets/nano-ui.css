@@ -79,6 +79,11 @@
   --nano-modal-btn-primary-hover: #4f46e5;
   --nano-modal-btn-secondary: #27272a;
   --nano-modal-btn-secondary-hover: #3f3f46;
+  --nano-modal-shadow: 0 20px 48px rgba(0, 0, 0, 0.5);
+  --nano-modal-header-bg: rgba(0, 0, 0, 0.2);
+  --nano-modal-footer-bg: rgba(0, 0, 0, 0.15);
+  --nano-modal-close-hover: rgba(255, 255, 255, 0.14);
+  --nano-modal-close-color: #ffffff;
 }
 
 :root[data-theme="light"],
@@ -134,6 +139,11 @@ html[data-theme="light"] {
   --nano-modal-btn-primary-hover: #4338ca;
   --nano-modal-btn-secondary: #f1f5f9;
   --nano-modal-btn-secondary-hover: #e2e8f0;
+  --nano-modal-shadow: 0 12px 32px rgba(15, 23, 42, 0.12);
+  --nano-modal-header-bg: rgba(15, 23, 42, 0.02);
+  --nano-modal-footer-bg: rgba(15, 23, 42, 0.02);
+  --nano-modal-close-hover: rgba(15, 23, 42, 0.09);
+  --nano-modal-close-color: #0f172a;
 }
 
 /* Zero-FOUC: Freeze all CSS transitions during initial page load & dynamic theme switching */

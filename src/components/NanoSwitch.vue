@@ -349,20 +349,17 @@ const toggle = (event) => {
 }
 
 /* --- Stationary Hover States --- */
-.nano-switch:not(.is-disabled):hover .nano-switch-slider {
-  border-color: rgba(255, 255, 255, 0.35);
-}
-
 .nano-switch:not(.is-disabled):not(.is-checked):not(.is-indeterminate):hover .nano-switch-slider {
-  background: rgba(255, 255, 255, 0.1);
+  border-color: var(--nano-border-hover);
+  background: var(--nano-bg-hover);
 }
 
 .nano-switch.is-checked:not(.is-disabled):hover .nano-switch-slider {
-  filter: brightness(1.15);
+  box-shadow: 0 0 12px var(--nano-switch-active-shadow, rgba(0, 242, 254, 0.35));
 }
 
 .nano-switch.is-indeterminate:not(.is-disabled):hover .nano-switch-slider::before {
-  filter: brightness(1.2);
+  opacity: 0.9;
 }
 
 /* Text Label */

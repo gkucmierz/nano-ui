@@ -102,14 +102,23 @@ const showCustom = ref(false);
   gap: 2rem;
 }
 
-h2 { margin: 0; color: #fff; }
-h3 { margin-bottom: 1rem; color: #a1a1aa; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 0.5rem; }
+h2 {
+  margin: 0;
+  color: var(--nano-text-main);
+}
+
+h3 {
+  margin-bottom: 1rem;
+  color: var(--nano-text-main);
+  border-bottom: 1px solid var(--nano-border-subtle);
+  padding-bottom: 0.5rem;
+}
 
 .demo-section {
-  background: rgba(255, 255, 255, 0.02);
+  background: var(--nano-bg-card);
   padding: 1.5rem;
   border-radius: 8px;
-  border: 1px solid rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--nano-border-card);
 }
 
 .demo-btn {
@@ -120,15 +129,28 @@ h3 { margin-bottom: 1rem; color: #a1a1aa; border-bottom: 1px solid rgba(255,255,
   border-radius: 6px;
   cursor: pointer;
   font-weight: 600;
+  transition: background-color var(--nano-transition-interactive);
 }
 
-.demo-btn:hover { background: #4f46e5; }
+.demo-btn:hover {
+  background: #4f46e5;
+}
 
 .api-reference {
-  background: #1e1e1e;
-  padding: 1rem;
+  background: var(--nano-bg-code);
+  padding: 1.5rem;
   border-radius: 8px;
-  font-family: monospace;
-  color: #a1a1aa;
+  border: 1px solid var(--nano-border-card);
+}
+
+.api-reference h3 {
+  margin-top: 0;
+}
+
+.api-reference code {
+  font-family: ui-monospace, SFMono-Regular, monospace;
+  font-size: 0.9rem;
+  color: var(--nano-text-code);
+  line-height: 1.6;
 }
 </style>

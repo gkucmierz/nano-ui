@@ -317,12 +317,22 @@ const handleCancel = () => { emit('cancel'); closeModal(); };
   background: var(--nano-modal-bg);
   border: 1px solid var(--nano-modal-border);
   border-radius: var(--nano-modal-radius);
-  box-shadow: 0 24px 48px rgba(0, 0, 0, 0.5);
+  box-shadow: var(--nano-modal-shadow);
   display: flex;
   flex-direction: column;
   max-height: 90vh;
   color: var(--nano-modal-text);
   position: relative;
+  overflow: hidden;
+}
+
+.nano-modal-window h1,
+.nano-modal-window h2,
+.nano-modal-window h3,
+.nano-modal-window h4,
+.nano-modal-window h5,
+.nano-modal-window h6 {
+  color: var(--nano-modal-text);
 }
 
 /* Important for draggable absolute positioning */
@@ -342,7 +352,7 @@ const handleCancel = () => { emit('cancel'); closeModal(); };
   display: flex;
   justify-content: space-between;
   align-items: center;
-  background: rgba(0, 0, 0, 0.2);
+  background: var(--nano-modal-header-bg);
   user-select: none;
 }
 
@@ -366,17 +376,20 @@ const handleCancel = () => { emit('cancel'); closeModal(); };
   border: none;
   color: var(--nano-modal-text-muted);
   cursor: pointer;
-  padding: 4px;
+  width: 32px;
+  height: 32px;
+  padding: 0;
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: 6px;
+  border-radius: 8px;
+  outline: none;
   transition: color var(--nano-transition-interactive), background-color var(--nano-transition-interactive);
 }
 
 .nano-modal-close-btn:hover {
-  color: var(--nano-modal-text);
-  background: rgba(255, 255, 255, 0.1);
+  color: var(--nano-modal-close-color, var(--nano-modal-text));
+  background: var(--nano-modal-close-hover);
 }
 
 .nano-modal-body {
@@ -388,7 +401,7 @@ const handleCancel = () => { emit('cancel'); closeModal(); };
 .nano-modal-footer {
   padding: 16px 24px;
   border-top: 1px solid var(--nano-modal-border);
-  background: rgba(0, 0, 0, 0.15);
+  background: var(--nano-modal-footer-bg);
   display: flex;
   justify-content: flex-end;
 }

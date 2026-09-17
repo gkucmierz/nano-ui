@@ -109,48 +109,9 @@ const copyCode = async (text) => {
 }
 
 .desc {
-  color: #a1a1aa;
+  color: var(--nano-text-muted);
   margin-bottom: 1.5rem;
   font-size: 0.95rem;
-}
-
-.test-row {
-  display: flex;
-  gap: 2rem;
-  align-items: flex-start;
-  flex-wrap: wrap;
-}
-
-.example {
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
-  align-items: flex-start;
-}
-
-.code-snippet {
-  background: rgba(255, 255, 255, 0.08);
-  border: 1px solid rgba(255, 255, 255, 0.15);
-  padding: 8px 12px;
-  border-radius: 8px;
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-  font-size: 13px;
-  color: #e4e4e7;
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  cursor: pointer;
-  outline: none;
-  transition: var(--nano-transition-interactive);
-}
-
-.code-snippet:focus-visible {
-  box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.5);
-}
-
-.code-snippet:hover {
-  background: rgba(255, 255, 255, 0.12);
-  border-color: rgba(255, 255, 255, 0.3);
 }
 
 .code-snippet:active {
