@@ -68,8 +68,15 @@ onUnmounted(() => {
     <aside class="sidebar">
       <div class="sidebar-header">
         <div class="header-title">
-          <h1>Nano UI</h1>
-          <div class="version">v{{ version }}</div>
+          <svg class="brand-icon" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg" width="28" height="28">
+            <rect width="32" height="32" rx="8" fill="var(--nano-bg-card, #0f172a)" stroke="var(--nano-border-card, rgba(255,255,255,0.15))" stroke-width="1.5"/>
+            <path d="M10 22V10M10 10L22 22M22 22V10" stroke="var(--nano-accent-primary, #6366f1)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+            <circle cx="22" cy="10" r="2.2" fill="var(--nano-state-active, #00f2fe)"/>
+          </svg>
+          <div class="brand-text">
+            <h1>Nano UI</h1>
+            <div class="version">v{{ version }}</div>
+          </div>
         </div>
         <button class="theme-toggle" @click="toggleTheme" aria-label="Toggle theme" v-tooltip="'Toggle Theme (L)'">
           <svg v-if="isDark" class="theme-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -97,6 +104,7 @@ onUnmounted(() => {
         </div>
         <div class="nav-section">
           <h3>Components</h3>
+          <router-link to="/docs/kinetic" class="nav-link" active-class="active">KineticRotator</router-link>
           <router-link to="/docs/switch" class="nav-link" active-class="active">NanoSwitch</router-link>
           <router-link to="/docs/modal" class="nav-link" active-class="active">NanoModal</router-link>
           <router-link to="/docs/3d-donut-chart" class="nav-link" active-class="active">ThreeDDonutChart</router-link>

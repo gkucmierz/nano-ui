@@ -11,6 +11,7 @@ import PrecisionScrubber from './components/PrecisionScrubber.vue';
 import MutatingHeader from './components/MutatingHeader.vue';
 import TopologyRadar from './components/TopologyRadar.vue';
 import NanoSwitch from './components/NanoSwitch.vue';
+import KineticRotator from './components/KineticRotator.vue';
 import { transitions, durations, easings, transitionVariables } from './config/transitions.js';
 import './style.css';
 
@@ -27,6 +28,7 @@ export {
   TopologyRadar, 
   MutatingHeader, 
   NanoSwitch,
+  KineticRotator,
   transitions,
   durations,
   easings,
@@ -44,5 +46,6 @@ export default {
     app.component('TopologyRadar', TopologyRadar);
     app.component('MutatingHeader', MutatingHeader);
     app.component('NanoSwitch', NanoSwitch);
+    app.component('KineticRotator', KineticRotator);
   }
 };

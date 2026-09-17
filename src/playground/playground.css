@@ -90,6 +90,17 @@ pre {
   gap: 12px;
 }
 
+.brand-icon {
+  flex-shrink: 0;
+  display: block;
+}
+
+.brand-text {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
 .sidebar-header h1 {
   font-weight: 800;
   letter-spacing: -0.5px;

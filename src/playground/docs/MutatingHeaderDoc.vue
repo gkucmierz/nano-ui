@@ -148,18 +148,27 @@ stuck: Boolean (v-model:stuck) - Two-way controlled docking state
   margin-bottom: 16px;
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
   gap: 8px;
 }
 
 .status-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  white-space: nowrap;
+  text-align: center;
+  flex-shrink: 0;
   font-family: var(--font-mono, monospace);
   font-size: 0.75rem;
   font-weight: 700;
-  padding: 2px 8px;
+  padding: 2px 10px;
   border-radius: 9999px;
   background: var(--status-bg);
   color: var(--status-color);
   border: 1px solid var(--status-border);
+  user-select: none;
+  -webkit-user-select: none;
 }
 
 .status-pill.stuck {
