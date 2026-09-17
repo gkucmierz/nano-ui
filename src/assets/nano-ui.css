@@ -11,6 +11,8 @@
   --nano-ease-standard: cubic-bezier(0.4, 0, 0.2, 1);
   --nano-ease-smooth: cubic-bezier(0.16, 1, 0.3, 1);
   --nano-ease-spring: cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  --nano-ease-out: cubic-bezier(0, 0, 0.2, 1);
+  --nano-ease-in: cubic-bezier(0.4, 0, 1, 1);
   --nano-ease-linear: linear;
 
   /* --- Logical Transition Variables (Parametrized by Core Durations) --- */
@@ -21,6 +23,9 @@
   --nano-transition-tooltip: var(--nano-duration-fast) var(--nano-ease-smooth);
   --nano-transition-chart: var(--nano-duration-medium) var(--nano-ease-standard);
   --nano-transition-modal: var(--nano-duration-slow) var(--nano-ease-spring);
+  --nano-transition-modal-backdrop: var(--nano-duration-medium) var(--nano-ease-out);
+  --nano-transition-modal-enter: var(--nano-duration-slow) var(--nano-ease-spring);
+  --nano-transition-modal-leave: var(--nano-duration-fast) var(--nano-ease-in);
   --nano-transition-ripple: var(--nano-duration-ripple) var(--nano-ease-linear);
 
   /* Color Palette SSoT - Dark Theme (Default) */
@@ -61,6 +66,19 @@
 
   /* Ripple Token - Dark Theme */
   --nano-ripple-color: rgba(255, 255, 255, 0.35);
+
+  /* NanoModal Tokens - Dark Theme */
+  --nano-modal-bg: #18181b;
+  --nano-modal-glass-bg: rgba(24, 24, 27, 0.85);
+  --nano-modal-border: rgba(255, 255, 255, 0.1);
+  --nano-modal-text: #f8fafc;
+  --nano-modal-text-muted: #94a3b8;
+  --nano-modal-backdrop: rgba(0, 0, 0, 0.6);
+  --nano-modal-radius: 12px;
+  --nano-modal-btn-primary: #6366f1;
+  --nano-modal-btn-primary-hover: #4f46e5;
+  --nano-modal-btn-secondary: #27272a;
+  --nano-modal-btn-secondary-hover: #3f3f46;
 }
 
 :root[data-theme="light"],
@@ -103,6 +121,19 @@ html[data-theme="light"] {
 
   /* Ripple Token - Light Theme (Visible on White Cards) */
   --nano-ripple-color: rgba(15, 23, 42, 0.12);
+
+  /* NanoModal Tokens - Light Theme */
+  --nano-modal-bg: #ffffff;
+  --nano-modal-glass-bg: rgba(255, 255, 255, 0.9);
+  --nano-modal-border: #cbd5e1;
+  --nano-modal-text: #0f172a;
+  --nano-modal-text-muted: #475569;
+  --nano-modal-backdrop: rgba(15, 23, 42, 0.4);
+  --nano-modal-radius: 12px;
+  --nano-modal-btn-primary: #4f46e5;
+  --nano-modal-btn-primary-hover: #4338ca;
+  --nano-modal-btn-secondary: #f1f5f9;
+  --nano-modal-btn-secondary-hover: #e2e8f0;
 }
 
 /* Zero-FOUC: Freeze all CSS transitions during initial page load & dynamic theme switching */

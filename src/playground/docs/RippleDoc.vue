@@ -198,7 +198,7 @@ const copyCode = async (text, id) => {
   user-select: none;
   -webkit-user-select: none;
   color: white;
-  transition: transform var(--nano-transition-interactive, 150ms cubic-bezier(0.4, 0, 0.2, 1)), box-shadow var(--nano-transition-interactive, 150ms cubic-bezier(0.4, 0, 0.2, 1));
+  transition: transform var(--nano-transition-interactive), box-shadow var(--nano-transition-interactive);
 }
 
 .btn:focus-visible {
@@ -238,7 +238,7 @@ const copyCode = async (text, id) => {
   box-shadow: var(--nano-shadow-card);
   color: var(--nano-text-main);
   cursor: pointer;
-  transition: transform var(--nano-transition-interactive, 150ms cubic-bezier(0.4, 0, 0.2, 1)), border-color var(--nano-transition-interactive, 150ms cubic-bezier(0.4, 0, 0.2, 1));
+  transition: transform var(--nano-transition-interactive), border-color var(--nano-transition-interactive);
   transform: translateZ(0);
   user-select: none;
   -webkit-user-select: none;

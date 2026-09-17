@@ -106,7 +106,7 @@ const toggle = (event) => {
 }
 
 .nano-switch {
-  --nano-switch-transition: var(--nano-transition-toggle, 250ms cubic-bezier(0.4, 0, 0.2, 1));
+  --nano-switch-transition: var(--nano-transition-toggle);
   display: inline-flex;
   align-items: center;
   gap: 0.65rem;

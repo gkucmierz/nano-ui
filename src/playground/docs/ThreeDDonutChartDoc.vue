@@ -325,7 +325,7 @@ h4 { margin: 0 0 0.5rem 0; color: #e4e4e7; font-size: 0.9rem; }
   border-radius: 6px;
   cursor: pointer;
   font-weight: 600;
-  transition: background 0.2s ease;
+  transition: background var(--nano-transition-interactive);
 }
 
 .demo-btn:hover { background: #4f46e5; }
@@ -444,7 +444,7 @@ h4 { margin: 0 0 0.5rem 0; color: #e4e4e7; font-size: 0.9rem; }
   bottom: 0;
   background-color: rgba(255, 255, 255, 0.1);
   border: 1px solid rgba(255, 255, 255, 0.15);
-  transition: .3s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: var(--nano-transition-toggle);
   border-radius: 20px;
 }
 
@@ -456,7 +456,7 @@ h4 { margin: 0 0 0.5rem 0; color: #e4e4e7; font-size: 0.9rem; }
   left: 2px;
   bottom: 2px;
   background-color: #a1a1aa;
-  transition: .3s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: var(--nano-transition-toggle);
   border-radius: 50%;
 }
 
@@ -466,8 +466,26 @@ input:checked + .switch-slider {
 }
 
 input:checked + .switch-slider:before {
-  transform: translateX(16px);
-  background-color: #6366f1;
+  transform: translateX(18px);
+  background-color: #ffffff;
+}
+
+/* Controls inputs */
+.control-row {
+  margin-bottom: 12px;
+}
+
+.control-row label {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.85rem;
+  color: var(--nano-text-muted);
+  margin-bottom: 4px;
+}
+
+.control-row label span {
+  font-family: monospace;
+  color: var(--nano-text-main);
 }
 
 .switch:hover .switch-slider:before {
@@ -506,7 +524,7 @@ input[type="range"] {
   background: rgba(255, 255, 255, 0.1);
   border-radius: 4px;
   outline: none;
-  transition: background 0.2s ease;
+  transition: background var(--nano-transition-interactive);
   cursor: pointer;
   margin: 8px 0;
 }
@@ -523,7 +541,7 @@ input[type="range"]::-webkit-slider-thumb {
   border-radius: 50%;
   background: #6366f1;
   box-shadow: 0 0 10px rgba(99, 102, 241, 0.5);
-  transition: transform 0.1s ease, background 0.1s ease;
+  transition: transform var(--nano-transition-interactive), background var(--nano-transition-interactive);
 }
 
 input[type="range"]::-webkit-slider-thumb:hover {
@@ -538,7 +556,7 @@ input[type="range"]::-moz-range-thumb {
   border-radius: 50%;
   background: #6366f1;
   box-shadow: 0 0 10px rgba(99, 102, 241, 0.5);
-  transition: transform 0.1s ease, background 0.1s ease;
+  transition: transform var(--nano-transition-interactive), background var(--nano-transition-interactive);
   cursor: pointer;
 }
 

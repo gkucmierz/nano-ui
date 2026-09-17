@@ -21,7 +21,7 @@ const formatCustomValue = (val) => {
 
     <div class="demo-section">
       <h3>Basic Playground</h3>
-      <p style="margin-bottom: 1.5rem; color: #94a3b8;">Try holding and dragging horizontally on the track for coarse slider jumps. Drag vertically (up/down) by 15px to engage <strong>Fine-Tune</strong> mode, where dragging up increases the value, dragging down decreases it, and vertical distance controls precision.</p>
+      <p class="demo-desc">Try holding and dragging horizontally on the track for coarse slider jumps. Drag vertically (up/down) by 15px to engage <strong>Fine-Tune</strong> mode, where dragging up increases the value, dragging down decreases it, and vertical distance controls precision.</p>
       
       <div class="preview-container">
         <div class="value-display mono">
@@ -61,9 +61,39 @@ const formatCustomValue = (val) => {
   gap: 2rem;
 }
 
+.doc-page h2 {
+  color: var(--nano-text-main);
+  margin: 0;
+}
+
+.doc-page > p {
+  color: var(--nano-text-muted);
+  margin: 0;
+}
+
+.demo-section {
+  background: var(--nano-bg-card);
+  border: 1px solid var(--nano-border-card);
+  border-radius: 12px;
+  padding: 1.5rem;
+  box-shadow: var(--nano-shadow-card);
+}
+
+.demo-section h3 {
+  color: var(--nano-text-main);
+  margin-top: 0;
+  margin-bottom: 0.5rem;
+}
+
+.demo-desc {
+  color: var(--nano-text-muted);
+  margin-bottom: 1.5rem;
+  line-height: 1.5;
+}
+
 .preview-container {
-  background: rgba(30, 41, 59, 0.5);
-  border: 1px solid rgba(255, 255, 255, 0.05);
+  background: var(--nano-bg-card-elevated);
+  border: 1px solid var(--nano-border-card);
   border-radius: 12px;
   padding: 2rem;
   display: flex;
@@ -71,43 +101,39 @@ const formatCustomValue = (val) => {
   align-items: center;
   gap: 1.5rem;
   max-width: 600px;
+  box-shadow: var(--nano-shadow-elevated);
 }
 
 .value-display {
   font-size: 2rem;
   font-weight: 800;
-  color: #00e5ff;
-  font-family: monospace;
+  color: var(--nano-state-active);
+  font-family: ui-monospace, SFMono-Regular, monospace;
   letter-spacing: 0.05rem;
 }
 
-.demo-section {
-  background: rgba(30, 41, 59, 0.2);
-  border: 1px solid rgba(255, 255, 255, 0.03);
-  border-radius: 12px;
-  padding: 1.5rem;
-}
-
 .api-reference {
-  background: #0f172a;
-  border: 1px solid rgba(255, 255, 255, 0.05);
+  background: var(--nano-bg-code);
+  border: 1px solid var(--nano-border-card);
   border-radius: 8px;
   padding: 1.5rem;
+  box-shadow: var(--nano-shadow-card);
 }
 
 .api-reference h3 {
+  color: var(--nano-text-main);
   margin-top: 0;
   margin-bottom: 1rem;
 }
 
 .api-reference code {
-  font-family: monospace;
+  font-family: ui-monospace, SFMono-Regular, monospace;
   font-size: 0.9rem;
-  color: #cbd5e1;
+  color: var(--nano-text-code);
   line-height: 1.6;
 }
 
 .mono {
-  font-family: monospace;
+  font-family: ui-monospace, SFMono-Regular, monospace;
 }
 </style>

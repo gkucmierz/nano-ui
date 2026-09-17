@@ -141,7 +141,7 @@ const copyCode = async (text) => {
   gap: 12px;
   cursor: pointer;
   outline: none;
-  transition: background 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+  transition: var(--nano-transition-interactive);
 }
 
 .code-snippet:focus-visible {
@@ -160,7 +160,7 @@ const copyCode = async (text) => {
 .copy-icon {
   font-size: 14px;
   opacity: 0.5;
-  transition: opacity 0.2s ease;
+  transition: opacity var(--nano-transition-interactive);
 }
 
 .code-snippet:hover .copy-icon {
@@ -177,7 +177,7 @@ const copyCode = async (text) => {
   cursor: pointer;
   outline: none;
   color: white;
-  transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.2s ease;
+  transition: transform var(--nano-transition-interactive), box-shadow var(--nano-transition-interactive);
 }
 
 .btn:focus-visible {
@@ -245,68 +245,3 @@ const copyCode = async (text) => {
 
 </style>
 
-<style>
-/* Light Mode Overrides */
-:root[data-theme="light"] .doc-page h2,
-:root[data-theme="light"] .section-title {
-  color: #0f172a;
-}
-:root[data-theme="light"] .desc {
-  color: #475569;
-}
-
-:root[data-theme="light"] .code-snippet {
-  background: #f1f5f9;
-  border-color: #cbd5e1;
-  color: #1e293b;
-}
-:root[data-theme="light"] .code-snippet:hover {
-  background: #e2e8f0;
-  border-color: #cbd5e1;
-}
-:root[data-theme="light"] .copy-icon {
-  color: #64748b;
-}
-
-:root[data-theme="light"] .css-vars-block {
-  background: #f1f5f9;
-  border-color: #e2e8f0;
-}
-:root[data-theme="light"] .css-vars-block pre {
-  color: #334155;
-}
-
-:root[data-theme="light"] .btn.outline {
-  border-color: #cbd5e1;
-  color: #0f172a;
-}
-:root[data-theme="light"] .btn.outline:hover {
-  background: #f1f5f9;
-}
-
-/* 
-  Global styles for our custom tooltips!
-  Normally these would be in your app's global css (like style.css).
-  We put them here globally so the GlobalTooltip component can pick them up.
-*/
-</style>
-
-<style>
-.global-tooltip.tooltip-danger {
-  --nu-tooltip-bg: rgba(234, 88, 12, 0.95);
-  --nu-tooltip-border: 1px solid rgba(253, 186, 116, 0.3);
-  --nu-tooltip-arrow-border: rgba(253, 186, 116, 0.3);
-}
-
-.global-tooltip.tooltip-error {
-  --nu-tooltip-bg: rgba(220, 38, 38, 0.95);
-  --nu-tooltip-border: 1px solid rgba(255, 100, 100, 0.3);
-  --nu-tooltip-arrow-border: rgba(255, 100, 100, 0.3);
-}
-
-.global-tooltip.tooltip-success {
-  --nu-tooltip-bg: rgba(5, 150, 105, 0.95);
-  --nu-tooltip-border: 1px solid rgba(52, 211, 153, 0.3);
-  --nu-tooltip-arrow-border: rgba(52, 211, 153, 0.3);
-}
-</style>

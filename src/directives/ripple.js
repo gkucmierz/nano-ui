@@ -1,5 +1,3 @@
-import { durations } from '../config/transitions.js';
-
 const Ripple = {
   mounted(el, binding) {
     el.style.position = 'relative';
@@ -24,11 +22,10 @@ const Ripple = {
         circle.style.backgroundColor = binding.value;
       }
 
-      el.appendChild(circle);
+      // Native browser event: cleans up automatically when CSS animation ends (100% SSoT in CSS)
+      circle.addEventListener('animationend', () => circle.remove(), { once: true });
 
-      setTimeout(() => {
-        circle.remove();
-      }, durations.ripple); // SSoT animation duration (600ms)
+      el.appendChild(circle);
     });
   }
 };

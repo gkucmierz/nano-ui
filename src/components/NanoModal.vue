@@ -289,22 +289,8 @@ const handleCancel = () => { emit('cancel'); closeModal(); };
   </Teleport>
 </template>
 
-<style>
-/* CSS Variables */
-:root {
-  --nano-modal-bg: #1e1e24;
-  --nano-modal-glass-bg: rgba(30, 30, 36, 0.85);
-  --nano-modal-border: rgba(255, 255, 255, 0.1);
-  --nano-modal-text: #ffffff;
-  --nano-modal-text-muted: #a0a0a0;
-  --nano-modal-backdrop: rgba(0, 0, 0, 0.6);
-  --nano-modal-radius: 12px;
+<style scoped>
 
-  --nano-btn-primary: #3498db;
-  --nano-btn-primary-hover: #2980b9;
-  --nano-btn-secondary: #34495e;
-  --nano-btn-secondary-hover: #2c3e50;
-}
 
 .nano-modal-overlay {
   position: fixed;
@@ -385,7 +371,7 @@ const handleCancel = () => { emit('cancel'); closeModal(); };
   align-items: center;
   justify-content: center;
   border-radius: 6px;
-  transition: color var(--nano-transition-interactive, 150ms cubic-bezier(0.4, 0, 0.2, 1)), background-color var(--nano-transition-interactive, 150ms cubic-bezier(0.4, 0, 0.2, 1));
+  transition: color var(--nano-transition-interactive), background-color var(--nano-transition-interactive);
 }
 
 .nano-modal-close-btn:hover {
@@ -420,11 +406,11 @@ const handleCancel = () => { emit('cancel'); closeModal(); };
   font-size: 0.95rem;
   cursor: pointer;
   color: white;
-  transition: background-color var(--nano-transition-interactive, 150ms cubic-bezier(0.4, 0, 0.2, 1)), transform var(--nano-transition-interactive, 150ms cubic-bezier(0.4, 0, 0.2, 1)), box-shadow var(--nano-transition-interactive, 150ms cubic-bezier(0.4, 0, 0.2, 1));
+  transition: background-color var(--nano-transition-interactive), transform var(--nano-transition-interactive), box-shadow var(--nano-transition-interactive);
 }
 
 .nano-btn-primary {
-  background: var(--nano-btn-primary);
+  background: var(--nano-modal-btn-primary, var(--nano-accent-primary));
 }
 
 .nano-btn-primary:hover {
@@ -432,15 +418,16 @@ const handleCancel = () => { emit('cancel'); closeModal(); };
 }
 
 .nano-btn-secondary {
-  background: rgba(255, 255, 255, 0.1);
+  background: var(--nano-modal-btn-secondary, rgba(255, 255, 255, 0.1));
+  color: var(--nano-modal-text);
 }
 
 .nano-btn-secondary:hover {
-  background: rgba(255, 255, 255, 0.15);
+  filter: brightness(1.1);
 }
 
 .nano-btn-danger {
-  background: var(--nano-btn-danger);
+  background: var(--nano-state-danger, #ef4444);
 }
 
 .nano-btn-danger:hover {
@@ -459,7 +446,7 @@ const handleCancel = () => { emit('cancel'); closeModal(); };
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: color var(--nano-transition-interactive, 150ms cubic-bezier(0.4, 0, 0.2, 1));
+  transition: color var(--nano-transition-interactive);
   z-index: 10;
 }
 
@@ -469,15 +456,15 @@ const handleCancel = () => { emit('cancel'); closeModal(); };
 
 .nano-modal-fade-enter-active,
 .nano-modal-fade-leave-active {
-  transition: opacity var(--nano-transition-modal-backdrop, 250ms cubic-bezier(0, 0, 0.2, 1));
+  transition: opacity var(--nano-transition-modal-backdrop);
 }
 
 .nano-modal-fade-enter-active .nano-modal-window {
-  transition: transform var(--nano-transition-modal-enter, 300ms cubic-bezier(0.175, 0.885, 0.32, 1.275));
+  transition: transform var(--nano-transition-modal-enter);
 }
 
 .nano-modal-fade-leave-active .nano-modal-window {
-  transition: transform var(--nano-transition-modal-leave, 200ms cubic-bezier(0.4, 0, 1, 1));
+  transition: transform var(--nano-transition-modal-leave);
 }
 
 .nano-modal-fade-enter-from,

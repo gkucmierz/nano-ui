@@ -194,12 +194,12 @@ onUnmounted(() => {
   box-shadow: 0 8px 24px -6px rgba(0, 0, 0, 0.45);
   background: var(--bg-card, rgba(16, 22, 34, 0.85));
   will-change: margin, border-radius, border-color, padding, box-shadow;
-  transition: margin var(--nano-transition-header, 200ms cubic-bezier(0.16, 1, 0.3, 1)),
-              border-radius var(--nano-transition-header, 200ms cubic-bezier(0.16, 1, 0.3, 1)),
-              border-color var(--nano-transition-interactive, 150ms cubic-bezier(0.4, 0, 0.2, 1)),
-              padding var(--nano-transition-header, 200ms cubic-bezier(0.16, 1, 0.3, 1)),
-              box-shadow var(--nano-transition-header, 200ms cubic-bezier(0.16, 1, 0.3, 1)),
-              background-color var(--nano-transition-interactive, 150ms cubic-bezier(0.4, 0, 0.2, 1));
+  transition: margin var(--nano-transition-header),
+              border-radius var(--nano-transition-header),
+              border-color var(--nano-transition-interactive),
+              padding var(--nano-transition-header),
+              box-shadow var(--nano-transition-header),
+              background-color var(--nano-transition-interactive);
 }
 
 .nano-mutating-header.has-glassmorphism {

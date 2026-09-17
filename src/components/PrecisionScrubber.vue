@@ -252,7 +252,7 @@ const formatNum = (num) => {
   position: relative;
   overflow: hidden;
   user-select: none;
-  transition: border-color var(--nano-transition-interactive, 150ms cubic-bezier(0.4, 0, 0.2, 1)), background-color var(--nano-transition-interactive, 150ms cubic-bezier(0.4, 0, 0.2, 1));
+  transition: border-color var(--nano-transition-interactive), background-color var(--nano-transition-interactive);
 }
 
 .nano-scrub-track:hover {

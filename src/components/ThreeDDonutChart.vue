@@ -1597,7 +1597,7 @@ defineExpose({
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: width 0.45s cubic-bezier(0.25, 1, 0.5, 1), height 0.45s cubic-bezier(0.25, 1, 0.5, 1);
+  transition: width var(--nano-transition-motion), height var(--nano-transition-motion);
 }
 
 .donut-canvas-wrapper.is-expanded {
@@ -1622,7 +1622,7 @@ defineExpose({
 /* Beautiful Interactive 3D hover effects */
 .slice-group-3d {
   cursor: pointer;
-  transition: transform var(--nano-transition-chart, 250ms cubic-bezier(0.4, 0, 0.2, 1)), opacity var(--nano-transition-interactive, 150ms cubic-bezier(0.4, 0, 0.2, 1));
+  transition: transform var(--nano-transition-chart), opacity var(--nano-transition-interactive);
 }
 
 .slice-group-3d.is-dimmed {
@@ -1631,15 +1631,15 @@ defineExpose({
 
 /* Hover highlights for leader lines and text */
 .label-group {
-  transition: opacity var(--nano-transition-interactive, 150ms cubic-bezier(0.4, 0, 0.2, 1));
+  transition: opacity var(--nano-transition-interactive);
 }
 
 .label-group path {
-  transition: d var(--nano-transition-chart, 250ms cubic-bezier(0.4, 0, 0.2, 1)), stroke-width var(--nano-transition-interactive, 150ms cubic-bezier(0.4, 0, 0.2, 1)), opacity var(--nano-transition-interactive, 150ms cubic-bezier(0.4, 0, 0.2, 1));
+  transition: d var(--nano-transition-chart), stroke-width var(--nano-transition-interactive), opacity var(--nano-transition-interactive);
 }
 
 .label-group text {
-  transition: transform var(--nano-transition-chart, 250ms cubic-bezier(0.4, 0, 0.2, 1)), font-weight var(--nano-transition-interactive, 150ms cubic-bezier(0.4, 0, 0.2, 1)), opacity var(--nano-transition-interactive, 150ms cubic-bezier(0.4, 0, 0.2, 1));
+  transition: transform var(--nano-transition-chart), font-weight var(--nano-transition-interactive), opacity var(--nano-transition-interactive);
 }
 
 .label-group.is-hovered path {

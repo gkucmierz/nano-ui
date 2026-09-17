@@ -115,8 +115,7 @@ watch(() => tooltipState.isVisible, async (visible) => {
   pointer-events: none;
   box-shadow: var(--nu-tooltip-shadow);
   border: var(--nu-tooltip-border);
-  transform: translateY(4px) scale(0.95);
-  transition: opacity var(--nano-transition-tooltip, 200ms cubic-bezier(0.16, 1, 0.3, 1)), transform var(--nano-transition-tooltip, 200ms cubic-bezier(0.16, 1, 0.3, 1));
+  transition: opacity var(--nano-transition-tooltip), transform var(--nano-transition-tooltip);
   opacity: 0;
   visibility: hidden;
 }

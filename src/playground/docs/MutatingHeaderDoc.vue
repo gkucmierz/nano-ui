@@ -97,57 +97,55 @@ const hysteresisVal = ref(8);
   display: flex;
   flex-direction: column;
   gap: 24px;
-  --doc-title-color: #f8fafc;
-  --doc-desc-color: #94a3b8;
   --status-bg: rgba(59, 130, 246, 0.15);
   --status-color: #60a5fa;
   --status-border: rgba(59, 130, 246, 0.3);
   --status-stuck-bg: rgba(16, 185, 129, 0.15);
   --status-stuck-color: #34d399;
   --status-stuck-border: rgba(16, 185, 129, 0.3);
-  --viewport-bg: rgba(15, 23, 42, 0.6);
-  --viewport-border: rgba(255, 255, 255, 0.1);
-  --viewport-shadow: inset 0 2px 8px rgba(0, 0, 0, 0.3);
-  --brand-color: #f8fafc;
+  --viewport-bg: var(--nano-bg-card-elevated);
+  --viewport-border: var(--nano-border-card);
+  --viewport-shadow: var(--nano-shadow-elevated);
+  --brand-color: var(--nano-text-main);
   --badge-bg: rgba(6, 182, 212, 0.15);
   --badge-color: #22d3ee;
   --badge-border: rgba(6, 182, 212, 0.3);
-  --stat-num: #38bdf8;
-  --stat-lbl: #94a3b8;
-  --divider-bg: rgba(255, 255, 255, 0.12);
-  --btn-color: #94a3b8;
-  --btn-hover-bg: rgba(255, 255, 255, 0.08);
-  --btn-hover-color: #ffffff;
-  --pill-border: rgba(255, 255, 255, 0.12);
-  --pill-color: #94a3b8;
-  --card-bg: rgba(255, 255, 255, 0.03);
-  --card-border: rgba(255, 255, 255, 0.06);
-  --card-title: #f8fafc;
-  --card-text: #94a3b8;
-  --card-shadow: none;
-  --api-bg: rgba(0, 0, 0, 0.25);
-  --api-border: rgba(255, 255, 255, 0.08);
-  --api-title: #f8fafc;
-  --api-code: #e2e8f0;
+  --stat-num: var(--nano-state-active);
+  --stat-lbl: var(--nano-text-muted);
+  --divider-bg: var(--nano-border-subtle);
+  --btn-color: var(--nano-text-muted);
+  --btn-hover-bg: var(--nano-bg-hover);
+  --btn-hover-color: var(--nano-text-main);
+  --pill-border: var(--nano-border-card);
+  --pill-color: var(--nano-text-muted);
+  --card-bg: var(--nano-bg-card);
+  --card-border: var(--nano-border-card);
+  --card-title: var(--nano-text-main);
+  --card-text: var(--nano-text-muted);
+  --card-shadow: var(--nano-shadow-card);
+  --api-bg: var(--nano-bg-code);
+  --api-border: var(--nano-border-card);
+  --api-title: var(--nano-text-main);
+  --api-code: var(--nano-text-code);
 }
 
 .doc-page h2 {
-  color: var(--doc-title-color);
+  color: var(--nano-text-main);
   margin: 0;
 }
 
-.doc-page p {
-  color: var(--doc-desc-color);
+.doc-page > p {
+  color: var(--nano-text-muted);
   margin: 0;
 }
 
 .demo-section h3 {
-  color: var(--doc-title-color);
+  color: var(--nano-text-main);
   margin: 0 0 8px 0;
 }
 
 .demo-desc {
-  color: var(--doc-desc-color);
+  color: var(--nano-text-muted);
   font-size: 0.9rem;
   margin-bottom: 16px;
   display: flex;
@@ -236,7 +234,7 @@ const hysteresisVal = ref(8);
   border-radius: 4px;
   outline: none;
   user-select: none;
-  transition: background-color 0.15s ease, color 0.15s ease;
+  transition: var(--nano-transition-interactive);
 }
 
 .demo-btn:hover {
@@ -255,7 +253,7 @@ const hysteresisVal = ref(8);
   cursor: pointer;
   outline: none;
   user-select: none;
-  transition: background-color 0.15s ease;
+  transition: var(--nano-transition-interactive);
 }
 
 .demo-btn-action:hover {
@@ -321,41 +319,3 @@ const hysteresisVal = ref(8);
 }
 </style>
 
-<style>
-/* Light Theme High-Contrast Overrides for MutatingHeader Documentation */
-:root[data-theme="light"] .doc-page,
-[data-theme="light"] .doc-page {
-  --doc-title-color: #0f172a;
-  --doc-desc-color: #475569;
-  --status-bg: #eff6ff;
-  --status-color: #1d4ed8;
-  --status-border: #bfdbfe;
-  --status-stuck-bg: #ecfdf5;
-  --status-stuck-color: #047857;
-  --status-stuck-border: #a7f3d0;
-  --viewport-bg: #f1f5f9;
-  --viewport-border: #cbd5e1;
-  --viewport-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.04);
-  --brand-color: #0f172a;
-  --badge-bg: #ecfeff;
-  --badge-color: #0891b2;
-  --badge-border: #a5f3fc;
-  --stat-num: #0284c7;
-  --stat-lbl: #475569;
-  --divider-bg: rgba(0, 0, 0, 0.12);
-  --btn-color: #334155;
-  --btn-hover-bg: rgba(0, 0, 0, 0.06);
-  --btn-hover-color: #0f172a;
-  --pill-border: #cbd5e1;
-  --pill-color: #475569;
-  --card-bg: #ffffff;
-  --card-border: #cbd5e1;
-  --card-title: #0f172a;
-  --card-text: #334155;
-  --card-shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
-  --api-bg: #f8fafc;
-  --api-border: #cbd5e1;
-  --api-title: #0f172a;
-  --api-code: #0f172a;
-}
-</style>

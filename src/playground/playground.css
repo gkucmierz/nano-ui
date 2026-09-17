@@ -262,3 +262,23 @@
   transform: translateY(5px);
 }
 
+/* Playground Custom Tooltip Variants */
+.global-tooltip.tooltip-danger {
+  --nu-tooltip-bg: rgba(234, 88, 12, 0.95);
+  --nu-tooltip-border: 1px solid rgba(253, 186, 116, 0.3);
+  --nu-tooltip-arrow-border: rgba(253, 186, 116, 0.3);
+}
+
+.global-tooltip.tooltip-error {
+  --nu-tooltip-bg: rgba(220, 38, 38, 0.95);
+  --nu-tooltip-border: 1px solid rgba(255, 100, 100, 0.3);
+  --nu-tooltip-arrow-border: rgba(255, 100, 100, 0.3);
+}
+
+.global-tooltip.tooltip-success {
+  --nu-tooltip-bg: rgba(5, 150, 105, 0.95);
+  --nu-tooltip-border: 1px solid rgba(52, 211, 153, 0.3);
+  --nu-tooltip-arrow-border: rgba(52, 211, 153, 0.3);
+}
+
+
