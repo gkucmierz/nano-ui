@@ -40,7 +40,7 @@ const props = defineProps({
   },
   /**
    * Timing mode: 'proportional' scales duration with deltaAngle (v ~ const).
-   * 'fixed' duration is always exactly 1T (1 click = now + 1T, Rubik's cube mode).
+   * 'fixed' duration is always constant T (1 click = now + 1T, isochronous mode T = const).
    */
   timingMode: {
     type: String,

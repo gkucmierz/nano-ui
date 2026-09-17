@@ -184,20 +184,6 @@ const triggerSpam = () => {
   }, 360);
 };
 
-const triggerInertiaTest = () => {
-  registerClickEvent('179° + 180°');
-  if (!rotatorRef.value) return;
-  // Step 1: Rotate quickly toward 179°
-  rotatorRef.value.setAngle(179);
-  // Step 2: Trigger +180° mid-motion
-  setTimeout(() => {
-    if (rotatorRef.value) {
-      registerClickEvent('+180° Burst');
-      rotatorRef.value.rotateBy(180);
-    }
-  }, 160);
-};
-
 const triggerReset = () => {
   registerClickEvent('Reset');
   if (rotatorRef.value) {
@@ -549,7 +535,7 @@ onUnmounted(() => {
         <div class="control-group">
           <label class="group-label">
             <span>Timing Mode</span>
-            <span class="unit-indicator">{{ timingMode === 'fixed' ? 'Fixed 1T' : 'Proportional' }}</span>
+            <span class="unit-indicator">{{ timingMode === 'fixed' ? 'T = const' : 'v ~ const' }}</span>
           </label>
           <div class="preset-pills">
             <button
@@ -568,7 +554,7 @@ onUnmounted(() => {
               @click="timingMode = 'fixed'"
               v-ripple
             >
-              Fixed 1T (Rubik's Cube)
+              Fixed (T = const)
             </button>
           </div>
         </div>
@@ -602,16 +588,8 @@ onUnmounted(() => {
             >
               ⚡ Spam 4x
             </button>
-            <button
-              type="button"
-              class="btn btn-action inertia-btn"
-              @click="triggerInertiaTest"
-              v-ripple
-            >
-              🎯 179° + 180°
-            </button>
             <button type="button" class="btn btn-reset" @click="triggerReset" v-ripple>
-              Reset
+              ↺ Reset
             </button>
           </div>
         </div>
@@ -925,7 +903,7 @@ duration: Number (default: 1000) - Base duration in ms per 90° step
 speedMultiplier: Number (default: 1) - Time multiplier (e.g. 0.5 = 2x slower)
 step: Number (default: 90) - Angular step quantum in degrees
 shortestPath: Boolean (default: true) - Geodesic modulo 360° path optimization
-timingMode: String (default: 'proportional') - 'proportional' (v ~ const) or 'fixed' (1 click = now + 1T)
+timingMode: String (default: 'proportional') - 'proportional' (v ~ const, isokinetic) or 'fixed' (T = const, isochronous)
 inertiaThreshold: Number (default: 0.25) - Momentum reversal avoidance threshold in seconds (0 to disable)
 size: Number | String (default: 260) - Width/height dimension
 
@@ -946,6 +924,94 @@ isMoving - Boolean motion status ref
 @change - Emits new target whenever commanded
 @settled - Emitted when movement completes: { angle, normalizedAngle }
 @frame - Emitted on every rAF tick with live kinematic telemetry { currentAngle, targetAngle, velocity, acceleration, progress, isMoving, v0, timestamp }</code></pre>
+    </div>
+
+    <!-- Kinematic & Mathematical Foundations -->
+    <h3 class="section-title">Kinematics & Smoothness Classes (Cᵏ)</h3>
+    <div class="math-reference">
+      <div class="math-table-container">
+        <table class="math-table">
+          <thead>
+            <tr>
+              <th>Funkcja / Sygnał</th>
+              <th>Nazwa matematyczna</th>
+              <th>Klasa gładkości</th>
+              <th>Opis fizyczny & zachowanie</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td class="fn-cell">
+                <span class="dot-badge cyan"></span>
+                <strong>Kąt θ(t)</strong>
+              </td>
+              <td>Funkcja ciągła i gładka</td>
+              <td><span class="class-pill c1">C¹</span></td>
+              <td>Ciągła na całej dziedzinie, bez skoków i teleportacji. Ciągła pierwsza pochodna (brak ostrych załamań).</td>
+            </tr>
+            <tr>
+              <td class="fn-cell">
+                <span class="dot-badge emerald"></span>
+                <strong>Prędkość ω(t)</strong>
+              </td>
+              <td>Funkcja kawałkami gładka</td>
+              <td><span class="class-pill c0">C⁰</span></td>
+              <td>Ciągła, lecz w momentach impulsów posiada punkty nieróżniczkowalności (ostrza / załamania).</td>
+            </tr>
+            <tr>
+              <td class="fn-cell">
+                <span class="dot-badge amber"></span>
+                <strong>Przyspieszenie α(t)</strong>
+              </td>
+              <td>Funkcja nieciągła (przedziałami ciągła)</td>
+              <td><span class="class-pill disc">Skokowa</span></td>
+              <td>Posiada nieciągłości skokowe I rodzaju (jump discontinuities). W momentach impulsów przyspieszenie zmienia się skokowo.</td>
+            </tr>
+            <tr>
+              <td class="fn-cell">
+                <span class="dot-badge pink"></span>
+                <strong>Cel θ_target(t)</strong>
+              </td>
+              <td>Funkcja schodkowa</td>
+              <td><span class="class-pill step">Heaviside</span></td>
+              <td>Suma skoków jednostkowych Heaviside'a Θ(t). Zadana orientacja przeskakuje natychmiast o kwant kąta.</td>
+            </tr>
+            <tr>
+              <td class="fn-cell">
+                <span class="dot-badge purple"></span>
+                <strong>Zryw j(t) & Impulsy</strong>
+              </td>
+              <td>Pochodna przyspieszenia / Impuls Diraca</td>
+              <td><span class="class-pill dirac">δ(t)</span></td>
+              <td>W punktach uskoków przyspieszenia zryw (jerk) dąży do nieskończoności, modelowany jako impulsy Diraca.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="timing-modes-grid">
+        <div class="mode-card">
+          <div class="mode-header">
+            <span class="mode-badge">Proportional</span>
+            <span class="mode-formula font-mono">v ≈ const (ω ≈ const)</span>
+          </div>
+          <p class="mode-desc">
+            Ruch <strong>izokinetyczny</strong>. Czas trwania animacji skaluje się proporcjonalnie do odległości kątowej:
+            <code class="font-mono">T ∝ |Δθ|</code>. Prędkość kątowa pozostaje stała, więc dłuższy obrót trwa odpowiednio dłużej.
+          </p>
+        </div>
+        <div class="mode-card">
+          <div class="mode-header">
+            <span class="mode-badge isochronous">Fixed Duration</span>
+            <span class="mode-formula font-mono">T = const (1T)</span>
+          </div>
+          <p class="mode-desc">
+            Ruch <strong>izochroniczny</strong>. Każdy impuls kończy się dokładnie po upływie stałego czasu bazowego:
+            <code class="font-mono">t_end = now + T</code>. Prędkość kątowa skaluje się z dystansem:
+            <code class="font-mono">ω ∝ |Δθ|</code>.
+          </p>
+        </div>
+      </div>
     </div>
   </div>
 </template>
@@ -1269,17 +1335,6 @@ isMoving - Boolean motion status ref
   background: rgba(239, 68, 68, 0.08);
 }
 
-.btn-action.inertia-btn {
-  border-color: #8b5cf6;
-  color: #c4b5fd;
-  background: rgba(139, 92, 246, 0.08);
-}
-
-.btn-action.inertia-btn:hover {
-  background: rgba(139, 92, 246, 0.16);
-  border-color: #a78bfa;
-}
-
 /* Preset Pills */
 .preset-pills {
   display: flex;
@@ -1541,5 +1596,156 @@ isMoving - Boolean motion status ref
   font-size: 0.82rem;
   line-height: 1.6;
   color: var(--nano-text-code, #e2e8f0);
+}
+
+/* Kinematics Math Reference Table */
+.math-reference {
+  display: flex;
+  flex-direction: column;
+  gap: var(--nano-space-md, 16px);
+}
+
+.math-table-container {
+  overflow-x: auto;
+  border-radius: var(--nano-radius-md, 8px);
+  background: var(--nano-bg-code, #0f172a);
+  border: 1px solid var(--nano-border-card, rgba(255, 255, 255, 0.12));
+}
+
+.math-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.82rem;
+  text-align: left;
+}
+
+.math-table th {
+  padding: 10px 14px;
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--nano-text-muted, #94a3b8);
+  font-weight: 600;
+  border-bottom: 1px solid var(--nano-border-card, rgba(255, 255, 255, 0.08));
+  white-space: nowrap;
+}
+
+.math-table td {
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--nano-border-card, rgba(255, 255, 255, 0.05));
+  color: var(--nano-text-main, #e2e8f0);
+  vertical-align: middle;
+}
+
+.math-table tr:last-child td {
+  border-bottom: none;
+}
+
+.fn-cell {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  white-space: nowrap;
+}
+
+.dot-badge {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.dot-badge.cyan { background: var(--nano-state-active, #00f2fe); }
+.dot-badge.emerald { background: #10b981; }
+.dot-badge.amber { background: #f59e0b; }
+.dot-badge.pink { background: var(--nano-accent-secondary, #ec4899); }
+.dot-badge.purple { background: #a855f7; }
+
+.class-pill {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 9999px;
+  font-family: var(--font-mono, monospace);
+  font-size: 0.75rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.class-pill.c1 {
+  background: rgba(0, 242, 254, 0.15);
+  color: #00f2fe;
+}
+
+.class-pill.c0 {
+  background: rgba(16, 185, 129, 0.15);
+  color: #10b981;
+}
+
+.class-pill.disc {
+  background: rgba(245, 158, 11, 0.15);
+  color: #f59e0b;
+}
+
+.class-pill.step {
+  background: rgba(236, 72, 153, 0.15);
+  color: #ec4899;
+}
+
+.class-pill.dirac {
+  background: rgba(168, 85, 247, 0.15);
+  color: #c084fc;
+}
+
+.timing-modes-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: var(--nano-space-md, 16px);
+}
+
+.mode-card {
+  padding: var(--nano-space-md, 16px);
+  border-radius: var(--nano-radius-md, 8px);
+  background: var(--nano-bg-code, #0f172a);
+  border: 1px solid var(--nano-border-card, rgba(255, 255, 255, 0.12));
+}
+
+.mode-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.mode-badge {
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 3px 8px;
+  border-radius: 4px;
+  background: rgba(99, 102, 241, 0.2);
+  color: #818cf8;
+}
+
+.mode-badge.isochronous {
+  background: rgba(16, 185, 129, 0.2);
+  color: #34d399;
+}
+
+.mode-formula {
+  font-size: 0.8rem;
+  color: var(--nano-text-muted, #94a3b8);
+}
+
+.mode-desc {
+  margin: 0;
+  font-size: 0.82rem;
+  line-height: 1.55;
+  color: var(--nano-text-main, #e2e8f0);
+}
+
+.mode-desc code {
+  padding: 1px 5px;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.08);
+  color: #00f2fe;
 }
 </style>
