@@ -1,8 +1,56 @@
 /* Nano UI - Playground Minimal Layout Styles */
 
-:global(*:focus),
-:global(*:focus-visible) {
-  outline: none;
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+*:focus,
+*:focus-visible {
+  outline: none !important;
+}
+
+input,
+textarea,
+select,
+button {
+  outline: none !important;
+}
+
+input:focus,
+input:focus-visible,
+textarea:focus,
+textarea:focus-visible,
+select:focus,
+select:focus-visible,
+button:focus,
+button:focus-visible {
+  outline: none !important;
+  box-shadow: none !important;
+}
+
+:root,
+body,
+.playground-layout {
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+input,
+textarea,
+[contenteditable="true"],
+code,
+pre,
+kbd,
+samp {
+  user-select: text !important;
+  -webkit-user-select: text !important;
+}
+
+code,
+pre {
+  cursor: text;
 }
 
 .playground-layout {

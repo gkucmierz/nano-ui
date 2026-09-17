@@ -370,6 +370,12 @@ h4 { margin: 0 0 0.5rem 0; color: #e4e4e7; font-size: 0.9rem; }
   border-radius: 6px;
   color: #fff;
   font-size: 0.85rem;
+  outline: none;
+  transition: border-color var(--nano-transition-interactive);
+}
+
+.input-name:focus {
+  border-color: var(--nano-border-hover);
 }
 
 .input-value {
@@ -380,6 +386,12 @@ h4 { margin: 0 0 0.5rem 0; color: #e4e4e7; font-size: 0.9rem; }
   border-radius: 6px;
   color: #fff;
   font-size: 0.85rem;
+  outline: none;
+  transition: border-color var(--nano-transition-interactive);
+}
+
+.input-value:focus {
+  border-color: var(--nano-border-hover);
 }
 
 .input-color {

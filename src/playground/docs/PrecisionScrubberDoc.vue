@@ -24,9 +24,7 @@ const formatCustomValue = (val) => {
       <p class="demo-desc">Try holding and dragging horizontally on the track for coarse slider jumps. Drag vertically (up/down) by 15px to engage <strong>Fine-Tune</strong> mode, where dragging up increases the value, dragging down decreases it, and vertical distance controls precision.</p>
       
       <div class="preview-container">
-        <div class="value-display mono">
-          {{ formattedValue }}
-        </div>
+        <div class="value-display mono">{{ formattedValue }}</div>
         
         <PrecisionScrubber 
           v-model="sampleIndex"

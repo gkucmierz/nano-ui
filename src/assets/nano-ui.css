@@ -148,6 +148,24 @@ html.theme-switching *::after {
   transition: none !important;
 }
 
+/* Zero native outlines & focus rings across all interactive controls (Rule 6.3) */
+*:focus,
+*:focus-visible {
+  outline: none !important;
+}
+
+input:focus,
+input:focus-visible,
+textarea:focus,
+textarea:focus-visible,
+select:focus,
+select:focus-visible,
+button:focus,
+button:focus-visible {
+  outline: none !important;
+  box-shadow: none !important;
+}
+
 body {
   margin: 0;
   padding: 0;

@@ -11,9 +11,7 @@
       :style="{ width: progressPercent + '%' }"
     ></div>
     
-    <span class="nano-scrub-label">
-      {{ label }}
-    </span>
+    <span class="nano-scrub-label">{{ label }}</span>
   </div>
 
   <!-- HUD Overlay for high-precision scrubbing -->

@@ -281,6 +281,8 @@ const hysteresisVal = ref(8);
   border: 1px solid var(--card-border);
   background: var(--card-bg);
   box-shadow: var(--card-shadow);
+  user-select: text;
+  -webkit-user-select: text;
 }
 
 .demo-card-placeholder h4 {
