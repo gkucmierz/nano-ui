@@ -485,7 +485,15 @@ pre {
 
   .content {
     width: calc(100% - 68px);
-    padding: 2rem 1.5rem;
+    padding: 1.5rem 1.25rem;
+  }
+
+  .component-section {
+    background: transparent;
+    border: none;
+    border-radius: 0;
+    box-shadow: none;
+    padding: 0;
   }
 }
 
@@ -510,7 +518,7 @@ pre {
 
   .content {
     width: calc(100% - 58px);
-    padding: 1.5rem 1rem;
+    padding: 1.25rem 0.85rem;
   }
 
   .content-header h1 {
@@ -518,7 +526,11 @@ pre {
   }
 
   .component-section {
-    padding: 1.25rem;
+    background: transparent;
+    border: none;
+    border-radius: 0;
+    box-shadow: none;
+    padding: 0;
   }
 }
 
