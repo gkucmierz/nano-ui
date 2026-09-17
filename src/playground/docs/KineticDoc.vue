@@ -724,6 +724,7 @@ onUnmounted(() => {
             <!-- Zero reference line for velocity & acceleration -->
             <line
               v-if="showVelocity || showAcceleration"
+              class="zero-ref-line"
               :x1="padding.left"
               :y1="padding.top + 0.5 * plotHeight"
               :x2="svgWidth - padding.right"
@@ -748,7 +749,7 @@ onUnmounted(() => {
           </g>
 
           <!-- Right Y-Axis Labels (Velocity ω scale) -->
-          <g v-if="showVelocity" class="axis-labels" font-family="monospace" font-size="9" fill="#10b981">
+          <g v-if="showVelocity" class="axis-labels axis-vel-labels" font-family="monospace" font-size="9" fill="#10b981">
             <text :x="svgWidth - padding.right + 8" :y="padding.top + 10" text-anchor="start">
               +{{ formatVelocity(maxVel, selectedUnit, 0) }}
             </text>
@@ -1747,5 +1748,239 @@ isMoving - Boolean motion status ref
   border-radius: 4px;
   background: rgba(255, 255, 255, 0.08);
   color: #00f2fe;
+}
+
+/* ==========================================================================
+   Light Theme Enhancements (High Contrast & Crisp Soft Surfaces)
+   ========================================================================== */
+[data-theme="light"] .matrix-cell,
+:root[data-theme="light"] .matrix-cell,
+[data-theme="light"] .stage-status-bar,
+:root[data-theme="light"] .stage-status-bar,
+[data-theme="light"] .visual-tabs,
+:root[data-theme="light"] .visual-tabs,
+[data-theme="light"] .telemetry-foot,
+:root[data-theme="light"] .telemetry-foot {
+  background: #f8fafc;
+  border-color: #e2e8f0;
+}
+
+[data-theme="light"] .matrix-lbl,
+:root[data-theme="light"] .matrix-lbl {
+  color: #64748b;
+}
+
+[data-theme="light"] .matrix-val,
+:root[data-theme="light"] .matrix-val {
+  color: #0f172a;
+}
+
+[data-theme="light"] .matrix-val.active,
+:root[data-theme="light"] .matrix-val.active {
+  color: #0284c7;
+}
+
+[data-theme="light"] .matrix-val.target,
+:root[data-theme="light"] .matrix-val.target {
+  color: #be185d;
+}
+
+[data-theme="light"] .matrix-val.vel,
+:root[data-theme="light"] .matrix-val.vel {
+  color: #047857;
+}
+
+[data-theme="light"] .matrix-val.acc,
+:root[data-theme="light"] .matrix-val.acc {
+  color: #b45309;
+}
+
+[data-theme="light"] .status-text,
+:root[data-theme="light"] .status-text {
+  color: #047857;
+}
+
+[data-theme="light"] .status-text.moving,
+:root[data-theme="light"] .status-text.moving {
+  color: #b45309;
+}
+
+[data-theme="light"] .cum-turns-pill,
+:root[data-theme="light"] .cum-turns-pill {
+  background: rgba(99, 102, 241, 0.12);
+  color: #4338ca;
+}
+
+[data-theme="light"] .preset-pill,
+:root[data-theme="light"] .preset-pill {
+  background: #f8fafc;
+  border-color: #cbd5e1;
+  color: #334155;
+}
+
+[data-theme="light"] .preset-pill:hover,
+:root[data-theme="light"] .preset-pill:hover {
+  background: #f1f5f9;
+  border-color: #94a3b8;
+  color: #0f172a;
+}
+
+[data-theme="light"] .preset-pill.active,
+:root[data-theme="light"] .preset-pill.active {
+  background: var(--nano-accent-primary, #4f46e5);
+  border-color: var(--nano-accent-primary, #4f46e5);
+  color: #ffffff;
+}
+
+[data-theme="light"] .btn-action,
+:root[data-theme="light"] .btn-action {
+  background: #f8fafc;
+  border-color: #cbd5e1;
+  color: #0f172a;
+}
+
+[data-theme="light"] .btn-action:hover,
+:root[data-theme="light"] .btn-action:hover {
+  background: #f1f5f9;
+  border-color: var(--nano-accent-primary, #4f46e5);
+}
+
+[data-theme="light"] .btn-action.highlight,
+:root[data-theme="light"] .btn-action.highlight {
+  border-color: #0284c7;
+  color: #0369a1;
+  background: rgba(2, 132, 199, 0.08);
+}
+
+[data-theme="light"] .btn-action.highlight:hover,
+:root[data-theme="light"] .btn-action.highlight:hover {
+  background: rgba(2, 132, 199, 0.16);
+}
+
+[data-theme="light"] .btn-action.warning,
+:root[data-theme="light"] .btn-action.warning {
+  border-color: #f59e0b;
+  color: #b45309;
+  background: rgba(245, 158, 11, 0.08);
+}
+
+[data-theme="light"] .btn-action.warning:hover,
+:root[data-theme="light"] .btn-action.warning:hover {
+  background: rgba(245, 158, 11, 0.16);
+}
+
+[data-theme="light"] .btn-reset,
+:root[data-theme="light"] .btn-reset {
+  color: #475569;
+  border-color: #cbd5e1;
+}
+
+[data-theme="light"] .btn-reset:hover,
+:root[data-theme="light"] .btn-reset:hover {
+  color: #dc2626;
+  border-color: #dc2626;
+  background: rgba(239, 68, 68, 0.08);
+}
+
+[data-theme="light"] .tab-btn,
+:root[data-theme="light"] .tab-btn {
+  color: #64748b;
+}
+
+[data-theme="light"] .tab-btn:hover,
+:root[data-theme="light"] .tab-btn:hover {
+  color: #0f172a;
+  background: #e2e8f0;
+}
+
+[data-theme="light"] .tab-btn.active,
+:root[data-theme="light"] .tab-btn.active {
+  background: var(--nano-accent-primary, #4f46e5);
+  color: #ffffff;
+}
+
+[data-theme="light"] .unit-indicator,
+:root[data-theme="light"] .unit-indicator {
+  color: #0284c7;
+}
+
+[data-theme="light"] .foot-lbl,
+:root[data-theme="light"] .foot-lbl,
+[data-theme="light"] .foot-sub,
+:root[data-theme="light"] .foot-sub {
+  color: #64748b;
+}
+
+[data-theme="light"] .foot-val,
+:root[data-theme="light"] .foot-val {
+  color: #0f172a;
+}
+
+[data-theme="light"] .foot-val.vel-val,
+:root[data-theme="light"] .foot-val.vel-val {
+  color: #047857;
+}
+
+[data-theme="light"] .foot-val.acc-val,
+:root[data-theme="light"] .foot-val.acc-val {
+  color: #b45309;
+}
+
+[data-theme="light"] .foot-val.target-val,
+:root[data-theme="light"] .foot-val.target-val {
+  color: #be185d;
+}
+
+[data-theme="light"] .axis-vel-labels text,
+:root[data-theme="light"] .axis-vel-labels text {
+  fill: #047857;
+}
+
+[data-theme="light"] .axis-labels text,
+:root[data-theme="light"] .axis-labels text {
+  fill: #475569;
+}
+
+[data-theme="light"] .zero-ref-line,
+:root[data-theme="light"] .zero-ref-line {
+  stroke: rgba(4, 120, 87, 0.35);
+}
+
+[data-theme="light"] .math-table-container,
+:root[data-theme="light"] .math-table-container,
+[data-theme="light"] .mode-card,
+:root[data-theme="light"] .mode-card {
+  background: #ffffff;
+  border-color: #cbd5e1;
+}
+
+[data-theme="light"] .math-table th,
+:root[data-theme="light"] .math-table th {
+  background: #f8fafc;
+  color: #475569;
+  border-color: #e2e8f0;
+}
+
+[data-theme="light"] .math-table td,
+:root[data-theme="light"] .math-table td {
+  color: #0f172a;
+  border-color: #f1f5f9;
+}
+
+[data-theme="light"] .mode-desc,
+:root[data-theme="light"] .mode-desc {
+  color: #1e293b;
+}
+
+[data-theme="light"] .mode-desc code,
+:root[data-theme="light"] .mode-desc code {
+  background: #f1f5f9;
+  color: #0369a1;
+  border: 1px solid #e2e8f0;
+}
+
+[data-theme="light"] .mode-formula,
+:root[data-theme="light"] .mode-formula {
+  color: #64748b;
 }
 </style>
