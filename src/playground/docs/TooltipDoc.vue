@@ -140,7 +140,7 @@ const copyCode = async (text) => {
   align-items: center;
   gap: 12px;
   cursor: pointer;
-  outline: none !important;
+  outline: none;
   transition: background 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
 }
 
@@ -175,7 +175,7 @@ const copyCode = async (text) => {
   border: none;
   border-radius: 12px;
   cursor: pointer;
-  outline: none !important;
+  outline: none;
   color: white;
   transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.2s ease;
 }
@@ -292,21 +292,21 @@ const copyCode = async (text) => {
 </style>
 
 <style>
-.tooltip-danger {
-  --nu-tooltip-bg: rgba(234, 88, 12, 0.95) !important;
-  --nu-tooltip-border: 1px solid rgba(253, 186, 116, 0.3) !important;
-  --nu-tooltip-arrow-border: rgba(253, 186, 116, 0.3) !important;
+.global-tooltip.tooltip-danger {
+  --nu-tooltip-bg: rgba(234, 88, 12, 0.95);
+  --nu-tooltip-border: 1px solid rgba(253, 186, 116, 0.3);
+  --nu-tooltip-arrow-border: rgba(253, 186, 116, 0.3);
 }
 
-.tooltip-error {
-  --nu-tooltip-bg: rgba(220, 38, 38, 0.95) !important;
-  --nu-tooltip-border: 1px solid rgba(255, 100, 100, 0.3) !important;
-  --nu-tooltip-arrow-border: rgba(255, 100, 100, 0.3) !important;
+.global-tooltip.tooltip-error {
+  --nu-tooltip-bg: rgba(220, 38, 38, 0.95);
+  --nu-tooltip-border: 1px solid rgba(255, 100, 100, 0.3);
+  --nu-tooltip-arrow-border: rgba(255, 100, 100, 0.3);
 }
 
-.tooltip-success {
-  --nu-tooltip-bg: rgba(5, 150, 105, 0.95) !important;
-  --nu-tooltip-border: 1px solid rgba(52, 211, 153, 0.3) !important;
-  --nu-tooltip-arrow-border: rgba(52, 211, 153, 0.3) !important;
+.global-tooltip.tooltip-success {
+  --nu-tooltip-bg: rgba(5, 150, 105, 0.95);
+  --nu-tooltip-border: 1px solid rgba(52, 211, 153, 0.3);
+  --nu-tooltip-arrow-border: rgba(52, 211, 153, 0.3);
 }
 </style>

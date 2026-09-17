@@ -1622,7 +1622,7 @@ defineExpose({
 /* Beautiful Interactive 3D hover effects */
 .slice-group-3d {
   cursor: pointer;
-  transition: transform 0.25s cubic-bezier(0.25, 1, 0.5, 1), opacity 0.25s ease;
+  transition: transform var(--nano-transition-chart, 250ms cubic-bezier(0.4, 0, 0.2, 1)), opacity var(--nano-transition-interactive, 150ms cubic-bezier(0.4, 0, 0.2, 1));
 }
 
 .slice-group-3d.is-dimmed {
@@ -1631,15 +1631,15 @@ defineExpose({
 
 /* Hover highlights for leader lines and text */
 .label-group {
-  transition: opacity 0.25s ease;
+  transition: opacity var(--nano-transition-interactive, 150ms cubic-bezier(0.4, 0, 0.2, 1));
 }
 
 .label-group path {
-  transition: d 0.25s cubic-bezier(0.25, 1, 0.5, 1), stroke-width 0.2s ease, opacity 0.2s ease;
+  transition: d var(--nano-transition-chart, 250ms cubic-bezier(0.4, 0, 0.2, 1)), stroke-width var(--nano-transition-interactive, 150ms cubic-bezier(0.4, 0, 0.2, 1)), opacity var(--nano-transition-interactive, 150ms cubic-bezier(0.4, 0, 0.2, 1));
 }
 
 .label-group text {
-  transition: transform 0.25s cubic-bezier(0.25, 1, 0.5, 1), font-weight 0.2s ease, opacity 0.2s ease;
+  transition: transform var(--nano-transition-chart, 250ms cubic-bezier(0.4, 0, 0.2, 1)), font-weight var(--nano-transition-interactive, 150ms cubic-bezier(0.4, 0, 0.2, 1)), opacity var(--nano-transition-interactive, 150ms cubic-bezier(0.4, 0, 0.2, 1));
 }
 
 .label-group.is-hovered path {
@@ -1659,7 +1659,7 @@ defineExpose({
 .no-transitions .label-group path,
 .no-transitions .label-group text,
 .no-transitions .slice-group-3d {
-  transition: none !important;
+  transition: none;
 }
 
 .center-text-value {

@@ -6,6 +6,7 @@ import ThreeDDonutChartDoc from '../docs/ThreeDDonutChartDoc.vue';
 import PrecisionScrubberDoc from '../docs/PrecisionScrubberDoc.vue';
 import TopologyRadarDoc from '../docs/TopologyRadarDoc.vue';
 import MutatingHeaderDoc from '../docs/MutatingHeaderDoc.vue';
+import SwitchDoc from '../docs/SwitchDoc.vue';
 
 const routes = [
   {
@@ -26,6 +27,11 @@ const routes = [
     path: '/docs/modal',
     name: 'Modal',
     component: ModalDoc
+  },
+  {
+    path: '/docs/switch',
+    name: 'Switch',
+    component: SwitchDoc
   },
   {
     path: '/docs/3d-donut-chart',

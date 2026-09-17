@@ -385,7 +385,7 @@ const handleCancel = () => { emit('cancel'); closeModal(); };
   align-items: center;
   justify-content: center;
   border-radius: 6px;
-  transition: all 0.2s;
+  transition: color var(--nano-transition-interactive, 150ms cubic-bezier(0.4, 0, 0.2, 1)), background-color var(--nano-transition-interactive, 150ms cubic-bezier(0.4, 0, 0.2, 1));
 }
 
 .nano-modal-close-btn:hover {
@@ -420,7 +420,7 @@ const handleCancel = () => { emit('cancel'); closeModal(); };
   font-size: 0.95rem;
   cursor: pointer;
   color: white;
-  transition: all 0.2s ease;
+  transition: background-color var(--nano-transition-interactive, 150ms cubic-bezier(0.4, 0, 0.2, 1)), transform var(--nano-transition-interactive, 150ms cubic-bezier(0.4, 0, 0.2, 1)), box-shadow var(--nano-transition-interactive, 150ms cubic-bezier(0.4, 0, 0.2, 1));
 }
 
 .nano-btn-primary {
@@ -428,30 +428,38 @@ const handleCancel = () => { emit('cancel'); closeModal(); };
 }
 
 .nano-btn-primary:hover {
-  background: var(--nano-btn-primary-hover);
+  filter: brightness(1.1);
 }
 
 .nano-btn-secondary {
-  background: var(--nano-btn-secondary);
+  background: rgba(255, 255, 255, 0.1);
 }
 
 .nano-btn-secondary:hover {
-  background: var(--nano-btn-secondary-hover);
+  background: rgba(255, 255, 255, 0.15);
+}
+
+.nano-btn-danger {
+  background: var(--nano-btn-danger);
+}
+
+.nano-btn-danger:hover {
+  filter: brightness(1.1);
 }
 
 /* Resizer Handle */
 .nano-modal-resizer {
   position: absolute;
-  bottom: 4px;
-  right: 4px;
-  width: 16px;
-  height: 16px;
+  bottom: 2px;
+  right: 2px;
+  width: 14px;
+  height: 14px;
   cursor: se-resize;
   color: var(--nano-modal-text-muted);
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: color 0.2s;
+  transition: color var(--nano-transition-interactive, 150ms cubic-bezier(0.4, 0, 0.2, 1));
   z-index: 10;
 }
 
@@ -461,15 +469,15 @@ const handleCancel = () => { emit('cancel'); closeModal(); };
 
 .nano-modal-fade-enter-active,
 .nano-modal-fade-leave-active {
-  transition: opacity 0.25s ease;
+  transition: opacity var(--nano-transition-modal-backdrop, 250ms cubic-bezier(0, 0, 0.2, 1));
 }
 
 .nano-modal-fade-enter-active .nano-modal-window {
-  transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  transition: transform var(--nano-transition-modal-enter, 300ms cubic-bezier(0.175, 0.885, 0.32, 1.275));
 }
 
 .nano-modal-fade-leave-active .nano-modal-window {
-  transition: transform 0.2s ease-in;
+  transition: transform var(--nano-transition-modal-leave, 200ms cubic-bezier(0.4, 0, 1, 1));
 }
 
 .nano-modal-fade-enter-from,

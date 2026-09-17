@@ -1,0 +1,144 @@
+/* Nano UI - Core Design System & Tokens (SSoT) */
+
+:root {
+  /* --- 4 Core Motion & Transition Durations (SSoT) --- */
+  --nano-duration-fast: 150ms;
+  --nano-duration-medium: 250ms;
+  --nano-duration-slow: 350ms;
+  --nano-duration-ripple: 600ms;
+
+  /* --- Motion Curves --- */
+  --nano-ease-standard: cubic-bezier(0.4, 0, 0.2, 1);
+  --nano-ease-smooth: cubic-bezier(0.16, 1, 0.3, 1);
+  --nano-ease-spring: cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  --nano-ease-linear: linear;
+
+  /* --- Logical Transition Variables (Parametrized by Core Durations) --- */
+  --nano-transition-interactive: var(--nano-duration-fast) var(--nano-ease-standard);
+  --nano-transition-motion: var(--nano-duration-medium) var(--nano-ease-standard);
+  --nano-transition-toggle: var(--nano-duration-medium) var(--nano-ease-standard);
+  --nano-transition-header: var(--nano-duration-medium) var(--nano-ease-smooth);
+  --nano-transition-tooltip: var(--nano-duration-fast) var(--nano-ease-smooth);
+  --nano-transition-chart: var(--nano-duration-medium) var(--nano-ease-standard);
+  --nano-transition-modal: var(--nano-duration-slow) var(--nano-ease-spring);
+  --nano-transition-ripple: var(--nano-duration-ripple) var(--nano-ease-linear);
+
+  /* Color Palette SSoT - Dark Theme (Default) */
+  --nano-bg-app: #09090b;
+  --nano-bg-sidebar: #18181b;
+  --nano-bg-card: rgba(255, 255, 255, 0.02);
+  --nano-bg-card-elevated: rgba(255, 255, 255, 0.04);
+  --nano-bg-muted: rgba(255, 255, 255, 0.06);
+  --nano-bg-code: #0f172a;
+  --nano-bg-hover: rgba(255, 255, 255, 0.08);
+
+  --nano-text-main: #f8fafc;
+  --nano-text-secondary: #cbd5e1;
+  --nano-text-muted: #94a3b8;
+  --nano-text-code: #cbd5e1;
+
+  --nano-border-subtle: rgba(255, 255, 255, 0.05);
+  --nano-border-card: rgba(255, 255, 255, 0.08);
+  --nano-border-hover: rgba(255, 255, 255, 0.25);
+
+  --nano-shadow-card: none;
+  --nano-shadow-elevated: 0 4px 20px rgba(0, 0, 0, 0.25);
+
+  --nano-accent-primary: #6366f1;
+  --nano-accent-primary-hover: #4f46e5;
+  --nano-state-active: #00f2fe;
+  --nano-nav-active-bg: rgba(99, 102, 241, 0.15);
+  --nano-nav-active-color: #818cf8;
+
+  /* NanoSwitch Tokens - Dark Theme */
+  --nano-switch-bg: rgba(15, 23, 42, 0.6);
+  --nano-switch-border: rgba(255, 255, 255, 0.15);
+  --nano-switch-knob: #94a3b8;
+  --nano-switch-active-bg: rgba(0, 242, 254, 0.2);
+  --nano-switch-active-border: #00f2fe;
+  --nano-switch-active-shadow: rgba(0, 242, 254, 0.3);
+  --nano-switch-active-knob: #00f2fe;
+
+  /* Ripple Token - Dark Theme */
+  --nano-ripple-color: rgba(255, 255, 255, 0.35);
+}
+
+:root[data-theme="light"],
+html[data-theme="light"] {
+  /* Color Palette SSoT - Light Theme (High Contrast, Deep Slate Text, Sharp Depth) */
+  --nano-bg-app: #f8fafc;
+  --nano-bg-sidebar: #ffffff;
+  --nano-bg-card: #ffffff;
+  --nano-bg-card-elevated: #ffffff;
+  --nano-bg-muted: #f1f5f9;
+  --nano-bg-code: #f8fafc;
+  --nano-bg-hover: #f1f5f9;
+
+  --nano-text-main: #0f172a;
+  --nano-text-secondary: #1e293b;
+  --nano-text-muted: #475569;
+  --nano-text-code: #0f172a;
+
+  --nano-border-subtle: #e2e8f0;
+  --nano-border-card: #cbd5e1;
+  --nano-border-hover: #94a3b8;
+
+  --nano-shadow-card: 0 1px 3px rgba(15, 23, 42, 0.06), 0 1px 2px rgba(15, 23, 42, 0.04);
+  --nano-shadow-elevated: 0 4px 16px rgba(15, 23, 42, 0.06);
+
+  --nano-accent-primary: #4f46e5;
+  --nano-accent-primary-hover: #4338ca;
+  --nano-state-active: #0284c7;
+  --nano-nav-active-bg: #e0e7ff;
+  --nano-nav-active-color: #4338ca;
+
+  /* NanoSwitch Tokens - Light Theme */
+  --nano-switch-bg: #e2e8f0;
+  --nano-switch-border: #cbd5e1;
+  --nano-switch-knob: #ffffff;
+  --nano-switch-active-bg: #e0f2fe;
+  --nano-switch-active-border: #0284c7;
+  --nano-switch-active-shadow: rgba(2, 132, 199, 0.15);
+  --nano-switch-active-knob: #0284c7;
+
+  /* Ripple Token - Light Theme (Visible on White Cards) */
+  --nano-ripple-color: rgba(15, 23, 42, 0.12);
+}
+
+/* Zero-FOUC: Freeze all CSS transitions during initial page load & dynamic theme switching */
+html.preload,
+html.preload *,
+html.preload *::before,
+html.preload *::after,
+html.theme-switching,
+html.theme-switching *,
+html.theme-switching *::before,
+html.theme-switching *::after {
+  transition: none !important;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  background-color: var(--nano-bg-app);
+  color: var(--nano-text-main);
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Directive: v-ripple */
+span.ripple {
+  position: absolute;
+  border-radius: 50%;
+  transform: scale(0);
+  animation: nano-ripple-anim var(--nano-transition-ripple);
+  background-color: var(--nano-ripple-color, rgba(255, 255, 255, 0.4));
+  pointer-events: none;
+}
+
+@keyframes nano-ripple-anim {
+  to {
+    transform: scale(4);
+    opacity: 0;
+  }
+}

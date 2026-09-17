@@ -1,3 +1,5 @@
+import { durations } from '../config/transitions.js';
+
 const Ripple = {
   mounted(el, binding) {
     el.style.position = 'relative';
@@ -26,7 +28,7 @@ const Ripple = {
 
       setTimeout(() => {
         circle.remove();
-      }, 600); // Match animation duration
+      }, durations.ripple); // SSoT animation duration (600ms)
     });
   }
 };

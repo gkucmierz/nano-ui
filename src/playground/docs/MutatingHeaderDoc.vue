@@ -234,7 +234,7 @@ const hysteresisVal = ref(8);
   cursor: pointer;
   padding: 4px 8px;
   border-radius: 4px;
-  outline: none !important;
+  outline: none;
   user-select: none;
   transition: background-color 0.15s ease, color 0.15s ease;
 }
@@ -253,7 +253,7 @@ const hysteresisVal = ref(8);
   font-size: 0.78rem;
   font-weight: 700;
   cursor: pointer;
-  outline: none !important;
+  outline: none;
   user-select: none;
   transition: background-color 0.15s ease;
 }

@@ -10,9 +10,28 @@ import ThreeDDonutChart from './components/ThreeDDonutChart.vue';
 import PrecisionScrubber from './components/PrecisionScrubber.vue';
 import MutatingHeader from './components/MutatingHeader.vue';
 import TopologyRadar from './components/TopologyRadar.vue';
+import NanoSwitch from './components/NanoSwitch.vue';
+import { transitions, durations, easings, transitionVariables } from './config/transitions.js';
 import './assets/style.css';
 
-export { Ripple, tooltipDirective, showTooltip, hideTooltip, tooltipState, GlobalTooltip, NanoModal, ThreeDDonutChart, PrecisionScrubber, TopologyRadar, MutatingHeader };
+export { 
+  Ripple, 
+  tooltipDirective, 
+  showTooltip, 
+  hideTooltip, 
+  tooltipState, 
+  GlobalTooltip, 
+  NanoModal, 
+  ThreeDDonutChart, 
+  PrecisionScrubber, 
+  TopologyRadar, 
+  MutatingHeader, 
+  NanoSwitch,
+  transitions,
+  durations,
+  easings,
+  transitionVariables
+};
 
 export default {
   install(app) {
@@ -24,5 +43,6 @@ export default {
     app.component('PrecisionScrubber', PrecisionScrubber);
     app.component('TopologyRadar', TopologyRadar);
     app.component('MutatingHeader', MutatingHeader);
+    app.component('NanoSwitch', NanoSwitch);
   }
 };
