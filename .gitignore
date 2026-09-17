@@ -4,3 +4,5 @@ dist-app
 test-results
 .DS_Store
 *.local
+
+scr/
