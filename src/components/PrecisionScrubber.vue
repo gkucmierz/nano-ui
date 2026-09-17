@@ -240,9 +240,9 @@ const formatNum = (num) => {
 .nano-scrub-track {
   width: 100%;
   height: 44px;
-  background: rgba(0, 229, 255, 0.02);
-  border: 1px dashed rgba(0, 229, 255, 0.25);
-  border-radius: 8px;
+  background: var(--nano-scrub-bg, rgba(0, 229, 255, 0.02));
+  border: var(--nano-border-width, 1px) dashed var(--nano-scrub-border, rgba(0, 229, 255, 0.25));
+  border-radius: var(--nano-radius-md, 8px);
   cursor: ew-resize;
   display: flex;
   align-items: center;
@@ -254,8 +254,8 @@ const formatNum = (num) => {
 }
 
 .nano-scrub-track:hover {
-  background: rgba(0, 229, 255, 0.04);
-  border-color: rgba(0, 229, 255, 0.4);
+  background: var(--nano-scrub-hover-bg, rgba(0, 229, 255, 0.04));
+  border-color: var(--nano-scrub-hover-border, rgba(0, 229, 255, 0.4));
 }
 
 .nano-scrub-progress {
@@ -263,14 +263,14 @@ const formatNum = (num) => {
   left: 0;
   top: 0;
   height: 100%;
-  background: rgba(0, 229, 255, 0.06);
+  background: var(--nano-scrub-progress-bg, rgba(0, 229, 255, 0.06));
   pointer-events: none;
 }
 
 .nano-scrub-label {
   font-size: 10px;
   font-weight: bold;
-  color: #00e5ff;
+  color: var(--nano-scrub-color, #00e5ff);
   letter-spacing: 0.03rem;
   z-index: 1;
   pointer-events: none;

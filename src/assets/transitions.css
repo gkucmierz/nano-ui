@@ -1,0 +1,47 @@
+/* Nano UI - Motion & Transition Tokens (SSoT) */
+
+:root {
+  /* --- 4 Core Motion & Transition Durations (SSoT) --- */
+  --nano-duration-fast: 150ms;
+  --nano-duration-medium: 250ms;
+  --nano-duration-slow: 350ms;
+  --nano-duration-ripple: 600ms;
+
+  /* --- Motion Curves --- */
+  --nano-ease-standard: cubic-bezier(0.4, 0, 0.2, 1);
+  --nano-ease-smooth: cubic-bezier(0.16, 1, 0.3, 1);
+  --nano-ease-spring: cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  --nano-ease-out: cubic-bezier(0, 0, 0.2, 1);
+  --nano-ease-in: cubic-bezier(0.4, 0, 1, 1);
+  --nano-ease-linear: linear;
+
+  /* --- Logical Transition Variables (Parametrized by Core Durations) --- */
+  --nano-transition-interactive: var(--nano-duration-fast) var(--nano-ease-standard);
+  --nano-transition-motion: var(--nano-duration-medium) var(--nano-ease-standard);
+  --nano-transition-toggle: var(--nano-duration-medium) var(--nano-ease-standard);
+  --nano-transition-header: var(--nano-duration-medium) var(--nano-ease-smooth);
+  --nano-transition-tooltip: var(--nano-duration-fast) var(--nano-ease-smooth);
+  --nano-transition-chart: var(--nano-duration-medium) var(--nano-ease-standard);
+  --nano-transition-modal: var(--nano-duration-slow) var(--nano-ease-spring);
+  --nano-transition-modal-backdrop: var(--nano-duration-medium) var(--nano-ease-out);
+  --nano-transition-modal-enter: var(--nano-duration-slow) var(--nano-ease-spring);
+  --nano-transition-modal-leave: var(--nano-duration-fast) var(--nano-ease-in);
+  --nano-transition-ripple: var(--nano-duration-ripple) var(--nano-ease-linear);
+}
+
+/* Ripple Animation Keyframes */
+span.ripple {
+  position: absolute;
+  border-radius: 50%;
+  transform: scale(0);
+  animation: nano-ripple-anim var(--nano-transition-ripple);
+  background-color: var(--nano-ripple-color, rgba(255, 255, 255, 0.4));
+  pointer-events: none;
+}
+
+@keyframes nano-ripple-anim {
+  to {
+    transform: scale(4);
+    opacity: 0;
+  }
+}

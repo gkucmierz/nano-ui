@@ -1,0 +1,36 @@
+/* Nano UI - Spatial Geometry, Spacing & Sizing Tokens (SSoT) */
+
+:root {
+  /* --- Base Quantum Units --- */
+  --nano-border-width: 1px;
+  --nano-unit: 8px;
+
+  /* --- Spacing Scale (Multiples of --nano-unit) --- */
+  --nano-space-xs: calc(var(--nano-unit) * 0.5); /* 4px */
+  --nano-space-sm: var(--nano-unit);             /* 8px */
+  --nano-space-md: calc(var(--nano-unit) * 2);   /* 16px */
+  --nano-space-lg: calc(var(--nano-unit) * 3);   /* 24px */
+  --nano-space-xl: calc(var(--nano-unit) * 4);   /* 32px */
+  --nano-space-2xl: calc(var(--nano-unit) * 6);  /* 48px */
+
+  /* Numeric Aliases */
+  --nano-space-1: var(--nano-space-sm);
+  --nano-space-2: var(--nano-space-md);
+  --nano-space-3: var(--nano-space-lg);
+  --nano-space-4: var(--nano-space-xl);
+
+  /* --- Radius Scale --- */
+  --nano-radius-xs: calc(var(--nano-unit) * 0.25); /* 2px */
+  --nano-radius-sm: calc(var(--nano-unit) * 0.5);  /* 4px */
+  --nano-radius-md: var(--nano-unit);              /* 8px */
+  --nano-radius-lg: calc(var(--nano-unit) * 1.5);  /* 12px */
+  --nano-radius-xl: calc(var(--nano-unit) * 2);    /* 16px */
+  --nano-radius-full: 9999px;
+
+  /* --- Blur Scale --- */
+  --nano-blur-xs: calc(var(--nano-unit) * 0.25); /* 2px */
+  --nano-blur-sm: calc(var(--nano-unit) * 0.5);  /* 4px */
+  --nano-blur-md: var(--nano-unit);              /* 8px */
+  --nano-blur-lg: calc(var(--nano-unit) * 2);    /* 16px */
+  --nano-blur-xl: calc(var(--nano-unit) * 3);    /* 24px */
+}

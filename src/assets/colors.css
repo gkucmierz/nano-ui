@@ -1,0 +1,168 @@
+/* Nano UI - Color Palette & Theming Tokens (SSoT) */
+
+:root {
+  /* --- 5 Strict Discrete Opacity / Alpha Levels SSoT --- */
+  --nano-alpha-1: 0.05;   /* Level 1 (Subtle): Faint card fills & tints (5%) */
+  --nano-alpha-2: 0.15;   /* Level 2 (Muted): Borders, chips, soft active fills (15%) */
+  --nano-alpha-3: 0.30;   /* Level 3 (Hover): Hover borders, ripple, glow (30%) */
+  --nano-alpha-4: 0.60;   /* Level 4 (Medium): Dim backdrops, overlays (60%) */
+  --nano-alpha-5: 0.90;   /* Level 5 (Glass): Translucent panels, tooltips (90%) */
+
+  /* Semantic Aliases */
+  --nano-alpha-subtle: var(--nano-alpha-1);
+  --nano-alpha-muted: var(--nano-alpha-2);
+  --nano-alpha-hover: var(--nano-alpha-3);
+  --nano-alpha-medium: var(--nano-alpha-4);
+  --nano-alpha-glass: var(--nano-alpha-5);
+
+  /* --- Dark Theme (Default) --- */
+  --nano-bg-app: #09090b;
+  --nano-bg-sidebar: #18181b;
+  --nano-bg-card: rgba(255, 255, 255, var(--nano-alpha-subtle));
+  --nano-bg-card-elevated: rgba(255, 255, 255, var(--nano-alpha-subtle));
+  --nano-bg-muted: rgba(255, 255, 255, var(--nano-alpha-subtle));
+  --nano-bg-code: #0f172a;
+  --nano-bg-hover: rgba(255, 255, 255, var(--nano-alpha-muted));
+
+  --nano-text-main: #f8fafc;
+  --nano-text-secondary: #cbd5e1;
+  --nano-text-muted: #94a3b8;
+  --nano-text-code: #cbd5e1;
+
+  --nano-border-subtle: rgba(255, 255, 255, var(--nano-alpha-subtle));
+  --nano-border-card: rgba(255, 255, 255, var(--nano-alpha-muted));
+  --nano-border-hover: rgba(255, 255, 255, var(--nano-alpha-hover));
+
+  --nano-shadow-card: none;
+  --nano-shadow-elevated: 0 var(--nano-space-xs) calc(var(--nano-unit) * 2.5) rgba(0, 0, 0, var(--nano-alpha-hover));
+
+  --nano-accent-primary: #6366f1;
+  --nano-accent-primary-hover: #4f46e5;
+  --nano-state-active: #00f2fe;
+  --nano-nav-active-bg: rgba(99, 102, 241, var(--nano-alpha-muted));
+  --nano-nav-active-color: #818cf8;
+
+  /* NanoSwitch Tokens - Dark Theme */
+  --nano-switch-bg: rgba(15, 23, 42, var(--nano-alpha-medium));
+  --nano-switch-border: rgba(255, 255, 255, var(--nano-alpha-muted));
+  --nano-switch-knob: #94a3b8;
+  --nano-switch-active-bg: rgba(0, 242, 254, var(--nano-alpha-muted));
+  --nano-switch-active-border: #00f2fe;
+  --nano-switch-active-shadow: rgba(0, 242, 254, var(--nano-alpha-hover));
+  --nano-switch-active-knob: #00f2fe;
+
+  /* Ripple Token - Dark Theme */
+  --nano-ripple-color: rgba(255, 255, 255, var(--nano-alpha-hover));
+
+  /* NanoModal Tokens - Dark Theme */
+  --nano-modal-bg: #18181b;
+  --nano-modal-glass-bg: rgba(24, 24, 27, var(--nano-alpha-glass));
+  --nano-modal-border: rgba(255, 255, 255, var(--nano-alpha-muted));
+  --nano-modal-text: #f8fafc;
+  --nano-modal-text-muted: #94a3b8;
+  --nano-modal-backdrop: rgba(0, 0, 0, var(--nano-alpha-medium));
+  --nano-modal-radius: var(--nano-radius-lg);
+  --nano-modal-btn-primary: #6366f1;
+  --nano-modal-btn-primary-hover: #4f46e5;
+  --nano-modal-btn-secondary: #27272a;
+  --nano-modal-btn-secondary-hover: #3f3f46;
+  --nano-modal-shadow: 0 calc(var(--nano-unit) * 2.5) calc(var(--nano-unit) * 6) rgba(0, 0, 0, var(--nano-alpha-medium));
+  --nano-modal-header-bg: rgba(0, 0, 0, var(--nano-alpha-muted));
+  --nano-modal-footer-bg: rgba(0, 0, 0, var(--nano-alpha-muted));
+  --nano-modal-close-hover: rgba(255, 255, 255, var(--nano-alpha-muted));
+  --nano-modal-close-color: #ffffff;
+
+  /* PrecisionScrubber Tokens - Dark Theme */
+  --nano-scrub-color: #00e5ff;
+  --nano-scrub-bg: rgba(0, 229, 255, var(--nano-alpha-subtle));
+  --nano-scrub-border: rgba(0, 229, 255, var(--nano-alpha-hover));
+  --nano-scrub-hover-bg: rgba(0, 229, 255, var(--nano-alpha-muted));
+  --nano-scrub-hover-border: rgba(0, 229, 255, var(--nano-alpha-medium));
+  --nano-scrub-progress-bg: rgba(0, 229, 255, var(--nano-alpha-muted));
+
+  /* Tooltip Tokens - Dark Theme */
+  --nano-tooltip-bg: rgba(15, 23, 42, var(--nano-alpha-glass));
+  --nano-tooltip-color: #f8fafc;
+  --nano-tooltip-radius: var(--nano-radius-md);
+  --nano-tooltip-padding: var(--nano-space-sm) var(--nano-space-md);
+  --nano-tooltip-shadow: 0 var(--nano-space-sm) var(--nano-space-lg) rgba(0, 0, 0, var(--nano-alpha-hover));
+  --nano-tooltip-border: var(--nano-border-width) solid rgba(255, 255, 255, var(--nano-alpha-muted));
+  --nano-tooltip-arrow-border: rgba(255, 255, 255, var(--nano-alpha-muted));
+}
+
+:root[data-theme="light"],
+html[data-theme="light"] {
+  /* --- Light Theme (High Contrast, Deep Slate Text) --- */
+  --nano-bg-app: #f8fafc;
+  --nano-bg-sidebar: #ffffff;
+  --nano-bg-card: #ffffff;
+  --nano-bg-card-elevated: #ffffff;
+  --nano-bg-muted: #f1f5f9;
+  --nano-bg-code: #f8fafc;
+  --nano-bg-hover: #f1f5f9;
+
+  --nano-text-main: #0f172a;
+  --nano-text-secondary: #1e293b;
+  --nano-text-muted: #475569;
+  --nano-text-code: #0f172a;
+
+  --nano-border-subtle: #e2e8f0;
+  --nano-border-card: #cbd5e1;
+  --nano-border-hover: #94a3b8;
+
+  --nano-shadow-card: 0 var(--nano-border-width) calc(var(--nano-border-width) * 3) rgba(15, 23, 42, var(--nano-alpha-subtle)), 0 var(--nano-border-width) calc(var(--nano-border-width) * 2) rgba(15, 23, 42, var(--nano-alpha-subtle));
+  --nano-shadow-elevated: 0 var(--nano-space-xs) calc(var(--nano-unit) * 2) rgba(15, 23, 42, var(--nano-alpha-subtle));
+
+  --nano-accent-primary: #4f46e5;
+  --nano-accent-primary-hover: #4338ca;
+  --nano-state-active: #0284c7;
+  --nano-nav-active-bg: #e0e7ff;
+  --nano-nav-active-color: #4338ca;
+
+  /* NanoSwitch Tokens - Light Theme */
+  --nano-switch-bg: #e2e8f0;
+  --nano-switch-border: #cbd5e1;
+  --nano-switch-knob: #ffffff;
+  --nano-switch-active-bg: #e0f2fe;
+  --nano-switch-active-border: #0284c7;
+  --nano-switch-active-shadow: rgba(2, 132, 199, var(--nano-alpha-muted));
+  --nano-switch-active-knob: #0284c7;
+
+  /* Ripple Token - Light Theme */
+  --nano-ripple-color: rgba(15, 23, 42, var(--nano-alpha-muted));
+
+  /* NanoModal Tokens - Light Theme */
+  --nano-modal-bg: #ffffff;
+  --nano-modal-glass-bg: rgba(255, 255, 255, var(--nano-alpha-glass));
+  --nano-modal-border: #cbd5e1;
+  --nano-modal-text: #0f172a;
+  --nano-modal-text-muted: #475569;
+  --nano-modal-backdrop: rgba(15, 23, 42, var(--nano-alpha-medium));
+  --nano-modal-radius: var(--nano-radius-lg);
+  --nano-modal-btn-primary: #4f46e5;
+  --nano-modal-btn-primary-hover: #4338ca;
+  --nano-modal-btn-secondary: #f1f5f9;
+  --nano-modal-btn-secondary-hover: #e2e8f0;
+  --nano-modal-shadow: 0 calc(var(--nano-unit) * 1.5) calc(var(--nano-unit) * 4) rgba(15, 23, 42, var(--nano-alpha-muted));
+  --nano-modal-header-bg: rgba(15, 23, 42, var(--nano-alpha-subtle));
+  --nano-modal-footer-bg: rgba(15, 23, 42, var(--nano-alpha-subtle));
+  --nano-modal-close-hover: rgba(15, 23, 42, var(--nano-alpha-muted));
+  --nano-modal-close-color: #0f172a;
+
+  /* PrecisionScrubber Tokens - Light Theme */
+  --nano-scrub-color: #0284c7;
+  --nano-scrub-bg: rgba(2, 132, 199, var(--nano-alpha-subtle));
+  --nano-scrub-border: rgba(2, 132, 199, var(--nano-alpha-hover));
+  --nano-scrub-hover-bg: rgba(2, 132, 199, var(--nano-alpha-muted));
+  --nano-scrub-hover-border: rgba(2, 132, 199, var(--nano-alpha-medium));
+  --nano-scrub-progress-bg: rgba(2, 132, 199, var(--nano-alpha-muted));
+
+  /* Tooltip Tokens - Light Theme */
+  --nano-tooltip-bg: rgba(15, 23, 42, var(--nano-alpha-glass));
+  --nano-tooltip-color: #f8fafc;
+  --nano-tooltip-radius: var(--nano-radius-md);
+  --nano-tooltip-padding: var(--nano-space-sm) var(--nano-space-md);
+  --nano-tooltip-shadow: 0 var(--nano-space-sm) var(--nano-space-lg) rgba(15, 23, 42, var(--nano-alpha-hover));
+  --nano-tooltip-border: var(--nano-border-width) solid rgba(255, 255, 255, var(--nano-alpha-muted));
+  --nano-tooltip-arrow-border: rgba(255, 255, 255, var(--nano-alpha-muted));
+}

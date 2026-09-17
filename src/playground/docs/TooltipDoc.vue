@@ -64,12 +64,12 @@
     <p class="desc">Override these CSS variables on <code>:root</code> or a parent container to change the default theme.</p>
     <div class="css-vars-block">
 <pre><code>.global-tooltip {
-  --nu-tooltip-bg: rgba(15, 23, 42, 0.95);
-  --nu-tooltip-color: #f8fafc;
-  --nu-tooltip-radius: 8px;
-  --nu-tooltip-padding: 8px 14px;
-  --nu-tooltip-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
-  --nu-tooltip-border: 1px solid rgba(255, 255, 255, 0.1);
+  --nu-tooltip-bg: var(--nano-tooltip-bg);
+  --nu-tooltip-color: var(--nano-tooltip-color);
+  --nu-tooltip-radius: var(--nano-radius-md); /* 8px */
+  --nu-tooltip-padding: var(--nano-space-sm) var(--nano-space-md); /* 8px 16px */
+  --nu-tooltip-shadow: 0 var(--nano-space-sm) var(--nano-space-lg) rgba(0, 0, 0, 0.3); /* 0 8px 24px */
+  --nu-tooltip-border: var(--nano-border-width) solid rgba(255, 255, 255, 0.1);
   --nu-tooltip-arrow-border: rgba(255, 255, 255, 0.1);
 }</code></pre>
     </div>
@@ -112,6 +112,20 @@ const copyCode = async (text) => {
   color: var(--nano-text-muted);
   margin-bottom: 1.5rem;
   font-size: 0.95rem;
+}
+
+.test-row {
+  display: flex;
+  gap: 2rem;
+  align-items: flex-start;
+  flex-wrap: wrap;
+}
+
+.example {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  align-items: flex-start;
 }
 
 .code-snippet:active {

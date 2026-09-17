@@ -86,28 +86,28 @@ watch(() => tooltipState.isVisible, async (visible) => {
 <style scoped>
 .global-tooltip {
   /* Generic Styling Variables */
-  --nu-tooltip-bg: rgba(15, 23, 42, 0.95);
-  --nu-tooltip-color: #f8fafc;
-  --nu-tooltip-radius: 8px;
-  --nu-tooltip-padding: 8px 14px;
-  --nu-tooltip-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
-  --nu-tooltip-border: 1px solid rgba(255, 255, 255, 0.1);
-  --nu-tooltip-arrow-border: rgba(255, 255, 255, 0.1);
+  --nu-tooltip-bg: var(--nano-tooltip-bg, rgba(15, 23, 42, 0.95));
+  --nu-tooltip-color: var(--nano-tooltip-color, #f8fafc);
+  --nu-tooltip-radius: var(--nano-tooltip-radius, var(--nano-radius-md, 8px));
+  --nu-tooltip-padding: var(--nano-tooltip-padding, var(--nano-space-sm, 8px) var(--nano-space-md, 16px));
+  --nu-tooltip-shadow: var(--nano-tooltip-shadow, 0 var(--nano-space-sm, 8px) var(--nano-space-lg, 24px) rgba(0, 0, 0, 0.3));
+  --nu-tooltip-border: var(--nano-tooltip-border, var(--nano-border-width, 1px) solid rgba(255, 255, 255, 0.1));
+  --nu-tooltip-arrow-border: var(--nano-tooltip-arrow-border, rgba(255, 255, 255, 0.1));
 
   position: fixed;
   top: 0;
   left: 0;
   z-index: 99999;
   background: var(--nu-tooltip-bg);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(var(--nano-blur-md, 8px));
+  -webkit-backdrop-filter: blur(var(--nano-blur-md, 8px));
   color: var(--nu-tooltip-color);
   padding: var(--nu-tooltip-padding);
   border-radius: var(--nu-tooltip-radius);
   font-size: 0.85rem;
   font-weight: 500;
   width: max-content;
-  max-width: min(350px, calc(100vw - 32px));
+  max-width: min(350px, calc(100vw - var(--nano-space-xl, 32px)));
   text-align: center;
   line-height: 1.4;
   white-space: normal;
@@ -129,12 +129,12 @@ watch(() => tooltipState.isVisible, async (visible) => {
   width: 10px;
   height: 10px;
   background: var(--nu-tooltip-bg);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
-  border-right: 1px solid var(--nu-tooltip-arrow-border);
-  border-bottom: 1px solid var(--nu-tooltip-arrow-border);
+  backdrop-filter: blur(var(--nano-blur-md, 8px));
+  -webkit-backdrop-filter: blur(var(--nano-blur-md, 8px));
+  border-right: var(--nano-border-width, 1px) solid var(--nu-tooltip-arrow-border);
+  border-bottom: var(--nano-border-width, 1px) solid var(--nu-tooltip-arrow-border);
   transform: rotate(45deg);
-  border-radius: 0 0 2px 0;
+  border-radius: 0 0 var(--nano-radius-xs, 2px) 0;
   clip-path: polygon(100% 0, 100% 100%, 0 100%);
 }
 
@@ -143,9 +143,9 @@ watch(() => tooltipState.isVisible, async (visible) => {
   top: -5px;
   border-right: none;
   border-bottom: none;
-  border-left: 1px solid var(--nu-tooltip-arrow-border);
-  border-top: 1px solid var(--nu-tooltip-arrow-border);
-  border-radius: 2px 0 0 0;
+  border-left: var(--nano-border-width, 1px) solid var(--nu-tooltip-arrow-border);
+  border-top: var(--nano-border-width, 1px) solid var(--nu-tooltip-arrow-border);
+  border-radius: var(--nano-radius-xs, 2px) 0 0 0;
   clip-path: polygon(0 0, 100% 0, 0 100%);
 }
 
