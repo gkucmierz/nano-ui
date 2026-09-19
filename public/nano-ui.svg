@@ -1,54 +1,89 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+<svg width="512" height="512" viewBox="0 0 260 260" fill="none" xmlns="http://www.w3.org/2000/svg">
   <defs>
-    <!-- Background Squircle Gradient -->
-    <linearGradient id="nanoBgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#0f172a" />
-      <stop offset="100%" stop-color="#020617" />
-    </linearGradient>
+    <!-- Soft Glassmorphism Card Drop Shadow -->
+    <filter id="nanoCardShadow" x="-15%" y="-10%" width="130%" height="130%">
+      <feDropShadow dx="0" dy="7" stdDeviation="12" flood-color="#0f172a" flood-opacity="0.09" />
+    </filter>
 
-    <!-- Ambient Core Radial Glow -->
-    <radialGradient id="nanoAmbientGlow" cx="50%" cy="50%" r="50%">
-      <stop offset="0%" stop-color="#6366f1" stop-opacity="0.38" />
-      <stop offset="55%" stop-color="#00f2fe" stop-opacity="0.14" />
-      <stop offset="100%" stop-color="#020617" stop-opacity="0" />
+    <!-- Core Ambient Radial Glow -->
+    <radialGradient id="nanoBgGlow" cx="50%" cy="48%" r="50%">
+      <stop offset="0%" stop-color="#6366f1" stop-opacity="0.24" />
+      <stop offset="55%" stop-color="#00f2fe" stop-opacity="0.10" />
+      <stop offset="100%" stop-color="#ffffff" stop-opacity="0" />
     </radialGradient>
 
-    <!-- Continuous Kinetic Energy Monogram Gradient -->
-    <linearGradient id="nanoKineticGrad" x1="136" y1="376" x2="376" y2="136" gradientUnits="userSpaceOnUse">
-      <stop offset="0%" stop-color="#4f46e5" />
-      <stop offset="28%" stop-color="#6366f1" />
-      <stop offset="58%" stop-color="#38bdf8" />
-      <stop offset="100%" stop-color="#00f2fe" />
+    <!-- Left & Right Vertical Stems Gradient -->
+    <linearGradient id="stemGrad" x1="60" y1="50" x2="200" y2="210" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#818cf8" />
+      <stop offset="50%" stop-color="#6366f1" />
+      <stop offset="100%" stop-color="#4338ca" />
+    </linearGradient>
+
+    <!-- Kinetic Diagonal Beam Gradient -->
+    <linearGradient id="beamGrad" x1="70" y1="60" x2="190" y2="200" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#00f2fe" />
+      <stop offset="45%" stop-color="#38bdf8" />
+      <stop offset="100%" stop-color="#6366f1" />
     </linearGradient>
   </defs>
 
-  <!-- Squircle Base Canvas (App Icon & OG Surface) -->
-  <rect width="512" height="512" rx="144" fill="url(#nanoBgGrad)" stroke="rgba(255, 255, 255, 0.14)" stroke-width="4" />
+  <!-- Light Squircle Base Canvas with Soft Shadow -->
+  <rect x="8" y="8" width="244" height="244" rx="42" fill="#ffffff" stroke="rgba(15, 23, 42, 0.10)" stroke-width="1.5" filter="url(#nanoCardShadow)" />
 
-  <!-- Ambient Glow -->
-  <circle cx="256" cy="256" r="220" fill="url(#nanoAmbientGlow)" />
+  <!-- Ambient Glow Core -->
+  <circle cx="130" cy="126" r="108" fill="url(#nanoBgGlow)" />
 
-  <!-- High-Precision Quantum Reticle Rings -->
-  <circle cx="256" cy="256" r="208" stroke="rgba(255, 255, 255, 0.08)" stroke-width="2" stroke-dasharray="8 12" />
-  <circle cx="256" cy="256" r="160" stroke="rgba(255, 255, 255, 0.05)" stroke-width="1.5" />
+  <!-- High-Precision Reticle Rings -->
+  <circle cx="130" cy="126" r="102" stroke="rgba(15, 23, 42, 0.08)" stroke-width="1.2" stroke-dasharray="6 8" />
+  <circle cx="130" cy="126" r="78" stroke="rgba(15, 23, 42, 0.05)" stroke-width="1" />
 
   <!-- Diagonal Alignment Axis -->
-  <line x1="84" y1="84" x2="428" y2="428" stroke="rgba(255, 255, 255, 0.05)" stroke-width="1.5" stroke-dasharray="6 10" />
+  <line x1="42" y1="38" x2="218" y2="214" stroke="rgba(15, 23, 42, 0.06)" stroke-width="1" stroke-dasharray="4 6" />
 
-  <!-- BOLD KINETIC 'N' MONOGRAM (Continuous 72px Joined Path) -->
+  <!-- BOLD KINETIC 'N' MONOGRAM (Continuous 34px Path) -->
+  <!-- Left Vertical Stem -->
   <path
-    d="M136 376 V136 L376 376 V136"
-    stroke="url(#nanoKineticGrad)"
-    stroke-width="72"
+    d="M72 188 V64"
+    stroke="url(#stemGrad)"
+    stroke-width="34"
     stroke-linecap="round"
-    stroke-linejoin="round"
+  />
+
+  <!-- Diagonal Crossing Beam -->
+  <path
+    d="M72 64 L188 188"
+    stroke="url(#beamGrad)"
+    stroke-width="34"
+    stroke-linecap="round"
+  />
+
+  <!-- Right Vertical Stem -->
+  <path
+    d="M188 188 V64"
+    stroke="url(#stemGrad)"
+    stroke-width="34"
+    stroke-linecap="round"
   />
 
   <!-- Prominent Quantum Pulsar (Upper Right) -->
-  <circle cx="376" cy="136" r="54" fill="rgba(0, 242, 254, 0.24)" />
-  <circle cx="376" cy="136" r="32" fill="#00f2fe" />
-  <circle cx="376" cy="136" r="13" fill="#ffffff" />
+  <circle cx="188" cy="64" r="26" fill="rgba(0, 242, 254, 0.25)" />
+  <circle cx="188" cy="64" r="15" fill="#00f2fe" />
+  <circle cx="188" cy="64" r="6" fill="#ffffff" />
 
   <!-- Secondary Anchor Core (Bottom Left) -->
-  <circle cx="136" cy="376" r="15" fill="#4f46e5" />
+  <circle cx="72" cy="188" r="7" fill="#6366f1" />
+
+  <!-- Subtitle Spec Text -->
+  <text
+    x="130"
+    y="234"
+    text-anchor="middle"
+    font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace"
+    font-size="9.5"
+    font-weight="700"
+    letter-spacing="2"
+    fill="#64748b"
+  >
+    NANO UI // QUANTUM 8PX
+  </text>
 </svg>
