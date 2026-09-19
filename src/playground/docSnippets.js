@@ -93,11 +93,10 @@ export const generateBundleSnippet = ({
   const scriptLines = [
     ...imports,
     `import { ${name} } from '@gkucmierz/nano-ui';`,
-    requiresCss ? "import '@gkucmierz/nano-ui/style.css'; // Wymagany raz w main.js" : '',
+    requiresCss ? "import '@gkucmierz/nano-ui/style.css';" : '',
   ].filter(Boolean);
 
-  return `<!-- 1. Pełny import z paczki (Full package bundle) -->
-<script setup>
+  return `<script setup>
 ${scriptLines.join('\n')}
 </script>
 
@@ -119,7 +118,6 @@ export const generateGranularSnippet = ({
   componentPath = `src/components/${name}.vue`,
 } = {}) => {
   const lines = [
-    '// 2. Granularny import pojedynczego pliku (Minimal footprint / Tree-shaking)',
     `import ${name} from '@gkucmierz/nano-ui/${componentPath}';`,
     requiresCss ? "import '@gkucmierz/nano-ui/dist/nano-ui.css';" : '',
   ].filter(Boolean);
