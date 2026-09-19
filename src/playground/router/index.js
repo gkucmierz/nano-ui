@@ -142,4 +142,4 @@ export const createAppRouter = ({ isServer = false } = {}) => {
   return router;
 };
 
-export default createAppRouter();
+export default createAppRouter;

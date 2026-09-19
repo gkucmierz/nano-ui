@@ -1479,6 +1479,9 @@ const isLastSubSlice = (slice) => {
   return idx === lastIdx
 }
 
+// Initial synchronous data population for instant SSR / first render
+updateAnimatedData(normalizedData.value || [], true)
+
 watch(normalizedData, (newData) => {
   const isImmediate = props.immediate || props.currentLowFxMode
   updateAnimatedData(newData || [], isImmediate)
@@ -1486,7 +1489,7 @@ watch(normalizedData, (newData) => {
   if (!isImmediate) {
     animateChart()
   }
-}, { deep: true, immediate: true })
+}, { deep: true })
 
 watch(() => props.rotationAngle, () => {
   isRotationChanging.value = true

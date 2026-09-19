@@ -1,6 +1,6 @@
 import { tracker } from '@gkucmierz/analytics';
 
-if (typeof window !== 'undefined') {
+if (!import.meta.env.SSR) {
   tracker.init('nano-ui', 'https://analytics.7u.pl');
 }
 
