@@ -242,176 +242,64 @@ const toggle = (event) => {
   transform: translateX(4px);
 }
 
+/* --- Color Variants --- */
+.color-primary,
+.color-cyan {
+  --nano-switch-color: var(--nano-switch-active-knob, #00f2fe);
+  --nano-switch-color-bg: var(--nano-switch-active-bg, rgba(0, 242, 254, 0.2));
+  --nano-switch-color-border: var(--nano-switch-active-border, rgba(0, 242, 254, 0.6));
+  --nano-switch-color-shadow: var(--nano-switch-active-shadow, rgba(0, 242, 254, 0.3));
+}
+
+.color-purple {
+  --nano-switch-color: #a855f7;
+  --nano-switch-color-bg: color-mix(in srgb, #a855f7 20%, transparent);
+  --nano-switch-color-border: color-mix(in srgb, #a855f7 60%, transparent);
+  --nano-switch-color-shadow: color-mix(in srgb, #a855f7 30%, transparent);
+}
+
+.color-emerald {
+  --nano-switch-color: #10b981;
+  --nano-switch-color-bg: color-mix(in srgb, #10b981 20%, transparent);
+  --nano-switch-color-border: color-mix(in srgb, #10b981 60%, transparent);
+  --nano-switch-color-shadow: color-mix(in srgb, #10b981 30%, transparent);
+}
+
+.color-danger {
+  --nano-switch-color: #ef4444;
+  --nano-switch-color-bg: color-mix(in srgb, #ef4444 20%, transparent);
+  --nano-switch-color-border: color-mix(in srgb, #ef4444 60%, transparent);
+  --nano-switch-color-shadow: color-mix(in srgb, #ef4444 30%, transparent);
+}
+
+.color-gold {
+  --nano-switch-color: #c89b3c;
+  --nano-switch-color-bg: color-mix(in srgb, #c89b3c 20%, transparent);
+  --nano-switch-color-border: color-mix(in srgb, #c89b3c 60%, transparent);
+  --nano-switch-color-shadow: color-mix(in srgb, #c89b3c 30%, transparent);
+}
+
 /* --- Checked Active Styles --- */
-.color-primary.is-checked .nano-switch-slider,
-.color-cyan.is-checked .nano-switch-slider {
-  background: var(--nano-switch-active-bg, rgba(0, 242, 254, 0.2));
-  border-color: var(--nano-switch-active-border, rgba(0, 242, 254, 0.6));
-  box-shadow: 0 0 10px var(--nano-switch-active-shadow, rgba(0, 242, 254, 0.3));
-}
-.color-primary.is-checked .nano-switch-slider::before,
-.color-cyan.is-checked .nano-switch-slider::before {
-  background: var(--nano-switch-active-knob, #00f2fe);
-  box-shadow: 0 0 8px var(--nano-switch-active-knob, rgba(0, 242, 254, 0.6));
+.nano-switch.is-checked .nano-switch-slider {
+  background: var(--nano-switch-color-bg);
+  border-color: var(--nano-switch-color-border);
+  box-shadow: 0 0 10px var(--nano-switch-color-shadow);
 }
 
-.color-purple.is-checked .nano-switch-slider {
-  background: rgba(168, 85, 247, 0.2);
-  border-color: rgba(168, 85, 247, 0.6);
-  box-shadow: 0 0 10px rgba(168, 85, 247, 0.3);
-}
-.color-purple.is-checked .nano-switch-slider::before {
-  background: #c084fc;
-  box-shadow: 0 0 8px rgba(192, 132, 252, 0.6);
-}
-
-.color-emerald.is-checked .nano-switch-slider {
-  background: rgba(16, 185, 129, 0.2);
-  border-color: rgba(16, 185, 129, 0.6);
-  box-shadow: 0 0 10px rgba(16, 185, 129, 0.3);
-}
-.color-emerald.is-checked .nano-switch-slider::before {
-  background: #10b981;
-  box-shadow: 0 0 8px rgba(16, 185, 129, 0.6);
-}
-
-.color-danger.is-checked .nano-switch-slider {
-  background: rgba(239, 68, 68, 0.2);
-  border-color: rgba(239, 68, 68, 0.6);
-  box-shadow: 0 0 10px rgba(239, 68, 68, 0.3);
-}
-.color-danger.is-checked .nano-switch-slider::before {
-  background: #ef4444;
-  box-shadow: 0 0 8px rgba(239, 68, 68, 0.6);
-}
-
-.color-gold.is-checked .nano-switch-slider {
-  background: rgba(200, 155, 60, 0.2);
-  border-color: rgba(200, 155, 60, 0.6);
-  box-shadow: 0 0 10px rgba(200, 155, 60, 0.3);
-}
-.color-gold.is-checked .nano-switch-slider::before {
-  background: #c89b3c;
-  box-shadow: 0 0 8px rgba(200, 155, 60, 0.6);
+.nano-switch.is-checked .nano-switch-slider::before {
+  background: var(--nano-switch-color);
+  box-shadow: 0 0 8px var(--nano-switch-color-shadow);
 }
 
 /* --- Indeterminate State Styles --- */
 .nano-switch.is-indeterminate .nano-switch-slider {
-  background: rgba(148, 163, 184, 0.12);
-  border-color: rgba(148, 163, 184, 0.35);
+  background: color-mix(in srgb, var(--nano-switch-color, #94a3b8) 8%, transparent);
+  border-color: color-mix(in srgb, var(--nano-switch-color, #94a3b8) 45%, transparent);
 }
 
-.color-primary.is-indeterminate .nano-switch-slider,
-.color-cyan.is-indeterminate .nano-switch-slider {
-  background: rgba(0, 242, 254, 0.08);
-  border-color: rgba(0, 242, 254, 0.35);
-}
-.color-primary.is-indeterminate .nano-switch-slider::before,
-.color-cyan.is-indeterminate .nano-switch-slider::before {
-  background: #38bdf8;
-  box-shadow: 0 0 6px rgba(56, 189, 248, 0.4);
-}
-
-.color-purple.is-indeterminate .nano-switch-slider {
-  background: rgba(168, 85, 247, 0.08);
-  border-color: rgba(168, 85, 247, 0.35);
-}
-.color-purple.is-indeterminate .nano-switch-slider::before {
-  background: #c084fc;
-  box-shadow: 0 0 6px rgba(192, 132, 252, 0.4);
-}
-
-.color-emerald.is-indeterminate .nano-switch-slider {
-  background: rgba(16, 185, 129, 0.08);
-  border-color: rgba(16, 185, 129, 0.35);
-}
-.color-emerald.is-indeterminate .nano-switch-slider::before {
-  background: #34d399;
-  box-shadow: 0 0 6px rgba(52, 211, 153, 0.4);
-}
-
-.color-danger.is-indeterminate .nano-switch-slider {
-  background: rgba(239, 68, 68, 0.08);
-  border-color: rgba(239, 68, 68, 0.35);
-}
-.color-danger.is-indeterminate .nano-switch-slider::before {
-  background: #f87171;
-  box-shadow: 0 0 6px rgba(248, 113, 113, 0.4);
-}
-
-.color-gold.is-indeterminate .nano-switch-slider {
-  background: rgba(200, 155, 60, 0.08);
-  border-color: rgba(200, 155, 60, 0.35);
-}
-.color-gold.is-indeterminate .nano-switch-slider::before {
-  background: #fbbf24;
-  box-shadow: 0 0 6px rgba(251, 191, 36, 0.4);
-}
-
-/* Light Mode Indeterminate: Crisp, high-contrast borders & vivid knobs */
-:root[data-theme="light"] .nano-switch.is-indeterminate .nano-switch-slider,
-html[data-theme="light"] .nano-switch.is-indeterminate .nano-switch-slider {
-  background: rgba(100, 116, 139, 0.08);
-  border-color: rgba(100, 116, 139, 0.5);
-}
-
-:root[data-theme="light"] .color-primary.is-indeterminate .nano-switch-slider,
-:root[data-theme="light"] .color-cyan.is-indeterminate .nano-switch-slider,
-html[data-theme="light"] .color-primary.is-indeterminate .nano-switch-slider,
-html[data-theme="light"] .color-cyan.is-indeterminate .nano-switch-slider {
-  background: rgba(2, 132, 199, 0.08);
-  border-color: rgba(2, 132, 199, 0.65);
-}
-:root[data-theme="light"] .color-primary.is-indeterminate .nano-switch-slider::before,
-:root[data-theme="light"] .color-cyan.is-indeterminate .nano-switch-slider::before,
-html[data-theme="light"] .color-primary.is-indeterminate .nano-switch-slider::before,
-html[data-theme="light"] .color-cyan.is-indeterminate .nano-switch-slider::before {
-  background: #0284c7;
-  box-shadow: 0 0 6px rgba(2, 132, 199, 0.3);
-}
-
-:root[data-theme="light"] .color-purple.is-indeterminate .nano-switch-slider,
-html[data-theme="light"] .color-purple.is-indeterminate .nano-switch-slider {
-  background: rgba(124, 58, 237, 0.08);
-  border-color: rgba(124, 58, 237, 0.65);
-}
-:root[data-theme="light"] .color-purple.is-indeterminate .nano-switch-slider::before,
-html[data-theme="light"] .color-purple.is-indeterminate .nano-switch-slider::before {
-  background: #7c3aed;
-  box-shadow: 0 0 6px rgba(124, 58, 237, 0.3);
-}
-
-:root[data-theme="light"] .color-emerald.is-indeterminate .nano-switch-slider,
-html[data-theme="light"] .color-emerald.is-indeterminate .nano-switch-slider {
-  background: rgba(5, 150, 105, 0.08);
-  border-color: rgba(5, 150, 105, 0.65);
-}
-:root[data-theme="light"] .color-emerald.is-indeterminate .nano-switch-slider::before,
-html[data-theme="light"] .color-emerald.is-indeterminate .nano-switch-slider::before {
-  background: #059669;
-  box-shadow: 0 0 6px rgba(5, 150, 105, 0.3);
-}
-
-:root[data-theme="light"] .color-danger.is-indeterminate .nano-switch-slider,
-html[data-theme="light"] .color-danger.is-indeterminate .nano-switch-slider {
-  background: rgba(220, 38, 38, 0.08);
-  border-color: rgba(220, 38, 38, 0.65);
-}
-:root[data-theme="light"] .color-danger.is-indeterminate .nano-switch-slider::before,
-html[data-theme="light"] .color-danger.is-indeterminate .nano-switch-slider::before {
-  background: #dc2626;
-  box-shadow: 0 0 6px rgba(220, 38, 38, 0.3);
-}
-
-:root[data-theme="light"] .color-gold.is-indeterminate .nano-switch-slider,
-html[data-theme="light"] .color-gold.is-indeterminate .nano-switch-slider {
-  background: rgba(217, 119, 6, 0.08);
-  border-color: rgba(217, 119, 6, 0.65);
-}
-:root[data-theme="light"] .color-gold.is-indeterminate .nano-switch-slider::before,
-html[data-theme="light"] .color-gold.is-indeterminate .nano-switch-slider::before {
-  background: #d97706;
-  box-shadow: 0 0 6px rgba(217, 119, 6, 0.3);
+.nano-switch.is-indeterminate .nano-switch-slider::before {
+  background: var(--nano-switch-color, #94a3b8);
+  box-shadow: 0 0 6px color-mix(in srgb, var(--nano-switch-color, #94a3b8) 35%, transparent);
 }
 
 /* --- Stationary Hover States --- */
@@ -421,7 +309,7 @@ html[data-theme="light"] .color-gold.is-indeterminate .nano-switch-slider::befor
 }
 
 .nano-switch.is-checked:not(.is-disabled):hover .nano-switch-slider {
-  box-shadow: 0 0 12px var(--nano-switch-active-shadow, rgba(0, 242, 254, 0.35));
+  box-shadow: 0 0 12px var(--nano-switch-color-shadow, var(--nano-switch-active-shadow, rgba(0, 242, 254, 0.35)));
 }
 
 .nano-switch.is-indeterminate:not(.is-disabled):hover .nano-switch-slider::before {

@@ -1666,22 +1666,12 @@ defineExpose({
 }
 
 .center-text-value {
-  fill: #ffffff;
-  filter: drop-shadow(0px 0px 3px rgba(0, 0, 0, 0.8));
+  fill: var(--nano-text-main, #ffffff);
+  filter: drop-shadow(0px 0px 3px var(--nano-bg-app, rgba(0, 0, 0, 0.8)));
 }
 
 .center-text-label {
-  fill: #94a3b8;
-  filter: drop-shadow(0px 0px 2px rgba(0, 0, 0, 0.8));
-}
-
-:root[data-theme="light"] .center-text-value {
-  fill: #0f172a;
-  filter: drop-shadow(0px 0px 3px rgba(255, 255, 255, 0.9));
-}
-
-:root[data-theme="light"] .center-text-label {
-  fill: #475569;
-  filter: drop-shadow(0px 0px 2px rgba(255, 255, 255, 0.9));
+  fill: var(--nano-text-muted, #94a3b8);
+  filter: drop-shadow(0px 0px 2px var(--nano-bg-app, rgba(0, 0, 0, 0.8)));
 }
 </style>

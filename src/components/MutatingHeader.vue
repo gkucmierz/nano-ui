@@ -184,15 +184,16 @@ onUnmounted(() => {
   margin: var(--floating-margin, 12px 24px 0 24px);
   padding: 0 20px;
   border-radius: var(--floating-radius, 16px);
-  border: 1px solid var(--border-subtle, rgba(255, 255, 255, 0.1));
+  border: 1px solid var(--nano-border-subtle, rgba(255, 255, 255, 0.1));
   display: flex;
   align-items: center;
   flex-shrink: 0;
   box-sizing: border-box;
   -webkit-user-select: none;
   user-select: none;
-  box-shadow: 0 8px 24px -6px rgba(0, 0, 0, 0.45);
-  background: var(--bg-card, rgba(16, 22, 34, 0.85));
+  box-shadow: var(--nano-shadow-card, 0 8px 24px -6px rgba(0, 0, 0, 0.45));
+  background: var(--nano-bg-card, rgba(16, 22, 34, 0.85));
+  color: var(--nano-text-main);
   will-change: margin, border-radius, border-color, padding, box-shadow;
   transition: margin var(--nano-transition-header),
               border-radius var(--nano-transition-header),
@@ -210,24 +211,9 @@ onUnmounted(() => {
 .nano-mutating-header.is-stuck {
   margin: 0;
   border-radius: 0;
-  border-color: transparent transparent var(--border-subtle, rgba(255, 255, 255, 0.1)) transparent;
+  border-color: transparent transparent var(--nano-border-subtle, rgba(255, 255, 255, 0.1)) transparent;
   padding: 0 24px;
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25);
-}
-
-/* Light Theme Support */
-:root[data-theme="light"] .nano-mutating-header,
-[data-theme="light"] .nano-mutating-header {
-  background: var(--bg-card, rgba(255, 255, 255, 0.85));
-  border-color: var(--border-subtle, rgba(0, 0, 0, 0.08));
-  box-shadow: 0 8px 24px -6px rgba(0, 0, 0, 0.08);
-  color: #0f172a;
-}
-
-:root[data-theme="light"] .nano-mutating-header.is-stuck,
-[data-theme="light"] .nano-mutating-header.is-stuck {
-  border-color: transparent transparent var(--border-subtle, rgba(0, 0, 0, 0.08)) transparent;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.04);
 }
 
 .header-inner {

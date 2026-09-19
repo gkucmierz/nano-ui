@@ -1,6 +1,7 @@
 <script setup>
 import { ref, computed } from 'vue';
 import ThreeDDonutChart from '../../components/ThreeDDonutChart.vue';
+import NanoSwitch from '../../components/NanoSwitch.vue';
 
 const isExpanded = ref(true);
 const is3D = ref(true);
@@ -132,42 +133,27 @@ const setSingleDatapoint = () => {
           <h4>2. Visual Settings</h4>
           <div class="switch-row" style="margin-top: 0.5rem;">
             <span class="switch-label">Show Labels & Leader Lines</span>
-            <label class="switch">
-              <input type="checkbox" v-model="showLabels" />
-              <span class="switch-slider"></span>
-            </label>
+            <NanoSwitch v-model="showLabels" size="compact" />
           </div>
 
           <div class="switch-row" style="margin-top: 10px;">
             <span class="switch-label">Show Center Value Text</span>
-            <label class="switch">
-              <input type="checkbox" v-model="showCenterText" />
-              <span class="switch-slider"></span>
-            </label>
+            <NanoSwitch v-model="showCenterText" size="compact" />
           </div>
 
           <div class="switch-row" style="margin-top: 10px;">
             <span class="switch-label">Compact (Mini) Layout</span>
-            <label class="switch">
-              <input type="checkbox" :checked="!isExpanded" @change="isExpanded = !$event.target.checked" />
-              <span class="switch-slider"></span>
-            </label>
+            <NanoSwitch :modelValue="!isExpanded" @update:modelValue="isExpanded = !$event" size="compact" />
           </div>
 
           <div class="switch-row" style="margin-top: 10px;">
             <span class="switch-label">3D Render Mode</span>
-            <label class="switch">
-              <input type="checkbox" v-model="is3D" />
-              <span class="switch-slider"></span>
-            </label>
+            <NanoSwitch v-model="is3D" size="compact" />
           </div>
           
           <div class="switch-row" style="margin-top: 10px;">
             <span class="switch-label">Auto-Rotate</span>
-            <label class="switch">
-              <input type="checkbox" v-model="autoRotate" />
-              <span class="switch-slider"></span>
-            </label>
+            <NanoSwitch v-model="autoRotate" size="compact" />
           </div>
 
           <div 
@@ -181,10 +167,7 @@ const setSingleDatapoint = () => {
 
           <div class="switch-row" style="margin-top: 10px;">
             <span class="switch-label">Selectable (Click/Tap to lock item details)</span>
-            <label class="switch">
-              <input type="checkbox" v-model="selectable" />
-              <span class="switch-slider"></span>
-            </label>
+            <NanoSwitch v-model="selectable" size="compact" />
           </div>
 
           <div v-if="selectable && selectedItemId" style="font-size: 0.85rem; color: #10b981; margin-top: 8px; font-weight: 500;">
@@ -211,10 +194,7 @@ const setSingleDatapoint = () => {
           <h4>3. Value Aggregation</h4>
           <div class="switch-row">
             <span class="switch-label">Aggregate data below threshold into "Other"</span>
-            <label class="switch">
-              <input type="checkbox" v-model="aggregateOthers" />
-              <span class="switch-slider"></span>
-            </label>
+            <NanoSwitch v-model="aggregateOthers" size="compact" />
           </div>
 
           <div class="slider-row" :style="!aggregateOthers ? 'opacity: 0.4; pointer-events: none;' : ''">
@@ -291,9 +271,9 @@ showCenterText: Boolean (default: true) - Show/hide center value and label texts
   gap: 2rem;
 }
 
-h2 { margin: 0; color: #fff; }
-h3 { margin-bottom: 1rem; color: #a1a1aa; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 0.5rem; }
-h4 { margin: 0 0 0.5rem 0; color: #e4e4e7; font-size: 0.9rem; }
+h2 { margin: 0; color: var(--nano-text-main); }
+h3 { margin-bottom: 1rem; color: var(--nano-text-muted); border-bottom: 1px solid var(--nano-border-subtle); padding-bottom: 0.5rem; }
+h4 { margin: 0 0 0.5rem 0; color: var(--nano-text-secondary); font-size: 0.9rem; }
 
 .sandbox-grid {
   display: grid;
@@ -308,33 +288,34 @@ h4 { margin: 0 0 0.5rem 0; color: #e4e4e7; font-size: 0.9rem; }
 }
 
 .demo-section {
-  background: rgba(255, 255, 255, 0.02);
+  background: var(--nano-bg-card);
   padding: 1.5rem;
-  border-radius: 8px;
-  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: var(--nano-radius-md, 8px);
+  border: 1px solid var(--nano-border-card);
 }
 
 .demo-btn {
-  background: #6366f1;
-  color: white;
+  background: var(--nano-accent-primary);
+  color: #fff;
   border: none;
   padding: 8px 16px;
-  border-radius: 6px;
+  border-radius: var(--nano-radius-sm, 6px);
   cursor: pointer;
   font-weight: 600;
   transition: background var(--nano-transition-interactive);
 }
 
-.demo-btn:hover { background: #4f46e5; }
+.demo-btn:hover { background: var(--nano-accent-primary-hover); }
 
 .secondary-btn {
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  color: #e4e4e7;
+  background: var(--nano-bg-muted);
+  border: 1px solid var(--nano-border-subtle);
+  color: var(--nano-text-main);
 }
 
 .secondary-btn:hover {
-  background: rgba(255, 255, 255, 0.1);
+  background: var(--nano-bg-hover);
+  border-color: var(--nano-border-hover);
 }
 
 .action-buttons {
@@ -361,11 +342,11 @@ h4 { margin: 0 0 0.5rem 0; color: #e4e4e7; font-size: 0.9rem; }
 
 .input-name {
   flex-grow: 1;
-  background: #09090b;
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: var(--nano-bg-muted);
+  border: 1px solid var(--nano-border-subtle);
   padding: 6px 10px;
-  border-radius: 6px;
-  color: #fff;
+  border-radius: var(--nano-radius-sm, 6px);
+  color: var(--nano-text-main);
   font-size: 0.85rem;
   outline: none;
   transition: border-color var(--nano-transition-interactive);
@@ -377,11 +358,11 @@ h4 { margin: 0 0 0.5rem 0; color: #e4e4e7; font-size: 0.9rem; }
 
 .input-value {
   width: 70px;
-  background: #09090b;
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: var(--nano-bg-muted);
+  border: 1px solid var(--nano-border-subtle);
   padding: 6px 10px;
-  border-radius: 6px;
-  color: #fff;
+  border-radius: var(--nano-radius-sm, 6px);
+  color: var(--nano-text-main);
   font-size: 0.85rem;
   outline: none;
   transition: border-color var(--nano-transition-interactive);
@@ -395,9 +376,9 @@ h4 { margin: 0 0 0.5rem 0; color: #e4e4e7; font-size: 0.9rem; }
   width: 32px;
   height: 30px;
   padding: 0;
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: 1px solid var(--nano-border-subtle);
   background: transparent;
-  border-radius: 6px;
+  border-radius: var(--nano-radius-sm, 6px);
   cursor: pointer;
 }
 
@@ -413,7 +394,7 @@ h4 { margin: 0 0 0.5rem 0; color: #e4e4e7; font-size: 0.9rem; }
   align-items: center;
   gap: 8px;
   font-size: 0.9rem;
-  color: #d4d4d8;
+  color: var(--nano-text-secondary);
   cursor: pointer;
 }
 
@@ -426,57 +407,7 @@ h4 { margin: 0 0 0.5rem 0; color: #e4e4e7; font-size: 0.9rem; }
 
 .slider-label {
   font-size: 0.85rem;
-  color: #a1a1aa;
-}
-
-/* Custom premium Switch */
-.switch {
-  position: relative;
-  display: inline-block;
-  width: 36px;
-  height: 20px;
-  flex-shrink: 0;
-}
-
-.switch input {
-  opacity: 0;
-  width: 0;
-  height: 0;
-}
-
-.switch-slider {
-  position: absolute;
-  cursor: pointer;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background-color: rgba(255, 255, 255, 0.1);
-  border: 1px solid rgba(255, 255, 255, 0.15);
-  transition: var(--nano-transition-toggle);
-  border-radius: 20px;
-}
-
-.switch-slider:before {
-  position: absolute;
-  content: "";
-  height: 14px;
-  width: 14px;
-  left: 2px;
-  bottom: 2px;
-  background-color: #a1a1aa;
-  transition: var(--nano-transition-toggle);
-  border-radius: 50%;
-}
-
-input:checked + .switch-slider {
-  background-color: rgba(99, 102, 241, 0.2);
-  border-color: #6366f1;
-}
-
-input:checked + .switch-slider:before {
-  transform: translateX(18px);
-  background-color: #ffffff;
+  color: var(--nano-text-muted);
 }
 
 /* Controls inputs */
@@ -497,19 +428,6 @@ input:checked + .switch-slider:before {
   color: var(--nano-text-main);
 }
 
-.switch:hover .switch-slider:before {
-  background-color: #e4e4e7;
-}
-
-input:checked:hover + .switch-slider:before {
-  background-color: #818cf8;
-}
-
-input:disabled + .switch-slider {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
 .switch-row {
   display: flex;
   align-items: center;
@@ -520,7 +438,7 @@ input:disabled + .switch-slider {
 
 .switch-label {
   font-size: 0.9rem;
-  color: #d4d4d8;
+  color: var(--nano-text-secondary);
   user-select: none;
 }
 
@@ -530,7 +448,7 @@ input[type="range"] {
   appearance: none;
   width: 100%;
   height: 8px;
-  background: rgba(255, 255, 255, 0.1);
+  background: var(--nano-border-subtle);
   border-radius: 4px;
   outline: none;
   transition: background var(--nano-transition-interactive);
@@ -539,7 +457,7 @@ input[type="range"] {
 }
 
 input[type="range"]:hover {
-  background: rgba(255, 255, 255, 0.15);
+  background: var(--nano-border-hover);
 }
 
 input[type="range"]::-webkit-slider-thumb {
@@ -548,14 +466,14 @@ input[type="range"]::-webkit-slider-thumb {
   width: 20px;
   height: 20px;
   border-radius: 50%;
-  background: #6366f1;
-  box-shadow: 0 0 10px rgba(99, 102, 241, 0.5);
+  background: var(--nano-accent-primary);
+  box-shadow: 0 0 10px color-mix(in srgb, var(--nano-accent-primary) 50%, transparent);
   transition: transform var(--nano-transition-interactive), background var(--nano-transition-interactive);
 }
 
 input[type="range"]::-webkit-slider-thumb:hover {
   transform: scale(1.2);
-  background: #818cf8;
+  background: var(--nano-accent-primary-hover);
 }
 
 input[type="range"]::-moz-range-thumb {
@@ -563,15 +481,15 @@ input[type="range"]::-moz-range-thumb {
   height: 20px;
   border: none;
   border-radius: 50%;
-  background: #6366f1;
-  box-shadow: 0 0 10px rgba(99, 102, 241, 0.5);
+  background: var(--nano-accent-primary);
+  box-shadow: 0 0 10px color-mix(in srgb, var(--nano-accent-primary) 50%, transparent);
   transition: transform var(--nano-transition-interactive), background var(--nano-transition-interactive);
   cursor: pointer;
 }
 
 input[type="range"]::-moz-range-thumb:hover {
   transform: scale(1.2);
-  background: #818cf8;
+  background: var(--nano-accent-primary-hover);
 }
 
 .chart-container {
@@ -583,60 +501,12 @@ input[type="range"]::-moz-range-thumb:hover {
 }
 
 .api-reference {
-  background: #1e1e1e;
+  background: var(--nano-bg-code);
+  border: 1px solid var(--nano-border-subtle);
   padding: 1rem;
-  border-radius: 8px;
+  border-radius: var(--nano-radius-md, 8px);
   font-family: monospace;
-  color: #a1a1aa;
+  color: var(--nano-text-code);
   line-height: 1.5;
-}
-
-/* Light mode overrides */
-:root[data-theme="light"] h2 { color: #0f172a; }
-:root[data-theme="light"] h4 { color: #1e293b; }
-:root[data-theme="light"] .demo-section {
-  background: #ffffff;
-  border-color: #e2e8f0;
-}
-:root[data-theme="light"] .input-name,
-:root[data-theme="light"] .input-value {
-  background: #f8fafc;
-  border-color: #cbd5e1;
-  color: #0f172a;
-}
-:root[data-theme="light"] .secondary-btn {
-  background: #f1f5f9;
-  border-color: #cbd5e1;
-  color: #334155;
-}
-:root[data-theme="light"] .secondary-btn:hover {
-  background: #e2e8f0;
-}
-:root[data-theme="light"] .checkbox-label {
-  color: #334155;
-}
-:root[data-theme="light"] .switch-label {
-  color: #334155;
-}
-:root[data-theme="light"] .switch-slider {
-  background-color: #cbd5e1;
-  border-color: #94a3b8;
-}
-:root[data-theme="light"] .switch-slider:before {
-  background-color: #64748b;
-}
-:root[data-theme="light"] input:checked + .switch-slider {
-  background-color: rgba(99, 102, 241, 0.15);
-  border-color: #6366f1;
-}
-:root[data-theme="light"] input:checked + .switch-slider:before {
-  background-color: #6366f1;
-}
-:root[data-theme="light"] input[type="range"] {
-  background: #cbd5e1;
-}
-:root[data-theme="light"] .api-reference {
-  background: #f1f5f9;
-  color: #334155;
 }
 </style>
