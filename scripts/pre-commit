@@ -11,11 +11,25 @@ if [ "$gpg_sign" != "true" ]; then
   exit 1
 fi
 
-# Allow easy bypass via environment variable: SKIP_LINT=1 git commit ...
+# 1. Bypass via environment variable (SKIP_LINT=1 git commit ...)
 if [ "$SKIP_LINT" = "1" ] || [ "$NO_LINT" = "1" ]; then
-  echo "⚡ [nano-ui] Skipping ESLint check (SKIP_LINT=1)..."
+  echo "⚡ [nano-ui] Skipping ESLint check (env flag)..."
   exit 0
 fi
+
+# 2. Bypass via git config: git config hooks.lint false
+if [ "$(git config --get hooks.lint || echo 'true')" = "false" ]; then
+  echo "⚡ [nano-ui] Skipping ESLint check (git config hooks.lint=false)..."
+  exit 0
+fi
+
+# 3. Bypass via .env.local / .env (allows quick Cmd + / toggle in editor)
+for env_file in .env.local .env; do
+  if [ -f "$env_file" ] && grep -qE '^\s*(SKIP_LINT|NO_LINT)\s*=\s*(1|true)' "$env_file" 2>/dev/null; then
+    echo "⚡ [nano-ui] Skipping ESLint check (found in $env_file)..."
+    exit 0
+  fi
+done
 
 echo "🔍 [nano-ui] Running ESLint pre-commit check..."
 npm run lint
