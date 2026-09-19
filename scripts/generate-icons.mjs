@@ -21,12 +21,32 @@ async function getSharp() {
 }
 
 async function main() {
-  const sharp = await getSharp();
   const svgPath = path.resolve(rootDir, 'public/nano-ui.svg');
   const outPath512 = path.resolve(rootDir, 'public/nano-ui-512.png');
 
   if (!fs.existsSync(svgPath)) {
     throw new Error(`SVG source not found at: ${svgPath}`);
+  }
+
+  // Instant check: If PNG exists and is up to date with SVG, return immediately (<1ms)
+  if (fs.existsSync(outPath512)) {
+    const svgStat = fs.statSync(svgPath);
+    const pngStat = fs.statSync(outPath512);
+    if (pngStat.mtimeMs >= svgStat.mtimeMs) {
+      console.log('⚡ Icons already up to date, skipping generation.');
+      return;
+    }
+  }
+
+  let sharp;
+  try {
+    sharp = await getSharp();
+  } catch (err) {
+    if (fs.existsSync(outPath512)) {
+      console.warn(`⚠️ ${err.message}. Using existing ${outPath512}.`);
+      return;
+    }
+    throw err;
   }
 
   console.log('Generating 512x512 Open Graph & app icon from public/nano-ui.svg...');

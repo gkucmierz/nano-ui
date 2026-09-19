@@ -23,7 +23,9 @@
   ],
   "scripts": {
     "dev": "vite",
+    "prebuild": "node scripts/generate-icons.mjs",
     "build": "vite build",
+    "prebuild:app": "node scripts/generate-icons.mjs",
     "build:app": "vite build -c vite.config.app.js",
     "icons": "node scripts/generate-icons.mjs",
     "test:e2e": "playwright test"
