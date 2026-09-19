@@ -47,7 +47,79 @@ const speedPresets = [
   { label: '0.5s (2x)', duration: 500 },
   { label: '1s (1x)', duration: 1000 },
   { label: '2s (1/2x)', duration: 2000 },
-  { label: '4s (1/4x)', duration: 4000 }
+  { label: '4s (1/4x)', duration: 4000 },
+];
+
+const codeTabs = [
+  {
+    id: 'api',
+    label: 'API Reference',
+    lang: 'api',
+    code: `// Props
+modelValue: Number (default: 0) - Target angle in degrees (v-model support)
+duration: Number (default: 1000) - Base duration in ms per 90° step
+speedMultiplier: Number (default: 1) - Time multiplier (e.g. 0.5 = 2x slower)
+step: Number (default: 90) - Angular step quantum in degrees
+shortestPath: Boolean (default: true) - Geodesic modulo 360° path optimization
+timingMode: String (default: 'proportional') - 'proportional' (v ~ const, isokinetic) or 'fixed' (T = const, isochronous)
+inertiaThreshold: Number (default: 0.25) - Momentum reversal avoidance threshold in seconds (0 to disable)
+size: Number | String (default: 260) - Width/height dimension
+
+// Slots
+default - Content to rotate. Receives { currentAngle, targetAngle, normalizedAngle, velocity, acceleration, isMoving, progress }
+
+// Exposed Methods (ref)
+rotateBy(delta: Number) - Increment target by delta degrees with continuous velocity chaining
+setAngle(deg: Number) - Set absolute target orientation
+reset() - Immediate reset to 0°
+currentAngle - Reactive continuous angle ref
+velocity - Reactive angular speed ref (deg/sec)
+acceleration - Reactive angular acceleration ref (deg/sec²)
+isMoving - Boolean motion status ref
+
+// Events
+@update:modelValue - Emits settled target angle
+@change - Emits new target whenever commanded
+@settled - Emitted when movement completes: { angle, normalizedAngle }
+@frame - Emitted on every rAF tick with live kinematic telemetry { currentAngle, targetAngle, velocity, acceleration, progress, isMoving, v0, timestamp }`,
+  },
+  {
+    id: 'usage',
+    label: 'Usage & Imports',
+    lang: 'vue',
+    code: `<!-- 1. Pełny import z paczki (Full package bundle) -->
+<script setup>
+import { ref } from 'vue';
+import { KineticRotator } from '@gkucmierz/nano-ui';
+import '@gkucmierz/nano-ui/style.css';
+
+const angle = ref(0);
+const rotator = ref(null);
+<\/script>
+
+<template>
+  <KineticRotator
+    ref="rotator"
+    v-model="angle"
+    :duration="1000"
+    :step="90"
+    :shortest-path="true"
+    timing-mode="proportional"
+  >
+    <div class="custom-dial">
+      <span>{{ Math.round(angle) }}°</span>
+    </div>
+  </KineticRotator>
+</template>
+
+<!-- 2. Granularny import pojedynczego pliku (Minimal footprint / Tree-shaking) -->
+<!--
+Jeśli nie chcesz importować całej biblioteki, zaimportuj wyłącznie ten komponent i style:
+
+import KineticRotator from '@gkucmierz/nano-ui/src/components/KineticRotator.vue';
+import '@gkucmierz/nano-ui/dist/nano-ui.css';
+-->`,
+  },
 ];
 
 const normalizedAngle = computed(() => {
@@ -895,36 +967,8 @@ onUnmounted(() => {
       </div>
     </div>
 
-    <!-- API Reference -->
-    <NanoCodeBlock title="API Reference" lang="api">
-// Props
-modelValue: Number (default: 0) - Target angle in degrees (v-model support)
-duration: Number (default: 1000) - Base duration in ms per 90° step
-speedMultiplier: Number (default: 1) - Time multiplier (e.g. 0.5 = 2x slower)
-step: Number (default: 90) - Angular step quantum in degrees
-shortestPath: Boolean (default: true) - Geodesic modulo 360° path optimization
-timingMode: String (default: 'proportional') - 'proportional' (v ~ const, isokinetic) or 'fixed' (T = const, isochronous)
-inertiaThreshold: Number (default: 0.25) - Momentum reversal avoidance threshold in seconds (0 to disable)
-size: Number | String (default: 260) - Width/height dimension
-
-// Slots
-default - Content to rotate. Receives { currentAngle, targetAngle, normalizedAngle, velocity, acceleration, isMoving, progress }
-
-// Exposed Methods (ref)
-rotateBy(delta: Number) - Increment target by delta degrees with continuous velocity chaining
-setAngle(deg: Number) - Set absolute target orientation
-reset() - Immediate reset to 0°
-currentAngle - Reactive continuous angle ref
-velocity - Reactive angular speed ref (deg/sec)
-acceleration - Reactive angular acceleration ref (deg/sec²)
-isMoving - Boolean motion status ref
-
-// Events
-@update:modelValue - Emits settled target angle
-@change - Emits new target whenever commanded
-@settled - Emitted when movement completes: { angle, normalizedAngle }
-@frame - Emitted on every rAF tick with live kinematic telemetry { currentAngle, targetAngle, velocity, acceleration, progress, isMoving, v0, timestamp }
-    </NanoCodeBlock>
+    <!-- API Reference & Usage Guide -->
+    <NanoCodeBlock :tabs="codeTabs" />
 
     <!-- Kinematic & Mathematical Foundations -->
     <h3 class="section-title">{{ t('kinetic.theoryTitle') }}</h3>

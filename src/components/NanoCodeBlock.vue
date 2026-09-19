@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed } from 'vue';
+import { ref, computed, watch } from 'vue';
 
 const props = defineProps({
   /**
@@ -7,58 +7,103 @@ const props = defineProps({
    */
   title: {
     type: String,
-    default: ''
+    default: '',
   },
   /**
    * Language badge label (e.g. 'vue', 'bash', 'js', 'json')
    */
   lang: {
     type: String,
-    default: ''
+    default: '',
   },
   /**
    * Raw code string if not passed via default slot
    */
   code: {
     type: String,
-    default: ''
+    default: '',
+  },
+  /**
+   * Optional array of tabs: [{ id?: string, label: string, lang?: string, code?: string }]
+   */
+  tabs: {
+    type: Array,
+    default: () => [],
+  },
+  /**
+   * Active tab index (v-model support)
+   */
+  modelValue: {
+    type: Number,
+    default: 0,
   },
   /**
    * Initial word-wrap state
    */
   defaultWrap: {
     type: Boolean,
-    default: false
+    default: false,
   },
   /**
    * Whether to show the wrap toggle action button
    */
   allowWrap: {
     type: Boolean,
-    default: true
+    default: true,
   },
   /**
    * Whether to show the copy action button
    */
   allowCopy: {
     type: Boolean,
-    default: true
+    default: true,
   },
   /**
    * Optional max height with vertical scroll
    */
   maxHeight: {
     type: [Number, String],
-    default: null
-  }
+    default: null,
+  },
 });
 
-const emit = defineEmits(['update:wrap', 'copied']);
+const emit = defineEmits(['update:wrap', 'update:modelValue', 'changeTab', 'copied']);
 
 const isWrapped = ref(props.defaultWrap);
 const copied = ref(false);
 const preRef = ref(null);
 let copyTimeout = null;
+
+const currentTabIndex = ref(props.modelValue || 0);
+
+watch(() => props.modelValue, (val) => {
+  if (val !== undefined && val !== currentTabIndex.value) {
+    currentTabIndex.value = val;
+  }
+});
+
+const activeTab = computed(() => {
+  if (!props.tabs || props.tabs.length === 0) return null;
+  return props.tabs[currentTabIndex.value] || props.tabs[0];
+});
+
+const hasTabs = computed(() => Boolean(props.tabs && props.tabs.length > 0));
+
+const currentLang = computed(() => {
+  if (activeTab.value && activeTab.value.lang) return activeTab.value.lang;
+  return props.lang;
+});
+
+const currentCode = computed(() => {
+  if (activeTab.value && activeTab.value.code !== undefined) return activeTab.value.code;
+  return props.code;
+});
+
+const selectTab = (idx) => {
+  currentTabIndex.value = idx;
+  emit('update:modelValue', idx);
+  emit('changeTab', idx, props.tabs[idx]);
+};
 
 const toggleWrap = () => {
   isWrapped.value = !isWrapped.value;
@@ -66,7 +111,7 @@ const toggleWrap = () => {
 };
 
 const copyCode = async () => {
-  let textToCopy = props.code;
+  let textToCopy = currentCode.value;
   if (!textToCopy && preRef.value) {
     textToCopy = preRef.value.innerText || preRef.value.textContent || '';
   }
@@ -107,16 +152,29 @@ const containerMaxHeight = computed(() => {
 </script>
 
 <template>
-  <div class="nano-code-block" :class="{ 'is-wrapped': isWrapped }">
-    <div v-if="title || lang || $slots.header || allowWrap || allowCopy" class="code-block-header">
+  <div class="nano-code-block" :class="{ 'is-wrapped': isWrapped, 'has-tabs': hasTabs }">
+    <div v-if="title || lang || hasTabs || $slots.header || allowWrap || allowCopy" class="code-block-header">
       <div class="code-block-title-group">
         <slot name="header">
-          <span v-if="title" class="code-block-title">{{ title }}</span>
-          <span v-if="lang" class="code-block-lang">{{ lang }}</span>
+          <div v-if="hasTabs" class="code-block-tabs">
+            <button
+              v-for="(tab, idx) in tabs"
+              :key="tab.id || idx"
+              type="button"
+              class="code-tab-btn"
+              :class="{ active: currentTabIndex === idx }"
+              @click="selectTab(idx)"
+            >
+              {{ tab.label }}
+            </button>
+          </div>
+          <span v-else-if="title" class="code-block-title">{{ title }}</span>
+          <span v-if="!hasTabs && currentLang" class="code-block-lang">{{ currentLang }}</span>
         </slot>
       </div>
 
       <div class="code-block-actions">
+        <span v-if="hasTabs && currentLang" class="code-block-lang">{{ currentLang }}</span>
         <button
           v-if="allowWrap"
           type="button"
@@ -160,7 +218,7 @@ const containerMaxHeight = computed(() => {
     </div>
 
     <div class="code-block-body" :style="{ maxHeight: containerMaxHeight }">
-      <pre ref="preRef" class="code-block-pre"><slot>{{ code }}</slot></pre>
+      <pre ref="preRef" class="code-block-pre"><slot :name="activeTab?.id || `tab-${currentTabIndex}`"><slot>{{ currentCode }}</slot></slot></pre>
     </div>
   </div>
 </template>
@@ -196,11 +254,76 @@ const containerMaxHeight = computed(() => {
   flex-shrink: 0;
 }
 
+.nano-code-block.has-tabs .code-block-header {
+  height: 38px;
+  padding: 0 10px 0 0;
+  align-items: stretch;
+}
+
 .code-block-title-group {
   display: flex;
   align-items: center;
   gap: 8px;
   min-width: 0;
+}
+
+.nano-code-block.has-tabs .code-block-title-group {
+  height: 100%;
+  align-items: stretch;
+  gap: 0;
+}
+
+.code-block-tabs {
+  display: flex;
+  align-items: stretch;
+  height: 100%;
+  gap: 0;
+  padding: 0;
+  margin: 0;
+  background: transparent;
+  border: none;
+  border-radius: 0;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.code-tab-btn {
+  height: 100%;
+  margin: 0;
+  padding: 0 16px;
+  border: none;
+  border-right: 1px solid var(--nano-code-header-border, var(--nano-border-card, rgba(255, 255, 255, 0.08)));
+  border-radius: 0;
+  background: transparent;
+  color: var(--nano-text-muted, #94a3b8);
+  font-size: 0.76rem;
+  font-weight: 600;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: none;
+  outline: none !important;
+  transition: var(--nano-transition-interactive, background 0.15s ease, color 0.15s ease);
+  user-select: none;
+  -webkit-user-select: none;
+  line-height: 1;
+}
+
+.code-tab-btn:hover:not(.active) {
+  color: var(--nano-text-main, #f8fafc);
+  background: var(--nano-bg-hover, rgba(255, 255, 255, 0.06));
+}
+
+.code-tab-btn.active {
+  color: var(--nano-state-active, #00f2fe);
+  background: var(--nano-code-bg, var(--nano-bg-code, #0b1120));
+  box-shadow: inset 0 -2px 0 var(--nano-state-active, #00f2fe);
+  font-weight: 700;
+}
+
+.nano-code-block.has-tabs .code-block-actions {
+  align-self: center;
 }
 
 .code-block-title {
