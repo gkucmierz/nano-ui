@@ -27,7 +27,7 @@ const Ripple = {
 
       el.appendChild(circle);
     });
-  }
+  },
 };
 
 export default Ripple;

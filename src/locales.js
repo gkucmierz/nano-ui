@@ -39,7 +39,7 @@ export const toggleLang = () => {
 
 const dictionaries = {
   en: enDict,
-  pl: plDict
+  pl: plDict,
 };
 
 export const t = (path, params = {}) => {
@@ -88,5 +88,5 @@ export default {
     app.provide('currentLang', currentLang);
     app.provide('setLang', setLang);
     app.provide('toggleLang', toggleLang);
-  }
+  },
 };

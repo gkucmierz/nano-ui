@@ -19,7 +19,7 @@ export const render = async (url) => {
     meta: {
       title: meta.title || 'Nano UI - High-performance Vue 3 UI Library',
       description: meta.description || 'High-performance, minimal footprint Vue 3 UI library, interactive 3D charts, and kinematic components.',
-      path: url
-    }
+      path: url,
+    },
   };
 };

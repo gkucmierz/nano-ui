@@ -4,7 +4,7 @@
  * Initializes data-theme and colorScheme attributes on <html> synchronously.
  * Reads saved user preference from localStorage or detects OS prefers-color-scheme.
  * Adds 'preload' class to suppress CSS transition flashes during boot.
- * 
+ *
  * @param {Object} options
  * @param {string} [options.storageKey='nano-ui-theme'] Key in localStorage
  * @param {string} [options.defaultTheme='dark'] Fallback theme ('dark' | 'light')
@@ -40,7 +40,34 @@ export const initTheme = ({ storageKey = 'nano-ui-theme', defaultTheme = 'dark' 
 initTheme();
 
 /**
+ * Inlined client-side theme initialization logic.
+ * Encapsulated as a standard JavaScript function for static analysis and clean formatting.
+ *
+ * @param {string} storageKey
+ * @param {string} defaultTheme
+ */
+const clientThemeBoot = (storageKey, defaultTheme) => {
+  try {
+    const saved = localStorage.getItem(storageKey);
+    const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+    const active = (saved === 'light' || saved === 'dark')
+      ? saved
+      : (prefersDark ? 'dark' : defaultTheme);
+
+    if (active === 'light') {
+      document.documentElement.setAttribute('data-theme', 'light');
+    } else {
+      document.documentElement.removeAttribute('data-theme');
+    }
+
+    document.documentElement.style.colorScheme = active;
+    document.documentElement.classList.add('preload');
+  } catch {}
+};
+
+/**
  * Generates the inlined JavaScript string for synchronous execution in <head>.
+ * Serializes the clean typed function into an IIFE to guarantee zero static analysis issues.
  *
  * @param {Object} [options]
  * @param {string} [options.storageKey='nano-ui-theme']
@@ -48,7 +75,11 @@ initTheme();
  * @returns {string}
  */
 export const getZeroFoucScript = ({ storageKey = 'nano-ui-theme', defaultTheme = 'dark' } = {}) => {
-  return `(function(){try{var s=localStorage.getItem('${storageKey}');var d=window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches;var t=(s==='light'||s==='dark')?s:(d?'dark':'${defaultTheme}');if(t==='light'){document.documentElement.setAttribute('data-theme','light')}else{document.documentElement.removeAttribute('data-theme')}document.documentElement.style.colorScheme=t;document.documentElement.classList.add('preload')}catch(e){}})();`;
+  const serializedFn = clientThemeBoot.toString();
+  const safeKey = JSON.stringify(storageKey);
+  const safeDefault = JSON.stringify(defaultTheme);
+
+  return `(${serializedFn})(${safeKey}, ${safeDefault});`;
 };
 
 /**
@@ -57,7 +88,14 @@ export const getZeroFoucScript = ({ storageKey = 'nano-ui-theme', defaultTheme =
  * @returns {string}
  */
 export const getZeroFoucStyle = () => {
-  return `html{background-color:#09090b;color-scheme:dark}html[data-theme="light"]{background-color:#f8fafc;color-scheme:light}html.preload,html.preload *,html.preload *::before,html.preload *::after,html.theme-switching,html.theme-switching *,html.theme-switching *::before,html.theme-switching *::after{transition:none!important;}`;
+  return [
+    'html { background-color: #09090b; color-scheme: dark; }',
+    'html[data-theme="light"] { background-color: #f8fafc; color-scheme: light; }',
+    'html.preload, html.preload *, html.preload *::before, html.preload *::after,',
+    'html.theme-switching, html.theme-switching *, html.theme-switching *::before, html.theme-switching *::after {',
+    '  transition: none !important;',
+    '}',
+  ].join('\n');
 };
 
 /**
@@ -67,5 +105,5 @@ export const getZeroFoucStyle = () => {
  * @returns {string}
  */
 export const getZeroFoucHtml = ({ storageKey = 'nano-ui-theme', defaultTheme = 'dark' } = {}) => {
-  return `<script id="nano-ui-zero-fouc">${getZeroFoucScript({ storageKey, defaultTheme })}</script>\n<style id="nano-ui-zero-fouc-style">${getZeroFoucStyle()}</style>`;
+  return `<script id="nano-ui-zero-fouc">${getZeroFoucScript({ storageKey, defaultTheme })}</script>\n<style id="nano-ui-zero-fouc-style">\n${getZeroFoucStyle()}\n</style>`;
 };

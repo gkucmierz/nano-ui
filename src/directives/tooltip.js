@@ -83,5 +83,5 @@ export const tooltipDirective = {
       el.removeEventListener('contextmenu', el._handleContextMenu);
     }
     hideTooltip();
-  }
+  },
 };

@@ -4,7 +4,7 @@ export const tooltipState = reactive({
   isVisible: false,
   text: '',
   customClass: '',
-  targetRect: null
+  targetRect: null,
 })
 
 export function showTooltip(el, options) {
@@ -25,7 +25,7 @@ export function showTooltip(el, options) {
     left: rect.left,
     width: rect.width,
     bottom: rect.bottom,
-    right: rect.right
+    right: rect.right,
   };
   tooltipState.text = text;
   tooltipState.customClass = customClass;

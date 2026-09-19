@@ -23,9 +23,10 @@ const prerender = async () => {
   // Spin up Vite in custom middlewareMode to load SSR modules on-the-fly
   const vite = await createServer({
     root,
-    configFile: path.resolve(root, 'vite.config.app.js'),
+    configFile: path.resolve(root, 'vite.config.js'),
+    mode: 'app',
     server: { middlewareMode: true },
-    appType: 'custom'
+    appType: 'custom',
   });
 
   try {

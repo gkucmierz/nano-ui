@@ -11,7 +11,7 @@ export const durations = {
   normal: 200,
   toggle: 250,
   slow: 300,
-  ripple: 600
+  ripple: 600,
 };
 
 export const easings = {
@@ -20,7 +20,7 @@ export const easings = {
   easeOut: 'cubic-bezier(0, 0, 0.2, 1)',
   easeIn: 'cubic-bezier(0.4, 0, 1, 1)',
   spring: 'cubic-bezier(0.175, 0.885, 0.32, 1.275)',
-  linear: 'linear'
+  linear: 'linear',
 };
 
 export const transitions = {
@@ -28,35 +28,35 @@ export const transitions = {
   interactive: {
     duration: durations.fast,
     ease: easings.standard,
-    css: `${durations.fast}ms ${easings.standard}`
+    css: `${durations.fast}ms ${easings.standard}`,
   },
 
   // Toggle & Switch controls (slider track, circle knob, indeterminate pill morph)
   toggle: {
     duration: durations.toggle,
     ease: easings.standard,
-    css: `${durations.toggle}ms ${easings.standard}`
+    css: `${durations.toggle}ms ${easings.standard}`,
   },
 
   // Overlays & Floating tooltips
   tooltip: {
     duration: durations.normal,
     ease: easings.smooth,
-    css: `${durations.normal}ms ${easings.smooth}`
+    css: `${durations.normal}ms ${easings.smooth}`,
   },
 
   // Layout & Sticky Mutating Header
   header: {
     duration: durations.normal,
     ease: easings.smooth,
-    css: `${durations.normal}ms ${easings.smooth}`
+    css: `${durations.normal}ms ${easings.smooth}`,
   },
 
   // Data visualization (3D slices, leader lines, labels)
   chart: {
     duration: durations.toggle,
     ease: easings.standard,
-    css: `${durations.toggle}ms ${easings.standard}`
+    css: `${durations.toggle}ms ${easings.standard}`,
   },
 
   // Modals & Dialogs
@@ -64,26 +64,26 @@ export const transitions = {
     backdrop: {
       duration: durations.toggle,
       ease: easings.easeOut,
-      css: `${durations.toggle}ms ${easings.easeOut}`
+      css: `${durations.toggle}ms ${easings.easeOut}`,
     },
     enter: {
       duration: durations.slow,
       ease: easings.spring,
-      css: `${durations.slow}ms ${easings.spring}`
+      css: `${durations.slow}ms ${easings.spring}`,
     },
     leave: {
       duration: durations.normal,
       ease: easings.easeIn,
-      css: `${durations.normal}ms ${easings.easeIn}`
-    }
+      css: `${durations.normal}ms ${easings.easeIn}`,
+    },
   },
 
   // Ripple effect (directive animation & removal timer)
   ripple: {
     duration: durations.ripple,
     ease: easings.linear,
-    css: `${durations.ripple}ms ${easings.linear}`
-  }
+    css: `${durations.ripple}ms ${easings.linear}`,
+  },
 };
 
 /**
@@ -108,7 +108,7 @@ export const transitionVariables = {
   '--nano-transition-modal-backdrop': transitions.modal.backdrop.css,
   '--nano-transition-modal-enter': transitions.modal.enter.css,
   '--nano-transition-modal-leave': transitions.modal.leave.css,
-  '--nano-transition-ripple': transitions.ripple.css
+  '--nano-transition-ripple': transitions.ripple.css,
 };
 
 export default transitions;

@@ -21,18 +21,18 @@ import NanoCodeBlock from './components/NanoCodeBlock.vue';
 import { transitions, durations, easings, transitionVariables } from './config/transitions.js';
 import './style.css';
 
-export { 
-  Ripple, 
-  tooltipDirective, 
-  showTooltip, 
-  hideTooltip, 
-  tooltipState, 
-  GlobalTooltip, 
-  NanoModal, 
-  ThreeDDonutChart, 
-  PrecisionScrubber, 
-  TopologyRadar, 
-  MutatingHeader, 
+export {
+  Ripple,
+  tooltipDirective,
+  showTooltip,
+  hideTooltip,
+  tooltipState,
+  GlobalTooltip,
+  NanoModal,
+  ThreeDDonutChart,
+  PrecisionScrubber,
+  TopologyRadar,
+  MutatingHeader,
   NanoSwitch,
   KineticRotator,
   NanoCodeBlock,
@@ -43,13 +43,13 @@ export {
   transitions,
   durations,
   easings,
-  transitionVariables
+  transitionVariables,
 };
 
 export const version = pkg.version;
 
 export const nanoCompilerOptions = {
-  isPreTag: tag => tag === 'pre' || tag === 'NanoCodeBlock' || tag === 'nano-code-block'
+  isPreTag: tag => tag === 'pre' || tag === 'NanoCodeBlock' || tag === 'nano-code-block',
 };
 
 export default {
@@ -70,5 +70,5 @@ export default {
     app.component(`${cp}NanoSwitch`, NanoSwitch);
     app.component(`${cp}KineticRotator`, KineticRotator);
     app.component(`${cp}NanoCodeBlock`, NanoCodeBlock);
-  }
+  },
 };

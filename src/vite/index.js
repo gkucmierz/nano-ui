@@ -18,16 +18,16 @@ export const nanoUi = ({ storageKey = 'nano-ui-theme', defaultTheme = 'dark' } =
           tag: 'script',
           attrs: { id: 'nano-ui-zero-fouc' },
           children: getZeroFoucScript({ storageKey, defaultTheme }),
-          injectTo: 'head-prepend'
+          injectTo: 'head-prepend',
         },
         {
           tag: 'style',
           attrs: { id: 'nano-ui-zero-fouc-style' },
           children: getZeroFoucStyle(),
-          injectTo: 'head-prepend'
-        }
+          injectTo: 'head-prepend',
+        },
       ];
-    }
+    },
   };
 };
 

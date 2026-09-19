@@ -14,7 +14,7 @@ import NotFoundDoc from '../docs/NotFoundDoc.vue';
 export const routes = [
   {
     path: '/',
-    redirect: '/docs/overview'
+    redirect: '/docs/overview',
   },
   {
     path: '/docs/overview',
@@ -22,8 +22,8 @@ export const routes = [
     component: OverviewDoc,
     meta: {
       title: 'Overview & Setup | Nano UI',
-      description: 'High-performance, minimal footprint Vue 3 UI library, interactive 3D charts, and kinematic directives with built-in Zero-FOUC design tokens.'
-    }
+      description: 'High-performance, minimal footprint Vue 3 UI library, interactive 3D charts, and kinematic directives with built-in Zero-FOUC design tokens.',
+    },
   },
   {
     path: '/docs/ripple',
@@ -31,8 +31,8 @@ export const routes = [
     component: RippleDoc,
     meta: {
       title: 'v-ripple Directive | Nano UI',
-      description: 'Ultra-lightweight, hardware-accelerated fluid radial wave ripple directive for Vue 3.'
-    }
+      description: 'Ultra-lightweight, hardware-accelerated fluid radial wave ripple directive for Vue 3.',
+    },
   },
   {
     path: '/docs/tooltip',
@@ -40,8 +40,8 @@ export const routes = [
     component: TooltipDoc,
     meta: {
       title: 'v-tooltip Directive | Nano UI',
-      description: 'Instant-feel cursor-aware tooltip directive for Vue 3 with zero latency and smart viewport collision avoidance.'
-    }
+      description: 'Instant-feel cursor-aware tooltip directive for Vue 3 with zero latency and smart viewport collision avoidance.',
+    },
   },
   {
     path: '/docs/modal',
@@ -49,8 +49,8 @@ export const routes = [
     component: ModalDoc,
     meta: {
       title: 'NanoModal Component | Nano UI',
-      description: 'Zero-FOUC glassmorphism modal dialog component with smooth backdrop transitions, dragging, and universal ESC dismissal.'
-    }
+      description: 'Zero-FOUC glassmorphism modal dialog component with smooth backdrop transitions, dragging, and universal ESC dismissal.',
+    },
   },
   {
     path: '/docs/switch',
@@ -58,8 +58,8 @@ export const routes = [
     component: SwitchDoc,
     meta: {
       title: 'NanoSwitch Component | Nano UI',
-      description: 'Tactile toggle switch component with spring-physics feedback and keyboard accessibility.'
-    }
+      description: 'Tactile toggle switch component with spring-physics feedback and keyboard accessibility.',
+    },
   },
   {
     path: '/docs/3d-donut-chart',
@@ -67,8 +67,8 @@ export const routes = [
     component: ThreeDDonutChartDoc,
     meta: {
       title: '3D Donut Chart Component | Nano UI',
-      description: 'Interactive 3D SVG donut and pie chart component with hover slicing, mouse tracking, and smooth rotation.'
-    }
+      description: 'Interactive 3D SVG donut and pie chart component with hover slicing, mouse tracking, and smooth rotation.',
+    },
   },
   {
     path: '/docs/precision-scrubber',
@@ -76,8 +76,8 @@ export const routes = [
     component: PrecisionScrubberDoc,
     meta: {
       title: 'PrecisionScrubber Component | Nano UI',
-      description: 'High-precision rotary scrub dial and slider component for granular numerical value control.'
-    }
+      description: 'High-precision rotary scrub dial and slider component for granular numerical value control.',
+    },
   },
   {
     path: '/docs/topology-radar',
@@ -85,8 +85,8 @@ export const routes = [
     component: TopologyRadarDoc,
     meta: {
       title: 'TopologyRadar Component | Nano UI',
-      description: 'Cyberpunk-inspired dynamic vector radar canvas component for node clustering and telemetry visualization.'
-    }
+      description: 'Cyberpunk-inspired dynamic vector radar canvas component for node clustering and telemetry visualization.',
+    },
   },
   {
     path: '/docs/mutating-header',
@@ -94,8 +94,8 @@ export const routes = [
     component: MutatingHeaderDoc,
     meta: {
       title: 'MutatingHeader Component | Nano UI',
-      description: 'Smooth morphing and docking navigation header component with scroll hysteresis.'
-    }
+      description: 'Smooth morphing and docking navigation header component with scroll hysteresis.',
+    },
   },
   {
     path: '/docs/kinetic',
@@ -103,8 +103,8 @@ export const routes = [
     component: KineticDoc,
     meta: {
       title: 'KineticRotator Component | Nano UI',
-      description: 'Continuous velocity-preserving Hermite kinematics component with modular geodesic shortest-path interpolation.'
-    }
+      description: 'Continuous velocity-preserving Hermite kinematics component with modular geodesic shortest-path interpolation.',
+    },
   },
   {
     path: '/:pathMatch(.*)*',
@@ -112,15 +112,15 @@ export const routes = [
     component: NotFoundDoc,
     meta: {
       title: '404 - Page Not Found | Nano UI',
-      description: 'The requested documentation path does not exist or the component has moved.'
-    }
-  }
+      description: 'The requested documentation path does not exist or the component has moved.',
+    },
+  },
 ];
 
 export const createAppRouter = ({ isServer = false } = {}) => {
   const router = createRouter({
     history: isServer ? createMemoryHistory() : createWebHistory(import.meta.env.BASE_URL),
-    routes
+    routes,
   });
 
   if (!isServer) {
