@@ -5,6 +5,8 @@
     "playgroundDesc": "Testing ground for all library components and directives."
   },
   "nav": {
+    "gettingStarted": "Getting Started",
+    "overview": "Overview & Setup",
     "components": "Components",
     "directives": "Directives",
     "visualization": "Visualization",

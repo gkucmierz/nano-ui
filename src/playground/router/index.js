@@ -1,4 +1,5 @@
 import { createRouter, createWebHashHistory } from 'vue-router';
+import OverviewDoc from '../docs/OverviewDoc.vue';
 import RippleDoc from '../docs/RippleDoc.vue';
 import TooltipDoc from '../docs/TooltipDoc.vue';
 import ModalDoc from '../docs/ModalDoc.vue';
@@ -13,7 +14,12 @@ import NotFoundDoc from '../docs/NotFoundDoc.vue';
 const routes = [
   {
     path: '/',
-    redirect: '/docs/ripple'
+    redirect: '/docs/overview'
+  },
+  {
+    path: '/docs/overview',
+    name: 'Overview',
+    component: OverviewDoc
   },
   {
     path: '/docs/ripple',

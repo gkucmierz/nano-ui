@@ -116,6 +116,16 @@ onUnmounted(() => {
       
       <nav class="sidebar-nav">
         <div class="nav-section">
+          <h3>{{ t('nav.gettingStarted') }}</h3>
+          <router-link to="/docs/overview" class="nav-link" active-class="active" v-tooltip="isNarrow ? t('nav.overview') : undefined">
+            <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/>
+              <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
+            </svg>
+            <span class="nav-label">{{ t('nav.overview') }}</span>
+          </router-link>
+        </div>
+        <div class="nav-section">
           <h3>{{ t('nav.directives') }}</h3>
           <router-link to="/docs/ripple" class="nav-link" active-class="active" v-tooltip="isNarrow ? t('nav.ripple') : undefined">
             <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">

@@ -1,6 +1,7 @@
 import { tracker } from '@gkucmierz/analytics'
 tracker.init('nano-ui', 'https://analytics.7u.pl')
 
+import pkg from '../package.json';
 import { initTheme } from './theme.js';
 import Ripple from './directives/ripple.js';
 import { tooltipDirective } from './directives/tooltip.js';
@@ -39,22 +40,29 @@ export {
   transitionVariables
 };
 
+export const version = pkg.version;
+
 export const nanoCompilerOptions = {
   isPreTag: tag => tag === 'pre' || tag === 'NanoCodeBlock' || tag === 'nano-code-block'
 };
 
 export default {
-  install(app) {
-    app.directive('ripple', Ripple);
-    app.directive('tooltip', tooltipDirective);
-    app.component('GlobalTooltip', GlobalTooltip);
-    app.component('NanoModal', NanoModal);
-    app.component('ThreeDDonutChart', ThreeDDonutChart);
-    app.component('PrecisionScrubber', PrecisionScrubber);
-    app.component('TopologyRadar', TopologyRadar);
-    app.component('MutatingHeader', MutatingHeader);
-    app.component('NanoSwitch', NanoSwitch);
-    app.component('KineticRotator', KineticRotator);
-    app.component('NanoCodeBlock', NanoCodeBlock);
+  version: pkg.version,
+  install(app, { directivePrefix = '', componentPrefix = '' } = {}) {
+    const dp = directivePrefix ? `${directivePrefix}-` : '';
+    const cp = componentPrefix ? `${componentPrefix}` : '';
+
+    app.directive(`${dp}ripple`, Ripple);
+    app.directive(`${dp}tooltip`, tooltipDirective);
+
+    app.component(`${cp}GlobalTooltip`, GlobalTooltip);
+    app.component(`${cp}NanoModal`, NanoModal);
+    app.component(`${cp}ThreeDDonutChart`, ThreeDDonutChart);
+    app.component(`${cp}PrecisionScrubber`, PrecisionScrubber);
+    app.component(`${cp}TopologyRadar`, TopologyRadar);
+    app.component(`${cp}MutatingHeader`, MutatingHeader);
+    app.component(`${cp}NanoSwitch`, NanoSwitch);
+    app.component(`${cp}KineticRotator`, KineticRotator);
+    app.component(`${cp}NanoCodeBlock`, NanoCodeBlock);
   }
 };

@@ -5,6 +5,8 @@
     "playgroundDesc": "Środowisko testowe dla komponentów i dyrektyw biblioteki."
   },
   "nav": {
+    "gettingStarted": "Wprowadzenie",
+    "overview": "Start & Konfiguracja",
     "components": "Komponenty",
     "directives": "Dyrektywy",
     "visualization": "Wizualizacja",
