@@ -160,7 +160,7 @@ const containerMaxHeight = computed(() => {
     </div>
 
     <div class="code-block-body" :style="{ maxHeight: containerMaxHeight }">
-      <pre ref="preRef" class="code-block-pre"><code><slot>{{ code }}</slot></code></pre>
+      <pre ref="preRef" class="code-block-pre"><slot>{{ code }}</slot></pre>
     </div>
   </div>
 </template>
@@ -169,7 +169,7 @@ const containerMaxHeight = computed(() => {
 .nano-code-block {
   display: flex;
   flex-direction: column;
-  background: var(--nano-bg-code, #0b1120);
+  background: var(--nano-code-bg, var(--nano-bg-code, #0b1120));
   border: 1px solid var(--nano-border-card, rgba(255, 255, 255, 0.12));
   border-radius: var(--nano-radius-md, 10px);
   max-width: 100%;
@@ -188,8 +188,8 @@ const containerMaxHeight = computed(() => {
   align-items: center;
   justify-content: space-between;
   padding: 8px 14px;
-  background: rgba(0, 0, 0, 0.25);
-  border-bottom: 1px solid var(--nano-border-card, rgba(255, 255, 255, 0.08));
+  background: var(--nano-code-header-bg, rgba(0, 0, 0, 0.25));
+  border-bottom: 1px solid var(--nano-code-header-border, var(--nano-border-card, rgba(255, 255, 255, 0.08)));
   user-select: none;
   -webkit-user-select: none;
   gap: 12px;
@@ -219,8 +219,8 @@ const containerMaxHeight = computed(() => {
   font-weight: 700;
   text-transform: uppercase;
   color: var(--nano-state-active, #00f2fe);
-  background: rgba(0, 242, 254, 0.12);
-  border: 1px solid rgba(0, 242, 254, 0.25);
+  background: color-mix(in srgb, var(--nano-state-active, #00f2fe) 12%, transparent);
+  border: 1px solid color-mix(in srgb, var(--nano-state-active, #00f2fe) 25%, transparent);
   padding: 1px 6px;
   border-radius: 4px;
   line-height: 1.2;
@@ -263,8 +263,8 @@ const containerMaxHeight = computed(() => {
 
 .code-action-btn.active {
   color: var(--nano-state-active, #00f2fe);
-  background: rgba(0, 242, 254, 0.1);
-  border-color: rgba(0, 242, 254, 0.25);
+  background: color-mix(in srgb, var(--nano-state-active, #00f2fe) 10%, transparent);
+  border-color: color-mix(in srgb, var(--nano-state-active, #00f2fe) 25%, transparent);
 }
 
 .code-action-btn.copied {
@@ -301,6 +301,9 @@ const containerMaxHeight = computed(() => {
   line-height: 1.6;
   color: var(--nano-text-code, #e2e8f0);
   white-space: pre;
+  user-select: text !important;
+  -webkit-user-select: text !important;
+  cursor: text;
 }
 
 .is-wrapped .code-block-pre {
@@ -317,5 +320,22 @@ const containerMaxHeight = computed(() => {
   color: inherit;
   font-family: inherit;
   font-size: inherit;
+}
+
+.code-block-pre pre {
+  margin: 0;
+  padding: 0;
+  background: transparent;
+  font-family: inherit;
+  font-size: inherit;
+  line-height: inherit;
+  color: inherit;
+  white-space: inherit;
+}
+
+.is-wrapped .code-block-pre pre {
+  white-space: pre-wrap !important;
+  word-break: break-word !important;
+  overflow-wrap: break-word !important;
 }
 </style>

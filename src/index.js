@@ -39,6 +39,10 @@ export {
   transitionVariables
 };
 
+export const nanoCompilerOptions = {
+  isPreTag: tag => tag === 'pre' || tag === 'NanoCodeBlock' || tag === 'nano-code-block'
+};
+
 export default {
   install(app) {
     app.directive('ripple', Ripple);

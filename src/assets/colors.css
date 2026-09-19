@@ -99,6 +99,11 @@
   --nano-radar-grid-subtle: rgba(255, 255, 255, var(--nano-alpha-subtle));
   --nano-radar-text: var(--nano-text-muted);
   --nano-radar-color: var(--nano-state-active);
+
+  /* NanoCodeBlock Tokens - Dark Theme */
+  --nano-code-bg: #0b1120;
+  --nano-code-header-bg: rgba(0, 0, 0, 0.25);
+  --nano-code-header-border: rgba(255, 255, 255, var(--nano-alpha-subtle));
 }
 
 :root[data-theme="light"],
@@ -187,4 +192,9 @@ html[data-theme="light"] {
   --nano-radar-grid-subtle: rgba(15, 23, 42, var(--nano-alpha-subtle));
   --nano-radar-text: var(--nano-text-muted);
   --nano-radar-color: var(--nano-state-active);
+
+  /* NanoCodeBlock Tokens - Light Theme */
+  --nano-code-bg: #ffffff;
+  --nano-code-header-bg: #f1f5f9;
+  --nano-code-header-border: #e2e8f0;
 }
