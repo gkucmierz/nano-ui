@@ -10,3 +10,14 @@ if [ "$gpg_sign" != "true" ]; then
   echo "Or locally by running: git config commit.gpgsign true"
   exit 1
 fi
+
+# Allow easy bypass via environment variable: SKIP_LINT=1 git commit ...
+if [ "$SKIP_LINT" = "1" ] || [ "$NO_LINT" = "1" ]; then
+  echo "⚡ [nano-ui] Skipping ESLint check (SKIP_LINT=1)..."
+  exit 0
+fi
+
+echo "🔍 [nano-ui] Running ESLint pre-commit check..."
+npm run lint
+
+echo "✅ [nano-ui] ESLint checks passed!"
