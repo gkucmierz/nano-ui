@@ -5,7 +5,7 @@ if (!import.meta.env.SSR) {
 }
 
 import pkg from '../package.json';
-import { initTheme } from './theme.js';
+import { initTheme, getZeroFoucScript, getZeroFoucStyle, getZeroFoucHtml } from './theme.js';
 import Ripple from './directives/ripple.js';
 import { tooltipDirective } from './directives/tooltip.js';
 import { showTooltip, hideTooltip, tooltipState } from './composables/useTooltip.js';
@@ -37,6 +37,9 @@ export {
   KineticRotator,
   NanoCodeBlock,
   initTheme,
+  getZeroFoucScript,
+  getZeroFoucStyle,
+  getZeroFoucHtml,
   transitions,
   durations,
   easings,

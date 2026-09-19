@@ -11,6 +11,9 @@
     ".": {
       "import": "./dist/nano-ui.js"
     },
+    "./vite": {
+      "import": "./dist/vite.js"
+    },
     "./style.css": "./dist/nano-ui.css",
     "./nano-ui.css": "./dist/nano-ui.css",
     "./dist/*": "./dist/*"

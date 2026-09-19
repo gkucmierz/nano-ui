@@ -21,13 +21,15 @@ export default defineConfig({
   },
   build: {
     lib: {
-      entry: resolve(__dirname, 'src/index.js'),
-      name: 'NanoUI',
+      entry: {
+        'nano-ui': resolve(__dirname, 'src/index.js'),
+        'vite': resolve(__dirname, 'src/vite/index.js')
+      },
       formats: ['es'],
-      fileName: 'nano-ui'
+      fileName: (format, entryName) => `${entryName}.js`
     },
     rollupOptions: {
-      external: ['vue']
+      external: ['vue', 'vite', /^node:/]
     }
   }
 });

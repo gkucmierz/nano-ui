@@ -21,48 +21,7 @@
     <meta name="twitter:description" content="High-performance, minimal footprint Vue 3 UI library, interactive 3D charts, and kinematic components." />
     <meta name="twitter:image" content="/nano-ui-512.png" />
 
-    <!-- Synchronous Theme Initialization (Zero FOUC / Theme Flash) -->
-    <script>
-      (function() {
-        try {
-          var saved = localStorage.getItem('nano-ui-theme');
-          var supportDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
-          var t = (saved === 'light' || saved === 'dark') ? saved : (supportDark ? 'dark' : 'light');
-          if (t === 'light') {
-            document.documentElement.setAttribute('data-theme', 'light');
-          } else {
-            document.documentElement.removeAttribute('data-theme');
-          }
-          document.documentElement.style.colorScheme = t;
-          document.documentElement.classList.add('preload');
-        } catch (e) {}
-      })();
-    </script>
-
     <style>
-      /* Zero-FOUC: Default root background & browser engine declaration */
-      html {
-        background-color: #09090b;
-        color-scheme: dark;
-      }
-
-      html[data-theme="light"] {
-        background-color: #f8fafc;
-        color-scheme: light;
-      }
-
-      /* Zero-FOUC: Freeze all CSS transitions during initial page load & dynamic theme switching */
-      html.preload,
-      html.preload *,
-      html.preload *::before,
-      html.preload *::after,
-      html.theme-switching,
-      html.theme-switching *,
-      html.theme-switching *::before,
-      html.theme-switching *::after {
-        transition: none !important;
-      }
-
       /* Universal Box-Sizing Reset */
       *,
       *::before,
