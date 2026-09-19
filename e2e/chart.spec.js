@@ -3,7 +3,7 @@ import { test, expect } from '@playwright/test';
 test.describe('3D Donut Chart E2E Tests', () => {
   test.beforeEach(async ({ page }) => {
     // Navigate to the documentation page for 3D Donut Chart
-    await page.goto('/#/docs/3d-donut-chart');
+    await page.goto('/docs/3d-donut-chart');
     // Wait for the chart to render (at least one path inside .items-svg-chart should be visible)
     await page.waitForSelector('.items-svg-chart path');
   });

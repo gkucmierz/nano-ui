@@ -1,4 +1,4 @@
-import { createRouter, createWebHashHistory } from 'vue-router';
+import { createRouter, createWebHistory } from 'vue-router';
 import OverviewDoc from '../docs/OverviewDoc.vue';
 import RippleDoc from '../docs/RippleDoc.vue';
 import TooltipDoc from '../docs/TooltipDoc.vue';
@@ -74,8 +74,15 @@ const routes = [
 ];
 
 const router = createRouter({
-  history: createWebHashHistory(),
+  history: createWebHistory(import.meta.env.BASE_URL),
   routes
+});
+
+// Graceful backward-compatibility redirect for legacy bookmarked URLs (e.g. /#/docs/...)
+router.beforeEach((to) => {
+  if (to.hash && to.hash.startsWith('#/')) {
+    return to.hash.slice(1);
+  }
 });
 
 export default router;

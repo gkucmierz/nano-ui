@@ -5,15 +5,16 @@ import { t } from '../../locales.js';
 const route = useRoute();
 
 const availableRoutes = [
+  { path: '/docs/overview', label: 'Overview & Setup' },
+  { path: '/docs/ripple', label: 'v-ripple' },
+  { path: '/docs/tooltip', label: 'v-tooltip' },
   { path: '/docs/kinetic', label: 'Kinetic Rotator' },
   { path: '/docs/switch', label: 'Nano Switch' },
   { path: '/docs/modal', label: 'Nano Modal' },
   { path: '/docs/3d-donut-chart', label: '3D Donut Chart' },
   { path: '/docs/precision-scrubber', label: 'Precision Scrubber' },
-  { path: '/docs/mutating-header', label: 'Mutating Header' },
   { path: '/docs/topology-radar', label: 'Topology Radar' },
-  { path: '/docs/ripple', label: 'v-ripple' },
-  { path: '/docs/tooltip', label: 'v-tooltip' }
+  { path: '/docs/mutating-header', label: 'Mutating Header' }
 ];
 </script>
 
@@ -26,11 +27,11 @@ const availableRoutes = [
 
       <div class="error-path">
         <span class="path-label">Path:</span>
-        <code>#{{ route.fullPath }}</code>
+        <code>{{ route.fullPath }}</code>
       </div>
 
       <div class="error-actions">
-        <router-link to="/docs/kinetic" class="btn-primary" v-ripple>
+        <router-link to="/docs/overview" class="btn-primary" v-ripple>
           {{ t('common.backToHome') }}
         </router-link>
       </div>
