@@ -1,7 +1,7 @@
 <script setup>
 import { ref, onMounted, onUnmounted } from 'vue';
 import pkg from '../../package.json';
-import { currentLang, toggleLang, t } from '../locales.js';
+import { currentLang, toggleLang, initSavedLang, t } from '../locales.js';
 import './playground.css';
 
 const version = pkg.version;
@@ -9,7 +9,9 @@ const isDark = ref(true);
 const isNarrow = ref(false);
 
 const updateViewport = () => {
-  isNarrow.value = window.innerWidth <= 860;
+  if (typeof window !== 'undefined') {
+    isNarrow.value = window.innerWidth <= 860;
+  }
 };
 
 const toggleTheme = () => {
@@ -47,6 +49,7 @@ const handleKeyDown = (e) => {
 };
 
 onMounted(() => {
+  initSavedLang();
   updateViewport();
   window.addEventListener('resize', updateViewport, { passive: true });
   window.addEventListener('keydown', handleKeyDown);

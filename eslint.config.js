@@ -4,6 +4,7 @@ export default [
       '**/node_modules/**',
       '**/dist/**',
       '**/dist-app/**',
+      '**/dist-ssg/**',
       '**/.git/**',
       'public/**',
     ],

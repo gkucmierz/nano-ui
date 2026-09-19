@@ -1,3 +1,6 @@
+// Ensure SSR prerendering runs with production environment so Vue scoped CSS hashes (descriptor.id) match client build exactly
+process.env.NODE_ENV = 'production';
+
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -5,7 +8,7 @@ import { createServer } from 'vite';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const root = path.resolve(__dirname, '..');
-const distDir = path.resolve(root, 'dist-app');
+const distDir = path.resolve(root, 'dist-ssg');
 
 const escapeAttr = (str) => String(str).replace(/"/g, '&quot;');
 const escapeText = (str) => String(str).replace(/</g, '&lt;').replace(/>/g, '&gt;');
@@ -16,7 +19,7 @@ const prerender = async () => {
   try {
     template = await fs.readFile(templatePath, 'utf-8');
   } catch (err) {
-    console.error('[prerender] Error: dist-app/index.html not found. Run client build first: npm run build:app');
+    console.error('[prerender] Error: dist-ssg/index.html not found. Run client build first: npm run build:ssg');
     process.exit(1);
   }
 
@@ -24,7 +27,7 @@ const prerender = async () => {
   const vite = await createServer({
     root,
     configFile: path.resolve(root, 'vite.config.js'),
-    mode: 'app',
+    mode: 'ssg',
     server: { middlewareMode: true },
     appType: 'custom',
   });
@@ -36,9 +39,9 @@ const prerender = async () => {
       .filter((r) => r.path !== '/:pathMatch(.*)*')
       .map((r) => r.path);
 
-    const allPaths = [...new Set([...renderRoutes, '/404'])];
+    const allPaths = [...new Set([...renderRoutes, '/docs', '/404'])];
 
-    console.log(`[prerender] Pre-rendering ${allPaths.length} routes for SEO...`);
+    console.log(`[prerender] Pre-rendering ${allPaths.length} routes for SEO into dist-ssg...`);
 
     for (const url of allPaths) {
       const is404 = url === '/404';
@@ -68,20 +71,25 @@ const prerender = async () => {
         }
       }
 
+      // Inject Canonical Link Tag for SEO SSoT
+      const canonicalPath = is404 ? '/404' : url === '/docs' ? '/docs/overview' : url;
+      const canonicalUrl = `https://nano-ui.7u.pl${canonicalPath === '/' ? '' : canonicalPath}`;
+      html = html.replace(/<\/head>/i, `  <link rel="canonical" href="${canonicalUrl}" />\n  </head>`);
+
       let outFilePath;
       if (is404) {
         outFilePath = path.resolve(distDir, '404.html');
-      } else if (url === '/' || url === '/docs/overview') {
-        if (url === '/docs/overview') {
-          const docDir = path.resolve(distDir, 'docs/overview');
-          await fs.mkdir(docDir, { recursive: true });
-          await fs.writeFile(path.resolve(docDir, 'index.html'), html, 'utf-8');
-        }
+      } else if (url === '/') {
         outFilePath = path.resolve(distDir, 'index.html');
       } else {
-        const routeDir = path.resolve(distDir, url.replace(/^\//, ''));
-        await fs.mkdir(routeDir, { recursive: true });
-        outFilePath = path.resolve(routeDir, 'index.html');
+        const cleanPath = url.replace(/^\//, ''); // e.g. 'docs', 'docs/overview', 'docs/tooltip'
+        outFilePath = path.resolve(distDir, `${cleanPath}.html`);
+        await fs.mkdir(path.dirname(outFilePath), { recursive: true });
+
+        // Ensure root index.html has pre-rendered overview content
+        if (url === '/docs/overview') {
+          await fs.writeFile(path.resolve(distDir, 'index.html'), html, 'utf-8');
+        }
       }
 
       await fs.writeFile(outFilePath, html, 'utf-8');

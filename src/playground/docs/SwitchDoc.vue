@@ -1,3 +1,84 @@
+<script setup>
+import { ref } from 'vue';
+import NanoSwitch from '../../components/NanoSwitch.vue';
+import { createDocTabs } from '../docSnippets.js';
+
+const basicVal = ref(true);
+const compactVal = ref(false);
+const miniVal = ref(true);
+
+const cyanVal = ref(true);
+const purpleVal = ref(true);
+const emeraldVal = ref(true);
+const dangerVal = ref(true);
+const goldVal = ref(true);
+
+const disabledOn = ref(true);
+const disabledOff = ref(false);
+
+const triStateVal = ref(null);
+
+const cycleTriState = () => {
+  if (triStateVal.value === false) {
+    triStateVal.value = null;
+  } else if (triStateVal.value === null) {
+    triStateVal.value = true;
+  } else {
+    triStateVal.value = false;
+  }
+};
+
+const codeBasic = '<NanoSwitch v-model="basicVal" label="Enable Telemetry & Analytics" />';
+const codeIndeterminate = '<NanoSwitch v-model="status" :indeterminate="status === null" />';
+
+const copiedId = ref(null);
+
+const copyCode = async (text, id) => {
+  try {
+    await navigator.clipboard.writeText(text);
+    copiedId.value = id;
+    setTimeout(() => {
+      if (copiedId.value === id) {
+        copiedId.value = null;
+      }
+    }, 2000);
+  } catch (err) {
+    console.error('Failed to copy', err);
+  }
+};
+
+const apiDoc = `// Props
+modelValue: Boolean | null (default: false, supports v-model)
+indeterminate: Boolean (default: false)
+label: String (default: '', also supports default <slot>)
+size: 'default' | 'compact' | 'mini' (default: 'default')
+color: 'primary' | 'cyan' | 'purple' | 'emerald' | 'danger' | 'gold' (default: 'primary')
+disabled: Boolean (default: false)
+name: String (optional, form input name)
+id: String (optional, html id attribute)
+
+// Events
+@update:modelValue(value: Boolean) - Emitted on state change
+@update:indeterminate(value: Boolean) - Emitted when indeterminate state clears
+@change(value: Boolean, event: Event) - Emitted on user toggle`;
+
+const codeTabs = createDocTabs({
+  name: 'NanoSwitch',
+  apiDoc,
+  props: {
+    'v-model': 'isEnabled',
+    size: 'default',
+    color: 'cyan',
+    label: 'Enable Telemetry',
+  },
+  imports: [
+    "import { ref } from 'vue';",
+    '',
+    'const isEnabled = ref(true);',
+  ],
+});
+</script>
+
 <template>
   <div class="doc-page">
     <h2>NanoSwitch Component</h2>
@@ -128,74 +209,10 @@
       </div>
     </div>
 
-    <!-- API Reference -->
-    <NanoCodeBlock title="API Reference" lang="api">
-// Props
-modelValue: Boolean | null (default: false, supports v-model)
-indeterminate: Boolean (default: false)
-label: String (default: '', also supports default &lt;slot&gt;)
-size: 'default' | 'compact' | 'mini' (default: 'default')
-color: 'primary' | 'cyan' | 'purple' | 'emerald' | 'danger' | 'gold' (default: 'primary')
-disabled: Boolean (default: false)
-name: String (optional, form input name)
-id: String (optional, html id attribute)
-
-// Events
-@update:modelValue(value: Boolean) - Emitted on state change
-@update:indeterminate(value: Boolean) - Emitted when indeterminate state clears
-@change(value: Boolean, event: Event) - Emitted on user toggle
-    </NanoCodeBlock>
+    <!-- API Reference & Usage Guide -->
+    <NanoCodeBlock :tabs="codeTabs" />
   </div>
 </template>
-
-<script setup>
-import { ref } from 'vue';
-import NanoSwitch from '../../components/NanoSwitch.vue';
-
-const basicVal = ref(true);
-const compactVal = ref(false);
-const miniVal = ref(true);
-
-const cyanVal = ref(true);
-const purpleVal = ref(true);
-const emeraldVal = ref(true);
-const dangerVal = ref(true);
-const goldVal = ref(true);
-
-const disabledOn = ref(true);
-const disabledOff = ref(false);
-
-const triStateVal = ref(null);
-
-const cycleTriState = () => {
-  if (triStateVal.value === false) {
-    triStateVal.value = null;
-  } else if (triStateVal.value === null) {
-    triStateVal.value = true;
-  } else {
-    triStateVal.value = false;
-  }
-};
-
-const codeBasic = '<NanoSwitch v-model="basicVal" label="Enable Telemetry & Analytics" />';
-const codeIndeterminate = '<NanoSwitch v-model="status" :indeterminate="status === null" />';
-
-const copiedId = ref(null);
-
-const copyCode = async (text, id) => {
-  try {
-    await navigator.clipboard.writeText(text);
-    copiedId.value = id;
-    setTimeout(() => {
-      if (copiedId.value === id) {
-        copiedId.value = null;
-      }
-    }, 2000);
-  } catch (err) {
-    console.error('Failed to copy', err);
-  }
-};
-</script>
 
 <style scoped>
 .doc-page {

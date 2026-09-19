@@ -7,9 +7,13 @@ import { nanoUi } from './src/vite/index.js';
 const __dirname = fileURLToPath(new URL('.', import.meta.url));
 
 export default defineConfig(({ mode }) => {
-  const isApp = mode === 'app';
+  const isApp = mode === 'app' || mode === 'ssg';
+  const outDir = mode === 'ssg' ? 'dist-ssg' : isApp ? 'dist-app' : 'dist';
 
   return {
+    define: {
+      __VUE_PROD_HYDRATION_MISMATCH_DETAILS__: 'true',
+    },
     plugins: [
       vue({
         template: {
@@ -19,14 +23,32 @@ export default defineConfig(({ mode }) => {
         },
       }),
       nanoUi(),
+      {
+        name: 'preview-clean-url-redirect',
+        configurePreviewServer(server) {
+          server.middlewares.use((req, res, next) => {
+            const [pathname, query] = (req.url || '').split('?');
+            if (pathname !== '/' && pathname.endsWith('/')) {
+              const cleanPath = pathname.replace(/\/+$/, '') + (query ? `?${query}` : '');
+              res.writeHead(301, { Location: cleanPath });
+              return res.end();
+            }
+            next();
+          });
+        },
+      },
     ],
     server: {
       port: 33164,
       strictPort: true,
     },
+    preview: {
+      port: 33165,
+      strictPort: true,
+    },
     build: isApp
       ? {
-        outDir: 'dist-app',
+        outDir,
         emptyOutDir: true,
       }
       : {

@@ -12,12 +12,12 @@ RUN npm install --legacy-peer-deps
 COPY . .
 
 # Build the playground app using the separate config
-RUN npm run build:app
+RUN npm run build:ssg
 
 # Stage 2: Serve the application with Nginx
 FROM nginx:stable-alpine as production-stage
 
-COPY --from=build-stage /app/dist-app /usr/share/nginx/html
+COPY --from=build-stage /app/dist-ssg /usr/share/nginx/html
 COPY nginx.conf /etc/nginx/conf.d/default.conf
 
 EXPOSE 80

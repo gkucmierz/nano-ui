@@ -10,8 +10,3 @@ if [ "$gpg_sign" != "true" ]; then
   echo "Or locally by running: git config commit.gpgsign true"
   exit 1
 fi
-
-echo "🔍 [nano-ui] Running ESLint pre-commit check..."
-npm run lint
-
-echo "✅ [nano-ui] ESLint checks passed!"

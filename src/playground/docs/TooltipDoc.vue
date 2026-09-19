@@ -1,3 +1,31 @@
+<script setup>
+import NanoCodeBlock from '../../components/NanoCodeBlock.vue';
+
+const codeSimple = '<button v-tooltip="\'This is a simple tooltip\'">...</button>';
+const codeLong = `<button v-tooltip="'Tooltips can be much longer...'">...</button>`;
+const codeObject = `<button v-tooltip="{ text: '...', class: 'tooltip-danger' }">...</button>`;
+const codeError = `<button v-tooltip="{ text: '...', class: 'tooltip-error' }">...</button>`;
+const codeSuccess = `<button v-tooltip="{ text: '...', class: 'tooltip-success' }">...</button>`;
+
+const cssVarsCode = `.global-tooltip {
+  --nu-tooltip-bg: var(--nano-tooltip-bg);
+  --nu-tooltip-color: var(--nano-tooltip-color);
+  --nu-tooltip-radius: var(--nano-radius-md); /* 8px */
+  --nu-tooltip-padding: var(--nano-space-sm) var(--nano-space-md); /* 8px 16px */
+  --nu-tooltip-shadow: 0 var(--nano-space-sm) var(--nano-space-lg) rgba(0, 0, 0, 0.3); /* 0 8px 24px */
+  --nu-tooltip-border: var(--nano-border-width) solid rgba(255, 255, 255, 0.1);
+  --nu-tooltip-arrow-border: rgba(255, 255, 255, 0.1);
+}`;
+
+const copyCode = async (text) => {
+  try {
+    await navigator.clipboard.writeText(text);
+  } catch (err) {
+    console.error('Failed to copy', err);
+  }
+};
+</script>
+
 <template>
   <div class="doc-page">
     <h2>v-tooltip Directive</h2>
@@ -62,35 +90,9 @@
     
     <h3 class="section-title">Global Theming</h3>
     <p class="desc">Override these CSS variables on <code>:root</code> or a parent container to change the default theme.</p>
-    <div class="css-vars-block">
-<pre><code>.global-tooltip {
-  --nu-tooltip-bg: var(--nano-tooltip-bg);
-  --nu-tooltip-color: var(--nano-tooltip-color);
-  --nu-tooltip-radius: var(--nano-radius-md); /* 8px */
-  --nu-tooltip-padding: var(--nano-space-sm) var(--nano-space-md); /* 8px 16px */
-  --nu-tooltip-shadow: 0 var(--nano-space-sm) var(--nano-space-lg) rgba(0, 0, 0, 0.3); /* 0 8px 24px */
-  --nu-tooltip-border: var(--nano-border-width) solid rgba(255, 255, 255, 0.1);
-  --nu-tooltip-arrow-border: rgba(255, 255, 255, 0.1);
-}</code></pre>
-    </div>
+    <NanoCodeBlock title="CSS Variables" lang="css" :code="cssVarsCode" />
   </div>
 </template>
-
-<script setup>
-const codeSimple = '<button v-tooltip="\'This is a simple tooltip\'">...</button>';
-const codeLong = `<button v-tooltip="'Tooltips can be much longer...'">...</button>`;
-const codeObject = `<button v-tooltip="{ text: '...', class: 'tooltip-danger' }">...</button>`;
-const codeError = `<button v-tooltip="{ text: '...', class: 'tooltip-error' }">...</button>`;
-const codeSuccess = `<button v-tooltip="{ text: '...', class: 'tooltip-success' }">...</button>`;
-
-const copyCode = async (text) => {
-  try {
-    await navigator.clipboard.writeText(text);
-  } catch (err) {
-    console.error('Failed to copy', err);
-  }
-};
-</script>
 
 <style scoped>
 .doc-page {
@@ -202,21 +204,5 @@ const copyCode = async (text) => {
 .btn.success:hover {
   box-shadow: 0 6px 20px rgba(16, 185, 129, 0.5);
 }
-
-.css-vars-block {
-  background: rgba(0, 0, 0, 0.3);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  padding: 1.5rem;
-  border-radius: 12px;
-  overflow-x: auto;
-}
-
-.css-vars-block pre {
-  margin: 0;
-  font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
-  font-size: 0.85rem;
-  color: #e4e4e7;
-}
-
 </style>
 

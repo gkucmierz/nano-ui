@@ -4,20 +4,22 @@ import plDict from './locales/pl.json';
 
 const STORAGE_KEY = 'nano_ui_lang';
 
-// Safe SSR / browser storage retrieval
-const getInitialLang = () => {
+// Deterministic initial language matching SSR baseline
+export const currentLang = ref('en');
+
+export const initSavedLang = () => {
   try {
     if (typeof localStorage !== 'undefined') {
       const saved = localStorage.getItem(STORAGE_KEY);
-      if (saved === 'en' || saved === 'pl') {
-        return saved;
+      if (saved && (saved === 'en' || saved === 'pl')) {
+        currentLang.value = saved;
+        if (typeof document !== 'undefined') {
+          document.documentElement.setAttribute('lang', saved);
+        }
       }
     }
   } catch (e) {}
-  return 'en';
 };
-
-export const currentLang = ref(getInitialLang());
 
 export const setLang = (lang) => {
   if (['en', 'pl'].includes(lang)) {

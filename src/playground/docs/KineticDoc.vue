@@ -6,6 +6,7 @@ import NanoSwitch from '../../components/NanoSwitch.vue';
 import InstaCatCanvas from '../components/InstaCatCanvas.vue';
 import NanoBanana from '../components/NanoBanana.vue';
 import NanoLogoCard from '../components/NanoLogoCard.vue';
+import { createDocTabs } from '../docSnippets.js';
 
 const rotatorRef = ref(null);
 
@@ -50,12 +51,7 @@ const speedPresets = [
   { label: '4s (1/4x)', duration: 4000 },
 ];
 
-const codeTabs = [
-  {
-    id: 'api',
-    label: 'API Reference',
-    lang: 'api',
-    code: `// Props
+const apiDoc = `// Props
 modelValue: Number (default: 0) - Target angle in degrees (v-model support)
 duration: Number (default: 1000) - Base duration in ms per 90° step
 speedMultiplier: Number (default: 1) - Time multiplier (e.g. 0.5 = 2x slower)
@@ -81,46 +77,28 @@ isMoving - Boolean motion status ref
 @update:modelValue - Emits settled target angle
 @change - Emits new target whenever commanded
 @settled - Emitted when movement completes: { angle, normalizedAngle }
-@frame - Emitted on every rAF tick with live kinematic telemetry { currentAngle, targetAngle, velocity, acceleration, progress, isMoving, v0, timestamp }`,
+@frame - Emitted on every rAF tick with live kinematic telemetry { currentAngle, targetAngle, velocity, acceleration, progress, isMoving, v0, timestamp }`;
+
+const codeTabs = createDocTabs({
+  name: 'KineticRotator',
+  apiDoc,
+  props: {
+    ref: 'rotator',
+    'v-model': 'angle',
+    ':duration': 1000,
+    ':step': 90,
+    ':shortest-path': true,
+    'timing-mode': 'proportional',
   },
-  {
-    id: 'usage',
-    label: 'Usage & Imports',
-    lang: 'vue',
-    code: `<!-- 1. Pełny import z paczki (Full package bundle) -->
-<script setup>
-import { ref } from 'vue';
-import { KineticRotator } from '@gkucmierz/nano-ui';
-import '@gkucmierz/nano-ui/style.css';
-
-const angle = ref(0);
-const rotator = ref(null);
-<\/script>
-
-<template>
-  <KineticRotator
-    ref="rotator"
-    v-model="angle"
-    :duration="1000"
-    :step="90"
-    :shortest-path="true"
-    timing-mode="proportional"
-  >
-    <div class="custom-dial">
-      <span>{{ Math.round(angle) }}°</span>
-    </div>
-  </KineticRotator>
-</template>
-
-<!-- 2. Granularny import pojedynczego pliku (Minimal footprint / Tree-shaking) -->
-<!--
-Jeśli nie chcesz importować całej biblioteki, zaimportuj wyłącznie ten komponent i style:
-
-import KineticRotator from '@gkucmierz/nano-ui/src/components/KineticRotator.vue';
-import '@gkucmierz/nano-ui/dist/nano-ui.css';
--->`,
-  },
-];
+  slots: '<div class="custom-dial">\n  <span>{{ Math.round(angle) }}°</span>\n</div>',
+  imports: [
+    "import { ref } from 'vue';",
+    '',
+    'const angle = ref(0);',
+    'const rotator = ref(null);',
+  ],
+  wrapTemplate: true,
+});
 
 const normalizedAngle = computed(() => {
   return ((currentAngle.value % 360) + 360) % 360;
