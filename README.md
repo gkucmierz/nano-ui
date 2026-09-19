@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="public/nano-ui.svg" width="120" height="120" alt="Nano UI Logo" />
+<img src="https://nano-ui.7u.pl/nano-ui.svg" width="120" height="120" alt="Nano UI Logo" />
 
 # @gkucmierz/nano-ui
 
