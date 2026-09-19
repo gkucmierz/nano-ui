@@ -1,5 +1,8 @@
-import { tracker } from '@gkucmierz/analytics'
-tracker.init('nano-ui', 'https://analytics.7u.pl')
+import { tracker } from '@gkucmierz/analytics';
+
+if (typeof window !== 'undefined') {
+  tracker.init('nano-ui', 'https://analytics.7u.pl');
+}
 
 import pkg from '../package.json';
 import { initTheme } from './theme.js';
