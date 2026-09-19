@@ -308,6 +308,7 @@ const containerMaxHeight = computed(() => {
   user-select: none;
   -webkit-user-select: none;
   line-height: 1;
+  position: relative;
 }
 
 .code-tab-btn:hover:not(.active) {
@@ -318,8 +319,17 @@ const containerMaxHeight = computed(() => {
 .code-tab-btn.active {
   color: var(--nano-state-active, #00f2fe);
   background: var(--nano-code-bg, var(--nano-bg-code, #0b1120));
-  box-shadow: inset 0 -2px 0 var(--nano-state-active, #00f2fe);
   font-weight: 700;
+}
+
+.code-tab-btn.active::after {
+  content: '';
+  position: absolute;
+  bottom: -1px;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: var(--nano-state-active, #00f2fe);
 }
 
 .nano-code-block.has-tabs .code-block-actions {

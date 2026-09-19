@@ -1743,6 +1743,8 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 6px 12px;
   margin-bottom: 8px;
 }
 
@@ -1755,6 +1757,7 @@ onUnmounted(() => {
   border-radius: 4px;
   background: rgba(99, 102, 241, 0.2);
   color: #818cf8;
+  white-space: nowrap;
 }
 
 .mode-badge.isochronous {
@@ -1765,6 +1768,7 @@ onUnmounted(() => {
 .mode-formula {
   font-size: 0.8rem;
   color: var(--nano-text-muted, #94a3b8);
+  white-space: nowrap;
 }
 
 .mode-desc {
@@ -2008,11 +2012,6 @@ onUnmounted(() => {
   background: #f1f5f9;
   color: #0369a1;
   border: 1px solid #e2e8f0;
-}
-
-[data-theme="light"] .mode-formula,
-:root[data-theme="light"] .mode-formula {
-  color: #64748b;
 }
 
 [data-theme="light"] .class-pill.c1,
