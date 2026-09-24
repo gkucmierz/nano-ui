@@ -79,6 +79,7 @@
   ],
   "dependencies": {
     "@gkucmierz/analytics": "^1.0.1",
+    "lucide-vue-next": "^0.469.0",
     "vue-router": "^5.0.6"
   }
 }

@@ -4,6 +4,8 @@ import ButtonDoc from '../docs/ButtonDoc.vue';
 import InputDoc from '../docs/InputDoc.vue';
 import CardDoc from '../docs/CardDoc.vue';
 import BadgeDoc from '../docs/BadgeDoc.vue';
+import TableDoc from '../docs/TableDoc.vue';
+import AlertDoc from '../docs/AlertDoc.vue';
 import RippleDoc from '../docs/RippleDoc.vue';
 import TooltipDoc from '../docs/TooltipDoc.vue';
 import ModalDoc from '../docs/ModalDoc.vue';
@@ -12,6 +14,7 @@ import PrecisionScrubberDoc from '../docs/PrecisionScrubberDoc.vue';
 import TopologyRadarDoc from '../docs/TopologyRadarDoc.vue';
 import MutatingHeaderDoc from '../docs/MutatingHeaderDoc.vue';
 import SwitchDoc from '../docs/SwitchDoc.vue';
+import IconDoc from '../docs/IconDoc.vue';
 import KineticDoc from '../docs/KineticDoc.vue';
 import NotFoundDoc from '../docs/NotFoundDoc.vue';
 
@@ -78,6 +81,28 @@ export const routes = [
     },
   },
   {
+    path: '/docs/tables',
+    name: 'Tables',
+    component: TableDoc,
+    meta: {
+      title: 'Data Tables | Nano UI',
+      componentName: 'Tables',
+      type: 'primitive',
+      description: 'High-density tabular data presentation, sticky header navigation, selectable rows with left accent indicators, and compact telemetry variants.',
+    },
+  },
+  {
+    path: '/docs/alerts',
+    name: 'Alerts',
+    component: AlertDoc,
+    meta: {
+      title: 'Alerts & Banners | Nano UI',
+      componentName: 'Alerts',
+      type: 'primitive',
+      description: 'Contextual feedback messages, system warnings, confirmation banners, and dismissible inline alerts with high-contrast theme tokens.',
+    },
+  },
+  {
     path: '/docs/ripple',
     name: 'Ripple',
     component: RippleDoc,
@@ -119,6 +144,17 @@ export const routes = [
       componentName: 'NanoSwitch',
       type: 'component',
       description: 'Tactile toggle switch component with spring-physics feedback and keyboard accessibility.',
+    },
+  },
+  {
+    path: '/docs/icons',
+    name: 'Icons',
+    component: IconDoc,
+    meta: {
+      title: 'NanoIcon Component | Nano UI',
+      componentName: 'NanoIcon',
+      type: 'component',
+      description: 'Universal, zero-dependency inline SVG icon component with full currentColor support, size presets, and offline-first design.',
     },
   },
   {

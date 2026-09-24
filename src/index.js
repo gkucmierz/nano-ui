@@ -18,6 +18,8 @@ import TopologyRadar from './components/TopologyRadar.vue';
 import NanoSwitch from './components/NanoSwitch.vue';
 import KineticRotator from './components/KineticRotator.vue';
 import NanoCodeBlock from './components/NanoCodeBlock.vue';
+import NanoIcon from './components/NanoIcon.vue';
+import { registerIcons, getAvailableIcons, BUILTIN_ICONS } from './icons/index.js';
 import { transitions, durations, easings, transitionVariables } from './config/transitions.js';
 import './style.css';
 
@@ -36,6 +38,10 @@ export {
   NanoSwitch,
   KineticRotator,
   NanoCodeBlock,
+  NanoIcon,
+  registerIcons,
+  getAvailableIcons,
+  BUILTIN_ICONS,
   initTheme,
   getZeroFoucScript,
   getZeroFoucStyle,
@@ -70,5 +76,6 @@ export default {
     app.component(`${cp}NanoSwitch`, NanoSwitch);
     app.component(`${cp}KineticRotator`, KineticRotator);
     app.component(`${cp}NanoCodeBlock`, NanoCodeBlock);
+    app.component(`${cp}NanoIcon`, NanoIcon);
   },
 };

@@ -158,6 +158,19 @@ onUnmounted(() => {
             </svg>
             <span class="nav-label">{{ t('nav.badges') }}</span>
           </router-link>
+          <router-link to="/docs/tables" class="nav-link" active-class="active" v-tooltip="isNarrow ? t('nav.tables') : undefined">
+            <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="3" y="3" width="18" height="18" rx="2"/>
+              <line x1="3" y1="9" x2="21" y2="9"/>
+              <line x1="3" y1="15" x2="21" y2="15"/>
+              <line x1="9" y1="3" x2="9" y2="21"/>
+            </svg>
+            <span class="nav-label">{{ t('nav.tables') }}</span>
+          </router-link>
+          <router-link to="/docs/alerts" class="nav-link" active-class="active" v-tooltip="isNarrow ? t('nav.alerts') : undefined">
+            <NanoIcon name="warn" class="nav-icon" :size="18" />
+            <span class="nav-label">{{ t('nav.alerts') }}</span>
+          </router-link>
         </div>
         <div class="nav-section">
           <h3>{{ t('nav.directives') }}</h3>
@@ -199,6 +212,10 @@ onUnmounted(() => {
               <line x1="9" y1="21" x2="9" y2="9"/>
             </svg>
             <span class="nav-label">{{ t('nav.modal') }}</span>
+          </router-link>
+          <router-link to="/docs/icons" class="nav-link" active-class="active" v-tooltip="isNarrow ? t('nav.icons') : undefined">
+            <NanoIcon name="sparkles" class="nav-icon" :size="18" />
+            <span class="nav-label">{{ t('nav.icons') }}</span>
           </router-link>
           <router-link to="/docs/3d-donut-chart" class="nav-link" active-class="active" v-tooltip="isNarrow ? t('nav.donut') : undefined">
             <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
