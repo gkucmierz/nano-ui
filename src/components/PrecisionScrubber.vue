@@ -15,7 +15,7 @@
   </div>
 
   <!-- HUD Overlay for high-precision scrubbing -->
-  <Teleport to="body">
+  <Teleport v-if="isMounted" to="body">
     <div v-if="isScrubbing" class="nano-scrub-overlay">
       <!-- Start location anchor dot -->
       <div v-if="isScrubbingRelative" class="nano-scrub-anchor" :style="{ left: scrubStartX + 'px', top: scrubStartY + 'px' }"></div>
@@ -49,7 +49,13 @@ export default {
 </script>
 
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue';
+
+const isMounted = ref(false);
+
+onMounted(() => {
+  isMounted.value = true;
+});
 
 const props = defineProps({
   modelValue: {
