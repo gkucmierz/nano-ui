@@ -355,13 +355,13 @@
               :d="getLeaderLinePath(label)" 
               fill="none" 
               :stroke="label.color" 
-              stroke-width="1.2" 
+              :stroke-width="leaderStrokeWidth" 
             />
             <text 
               x="85" 
               :y="label.finalY" 
               :fill="label.color" 
-              font-size="11" 
+              :font-size="resolvedLabelFontSize" 
               font-weight="600" 
               font-family="system-ui, -apple-system, sans-serif" 
               text-anchor="end" 
@@ -390,13 +390,13 @@
               :d="getLeaderLinePath(label)" 
               fill="none" 
               :stroke="label.color" 
-              stroke-width="1.2" 
+              :stroke-width="leaderStrokeWidth" 
             />
             <text 
               x="675" 
               :y="label.finalY" 
               :fill="label.color" 
-              font-size="11" 
+              :font-size="resolvedLabelFontSize" 
               font-weight="600" 
               font-family="system-ui, -apple-system, sans-serif" 
               text-anchor="start" 
@@ -519,10 +519,42 @@ const props = defineProps({
   animationDuration: {
     type: Number,
     default: 350
+  },
+  labelSize: {
+    type: String,
+    default: 'md',
+    validator: (val) => ['sm', 'md', 'lg', 'xl'].includes(val)
+  },
+  labelFontSize: {
+    type: [Number, String],
+    default: undefined
   }
 })
 
 const emit = defineEmits(['update:hoveredItemId', 'update:selectedItemId'])
+
+const SIZE_MAP = {
+  sm: 11,
+  md: 13,
+  lg: 15,
+  xl: 17
+}
+
+const resolvedLabelFontSize = computed(() => {
+  if (typeof props.labelFontSize === 'number') {
+    return props.labelFontSize
+  }
+  if (typeof props.labelFontSize === 'string') {
+    const parsed = parseFloat(props.labelFontSize)
+    if (!isNaN(parsed) && parsed > 0) return parsed
+    if (SIZE_MAP[props.labelFontSize]) return SIZE_MAP[props.labelFontSize]
+  }
+  return SIZE_MAP[props.labelSize] || 13
+})
+
+const leaderStrokeWidth = computed(() => {
+  return resolvedLabelFontSize.value >= 15 ? 1.4 : 1.2
+})
 
 let currentAnimationId = null
 const activeHoveredId = ref(null)
@@ -664,7 +696,7 @@ const resolveCollisions = (labels, centerY, height, sizeMultiplier) => {
   
   labels.sort((a, b) => a.desiredY - b.desiredY)
   
-  const minSpacing = 15
+  const minSpacing = Math.max(14, Math.round(resolvedLabelFontSize.value * 1.35))
   
   for (let i = 1; i < labels.length; i++) {
     if (labels[i].finalY < labels[i-1].finalY + minSpacing) {
@@ -672,7 +704,8 @@ const resolveCollisions = (labels, centerY, height, sizeMultiplier) => {
     }
   }
   
-  const maxY = height - 15
+  const halfFont = resolvedLabelFontSize.value / 2
+  const maxY = height - halfFont - 6
   if (labels[labels.length - 1].finalY > maxY) {
     labels[labels.length - 1].finalY = maxY
     for (let i = labels.length - 2; i >= 0; i--) {
@@ -682,7 +715,7 @@ const resolveCollisions = (labels, centerY, height, sizeMultiplier) => {
     }
   }
   
-  const minY = 15
+  const minY = halfFont + 6
   if (labels[0].finalY < minY) {
     labels[0].finalY = minY
     for (let i = 1; i < labels.length; i++) {
@@ -1448,8 +1481,13 @@ const updateGeometryImmediate = () => {
   labelOpacity.value = (props.isExpanded && props.showLabels) ? 1 : 0
 }
 
-const animateChart = (duration = props.animationDuration || 350) => {
-  if (props.currentLowFxMode || props.immediate) {
+const animateChart = (customDuration) => {
+  const duration = customDuration !== undefined ? customDuration : (props.animationDuration ?? 350)
+  if (props.currentLowFxMode || props.immediate || duration <= 0) {
+    if (currentAnimationId) {
+      cancelAnimationFrame(currentAnimationId)
+      currentAnimationId = null
+    }
     animatedItems.value.forEach(item => {
       item.value = item.targetValue
       item.percentage = item.targetPercentage !== undefined ? item.targetPercentage : 0
@@ -1588,8 +1626,8 @@ watch(normalizedData, (newData) => {
   }
 }, { deep: true })
 
-watch([activeRotationAngle, () => props.rotationAngle], () => {
-  const isImmediate = props.immediate || props.currentLowFxMode
+watch([activeRotationAngle, () => props.rotationAngle, () => props.autoRotate], () => {
+  const isImmediate = props.immediate || props.currentLowFxMode || props.immediateRotation || (props.animationDuration ?? 350) <= 0
   if (isImmediate) {
     if (currentAnimationId) {
       cancelAnimationFrame(currentAnimationId)
