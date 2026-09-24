@@ -142,8 +142,8 @@
             />
           </g>
 
-          <!-- Center Hole Text details (at drawCenterYComputed, sandwiched between back and front) -->
-          <g v-if="props.showCenterText" :transform="`translate(${animCx}, ${drawCenterYComputed})`" class="center-text-group">
+          <!-- Center Hole Text details (at centerTextY, sandwiched between back and front) -->
+          <g v-if="props.showCenterText" :transform="`translate(${animCx}, ${centerTextY})`" class="center-text-group">
             <text 
               x="0" 
               y="-3" 
@@ -528,6 +528,11 @@ const props = defineProps({
   labelFontSize: {
     type: [Number, String],
     default: undefined
+  },
+  centerTextZ: {
+    type: Number,
+    default: 0.0,
+    validator: (val) => val >= 0 && val <= 1
   }
 })
 
@@ -1016,6 +1021,13 @@ const animFontSizeLabel = computed(() => {
 
 const drawCenterYComputed = computed(() => {
   return animCy.value - animDepth.value / 2
+})
+
+const centerTextY = computed(() => {
+  const depth = animDepth.value
+  const topY = drawCenterYComputed.value
+  const zRatio = props.centerTextZ !== undefined && props.centerTextZ !== null ? props.centerTextZ : 0.0
+  return topY + depth * zRatio
 })
 
 const sortedSlices = computed(() => {
