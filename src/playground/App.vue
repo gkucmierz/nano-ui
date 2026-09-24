@@ -129,6 +129,16 @@ onUnmounted(() => {
           </router-link>
         </div>
         <div class="nav-section">
+          <h3>{{ t('nav.primitives') }}</h3>
+          <router-link to="/docs/buttons" class="nav-link" active-class="active" v-tooltip="isNarrow ? t('nav.buttons') : undefined">
+            <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="3" y="6" width="18" height="12" rx="3"/>
+              <path d="M8 12h8"/>
+            </svg>
+            <span class="nav-label">{{ t('nav.buttons') }}</span>
+          </router-link>
+        </div>
+        <div class="nav-section">
           <h3>{{ t('nav.directives') }}</h3>
           <router-link to="/docs/ripple" class="nav-link" active-class="active" v-tooltip="isNarrow ? t('nav.ripple') : undefined">
             <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">

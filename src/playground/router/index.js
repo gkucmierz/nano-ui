@@ -1,5 +1,6 @@
 import { createRouter, createWebHistory, createMemoryHistory } from 'vue-router';
 import OverviewDoc from '../docs/OverviewDoc.vue';
+import ButtonDoc from '../docs/ButtonDoc.vue';
 import RippleDoc from '../docs/RippleDoc.vue';
 import TooltipDoc from '../docs/TooltipDoc.vue';
 import ModalDoc from '../docs/ModalDoc.vue';
@@ -27,6 +28,17 @@ export const routes = [
     meta: {
       title: 'Overview & Setup | Nano UI',
       description: 'High-performance, minimal footprint Vue 3 UI library, interactive 3D charts, and kinematic directives with built-in Zero-FOUC design tokens.',
+    },
+  },
+  {
+    path: '/docs/buttons',
+    name: 'Buttons',
+    component: ButtonDoc,
+    meta: {
+      title: 'Buttons & Groups | Nano UI',
+      componentName: 'Buttons',
+      type: 'primitive',
+      description: 'Ultra-lightweight, hardware-accelerated button primitives with semantic states, fluid hover transitions, native accessibility, and docked button groups.',
     },
   },
   {

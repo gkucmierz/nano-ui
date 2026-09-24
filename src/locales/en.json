@@ -7,6 +7,8 @@
   "nav": {
     "gettingStarted": "Getting Started",
     "overview": "Overview & Setup",
+    "primitives": "Primitives",
+    "buttons": "Buttons & Groups",
     "components": "Components",
     "directives": "Directives",
     "visualization": "Visualization",
