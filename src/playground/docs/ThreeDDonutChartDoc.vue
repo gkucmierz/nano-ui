@@ -2,6 +2,9 @@
 import { ref, computed } from 'vue';
 import ThreeDDonutChart from '../../components/ThreeDDonutChart.vue';
 import NanoSwitch from '../../components/NanoSwitch.vue';
+import KineticRotator from '../../components/KineticRotator.vue';
+import NanoIcon from '../../components/NanoIcon.vue';
+import { normalizeAngle } from '../../utils/math.js';
 
 const isExpanded = ref(true);
 const is3D = ref(true);
@@ -11,6 +14,15 @@ const autoRotate = ref(true);
 const slopeRatio = ref(0.5);
 const thickness = ref(0.5);
 const showCenterText = ref(true);
+const isScrubbing = ref(false);
+
+const stepRotation = (delta) => {
+  rotationAngle.value = Math.round(rotationAngle.value + delta);
+};
+
+const setRotation = (angle) => {
+  rotationAngle.value = angle;
+};
 
 // Aggregation settings
 const aggregateOthers = ref(true);
@@ -107,111 +119,24 @@ const setSingleDatapoint = () => {
     <h2>ThreeDDonutChart Component</h2>
     <p>A glossy 3D donut / pie chart component built on SVG, featuring responsive painter's algorithm Z-index layers, auto-balancing label leader lines, and dynamic data aggregation.</p>
 
-    <div class="sandbox-grid">
-      <!-- Left Panel: Controls -->
-      <div class="demo-section controls-panel">
-        <h3>Interactive Controls</h3>
-        
-        <div class="control-group">
-          <h4>1. Slices / Data Points</h4>
-          <div class="slices-list">
-            <div v-for="(item, idx) in testData" :key="idx" class="slice-row">
-              <input type="text" v-model="item.name" class="input-name" placeholder="Name" />
-              <input type="number" v-model.number="item.value" class="input-value" min="0.01" step="0.01" placeholder="Value" />
-              <input type="color" v-model="item.color" class="input-color" />
-              <button @click="removeItem(idx)" class="btn-remove">🗑️</button>
-            </div>
-          </div>
-          <div class="action-buttons">
-            <button @click="addItem" class="demo-btn secondary-btn">Add Slice</button>
-            <button @click="setSingleDatapoint" class="demo-btn secondary-btn">1 Datapoint Test</button>
-            <button @click="resetToDefault" class="demo-btn secondary-btn">Reset</button>
-          </div>
-        </div>
-
-        <div class="control-group" style="margin-top: 1.5rem;">
-          <h4>2. Visual Settings</h4>
-          <div class="switch-row" style="margin-top: 0.5rem;">
-            <span class="switch-label">Show Labels & Leader Lines</span>
-            <NanoSwitch v-model="showLabels" size="compact" />
-          </div>
-
-          <div class="switch-row" style="margin-top: 10px;">
-            <span class="switch-label">Show Center Value Text</span>
-            <NanoSwitch v-model="showCenterText" size="compact" />
-          </div>
-
-          <div class="switch-row" style="margin-top: 10px;">
-            <span class="switch-label">Compact (Mini) Layout</span>
-            <NanoSwitch :modelValue="!isExpanded" @update:modelValue="isExpanded = !$event" size="compact" />
-          </div>
-
-          <div class="switch-row" style="margin-top: 10px;">
-            <span class="switch-label">3D Render Mode</span>
-            <NanoSwitch v-model="is3D" size="compact" />
-          </div>
-          
-          <div class="switch-row" style="margin-top: 10px;">
-            <span class="switch-label">Auto-Rotate</span>
-            <NanoSwitch v-model="autoRotate" size="compact" />
-          </div>
-
-          <div 
-            class="slider-row" 
-            :style="autoRotate ? 'opacity: 0.35; pointer-events: none;' : ''"
-            style="margin-top: 8px; margin-bottom: 8px;"
-          >
-            <span class="slider-label">Start Angle (Rotation): {{ rotationAngle }}°</span>
-            <input type="range" v-model.number="rotationAngle" min="-360" max="360" step="1" />
-          </div>
-
-          <div class="switch-row" style="margin-top: 10px;">
-            <span class="switch-label">Selectable (Click/Tap to lock item details)</span>
-            <NanoSwitch v-model="selectable" size="compact" />
-          </div>
-
-          <div v-if="selectable && selectedItemId" style="font-size: 0.85rem; color: #10b981; margin-top: 8px; font-weight: 500;">
-            Locked on: {{ selectedItemId }}
-          </div>
-
-          <div class="slider-row" :style="!is3D ? 'opacity: 0.35; pointer-events: none;' : ''">
-            <span class="slider-label">Slope Ratio (Tilt): {{ slopeRatio }}</span>
-            <input type="range" v-model.number="slopeRatio" min="0.2" max="1.0" step="0.01" :disabled="!is3D" />
-          </div>
-
-          <div class="slider-row">
-            <span class="slider-label">Donut Thickness (Pie-to-Donut): {{ (thickness * 100).toFixed(0) }}%</span>
-            <input type="range" v-model.number="thickness" min="0.0" max="1.0" step="0.01" />
-          </div>
-
-          <div class="slider-row">
-            <span class="slider-label">Label Decimals: {{ valueDecimalsRange === -1 ? 'Auto' : valueDecimalsRange }}</span>
-            <input type="range" v-model.number="valueDecimalsRange" min="-1" max="10" step="1" />
-          </div>
-        </div>
-
-        <div class="control-group" style="margin-top: 1.5rem;">
-          <h4>3. Value Aggregation</h4>
-          <div class="switch-row">
-            <span class="switch-label">Aggregate data below threshold into "Other"</span>
-            <NanoSwitch v-model="aggregateOthers" size="compact" />
-          </div>
-
-          <div class="slider-row" :style="!aggregateOthers ? 'opacity: 0.4; pointer-events: none;' : ''">
-            <span class="slider-label">Others Threshold: {{ (othersThreshold * 100).toFixed(1) }}%</span>
-            <input type="range" v-model.number="othersThreshold" min="0.001" max="0.15" step="0.001" />
-          </div>
-
-          <div class="input-row" :style="!aggregateOthers ? 'opacity: 0.4; pointer-events: none;' : ''" style="display: flex; gap: 8px; margin-top: 10px;">
-            <input type="text" v-model="othersLabel" class="input-name" style="width: 100%;" placeholder="Other Label" />
-            <input type="color" v-model="othersColor" class="input-color" style="height: 32px;" />
-          </div>
-        </div>
-      </div>
-
-      <!-- Right Panel: Chart Preview -->
+    <!-- 1. Full-Width Live Preview Stage on Top -->
+    <div class="stage-container">
       <div class="demo-section preview-panel">
-        <h3>Live Preview</h3>
+        <div class="preview-header">
+          <h3>Live Preview</h3>
+          <div class="preview-badges">
+            <span v-if="selectable && selectedItemId" class="status-badge locked">
+              Locked on: {{ selectedItemId }}
+            </span>
+            <span class="status-badge">
+              {{ is3D ? '3D Oblique' : '2D Flat' }}
+            </span>
+            <span class="status-badge">
+              Angle: {{ Math.round(normalizeAngle(rotationAngle)) }}°
+            </span>
+          </div>
+        </div>
+
         <div class="chart-container">
           <ThreeDDonutChart 
             v-model:hoveredItemId="hoveredItemId"
@@ -222,6 +147,7 @@ const setSingleDatapoint = () => {
             :showLabels="showLabels"
             :is3D="is3D"
             :rotationAngle="rotationAngle"
+            :immediateRotation="isScrubbing"
             :autoRotate="autoRotate"
             :slopeRatio="slopeRatio"
             :thickness="thickness"
@@ -235,6 +161,146 @@ const setSingleDatapoint = () => {
             centerLabel="Total Area (M km²)"
             emptyText="Add countries to render the 3D donut chart!"
           />
+        </div>
+      </div>
+    </div>
+
+    <!-- 2. Controls Grid Below the Chart -->
+    <div class="controls-grid">
+      <!-- Column 1: Slices / Data Points -->
+      <div class="demo-section control-card">
+        <h4>1. Slices / Data Points</h4>
+        <div class="slices-list">
+          <div v-for="(item, idx) in testData" :key="idx" class="slice-row">
+            <input type="text" v-model="item.name" class="input-name" placeholder="Name" />
+            <input type="number" v-model.number="item.value" class="input-value" min="0.01" step="0.01" placeholder="Value" />
+            <input type="color" v-model="item.color" class="input-color" />
+            <button @click="removeItem(idx)" class="btn-remove">🗑️</button>
+          </div>
+        </div>
+        <div class="action-buttons">
+          <button @click="addItem" class="demo-btn secondary-btn">Add Slice</button>
+          <button @click="setSingleDatapoint" class="demo-btn secondary-btn">1 Datapoint Test</button>
+          <button @click="resetToDefault" class="demo-btn secondary-btn">Reset</button>
+        </div>
+      </div>
+
+      <!-- Column 2: 3D & Visual Settings -->
+      <div class="demo-section control-card">
+        <h4>2. 3D & Visual Settings</h4>
+        <div class="switch-row" style="margin-top: 0.5rem;">
+          <span class="switch-label">Show Labels & Leader Lines</span>
+          <NanoSwitch v-model="showLabels" size="compact" />
+        </div>
+
+        <div class="switch-row" style="margin-top: 10px;">
+          <span class="switch-label">Show Center Value Text</span>
+          <NanoSwitch v-model="showCenterText" size="compact" />
+        </div>
+
+        <div class="switch-row" style="margin-top: 10px;">
+          <span class="switch-label">Compact (Mini) Layout</span>
+          <NanoSwitch :modelValue="!isExpanded" @update:modelValue="isExpanded = !$event" size="compact" />
+        </div>
+
+        <div class="switch-row" style="margin-top: 10px;">
+          <span class="switch-label">3D Render Mode</span>
+          <NanoSwitch v-model="is3D" size="compact" />
+        </div>
+
+        <div class="switch-row" style="margin-top: 10px;">
+          <span class="switch-label">Selectable (Click to lock)</span>
+          <NanoSwitch v-model="selectable" size="compact" />
+        </div>
+
+        <div class="slider-row" :style="!is3D ? 'opacity: 0.35; pointer-events: none;' : ''">
+          <span class="slider-label">Slope Ratio (Tilt): {{ slopeRatio }}</span>
+          <input type="range" v-model.number="slopeRatio" min="0.2" max="1.0" step="0.01" :disabled="!is3D" />
+        </div>
+
+        <div class="slider-row">
+          <span class="slider-label">Donut Thickness: {{ (thickness * 100).toFixed(0) }}%</span>
+          <input type="range" v-model.number="thickness" min="0.0" max="1.0" step="0.01" />
+        </div>
+
+        <div class="slider-row">
+          <span class="slider-label">Label Decimals: {{ valueDecimalsRange === -1 ? 'Auto' : valueDecimalsRange }}</span>
+          <input type="range" v-model.number="valueDecimalsRange" min="-1" max="10" step="1" />
+        </div>
+      </div>
+
+      <!-- Column 3: Rotation & Aggregation -->
+      <div class="demo-section control-card">
+        <h4>3. Rotation & Kinetic MSP</h4>
+        
+        <div class="switch-row" style="margin-top: 0.5rem; margin-bottom: 8px;">
+          <span class="switch-label">Auto-Rotate (Column Balance)</span>
+          <NanoSwitch v-model="autoRotate" size="compact" />
+        </div>
+
+        <div 
+          class="rotator-control-card" 
+          :style="autoRotate ? 'opacity: 0.35; pointer-events: none;' : ''"
+        >
+          <div class="rotator-card-header">
+            <span class="slider-label">Start Angle: <strong>{{ Math.round(rotationAngle) }}°</strong></span>
+            <span class="badge-msp">MSP 0ms Scrub</span>
+          </div>
+          
+          <input 
+            type="range" 
+            v-model.number="rotationAngle" 
+            min="-360" 
+            max="360" 
+            step="1"
+            @pointerdown="isScrubbing = true"
+            @pointerup="isScrubbing = false"
+            @change="isScrubbing = false"
+          />
+
+          <div class="kinetic-control-row">
+            <div class="kinetic-dial-container" title="Kinetic Rotator Dial (Geodesic S¹)">
+              <KineticRotator
+                v-model="rotationAngle"
+                :size="56"
+                :duration="400"
+                :shortest-path="true"
+              >
+                <template #default="{ currentAngle }">
+                  <div class="mini-dial-plate">
+                    <div class="mini-dial-marker"></div>
+                    <div class="mini-dial-hub">
+                      <NanoIcon name="rotate" :size="14" />
+                    </div>
+                  </div>
+                </template>
+              </KineticRotator>
+            </div>
+
+            <div class="step-buttons-grid">
+              <button type="button" class="btn-step" @click="stepRotation(-90)" title="Rotate -90°">-90°</button>
+              <button type="button" class="btn-step" @click="stepRotation(-45)" title="Rotate -45°">-45°</button>
+              <button type="button" class="btn-step" @click="setRotation(0)" title="Reset to 0°">0°</button>
+              <button type="button" class="btn-step" @click="stepRotation(45)" title="Rotate +45°">+45°</button>
+              <button type="button" class="btn-step" @click="stepRotation(90)" title="Rotate +90°">+90°</button>
+            </div>
+          </div>
+        </div>
+
+        <h4 style="margin-top: 1.25rem;">4. Value Aggregation</h4>
+        <div class="switch-row" style="margin-top: 0.5rem;">
+          <span class="switch-label">Aggregate into "Other"</span>
+          <NanoSwitch v-model="aggregateOthers" size="compact" />
+        </div>
+
+        <div class="slider-row" :style="!aggregateOthers ? 'opacity: 0.4; pointer-events: none;' : ''">
+          <span class="slider-label">Others Threshold: {{ (othersThreshold * 100).toFixed(1) }}%</span>
+          <input type="range" v-model.number="othersThreshold" min="0.001" max="0.15" step="0.001" />
+        </div>
+
+        <div class="input-row" :style="!aggregateOthers ? 'opacity: 0.4; pointer-events: none;' : ''" style="display: flex; gap: 8px; margin-top: 10px;">
+          <input type="text" v-model="othersLabel" class="input-name" style="width: 100%;" placeholder="Other Label" />
+          <input type="color" v-model="othersColor" class="input-color" style="height: 32px;" />
         </div>
       </div>
     </div>
@@ -275,14 +341,61 @@ h2 { margin: 0; color: var(--nano-text-main); }
 h3 { margin-bottom: 1rem; color: var(--nano-text-muted); border-bottom: 1px solid var(--nano-border-subtle); padding-bottom: 0.5rem; }
 h4 { margin: 0 0 0.5rem 0; color: var(--nano-text-secondary); font-size: 0.9rem; }
 
-.sandbox-grid {
+.stage-container {
+  width: 100%;
+}
+
+.preview-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+  border-bottom: 1px solid var(--nano-border-subtle);
+  padding-bottom: 0.5rem;
+}
+
+.preview-header h3 {
+  margin: 0;
+  border: none;
+  padding: 0;
+}
+
+.preview-badges {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.status-badge {
+  font-size: 0.75rem;
+  font-weight: 500;
+  padding: 3px 8px;
+  border-radius: 4px;
+  background: var(--nano-bg-muted);
+  color: var(--nano-text-secondary);
+  border: 1px solid var(--nano-border-subtle);
+}
+
+.status-badge.locked {
+  background: color-mix(in srgb, #10b981 15%, transparent);
+  color: #10b981;
+  border-color: color-mix(in srgb, #10b981 30%, transparent);
+}
+
+.controls-grid {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(3, 1fr);
   gap: 20px;
 }
 
-@media (max-width: 900px) {
-  .sandbox-grid {
+@media (max-width: 1100px) {
+  .controls-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 768px) {
+  .controls-grid {
     grid-template-columns: 1fr;
   }
 }
@@ -496,8 +609,9 @@ input[type="range"]::-moz-range-thumb:hover {
   display: flex;
   align-items: center;
   justify-content: center;
-  min-height: 360px;
-  padding: 10px;
+  min-height: 400px;
+  padding: 1rem 0;
+  width: 100%;
 }
 
 .api-reference {
@@ -508,5 +622,113 @@ input[type="range"]::-moz-range-thumb:hover {
   font-family: monospace;
   color: var(--nano-text-code);
   line-height: 1.5;
+}
+
+.rotator-control-card {
+  background: var(--nano-bg-subtle, rgba(255, 255, 255, 0.03));
+  border: 1px solid var(--nano-border-subtle);
+  border-radius: var(--nano-radius-md, 8px);
+  padding: 10px 12px;
+  margin: 10px 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.rotator-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.badge-msp {
+  font-size: 0.65rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: color-mix(in srgb, var(--nano-accent-primary) 15%, transparent);
+  color: var(--nano-accent-primary);
+  border: 1px solid color-mix(in srgb, var(--nano-accent-primary) 30%, transparent);
+}
+
+.kinetic-control-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 4px;
+}
+
+.kinetic-dial-container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.mini-dial-plate {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--nano-bg-surface) 85%, var(--nano-accent-primary) 15%);
+  border: 2px solid var(--nano-border-subtle);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  transition: border-color var(--nano-transition-interactive);
+}
+
+.mini-dial-plate:hover {
+  border-color: var(--nano-accent-primary);
+}
+
+.mini-dial-marker {
+  position: absolute;
+  top: 3px;
+  width: 3px;
+  height: 8px;
+  background: var(--nano-accent-primary);
+  border-radius: 2px;
+}
+
+.mini-dial-hub {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: var(--nano-bg-surface);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--nano-text-primary);
+  border: 1px solid var(--nano-border-subtle);
+}
+
+.step-buttons-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  flex: 1;
+}
+
+.btn-step {
+  flex: 1 1 calc(33.333% - 4px);
+  min-width: 40px;
+  padding: 4px 6px;
+  font-size: 0.75rem;
+  font-weight: 500;
+  background: var(--nano-bg-surface);
+  color: var(--nano-text-primary);
+  border: 1px solid var(--nano-border-subtle);
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background var(--nano-transition-interactive), border-color var(--nano-transition-interactive);
+}
+
+.btn-step:hover {
+  background: var(--nano-border-subtle);
+  border-color: var(--nano-accent-primary);
 }
 </style>

@@ -345,6 +345,7 @@
 
 <script setup>
 import { ref, computed, watch, onMounted, onUnmounted, nextTick } from 'vue'
+import { normalizeAngle, shortestAngleDiff } from '../utils/math.js'
 
 const props = defineProps({
   // Array of: { id, name, value, percentage, color, unit }
@@ -377,6 +378,10 @@ const props = defineProps({
     default: false
   },
   immediate: {
+    type: Boolean,
+    default: false
+  },
+  immediateRotation: {
     type: Boolean,
     default: false
   },
@@ -847,6 +852,9 @@ const animatedRotationAngle = ref(activeRotationAngle.value)
 const isAnimating = ref(false)
 const isRotationChanging = ref(false)
 let rotationTimer = null
+let lastRotationChangeTime = 0
+let isRapidScrubbing = false
+let scrubResetTimer = null
 
 const is3DMode = props.is3D
 const animCx = ref(props.isExpanded ? 380 : 60)
@@ -1375,6 +1383,7 @@ const animateChart = (duration = 450) => {
   const startTime = performance.now()
   const startRotation = animatedRotationAngle.value
   const targetRotation = activeRotationAngle.value
+  const deltaRotation = shortestAngleDiff(startRotation, targetRotation)
 
   const startCx = animCx.value
   const startCy = animCy.value
@@ -1422,7 +1431,7 @@ const animateChart = (duration = 450) => {
       item.percentage = Math.round(startPct + (targetPct - startPct) * easedProgress)
     })
 
-    animatedRotationAngle.value = startRotation + (targetRotation - startRotation) * easedProgress
+    animatedRotationAngle.value = startRotation + deltaRotation * easedProgress
 
     animCx.value = startCx + (targetCx - startCx) * easedProgress
     animCy.value = startCy + (targetCy - startCy) * easedProgress
@@ -1439,6 +1448,7 @@ const animateChart = (duration = 450) => {
       currentAnimationId = requestAnimationFrame(tick)
     } else {
       currentAnimationId = null
+      animatedRotationAngle.value = targetRotation
       animatedItems.value.forEach(item => {
         item.value = item.targetValue
         item.percentage = item.targetPercentage !== undefined ? item.targetPercentage : 0
@@ -1500,8 +1510,25 @@ watch(() => props.rotationAngle, () => {
 })
 
 watch(activeRotationAngle, (newAngle) => {
-  const isImmediate = props.immediate || props.currentLowFxMode
+  const now = performance.now()
+  const timeDelta = now - lastRotationChangeTime
+  lastRotationChangeTime = now
+
+  if (timeDelta > 0 && timeDelta < 80) {
+    isRapidScrubbing = true
+  }
+  if (scrubResetTimer) clearTimeout(scrubResetTimer)
+  scrubResetTimer = setTimeout(() => {
+    isRapidScrubbing = false
+  }, 120)
+
+  const isImmediate = props.immediate || props.immediateRotation || props.currentLowFxMode || isRapidScrubbing
   if (isImmediate) {
+    if (currentAnimationId) {
+      cancelAnimationFrame(currentAnimationId)
+      currentAnimationId = null
+      isAnimating.value = false
+    }
     animatedRotationAngle.value = newAngle
   } else {
     animateChart()
@@ -1577,6 +1604,8 @@ onUnmounted(() => {
   if (currentAnimationId) {
     cancelAnimationFrame(currentAnimationId)
   }
+  if (rotationTimer) clearTimeout(rotationTimer)
+  if (scrubResetTimer) clearTimeout(scrubResetTimer)
 })
 
 defineExpose({

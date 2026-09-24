@@ -1,5 +1,6 @@
 <script setup>
 import { ref, computed, watch, onMounted, onUnmounted } from 'vue';
+import { normalizeAngle, shortestAngleDiff } from '../utils/math.js';
 
 const props = defineProps({
   /**
@@ -103,19 +104,6 @@ const easeInOutCubicDerivative = (t) => {
 const easeInOutCubicSecondDerivative = (t) => {
   if (t < 0.5) return 24 * t;
   return 24 * t - 24;
-};
-
-// Modulo helper keeping degrees within [0, 360)
-const normalizeAngle = (deg) => {
-  return ((deg % 360) + 360) % 360;
-};
-
-// Shortest difference from fromDeg to toOrientationDeg in range [-180, 180)
-const shortestAngleDiff = (fromDeg, toOrientationDeg) => {
-  const fromNorm = normalizeAngle(fromDeg);
-  const toNorm = normalizeAngle(toOrientationDeg);
-  let diff = toNorm - fromNorm;
-  return ((diff + 180) % 360 + 360) % 360 - 180;
 };
 
 // Kinematic State

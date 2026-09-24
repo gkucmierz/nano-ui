@@ -20,6 +20,7 @@ import KineticRotator from './components/KineticRotator.vue';
 import NanoCodeBlock from './components/NanoCodeBlock.vue';
 import NanoIcon from './components/NanoIcon.vue';
 import { registerIcons, getAvailableIcons, BUILTIN_ICONS } from './icons/index.js';
+import { normalizeAngle, shortestAngleDiff } from './utils/math.js';
 import { transitions, durations, easings, transitionVariables } from './config/transitions.js';
 import './style.css';
 
@@ -42,6 +43,8 @@ export {
   registerIcons,
   getAvailableIcons,
   BUILTIN_ICONS,
+  normalizeAngle,
+  shortestAngleDiff,
   initTheme,
   getZeroFoucScript,
   getZeroFoucStyle,
