@@ -14,7 +14,8 @@ const autoRotate = ref(true);
 const slopeRatio = ref(0.5);
 const thickness = ref(0.5);
 const showCenterText = ref(true);
-const isScrubbing = ref(false);
+const chartAnimationDuration = ref(300); // 0, 150, 300, 500
+const labelFontSize = ref(13); // 11, 13, 15, 17
 
 const stepRotation = (delta) => {
   rotationAngle.value = Math.min(360, Math.max(-360, Math.round(rotationAngle.value + delta)));
@@ -145,9 +146,10 @@ const setSingleDatapoint = () => {
             :data="computedChartData"
             :isExpanded="isExpanded"
             :showLabels="showLabels"
+            :labelFontSize="labelFontSize"
+            :animationDuration="chartAnimationDuration"
             :is3D="is3D"
             :rotationAngle="rotationAngle"
-            :immediateRotation="isScrubbing"
             :autoRotate="autoRotate"
             :slopeRatio="slopeRatio"
             :thickness="thickness"
@@ -227,6 +229,45 @@ const setSingleDatapoint = () => {
           <span class="slider-label">Label Decimals: {{ valueDecimalsRange === -1 ? 'Auto' : valueDecimalsRange }}</span>
           <input type="range" v-model.number="valueDecimalsRange" min="-1" max="10" step="1" />
         </div>
+
+        <div class="control-subgroup" style="margin-top: 14px;">
+          <span class="slider-label" style="display: block; margin-bottom: 6px;">Animation Duration: {{ chartAnimationDuration === 0 ? '0ms (Instant)' : chartAnimationDuration + 'ms' }}</span>
+          <div class="nano-btn-group" style="width: 100%;">
+            <button 
+              v-for="dur in [0, 150, 300, 500]" 
+              :key="dur"
+              type="button"
+              class="nano-btn nano-btn-sm"
+              :class="chartAnimationDuration === dur ? 'nano-btn-primary' : 'nano-btn-secondary'"
+              style="flex: 1; text-align: center; justify-content: center; font-weight: 600;"
+              @click="chartAnimationDuration = dur"
+            >
+              {{ dur === 0 ? '0ms' : dur + 'ms' }}
+            </button>
+          </div>
+        </div>
+
+        <div class="control-subgroup" style="margin-top: 14px;" :style="!showLabels ? 'opacity: 0.4; pointer-events: none;' : ''">
+          <span class="slider-label" style="display: block; margin-bottom: 6px;">Label Font Size: {{ labelFontSize }}px</span>
+          <div class="nano-btn-group" style="width: 100%;">
+            <button 
+              v-for="opt in [
+                { label: 'S (11)', value: 11 },
+                { label: 'M (13)', value: 13 },
+                { label: 'L (15)', value: 15 },
+                { label: 'XL (17)', value: 17 }
+              ]" 
+              :key="opt.value"
+              type="button"
+              class="nano-btn nano-btn-sm"
+              :class="labelFontSize === opt.value ? 'nano-btn-primary' : 'nano-btn-secondary'"
+              style="flex: 1; text-align: center; justify-content: center; font-weight: 600;"
+              @click="labelFontSize = opt.value"
+            >
+              {{ opt.label }}
+            </button>
+          </div>
+        </div>
       </div>
 
       <!-- Column 3: Rotation & Aggregation -->
@@ -244,7 +285,7 @@ const setSingleDatapoint = () => {
         >
           <div class="rotator-card-header">
             <span class="slider-label">Start Angle: <strong>{{ Math.round(rotationAngle) }}°</strong></span>
-            <span class="badge-msp">MSP 0ms Scrub</span>
+            <span class="badge-msp">{{ chartAnimationDuration === 0 ? 'Instant (0ms)' : chartAnimationDuration + 'ms Anim' }}</span>
           </div>
           
           <input 
@@ -253,9 +294,6 @@ const setSingleDatapoint = () => {
             min="-360" 
             max="360" 
             step="1"
-            @pointerdown="isScrubbing = true"
-            @pointerup="isScrubbing = false"
-            @change="isScrubbing = false"
           />
 
           <div class="kinetic-control-row">
@@ -268,10 +306,8 @@ const setSingleDatapoint = () => {
                 :max="360"
                 :angle-offset="90"
                 :size="56"
-                :duration="400"
+                :duration="chartAnimationDuration"
                 :shortest-path="true"
-                @drag-start="isScrubbing = true"
-                @drag-end="isScrubbing = false"
               >
                 <template #default="{ currentAngle, isDragging }">
                   <div class="mini-dial-plate" :class="{ 'is-dragging': isDragging }">
@@ -333,6 +369,9 @@ selectable: Boolean (default: false) - Enables locking of items on click/tap
 selectedItemId: String | Number (default: null) - Currently selected/locked item ID (supports v-model:selectedItemId)
 thickness: Number (default: 0.5) - Thickness from 0.0 (thin ring) to 1.0 (full pie chart)
 showCenterText: Boolean (default: true) - Show/hide center value and label texts
+animationDuration: Number (default: 350) - Duration of chart transitions in ms (0 for instant)
+labelSize: String (default: 'md') - Preset size for callout labels ('sm', 'md', 'lg', 'xl')
+labelFontSize: Number | String (default: undefined) - Custom font size in px for callout labels (e.g. 13 or '13px')
     </NanoCodeBlock>
   </div>
 </template>
