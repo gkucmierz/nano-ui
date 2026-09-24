@@ -7,12 +7,13 @@ import { t } from '../../locales.js';
 // Interactive Playground State
 const selectedVariant = ref('primary');
 const selectedSize = ref('default');
+const isOutline = ref(false);
 const isDisabled = ref(false);
 const hasIcon = ref(false);
 const hasRipple = ref(true);
 const clickCount = ref(0);
 
-const variants = ['primary', 'success', 'secondary', 'ghost', 'danger', 'active'];
+const variants = ['primary', 'success', 'danger', 'active', 'secondary', 'ghost'];
 const sizes = ['sm', 'default', 'lg'];
 
 const handleClick = () => {
@@ -25,6 +26,9 @@ const generatedCode = computed(() => {
   const classes = ['nano-btn'];
   if (selectedVariant.value) {
     classes.push(`nano-btn-${selectedVariant.value}`);
+  }
+  if (isOutline.value && selectedVariant.value !== 'ghost') {
+    classes.push('nano-btn-outline');
   }
   if (selectedSize.value !== 'default') {
     classes.push(`nano-btn-${selectedSize.value}`);
@@ -40,7 +44,7 @@ const generatedCode = computed(() => {
   }
 
   const iconMarkup = hasIcon.value
-    ? '\n  <svg class="nano-btn-icon-svg" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>'
+    ? '\n  <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">\n    <polyline points="13 17 18 12 13 7" />\n  </svg>'
     : '';
 
   return `<button ${attrs.join(' ')}>${iconMarkup}\n  Action Button\n</button>`;
@@ -62,11 +66,18 @@ const groupCode = `<div class="nano-btn-group">
 
 const cssApiDoc = `/* Nano UI Button Primitives & Modifiers */
 .nano-btn                /* Base button: flex alignment, typography, border-radius, transitions */
-.nano-btn-primary        /* Primary action button (accent color background) */
-.nano-btn-secondary      /* Secondary action button (elevated card surface, subtle border) */
-.nano-btn-ghost          /* Ghost/transparent button (minimal chrome, hover fill) */
-.nano-btn-danger         /* Destructive action button (crimson tint & border) */
-.nano-btn-active         /* Highlighted/active state (cyan border & glow tint) */
+
+/* Semantic Colors */
+.nano-btn-primary        /* Primary action color (accent indigo) */
+.nano-btn-success        /* Success / confirm action color (emerald/green) */
+.nano-btn-danger         /* Destructive / delete action color (crimson red) */
+.nano-btn-active         /* Highlighted / active action color (neon cyan) */
+.nano-btn-secondary      /* Neutral elevated card surface with subtle border */
+.nano-btn-ghost          /* Flat transparent button with soft hover fill */
+
+/* Visual Treatments (Orthogonal Modifiers) */
+.nano-btn-outline        /* Visible matching border + soft 12% tinted fill */
+.nano-btn-solid          /* Forced solid saturated fill + crisp white text */
 
 /* Sizing Modifiers */
 .nano-btn-sm             /* Compact size: padding 3px 8px, font 0.72rem (dense UI/tables) */
@@ -92,7 +103,8 @@ const cssApiDoc = `/* Nano UI Button Primitives & Modifiers */
             :class="[
               'nano-btn',
               `nano-btn-${selectedVariant}`,
-              selectedSize !== 'default' ? `nano-btn-${selectedSize}` : ''
+              selectedSize !== 'default' ? `nano-btn-${selectedSize}` : '',
+              isOutline && selectedVariant !== 'ghost' ? 'nano-btn-outline' : ''
             ]"
             :disabled="isDisabled"
             v-ripple="hasRipple"
@@ -117,14 +129,14 @@ const cssApiDoc = `/* Nano UI Button Primitives & Modifiers */
           </button>
         </div>
 
-        <NanoCodeBlock :code="generatedCode" lang="html" title="Generated Markup" />
+        <NanoCodeBlock :code="generatedCode" lang="html" title="Generated Markup" :default-wrap="true" />
       </div>
 
       <!-- Controls Panel -->
       <div class="controls-panel">
         <div class="control-group">
           <label class="control-label">Variant</label>
-          <div class="nano-btn-group">
+          <div class="nano-cluster">
             <button
               v-for="v in variants"
               :key="v"
@@ -153,6 +165,11 @@ const cssApiDoc = `/* Nano UI Button Primitives & Modifiers */
         </div>
 
         <div class="control-group toggle-row">
+          <span class="control-label">Outline / Bordered</span>
+          <NanoSwitch v-model="isOutline" />
+        </div>
+
+        <div class="control-group toggle-row">
           <span class="control-label">With Icon</span>
           <NanoSwitch v-model="hasIcon" />
         </div>
@@ -169,43 +186,71 @@ const cssApiDoc = `/* Nano UI Button Primitives & Modifiers */
       </div>
     </div>
 
-    <!-- Visual Hierarchy & Semantic Variants -->
-    <h3 class="section-title">Visual Hierarchy & Semantic Variants</h3>
+    <!-- Solid Treatments -->
+    <h3 class="section-title">Solid Treatments (High Emphasis)</h3>
+    <p class="desc">Saturated full fills with crisp white text for prominent primary and critical actions.</p>
     <div class="variants-grid">
       <div class="variant-card">
-        <span class="variant-label">Primary</span>
+        <span class="variant-label">Primary Solid</span>
         <button class="nano-btn nano-btn-primary" v-ripple>Primary Action</button>
-        <span class="variant-desc">Main prominent call-to-action</span>
+        <span class="variant-desc">Main call-to-action</span>
       </div>
 
       <div class="variant-card">
-        <span class="variant-label">Success</span>
+        <span class="variant-label">Success Solid</span>
         <button class="nano-btn nano-btn-success" v-ripple>Accept & Save</button>
-        <span class="variant-desc">Confirm, accept, or save operations</span>
+        <span class="variant-desc">Confirm or save changes</span>
       </div>
 
+      <div class="variant-card">
+        <span class="variant-label">Danger Solid</span>
+        <button class="nano-btn nano-btn-danger" v-ripple>Delete Entry</button>
+        <span class="variant-desc">Destructive operations</span>
+      </div>
+    </div>
+
+    <!-- Outline / Bordered Treatments -->
+    <h3 class="section-title">Outline & Bordered Treatments (.nano-btn-outline)</h3>
+    <p class="desc">Soft 12% tinted fills with crisp matching borders and colored text. Ideal for filters, secondary tags, and subtle feedback.</p>
+    <div class="variants-grid">
+      <div class="variant-card">
+        <span class="variant-label">Primary Outline</span>
+        <button class="nano-btn nano-btn-primary nano-btn-outline" v-ripple>Primary Outline</button>
+        <span class="variant-desc">Subtle accent CTA</span>
+      </div>
+
+      <div class="variant-card">
+        <span class="variant-label">Success Outline</span>
+        <button class="nano-btn nano-btn-success nano-btn-outline" v-ripple>Success Outline</button>
+        <span class="variant-desc">Non-disruptive confirmation</span>
+      </div>
+
+      <div class="variant-card">
+        <span class="variant-label">Danger Outline</span>
+        <button class="nano-btn nano-btn-danger nano-btn-outline" v-ripple>Danger Outline</button>
+        <span class="variant-desc">Gentle warning / remove item</span>
+      </div>
+
+      <div class="variant-card">
+        <span class="variant-label">Active Glow</span>
+        <button class="nano-btn nano-btn-active" v-ripple>Active Glow</button>
+        <span class="variant-desc">Docked / toggled state</span>
+      </div>
+    </div>
+
+    <!-- Neutral & Chrome -->
+    <h3 class="section-title">Neutral & Chrome Variants</h3>
+    <div class="variants-grid">
       <div class="variant-card">
         <span class="variant-label">Secondary</span>
         <button class="nano-btn nano-btn-secondary" v-ripple>Secondary Action</button>
-        <span class="variant-desc">Neutral background with subtle border</span>
+        <span class="variant-desc">Elevated card fill & subtle border</span>
       </div>
 
       <div class="variant-card">
         <span class="variant-label">Ghost</span>
         <button class="nano-btn nano-btn-ghost" v-ripple>Ghost Action</button>
         <span class="variant-desc">Transparent with soft hover fill</span>
-      </div>
-
-      <div class="variant-card">
-        <span class="variant-label">Danger</span>
-        <button class="nano-btn nano-btn-danger" v-ripple>Delete Entry</button>
-        <span class="variant-desc">Destructive or critical operations</span>
-      </div>
-
-      <div class="variant-card">
-        <span class="variant-label">Active / Glow</span>
-        <button class="nano-btn nano-btn-active" v-ripple>Active State</button>
-        <span class="variant-desc">Current filter or toggled mode</span>
       </div>
 
       <div class="variant-card">
@@ -351,8 +396,10 @@ const cssApiDoc = `/* Nano UI Button Primitives & Modifiers */
 /* Sandbox */
 .sandbox-container {
   display: grid;
-  grid-template-columns: 1fr 340px;
+  grid-template-columns: minmax(0, 1fr) 300px;
   gap: 1.5rem;
+  max-width: 100%;
+  box-sizing: border-box;
   background: var(--nano-bg-card-elevated);
   border: 1px solid var(--nano-border-card);
   border-radius: 12px;
@@ -370,6 +417,8 @@ const cssApiDoc = `/* Nano UI Button Primitives & Modifiers */
   display: flex;
   flex-direction: column;
   gap: 1.5rem;
+  min-width: 0;
+  max-width: 100%;
 }
 
 .preview-area {
@@ -401,6 +450,9 @@ const cssApiDoc = `/* Nano UI Button Primitives & Modifiers */
   border: 1px solid var(--nano-border-subtle);
   border-radius: 8px;
   padding: 1.25rem;
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
 }
 
 .control-group {

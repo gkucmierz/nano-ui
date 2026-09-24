@@ -31,24 +31,57 @@
   pointer-events: none;
 }
 
+/* Color token assignments per semantic variant */
 .nano-btn-primary {
-  background: var(--nano-accent-primary, #6366f1);
-  color: #ffffff;
-  border-color: transparent;
-}
-.nano-btn-primary:hover:not(:disabled) {
-  filter: brightness(1.1);
+  --nano-btn-color: var(--nano-accent-primary, #6366f1);
+  --nano-btn-hover: var(--nano-accent-primary-hover, #4f46e5);
 }
 
+.nano-btn-success {
+  --nano-btn-color: var(--nano-state-success, #16a34a);
+  --nano-btn-hover: var(--nano-state-success-hover, #15803d);
+}
+
+.nano-btn-danger {
+  --nano-btn-color: var(--nano-state-danger, #ef4444);
+  --nano-btn-hover: var(--nano-state-danger-hover, #dc2626);
+}
+
+.nano-btn-active,
+.nano-btn-cyan {
+  --nano-btn-color: var(--nano-state-active, #00f2fe);
+  --nano-btn-hover: #38bdf8;
+}
+
+/* Default Solid Fill Treatment (Primary, Success, Danger) */
+.nano-btn-primary,
+.nano-btn-success,
+.nano-btn-danger,
+.nano-btn-solid {
+  background: var(--nano-btn-color, var(--nano-accent-primary, #6366f1));
+  color: #ffffff;
+  border-color: transparent;
+  --nano-ripple-color: rgba(255, 255, 255, 0.35);
+}
+.nano-btn-primary:hover:not(:disabled),
+.nano-btn-success:hover:not(:disabled),
+.nano-btn-danger:hover:not(:disabled),
+.nano-btn-solid:hover:not(:disabled) {
+  background: var(--nano-btn-hover, var(--nano-btn-color));
+}
+
+/* Default Outline / Tinted Treatment for Active / Glow */
 .nano-btn-active {
   background: color-mix(in srgb, var(--nano-state-active, #00f2fe) 15%, transparent);
   color: var(--nano-state-active, #00f2fe);
   border-color: color-mix(in srgb, var(--nano-state-active, #00f2fe) 40%, transparent);
+  --nano-ripple-color: color-mix(in srgb, var(--nano-state-active, #00f2fe) 35%, transparent);
 }
 .nano-btn-active:hover:not(:disabled) {
   background: color-mix(in srgb, var(--nano-state-active, #00f2fe) 25%, transparent);
 }
 
+/* Neutral Card & Ghost Variants */
 .nano-btn-secondary {
   background: var(--nano-bg-card, rgba(255, 255, 255, 0.05));
   color: var(--nano-text-main, #f8fafc);
@@ -58,15 +91,6 @@
 .nano-btn-secondary:hover:not(:disabled) {
   background: var(--nano-bg-hover, rgba(255, 255, 255, 0.1));
   border-color: var(--nano-border-hover, rgba(255, 255, 255, 0.3));
-}
-
-.nano-btn-success {
-  background: var(--nano-state-success, #16a34a);
-  color: #ffffff;
-  border-color: transparent;
-}
-.nano-btn-success:hover:not(:disabled) {
-  filter: brightness(1.1);
 }
 
 .nano-btn-ghost {
@@ -79,14 +103,33 @@
   color: var(--nano-text-main, #f8fafc);
 }
 
-.nano-btn-danger {
-  background: color-mix(in srgb, var(--nano-state-danger, #ef4444) 15%, transparent);
-  color: #f87171;
-  border-color: color-mix(in srgb, var(--nano-state-danger, #ef4444) 35%, transparent);
+/* ==========================================================================
+   Orthogonal Treatments: .nano-btn-outline & .nano-btn-solid
+   ========================================================================== */
+
+/* Visible Border + Soft Tinted Fill */
+.nano-btn-outline {
+  background: color-mix(in srgb, var(--nano-btn-color, currentColor) 12%, transparent);
+  color: var(--nano-btn-color, currentColor);
+  border-color: color-mix(in srgb, var(--nano-btn-color, currentColor) 35%, transparent);
+  --nano-ripple-color: color-mix(in srgb, var(--nano-btn-color, currentColor) 30%, transparent);
 }
-.nano-btn-danger:hover:not(:disabled) {
-  background: color-mix(in srgb, var(--nano-state-danger, #ef4444) 25%, transparent);
+.nano-btn-outline:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--nano-btn-color, currentColor) 22%, transparent);
+  border-color: color-mix(in srgb, var(--nano-btn-color, currentColor) 55%, transparent);
+  filter: none;
 }
+
+/* Forced Solid Fill */
+.nano-btn-solid {
+  background: var(--nano-btn-color, var(--nano-accent-primary, #6366f1));
+  color: #ffffff;
+  border-color: transparent;
+}
+.nano-btn-solid:hover:not(:disabled) {
+  filter: brightness(1.1);
+}
+
 
 .nano-btn-sm {
   padding: 3px 8px;
@@ -110,6 +153,7 @@
 .nano-btn-group {
   display: inline-flex;
   align-items: stretch;
+  max-width: 100%;
 }
 
 .nano-btn-group > .nano-btn {
@@ -128,6 +172,32 @@
 
 .nano-btn-group > .nano-btn:not(:first-child) {
   margin-left: -1px;
+}
+
+.nano-btn-group-wrap {
+  flex-wrap: wrap;
+  gap: 4px;
+}
+.nano-btn-group-wrap > .nano-btn {
+  border-radius: var(--nano-radius-sm, 4px) !important;
+  margin-left: 0 !important;
+}
+
+/* ==========================================================================
+   Layout Containers (.nano-cluster, .nano-row, .nano-stack)
+   ========================================================================== */
+.nano-cluster,
+.nano-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--nano-space-xs, 6px);
+}
+
+.nano-stack {
+  display: flex;
+  flex-direction: column;
+  gap: var(--nano-space-sm, 8px);
 }
 
 /* ==========================================================================
