@@ -4,7 +4,7 @@
     class="donut-canvas-wrapper" 
     :class="{ 
       'is-expanded': isExpanded,
-      'no-transitions': isAnimating || isRotationChanging || immediate || immediateRotation
+      'no-transitions': isAnimating || immediate
     }"
   >
     <svg 
@@ -515,6 +515,10 @@ const props = defineProps({
   centerValueFormatter: {
     type: Function,
     default: null
+  },
+  animationDuration: {
+    type: Number,
+    default: 350
   }
 })
 
@@ -929,11 +933,6 @@ const activeRotationAngle = computed(() => {
 
 const animatedRotationAngle = ref(activeRotationAngle.value)
 const isAnimating = ref(false)
-const isRotationChanging = ref(false)
-let rotationTimer = null
-let lastRotationChangeTime = 0
-let isRapidScrubbing = false
-let scrubResetTimer = null
 
 const is3DMode = props.is3D
 const animCx = ref(props.isExpanded ? 380 : 60)
@@ -1418,7 +1417,38 @@ const getLeaderLinePath = (label) => {
   return `M ${startX} ${startY} C ${cp1_x} ${cp1_y}, ${cp2_x} ${cp2_y}, ${alignX} ${endY}`
 }
 
-const animateChart = (duration = 450) => {
+const updateGeometryImmediate = () => {
+  if (currentAnimationId) {
+    cancelAnimationFrame(currentAnimationId)
+    currentAnimationId = null
+    isAnimating.value = false
+  }
+
+  const is3DMode = props.is3D
+  animCx.value = props.isExpanded ? 380 : 60
+  animCy.value = props.isExpanded ? 160 : 60
+  animRx.value = props.isExpanded ? 180 : 48
+  animRy.value = props.isExpanded 
+    ? (is3DMode ? 180 * props.slopeRatio : 180) 
+    : (is3DMode ? 48 * props.slopeRatio : 48)
+  animIrx.value = props.isExpanded 
+    ? 180 * (1 - props.thickness) 
+    : 48 * (1 - props.thickness)
+  animIry.value = props.isExpanded 
+    ? (is3DMode ? 180 * (1 - props.thickness) * props.slopeRatio : 180 * (1 - props.thickness)) 
+    : (is3DMode ? 48 * (1 - props.thickness) * props.slopeRatio : 48 * (1 - props.thickness))
+  
+  const baseDepth = (props.isExpanded && is3DMode) ? 32 : 0
+  animDepth.value = (is3DMode && props.slopeRatio > 0.5) 
+    ? baseDepth * (2 - 2 * props.slopeRatio) 
+    : baseDepth
+    
+  animVbWidth.value = props.isExpanded ? 760 : 120
+  animVbHeight.value = props.isExpanded ? 320 : 120
+  labelOpacity.value = (props.isExpanded && props.showLabels) ? 1 : 0
+}
+
+const animateChart = (duration = props.animationDuration || 350) => {
   if (props.currentLowFxMode || props.immediate) {
     animatedItems.value.forEach(item => {
       item.value = item.targetValue
@@ -1427,29 +1457,7 @@ const animateChart = (duration = 450) => {
     animatedItems.value = animatedItems.value.filter(item => item.targetValue > 0)
     animatedRotationAngle.value = activeRotationAngle.value
     
-    const is3DMode = props.is3D
-    animCx.value = props.isExpanded ? 380 : 60
-    animCy.value = props.isExpanded ? 160 : 60
-    animRx.value = props.isExpanded ? 180 : 48
-    animRy.value = props.isExpanded 
-      ? (is3DMode ? 180 * props.slopeRatio : 180) 
-      : (is3DMode ? 48 * props.slopeRatio : 48)
-    animIrx.value = props.isExpanded 
-      ? 180 * (1 - props.thickness) 
-      : 48 * (1 - props.thickness)
-    animIry.value = props.isExpanded 
-      ? (is3DMode ? 180 * (1 - props.thickness) * props.slopeRatio : 180 * (1 - props.thickness)) 
-      : (is3DMode ? 48 * (1 - props.thickness) * props.slopeRatio : 48 * (1 - props.thickness))
-    
-    const baseDepth = (props.isExpanded && is3DMode) ? 32 : 0
-    animDepth.value = (is3DMode && props.slopeRatio > 0.5) 
-      ? baseDepth * (2 - 2 * props.slopeRatio) 
-      : baseDepth
-      
-    animVbWidth.value = props.isExpanded ? 760 : 120
-    animVbHeight.value = props.isExpanded ? 320 : 120
-    labelOpacity.value = (props.isExpanded && props.showLabels) ? 1 : 0
-    
+    updateGeometryImmediate()
     isAnimating.value = false
     return
   }
@@ -1460,7 +1468,7 @@ const animateChart = (duration = 450) => {
 
   isAnimating.value = true
   const startTime = performance.now()
-  const startRotation = animatedRotationAngle.value
+  const startRotation = normalizeAngle(animatedRotationAngle.value)
   const targetRotation = activeRotationAngle.value
   const deltaRotation = shortestAngleDiff(startRotation, targetRotation)
 
@@ -1580,35 +1588,31 @@ watch(normalizedData, (newData) => {
   }
 }, { deep: true })
 
-watch(() => props.rotationAngle, () => {
-  isRotationChanging.value = true
-  if (rotationTimer) clearTimeout(rotationTimer)
-  rotationTimer = setTimeout(() => {
-    isRotationChanging.value = false
-  }, 100)
-})
-
-watch(activeRotationAngle, (newAngle) => {
-  const now = performance.now()
-  const timeDelta = now - lastRotationChangeTime
-  lastRotationChangeTime = now
-
-  if (timeDelta > 0 && timeDelta < 80) {
-    isRapidScrubbing = true
-  }
-  if (scrubResetTimer) clearTimeout(scrubResetTimer)
-  scrubResetTimer = setTimeout(() => {
-    isRapidScrubbing = false
-  }, 120)
-
-  const isImmediate = props.immediate || props.immediateRotation || props.currentLowFxMode || isRapidScrubbing
+watch([activeRotationAngle, () => props.rotationAngle], () => {
+  const isImmediate = props.immediate || props.currentLowFxMode
   if (isImmediate) {
     if (currentAnimationId) {
       cancelAnimationFrame(currentAnimationId)
       currentAnimationId = null
       isAnimating.value = false
     }
-    animatedRotationAngle.value = newAngle
+    animatedRotationAngle.value = activeRotationAngle.value
+  } else {
+    animateChart()
+  }
+})
+
+watch(() => props.slopeRatio, () => {
+  if (props.immediate || props.currentLowFxMode) {
+    updateGeometryImmediate()
+  } else {
+    animateChart()
+  }
+})
+
+watch(() => props.thickness, () => {
+  if (props.immediate || props.currentLowFxMode) {
+    updateGeometryImmediate()
   } else {
     animateChart()
   }
@@ -1616,47 +1620,32 @@ watch(activeRotationAngle, (newAngle) => {
 
 watch(() => props.isExpanded, () => {
   nextTick(() => {
-    animateChart()
+    if (props.immediate || props.currentLowFxMode) {
+      updateGeometryImmediate()
+    } else {
+      animateChart()
+    }
   })
 })
 
 watch(() => props.is3D, () => {
   nextTick(() => {
-    animateChart()
+    if (props.immediate || props.currentLowFxMode) {
+      updateGeometryImmediate()
+    } else {
+      animateChart()
+    }
   })
 })
 
 watch(() => props.showLabels, () => {
   nextTick(() => {
-    animateChart()
+    if (props.immediate || props.currentLowFxMode) {
+      updateGeometryImmediate()
+    } else {
+      animateChart()
+    }
   })
-})
-
-watch(() => props.slopeRatio, (newSlope) => {
-  if (props.is3D) {
-    animRy.value = props.isExpanded ? 180 * newSlope : 48
-    
-    const baseRx = props.isExpanded ? 180 : 48
-    const baseRy = props.isExpanded ? 180 * newSlope : 48
-    animIrx.value = baseRx * (1 - props.thickness)
-    animIry.value = baseRy * (1 - props.thickness)
-    
-    const baseDepth = props.isExpanded ? 32 : 0
-    animDepth.value = newSlope > 0.5 
-      ? baseDepth * (2 - 2 * newSlope) 
-      : baseDepth
-  }
-})
-
-watch(() => props.thickness, (newThickness) => {
-  const is3DMode = props.is3D
-  const baseRx = props.isExpanded ? 180 : 48
-  const baseRy = props.isExpanded 
-    ? (is3DMode ? 180 * props.slopeRatio : 180) 
-    : (is3DMode ? 48 * props.slopeRatio : 48)
-
-  animIrx.value = baseRx * (1 - newThickness)
-  animIry.value = baseRy * (1 - newThickness)
 })
 
 watch(() => props.hoveredItemId, (newId) => {
@@ -1683,8 +1672,6 @@ onUnmounted(() => {
   if (currentAnimationId) {
     cancelAnimationFrame(currentAnimationId)
   }
-  if (rotationTimer) clearTimeout(rotationTimer)
-  if (scrubResetTimer) clearTimeout(scrubResetTimer)
 })
 
 defineExpose({
