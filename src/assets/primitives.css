@@ -209,21 +209,65 @@
   border-radius: var(--nano-radius-sm, 4px);
   color: var(--nano-text-main, #f8fafc);
   padding: 6px 10px;
-  font-size: 0.8rem;
+  font-size: 0.82rem;
   font-family: inherit;
   width: 100%;
   box-sizing: border-box;
-  transition: border-color var(--nano-transition-interactive, 0.15s ease);
+  outline: none !important;
+  transition: border-color var(--nano-transition-interactive, 0.15s ease),
+              box-shadow var(--nano-transition-interactive, 0.15s ease);
 }
 
 .nano-input:focus {
   border-color: var(--nano-state-active, #00f2fe);
+  box-shadow: 0 0 0 1px var(--nano-state-active, #00f2fe);
+}
+
+.nano-input:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  background: var(--nano-bg-muted, rgba(255, 255, 255, 0.03));
 }
 
 .nano-input::placeholder {
   color: var(--nano-text-muted, #64748b);
 }
 
+/* Sizing Modifiers */
+.nano-input-sm {
+  padding: 3px 8px;
+  font-size: 0.72rem;
+  border-radius: var(--nano-radius-xs, 3px);
+}
+
+.nano-input-lg {
+  padding: 10px 14px;
+  font-size: 0.95rem;
+  border-radius: var(--nano-radius-md, 6px);
+}
+
+/* Validation States */
+.nano-input-danger,
+.nano-input.is-invalid {
+  border-color: var(--nano-state-danger, #ef4444) !important;
+}
+
+.nano-input-danger:focus,
+.nano-input.is-invalid:focus {
+  box-shadow: 0 0 0 1px var(--nano-state-danger, #ef4444) !important;
+}
+
+.nano-input-success,
+.nano-input.is-valid {
+  border-color: var(--nano-state-success, #16a34a) !important;
+}
+
+.nano-input-success:focus,
+.nano-input.is-valid:focus {
+  box-shadow: 0 0 0 1px var(--nano-state-success, #16a34a) !important;
+}
+
+/* Input Groups (.nano-input-group) */
 .nano-input-group {
   display: flex;
   align-items: stretch;
@@ -231,23 +275,55 @@
   border: 1px solid var(--nano-border-card, rgba(255, 255, 255, 0.15));
   border-radius: var(--nano-radius-sm, 6px);
   overflow: hidden;
-  transition: border-color var(--nano-transition-interactive, 0.15s ease);
+  width: 100%;
+  box-sizing: border-box;
+  transition: border-color var(--nano-transition-interactive, 0.15s ease),
+              box-shadow var(--nano-transition-interactive, 0.15s ease);
 }
 
 .nano-input-group:focus-within {
   border-color: var(--nano-state-active, #00f2fe);
+  box-shadow: 0 0 0 1px var(--nano-state-active, #00f2fe);
+}
+
+.nano-input-group.is-invalid {
+  border-color: var(--nano-state-danger, #ef4444) !important;
 }
 
 .nano-input-group .nano-input {
   border: none;
   background: transparent;
   flex: 1;
+  min-width: 0;
+  box-shadow: none !important;
 }
 
 .nano-input-group .nano-btn {
   border-radius: 0;
   border-left: 1px solid var(--nano-border-subtle, rgba(255, 255, 255, 0.08));
 }
+
+.nano-input-addon {
+  display: inline-flex;
+  align-items: center;
+  padding: 0 10px;
+  background: var(--nano-bg-muted, rgba(255, 255, 255, 0.04));
+  color: var(--nano-text-muted, #94a3b8);
+  font-size: 0.8rem;
+  font-family: inherit;
+  user-select: none;
+  -webkit-user-select: none;
+  white-space: nowrap;
+}
+
+.nano-input-addon:first-child {
+  border-right: 1px solid var(--nano-border-subtle, rgba(255, 255, 255, 0.08));
+}
+
+.nano-input-addon:last-child {
+  border-left: 1px solid var(--nano-border-subtle, rgba(255, 255, 255, 0.08));
+}
+
 
 /* ==========================================================================
    3. Docked Segmented Tabs (.nano-tabs, .nano-tab)

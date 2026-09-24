@@ -1,6 +1,7 @@
 import { createRouter, createWebHistory, createMemoryHistory } from 'vue-router';
 import OverviewDoc from '../docs/OverviewDoc.vue';
 import ButtonDoc from '../docs/ButtonDoc.vue';
+import InputDoc from '../docs/InputDoc.vue';
 import RippleDoc from '../docs/RippleDoc.vue';
 import TooltipDoc from '../docs/TooltipDoc.vue';
 import ModalDoc from '../docs/ModalDoc.vue';
@@ -39,6 +40,17 @@ export const routes = [
       componentName: 'Buttons',
       type: 'primitive',
       description: 'Ultra-lightweight, hardware-accelerated button primitives with semantic states, fluid hover transitions, native accessibility, and docked button groups.',
+    },
+  },
+  {
+    path: '/docs/inputs',
+    name: 'Inputs',
+    component: InputDoc,
+    meta: {
+      title: 'Inputs & Groups | Nano UI',
+      componentName: 'Inputs',
+      type: 'primitive',
+      description: 'Clean, ergonomic form controls with native zero-outline focus glow, docked prefix/suffix addons, seamless action buttons, and validation states.',
     },
   },
   {

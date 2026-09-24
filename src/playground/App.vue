@@ -137,6 +137,13 @@ onUnmounted(() => {
             </svg>
             <span class="nav-label">{{ t('nav.buttons') }}</span>
           </router-link>
+          <router-link to="/docs/inputs" class="nav-link" active-class="active" v-tooltip="isNarrow ? t('nav.inputs') : undefined">
+            <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="2" y="4" width="20" height="16" rx="3"/>
+              <line x1="6" y1="12" x2="10" y2="12"/>
+            </svg>
+            <span class="nav-label">{{ t('nav.inputs') }}</span>
+          </router-link>
         </div>
         <div class="nav-section">
           <h3>{{ t('nav.directives') }}</h3>
