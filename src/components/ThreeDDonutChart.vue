@@ -4,7 +4,7 @@
     class="donut-canvas-wrapper" 
     :class="{ 
       'is-expanded': isExpanded,
-      'no-transitions': isAnimating || isRotationChanging || immediate
+      'no-transitions': isAnimating || isRotationChanging || immediate || immediateRotation
     }"
   >
     <svg 
@@ -1736,7 +1736,7 @@ defineExpose({
 }
 
 .label-group path {
-  transition: d var(--nano-transition-chart), stroke-width var(--nano-transition-interactive), opacity var(--nano-transition-interactive);
+  transition: stroke-width var(--nano-transition-interactive), opacity var(--nano-transition-interactive);
 }
 
 .label-group text {
