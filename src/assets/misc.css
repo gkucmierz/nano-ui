@@ -50,6 +50,18 @@ samp {
   user-select: text !important;
 }
 
+.selectable {
+  -webkit-user-select: text !important;
+  user-select: text !important;
+  cursor: text;
+}
+
+.selectable-all {
+  -webkit-user-select: all !important;
+  user-select: all !important;
+  cursor: pointer;
+}
+
 code,
 pre {
   cursor: text;

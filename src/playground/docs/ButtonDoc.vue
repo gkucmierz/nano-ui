@@ -265,7 +265,7 @@ const cssApiDoc = `/* Nano UI Button Primitives & Modifiers */
     <div class="matrix-card">
       <div class="matrix-row">
         <div class="matrix-meta">
-          <code>.nano-btn-sm</code>
+          <code class="selectable-all">.nano-btn-sm</code>
           <span>Dense toolbars & tables (height: ~24px)</span>
         </div>
         <div class="matrix-actions">
@@ -276,7 +276,7 @@ const cssApiDoc = `/* Nano UI Button Primitives & Modifiers */
 
       <div class="matrix-row">
         <div class="matrix-meta">
-          <code>.nano-btn</code>
+          <code class="selectable-all">.nano-btn</code>
           <span>Standard UI controls (height: ~32px)</span>
         </div>
         <div class="matrix-actions">
@@ -287,7 +287,7 @@ const cssApiDoc = `/* Nano UI Button Primitives & Modifiers */
 
       <div class="matrix-row">
         <div class="matrix-meta">
-          <code>.nano-btn-lg</code>
+          <code class="selectable-all">.nano-btn-lg</code>
           <span>Hero sections & modal dialogs (height: ~40px)</span>
         </div>
         <div class="matrix-actions">
@@ -551,6 +551,9 @@ const cssApiDoc = `/* Nano UI Button Primitives & Modifiers */
   font-size: 0.85rem;
   color: var(--nano-state-active);
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  user-select: all !important;
+  -webkit-user-select: all !important;
+  cursor: pointer;
 }
 
 .matrix-meta span {
