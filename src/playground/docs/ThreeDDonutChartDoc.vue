@@ -14,6 +14,7 @@ const autoRotate = ref(true);
 const slopeRatio = ref(0.5);
 const thickness = ref(0.5);
 const showCenterText = ref(true);
+const centerTextZ = ref(0.0); // 0.0 = top, 0.5 = center, 1.0 = bottom
 const chartAnimationDuration = ref(300); // 0, 150, 300, 500
 const labelFontSize = ref(13); // 11, 13, 15, 17
 
@@ -154,6 +155,7 @@ const setSingleDatapoint = () => {
             :slopeRatio="slopeRatio"
             :thickness="thickness"
             :showCenterText="showCenterText"
+            :centerTextZ="centerTextZ"
             :aggregateOthers="aggregateOthers"
             :othersThreshold="othersThreshold"
             :othersLabel="othersLabel"
@@ -198,6 +200,40 @@ const setSingleDatapoint = () => {
         <div class="switch-row" style="margin-top: 10px;">
           <span class="switch-label">Show Center Value Text</span>
           <NanoSwitch v-model="showCenterText" size="compact" />
+        </div>
+
+        <div class="slider-row" :style="!showCenterText || !is3D ? 'opacity: 0.35; pointer-events: none;' : ''">
+          <span class="slider-label">Center Text Z (Depth): {{ centerTextZ === 0 ? 'Top (0.0)' : centerTextZ === 0.5 ? 'Center (0.5)' : centerTextZ === 1 ? 'Bottom (1.0)' : centerTextZ.toFixed(2) }}</span>
+          <input type="range" v-model.number="centerTextZ" min="0.0" max="1.0" step="0.05" />
+          <div class="nano-btn-group" style="width: 100%; margin-top: 4px;">
+            <button 
+              type="button" 
+              class="nano-btn nano-btn-sm" 
+              :class="centerTextZ === 0 ? 'nano-btn-primary' : 'nano-btn-secondary'" 
+              style="flex: 1; text-align: center; justify-content: center; font-weight: 600;" 
+              @click="centerTextZ = 0"
+            >
+              Top (0.0)
+            </button>
+            <button 
+              type="button" 
+              class="nano-btn nano-btn-sm" 
+              :class="centerTextZ === 0.5 ? 'nano-btn-primary' : 'nano-btn-secondary'" 
+              style="flex: 1; text-align: center; justify-content: center; font-weight: 600;" 
+              @click="centerTextZ = 0.5"
+            >
+              Center (0.5)
+            </button>
+            <button 
+              type="button" 
+              class="nano-btn nano-btn-sm" 
+              :class="centerTextZ === 1 ? 'nano-btn-primary' : 'nano-btn-secondary'" 
+              style="flex: 1; text-align: center; justify-content: center; font-weight: 600;" 
+              @click="centerTextZ = 1"
+            >
+              Bottom (1.0)
+            </button>
+          </div>
         </div>
 
         <div class="switch-row" style="margin-top: 10px;">
@@ -369,6 +405,7 @@ selectable: Boolean (default: false) - Enables locking of items on click/tap
 selectedItemId: String | Number (default: null) - Currently selected/locked item ID (supports v-model:selectedItemId)
 thickness: Number (default: 0.5) - Thickness from 0.0 (thin ring) to 1.0 (full pie chart)
 showCenterText: Boolean (default: true) - Show/hide center value and label texts
+centerTextZ: Number (default: 0.0) - Z position of center text in depth (0.0 = top plane, 0.5 = volumetric center, 1.0 = bottom plane)
 animationDuration: Number (default: 350) - Duration of chart transitions in ms (0 for instant)
 labelSize: String (default: 'md') - Preset size for callout labels ('sm', 'md', 'lg', 'xl')
 labelFontSize: Number | String (default: undefined) - Custom font size in px for callout labels (e.g. 13 or '13px')
