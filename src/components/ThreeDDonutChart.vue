@@ -67,181 +67,250 @@
 
       <!-- Donut Slices (walls and top faces grouped for perfect Z-indexing) -->
       <g v-else>
-        <!-- Back Half Slices (drawn behind center text) -->
-        <g 
-          v-for="slice in sortedSlices.filter(s => s.midY < drawCenterYComputed)" 
-          :key="'slice-sub-back-' + slice.item.id + '-' + slice.midAngle"
-          class="slice-group-3d"
-          :class="{ 
-            'is-hovered': effectiveActiveId === slice.item.id,
-            'is-dimmed': effectiveActiveId !== null && effectiveActiveId !== slice.item.id 
-          }"
-          :style="getSliceStyle(slice)"
-        >
-          <!-- Inner Wall -->
-          <path 
-            v-if="isExpanded && slice.innerWallPath" 
-            :d="slice.innerWallPath" 
-            :fill="`url(#inner-grad-${getSafeId(slice.item.id)})`" 
-          />
-          <!-- Inner Wall Outline (Stroke only on the non-split edges) -->
-          <path 
-            v-if="isExpanded && slice.innerWallStrokePath" 
-            :d="slice.innerWallStrokePath" 
-            fill="none"
-            :stroke="`url(#inner-grad-${getSafeId(slice.item.id)})`" 
-            stroke-width="0.8"
-            stroke-linejoin="round"
-          />
-          <!-- Radial Start Cut -->
-          <path v-if="isExpanded && slice.startCutPath" :d="slice.startCutPath" :fill="getDarkerColor(slice.color, 0.65)" />
-          <!-- Radial End Cut -->
-          <path v-if="isExpanded && slice.endCutPath" :d="slice.endCutPath" :fill="getDarkerColor(slice.color, 0.75)" />
-          <!-- Outer Wall -->
-          <path 
-            v-if="isExpanded && slice.outerWallPath" 
-            :d="slice.outerWallPath" 
-            :fill="`url(#outer-grad-${getSafeId(slice.item.id)})`" 
-          />
-          <!-- Outer Wall Outline (Stroke only on the non-split edges) -->
-          <path 
-            v-if="isExpanded && slice.outerWallStrokePath" 
-            :d="slice.outerWallStrokePath" 
-            fill="none"
-            :stroke="`url(#outer-grad-${getSafeId(slice.item.id)})`" 
-            stroke-width="0.8"
-            stroke-linejoin="round"
-          />
-
-          <!-- Top Face (Only drawn on the last sub-slice to prevent anti-aliasing seams/gaps) -->
-          <path 
-            v-if="isLastSubSlice(slice)"
-            :d="slice.originalTopPath" 
-            :fill="`url(#top-grad-${getSafeId(slice.item.id)})`" 
-          />
-
-          <!-- Top Face Outline -->
-          <path 
-            v-if="isLastSubSlice(slice)"
-            :d="slice.topStrokePath" 
-            fill="none"
-            :stroke="`url(#top-grad-${getSafeId(slice.item.id)})`" 
-            stroke-width="0.8"
-            stroke-linejoin="round"
-          />
-
-          <!-- Top Face White Highlight Outline -->
-          <path 
-            v-if="isLastSubSlice(slice)"
-            :d="slice.topStrokePath" 
-            fill="none" 
-            stroke="rgba(255, 255, 255, 0.16)" 
-            :stroke-width="isExpanded ? 0.8 : 0.5" 
-            stroke-linejoin="round"
-          />
-        </g>
-
-        <!-- Center Hole Text details (sandwiched inside the Z-index stack) -->
-        <g v-if="props.showCenterText" :transform="`translate(${animCx}, ${animCy})`" class="center-text-group">
-          <text 
-            x="0" 
-            y="-3" 
-            class="center-text-value"
-            :font-size="animFontSizeValue" 
-            font-weight="bold" 
-            font-family="'JetBrains Mono', monospace" 
-            text-anchor="middle" 
-            dominant-baseline="middle"
+        <!-- 3D MODE: Layered Z-index Sandwich (Back Slices -> Center Text -> Front Slices) -->
+        <template v-if="props.is3D">
+          <!-- Back Half Slices (drawn behind center text) -->
+          <g 
+            v-for="slice in sortedSlices.filter(s => s.midY < drawCenterYComputed)" 
+            :key="'slice-sub-back-' + slice.item.id + '-' + slice.midAngle"
+            class="slice-group-3d"
+            :class="{ 
+              'is-hovered': effectiveActiveId === slice.item.id,
+              'is-dimmed': effectiveActiveId !== null && effectiveActiveId !== slice.item.id 
+            }"
+            :style="getSliceStyle(slice)"
           >
-            {{ displayCenterValue }}
-          </text>
-          <text 
-            x="0" 
-            y="10" 
-            class="center-text-label"
-            :font-size="animFontSizeLabel" 
-            font-family="system-ui, -apple-system, sans-serif" 
-            font-weight="600"
-            text-anchor="middle" 
-            dominant-baseline="middle"
+            <!-- Inner Wall -->
+            <path 
+              v-if="isExpanded && slice.innerWallPath" 
+              :d="slice.innerWallPath" 
+              :fill="`url(#inner-grad-${getSafeId(slice.item.id)})`" 
+            />
+            <!-- Inner Wall Outline (Stroke only on the non-split edges) -->
+            <path 
+              v-if="isExpanded && slice.innerWallStrokePath" 
+              :d="slice.innerWallStrokePath" 
+              fill="none"
+              :stroke="`url(#inner-grad-${getSafeId(slice.item.id)})`" 
+              stroke-width="0.8"
+              stroke-linejoin="round"
+            />
+            <!-- Radial Start Cut -->
+            <path v-if="isExpanded && slice.startCutPath" :d="slice.startCutPath" :fill="getDarkerColor(slice.color, 0.65)" />
+            <!-- Radial End Cut -->
+            <path v-if="isExpanded && slice.endCutPath" :d="slice.endCutPath" :fill="getDarkerColor(slice.color, 0.75)" />
+            <!-- Outer Wall -->
+            <path 
+              v-if="isExpanded && slice.outerWallPath" 
+              :d="slice.outerWallPath" 
+              :fill="`url(#outer-grad-${getSafeId(slice.item.id)})`" 
+            />
+            <!-- Outer Wall Outline (Stroke only on the non-split edges) -->
+            <path 
+              v-if="isExpanded && slice.outerWallStrokePath" 
+              :d="slice.outerWallStrokePath" 
+              fill="none"
+              :stroke="`url(#outer-grad-${getSafeId(slice.item.id)})`" 
+              stroke-width="0.8"
+              stroke-linejoin="round"
+            />
+
+            <!-- Top Face for Back Half -->
+            <path 
+              :d="slice.topPath" 
+              :fill="`url(#top-grad-${getSafeId(slice.item.id)})`" 
+            />
+
+            <!-- Top Face Outline -->
+            <path 
+              v-if="slice.topStrokePath"
+              :d="slice.topStrokePath" 
+              fill="none"
+              :stroke="`url(#top-grad-${getSafeId(slice.item.id)})`" 
+              stroke-width="0.8"
+              stroke-linejoin="round"
+            />
+
+            <!-- Top Face White Highlight Outline -->
+            <path 
+              v-if="slice.topStrokePath"
+              :d="slice.topStrokePath" 
+              fill="none" 
+              stroke="rgba(255, 255, 255, 0.16)" 
+              :stroke-width="isExpanded ? 0.8 : 0.5" 
+              stroke-linejoin="round"
+            />
+          </g>
+
+          <!-- Center Hole Text details (at drawCenterYComputed, sandwiched between back and front) -->
+          <g v-if="props.showCenterText" :transform="`translate(${animCx}, ${drawCenterYComputed})`" class="center-text-group">
+            <text 
+              x="0" 
+              y="-3" 
+              class="center-text-value"
+              :font-size="animFontSizeValue" 
+              font-weight="bold" 
+              font-family="'JetBrains Mono', monospace" 
+              text-anchor="middle" 
+              dominant-baseline="middle"
+            >
+              {{ displayCenterValue }}
+            </text>
+            <text 
+              x="0" 
+              y="10" 
+              class="center-text-label"
+              :font-size="animFontSizeLabel" 
+              font-family="system-ui, -apple-system, sans-serif" 
+              font-weight="600"
+              text-anchor="middle" 
+              dominant-baseline="middle"
+            >
+              {{ displayCenterLabel }}
+            </text>
+          </g>
+
+          <!-- Front Half Slices (drawn in front of center text) -->
+          <g 
+            v-for="slice in sortedSlices.filter(s => s.midY >= drawCenterYComputed)" 
+            :key="'slice-sub-front-' + slice.item.id + '-' + slice.midAngle"
+            class="slice-group-3d"
+            :class="{ 
+              'is-hovered': effectiveActiveId === slice.item.id,
+              'is-dimmed': effectiveActiveId !== null && effectiveActiveId !== slice.item.id 
+            }"
+            :style="getSliceStyle(slice)"
           >
-            {{ displayCenterLabel }}
-          </text>
-        </g>
+            <!-- Inner Wall -->
+            <path 
+              v-if="isExpanded && slice.innerWallPath" 
+              :d="slice.innerWallPath" 
+              :fill="`url(#inner-grad-${getSafeId(slice.item.id)})`" 
+            />
+            <!-- Inner Wall Outline (Stroke only on the non-split edges) -->
+            <path 
+              v-if="isExpanded && slice.innerWallStrokePath" 
+              :d="slice.innerWallStrokePath" 
+              fill="none"
+              :stroke="`url(#inner-grad-${getSafeId(slice.item.id)})`" 
+              stroke-width="0.8"
+              stroke-linejoin="round"
+            />
+            <!-- Radial Start Cut -->
+            <path v-if="isExpanded && slice.startCutPath" :d="slice.startCutPath" :fill="getDarkerColor(slice.color, 0.65)" />
+            <!-- Radial End Cut -->
+            <path v-if="isExpanded && slice.endCutPath" :d="slice.endCutPath" :fill="getDarkerColor(slice.color, 0.75)" />
+            <!-- Outer Wall -->
+            <path 
+              v-if="isExpanded && slice.outerWallPath" 
+              :d="slice.outerWallPath" 
+              :fill="`url(#outer-grad-${getSafeId(slice.item.id)})`" 
+            />
+            <!-- Outer Wall Outline (Stroke only on the non-split edges) -->
+            <path 
+              v-if="isExpanded && slice.outerWallStrokePath" 
+              :d="slice.outerWallStrokePath" 
+              fill="none"
+              :stroke="`url(#outer-grad-${getSafeId(slice.item.id)})`" 
+              stroke-width="0.8"
+              stroke-linejoin="round"
+            />
 
-        <!-- Front Half Slices (drawn in front of center text) -->
-        <g 
-          v-for="slice in sortedSlices.filter(s => s.midY >= drawCenterYComputed)" 
-          :key="'slice-sub-front-' + slice.item.id + '-' + slice.midAngle"
-          class="slice-group-3d"
-          :class="{ 
-            'is-hovered': effectiveActiveId === slice.item.id,
-            'is-dimmed': effectiveActiveId !== null && effectiveActiveId !== slice.item.id 
-          }"
-          :style="getSliceStyle(slice)"
-        >
-          <!-- Inner Wall -->
-          <path 
-            v-if="isExpanded && slice.innerWallPath" 
-            :d="slice.innerWallPath" 
-            :fill="`url(#inner-grad-${getSafeId(slice.item.id)})`" 
-          />
-          <!-- Inner Wall Outline (Stroke only on the non-split edges) -->
-          <path 
-            v-if="isExpanded && slice.innerWallStrokePath" 
-            :d="slice.innerWallStrokePath" 
-            fill="none"
-            :stroke="`url(#inner-grad-${getSafeId(slice.item.id)})`" 
-            stroke-width="0.8"
-            stroke-linejoin="round"
-          />
-          <!-- Radial Start Cut -->
-          <path v-if="isExpanded && slice.startCutPath" :d="slice.startCutPath" :fill="getDarkerColor(slice.color, 0.65)" />
-          <!-- Radial End Cut -->
-          <path v-if="isExpanded && slice.endCutPath" :d="slice.endCutPath" :fill="getDarkerColor(slice.color, 0.75)" />
-          <!-- Outer Wall -->
-          <path 
-            v-if="isExpanded && slice.outerWallPath" 
-            :d="slice.outerWallPath" 
-            :fill="`url(#outer-grad-${getSafeId(slice.item.id)})`" 
-          />
-          <!-- Outer Wall Outline (Stroke only on the non-split edges) -->
-          <path 
-            v-if="isExpanded && slice.outerWallStrokePath" 
-            :d="slice.outerWallStrokePath" 
-            fill="none"
-            :stroke="`url(#outer-grad-${getSafeId(slice.item.id)})`" 
-            stroke-width="0.8"
-            stroke-linejoin="round"
-          />
+            <!-- Top Face for Front Half -->
+            <path 
+              :d="slice.topPath" 
+              :fill="`url(#top-grad-${getSafeId(slice.item.id)})`" 
+            />
 
-          <!-- Top Face (Only drawn on the last sub-slice to prevent anti-aliasing seams/gaps) -->
-          <path 
-            v-if="isLastSubSlice(slice)"
-            :d="slice.originalTopPath" 
-            :fill="`url(#top-grad-${getSafeId(slice.item.id)})`" 
-          />
+            <!-- Top Face Outline -->
+            <path 
+              v-if="slice.topStrokePath"
+              :d="slice.topStrokePath" 
+              fill="none"
+              :stroke="`url(#top-grad-${getSafeId(slice.item.id)})`" 
+              stroke-width="0.8"
+              stroke-linejoin="round"
+            />
 
-          <!-- Top Face Outline -->
-          <path 
-            v-if="isLastSubSlice(slice)"
-            :d="slice.topStrokePath" 
-            fill="none"
-            :stroke="`url(#top-grad-${getSafeId(slice.item.id)})`" 
-            stroke-width="0.8"
-            stroke-linejoin="round"
-          />
+            <!-- Top Face White Highlight Outline -->
+            <path 
+              v-if="slice.topStrokePath"
+              :d="slice.topStrokePath" 
+              fill="none" 
+              stroke="rgba(255, 255, 255, 0.16)" 
+              :stroke-width="isExpanded ? 0.8 : 0.5" 
+              stroke-linejoin="round"
+            />
+          </g>
+        </template>
 
-          <!-- Top Face White Highlight Outline -->
-          <path 
-            v-if="isLastSubSlice(slice)"
-            :d="slice.topStrokePath" 
-            fill="none" 
-            stroke="rgba(255, 255, 255, 0.16)" 
-            :stroke-width="isExpanded ? 0.8 : 0.5" 
-            stroke-linejoin="round"
-          />
-        </g>
+        <!-- 2D FLAT MODE: All slices rendered first, center label strictly on top of all elements -->
+        <template v-else>
+          <g 
+            v-for="slice in sortedSlices" 
+            :key="'slice-sub-2d-' + slice.item.id + '-' + slice.midAngle"
+            class="slice-group-3d"
+            :class="{ 
+              'is-hovered': effectiveActiveId === slice.item.id,
+              'is-dimmed': effectiveActiveId !== null && effectiveActiveId !== slice.item.id 
+            }"
+            :style="getSliceStyle(slice)"
+          >
+            <!-- Top Face in 2D -->
+            <path 
+              :d="slice.topPath" 
+              :fill="`url(#top-grad-${getSafeId(slice.item.id)})`" 
+            />
+
+            <!-- Top Face Outline -->
+            <path 
+              v-if="slice.topStrokePath"
+              :d="slice.topStrokePath" 
+              fill="none"
+              :stroke="`url(#top-grad-${getSafeId(slice.item.id)})`" 
+              stroke-width="0.8"
+              stroke-linejoin="round"
+            />
+
+            <!-- Top Face White Highlight Outline -->
+            <path 
+              v-if="slice.topStrokePath"
+              :d="slice.topStrokePath" 
+              fill="none" 
+              stroke="rgba(255, 255, 255, 0.16)" 
+              :stroke-width="isExpanded ? 0.8 : 0.5" 
+              stroke-linejoin="round"
+            />
+          </g>
+
+          <!-- Center Hole Text details (Strictly on top of all 2D slices) -->
+          <g v-if="props.showCenterText" :transform="`translate(${animCx}, ${animCy})`" class="center-text-group">
+            <text 
+              x="0" 
+              y="-3" 
+              class="center-text-value"
+              :font-size="animFontSizeValue" 
+              font-weight="bold" 
+              font-family="'JetBrains Mono', monospace" 
+              text-anchor="middle" 
+              dominant-baseline="middle"
+            >
+              {{ displayCenterValue }}
+            </text>
+            <text 
+              x="0" 
+              y="10" 
+              class="center-text-label"
+              :font-size="animFontSizeLabel" 
+              font-family="system-ui, -apple-system, sans-serif" 
+              font-weight="600"
+              text-anchor="middle" 
+              dominant-baseline="middle"
+            >
+              {{ displayCenterLabel }}
+            </text>
+          </g>
+        </template>
 
         <!-- Transparent Static Hover Triggers to prevent hover feedback loops -->
         <g 
