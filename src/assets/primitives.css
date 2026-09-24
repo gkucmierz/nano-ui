@@ -1,0 +1,361 @@
+/* Nano UI - Base Component Primitives & Functional Stylesheet (SSoT) */
+
+/* ==========================================================================
+   1. Buttons (.nano-btn)
+   ========================================================================== */
+.nano-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--nano-space-xs, 4px);
+  padding: 6px 14px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  line-height: 1.25;
+  border-radius: var(--nano-radius-sm, 4px);
+  border: 1px solid transparent;
+  cursor: pointer;
+  user-select: none;
+  -webkit-user-select: none;
+  text-decoration: none;
+  white-space: nowrap;
+  transition: background-color var(--nano-transition-interactive, 0.15s ease),
+              border-color var(--nano-transition-interactive, 0.15s ease),
+              color var(--nano-transition-interactive, 0.15s ease),
+              opacity var(--nano-transition-interactive, 0.15s ease);
+}
+
+.nano-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+.nano-btn-primary {
+  background: var(--nano-accent-primary, #6366f1);
+  color: #ffffff;
+  border-color: transparent;
+}
+.nano-btn-primary:hover:not(:disabled) {
+  filter: brightness(1.1);
+}
+
+.nano-btn-active {
+  background: color-mix(in srgb, var(--nano-state-active, #00f2fe) 15%, transparent);
+  color: var(--nano-state-active, #00f2fe);
+  border-color: color-mix(in srgb, var(--nano-state-active, #00f2fe) 40%, transparent);
+}
+.nano-btn-active:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--nano-state-active, #00f2fe) 25%, transparent);
+}
+
+.nano-btn-secondary {
+  background: var(--nano-bg-card, rgba(255, 255, 255, 0.05));
+  color: var(--nano-text-main, #f8fafc);
+  border-color: var(--nano-border-card, rgba(255, 255, 255, 0.15));
+}
+.nano-btn-secondary:hover:not(:disabled) {
+  background: var(--nano-bg-hover, rgba(255, 255, 255, 0.1));
+  border-color: var(--nano-border-hover, rgba(255, 255, 255, 0.3));
+}
+
+.nano-btn-ghost {
+  background: transparent;
+  color: var(--nano-text-muted, #94a3b8);
+  border-color: transparent;
+}
+.nano-btn-ghost:hover:not(:disabled) {
+  background: var(--nano-bg-hover, rgba(255, 255, 255, 0.05));
+  color: var(--nano-text-main, #f8fafc);
+}
+
+.nano-btn-danger {
+  background: color-mix(in srgb, var(--nano-state-danger, #ef4444) 15%, transparent);
+  color: #f87171;
+  border-color: color-mix(in srgb, var(--nano-state-danger, #ef4444) 35%, transparent);
+}
+.nano-btn-danger:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--nano-state-danger, #ef4444) 25%, transparent);
+}
+
+.nano-btn-sm {
+  padding: 3px 8px;
+  font-size: 0.72rem;
+  border-radius: var(--nano-radius-xs, 3px);
+}
+
+/* ==========================================================================
+   2. Inputs & Form Controls (.nano-input, .nano-input-group)
+   ========================================================================== */
+.nano-input {
+  background: var(--nano-bg-code, #0b1120);
+  border: 1px solid var(--nano-border-card, rgba(255, 255, 255, 0.15));
+  border-radius: var(--nano-radius-sm, 4px);
+  color: var(--nano-text-main, #f8fafc);
+  padding: 6px 10px;
+  font-size: 0.8rem;
+  font-family: inherit;
+  width: 100%;
+  box-sizing: border-box;
+  transition: border-color var(--nano-transition-interactive, 0.15s ease);
+}
+
+.nano-input:focus {
+  border-color: var(--nano-state-active, #00f2fe);
+}
+
+.nano-input::placeholder {
+  color: var(--nano-text-muted, #64748b);
+}
+
+.nano-input-group {
+  display: flex;
+  align-items: stretch;
+  background: var(--nano-bg-code, #0b1120);
+  border: 1px solid var(--nano-border-card, rgba(255, 255, 255, 0.15));
+  border-radius: var(--nano-radius-sm, 6px);
+  overflow: hidden;
+  transition: border-color var(--nano-transition-interactive, 0.15s ease);
+}
+
+.nano-input-group:focus-within {
+  border-color: var(--nano-state-active, #00f2fe);
+}
+
+.nano-input-group .nano-input {
+  border: none;
+  background: transparent;
+  flex: 1;
+}
+
+.nano-input-group .nano-btn {
+  border-radius: 0;
+  border-left: 1px solid var(--nano-border-subtle, rgba(255, 255, 255, 0.08));
+}
+
+/* ==========================================================================
+   3. Docked Segmented Tabs (.nano-tabs, .nano-tab)
+   ========================================================================== */
+.nano-tabs {
+  display: flex;
+  align-items: stretch;
+  height: 100%;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.nano-tab {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: transparent;
+  border: none;
+  border-left: 1px solid var(--nano-border-subtle, rgba(255, 255, 255, 0.08));
+  color: var(--nano-text-muted, #94a3b8);
+  font-size: 0.8rem;
+  font-weight: 600;
+  padding: 0 16px;
+  cursor: pointer;
+  transition: background-color var(--nano-transition-interactive, 0.15s ease),
+              color var(--nano-transition-interactive, 0.15s ease);
+}
+
+.nano-tab:hover {
+  background: var(--nano-bg-hover, rgba(255, 255, 255, 0.04));
+  color: var(--nano-text-main, #f8fafc);
+}
+
+.nano-tab.is-active {
+  background: color-mix(in srgb, var(--nano-state-active, #00f2fe) 10%, transparent);
+  color: var(--nano-state-active, #00f2fe);
+  box-shadow: inset 0 -2px 0 var(--nano-state-active, #00f2fe);
+}
+
+/* ==========================================================================
+   4. Badges & Status Indicators (.nano-badge)
+   ========================================================================== */
+.nano-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.65rem;
+  font-weight: 700;
+  line-height: 1;
+  padding: 2px 6px;
+  border-radius: var(--nano-radius-full, 9999px);
+  background: var(--nano-bg-hover, rgba(255, 255, 255, 0.1));
+  color: var(--nano-text-main, #f8fafc);
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+}
+
+.nano-badge-ok,
+.nano-badge-success {
+  background: rgba(34, 197, 94, 0.15);
+  color: #4ade80;
+  border: 1px solid rgba(34, 197, 94, 0.3);
+}
+
+.nano-badge-warn {
+  background: rgba(234, 179, 8, 0.15);
+  color: #facc15;
+  border: 1px solid rgba(234, 179, 8, 0.3);
+}
+
+.nano-badge-danger {
+  background: rgba(239, 68, 68, 0.15);
+  color: #f87171;
+  border: 1px solid rgba(239, 68, 68, 0.3);
+}
+
+.nano-badge-info {
+  background: rgba(56, 189, 248, 0.15);
+  color: #38bdf8;
+  border: 1px solid rgba(56, 189, 248, 0.3);
+}
+
+/* ==========================================================================
+   5. Cards & Panels (.nano-card)
+   ========================================================================== */
+.nano-card {
+  background: var(--nano-bg-card-elevated, #0f172a);
+  border: 1px solid var(--nano-border-card, rgba(255, 255, 255, 0.1));
+  border-radius: var(--nano-radius-md, 8px);
+  box-shadow: var(--nano-shadow-card, none);
+  overflow: hidden;
+}
+
+.nano-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--nano-border-subtle, rgba(255, 255, 255, 0.08));
+  background: var(--nano-bg-muted, rgba(0, 0, 0, 0.15));
+}
+
+.nano-card-body {
+  padding: 16px;
+}
+
+/* ==========================================================================
+   6. Data Tables (.nano-table, .nano-table-container)
+   ========================================================================== */
+.nano-table-container {
+  background: var(--nano-bg-card-elevated, #0f172a);
+  border: 1px solid var(--nano-border-card, rgba(255, 255, 255, 0.08));
+  border-radius: var(--nano-radius-md, 6px);
+  overflow: hidden;
+}
+
+.nano-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.78rem;
+  text-align: left;
+}
+
+.nano-table th {
+  background: var(--nano-bg-muted, rgba(255, 255, 255, 0.04));
+  padding: 8px 12px;
+  color: var(--nano-text-muted, #94a3b8);
+  font-weight: 600;
+  border-bottom: 1px solid var(--nano-border-card, rgba(255, 255, 255, 0.08));
+}
+
+.nano-table td {
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--nano-border-subtle, rgba(255, 255, 255, 0.03));
+  color: var(--nano-text-main, #e2e8f0);
+}
+
+.nano-table tr:hover td {
+  background: var(--nano-bg-hover, rgba(255, 255, 255, 0.03));
+}
+
+/* ==========================================================================
+   7. Banners & Alerts (.nano-alert)
+   ========================================================================== */
+.nano-alert {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  border-radius: var(--nano-radius-sm, 6px);
+  font-size: 0.8rem;
+}
+
+.nano-alert-danger {
+  background: rgba(239, 68, 68, 0.15);
+  border: 1px solid var(--nano-state-danger, #ef4444);
+  color: #fca5a5;
+}
+
+.nano-alert-warn {
+  background: rgba(234, 179, 8, 0.15);
+  border: 1px solid var(--nano-state-warning, #eab308);
+  color: #fef08a;
+}
+
+.nano-alert-ok {
+  background: rgba(34, 197, 94, 0.15);
+  border: 1px solid var(--nano-state-success, #22c55e);
+  color: #bbf7d0;
+}
+
+/* ==========================================================================
+   8. Metrics & Stat Cards (.nano-metric-card)
+   ========================================================================== */
+.nano-metric-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 16px;
+}
+
+.nano-metric-card {
+  background: var(--nano-bg-card-elevated, #0f172a);
+  border: 1px solid var(--nano-border-card, rgba(255, 255, 255, 0.08));
+  border-radius: var(--nano-radius-md, 8px);
+  padding: 20px;
+  text-align: center;
+}
+
+.nano-metric-val {
+  font-size: 2.2rem;
+  font-weight: 800;
+  color: var(--nano-state-active, #00f2fe);
+  margin-bottom: 4px;
+}
+
+.nano-metric-label {
+  font-size: 0.75rem;
+  color: var(--nano-text-muted, #94a3b8);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+/* ==========================================================================
+   9. Modern Clean Scrollbars (.nano-scrollbar)
+   ========================================================================== */
+.nano-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: var(--nano-border-card, rgba(255, 255, 255, 0.15)) transparent;
+}
+
+.nano-scrollbar::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.nano-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.nano-scrollbar::-webkit-scrollbar-thumb {
+  background: var(--nano-border-card, rgba(255, 255, 255, 0.15));
+  border-radius: 999px;
+}
+
+.nano-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: var(--nano-border-hover, rgba(255, 255, 255, 0.3));
+}
