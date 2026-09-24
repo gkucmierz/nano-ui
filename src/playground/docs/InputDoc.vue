@@ -278,9 +278,8 @@ const cssApiDoc = `/* Nano UI Input Primitives & Form Controls */
           <button class="nano-btn nano-btn-secondary" @click="stepperValue = Math.max(0, stepperValue - 100)" v-ripple>-100</button>
           <input
             type="number"
-            class="nano-input"
+            class="nano-input nano-input-center"
             v-model.number="stepperValue"
-            style="text-align: center; font-variant-numeric: tabular-nums;"
           />
           <button class="nano-btn nano-btn-secondary" @click="stepperValue = Math.min(10000, stepperValue + 100)" v-ripple>+100</button>
         </div>
@@ -306,7 +305,7 @@ const cssApiDoc = `/* Nano UI Input Primitives & Form Controls */
           <span>Compact inputs for dense data tables and filter bars (height: ~24px)</span>
         </div>
         <div class="matrix-actions">
-          <input type="text" class="nano-input nano-input-sm" placeholder="Compact input..." style="max-width: 220px;" />
+          <input type="text" class="nano-input nano-input-sm matrix-input-demo" placeholder="Compact input..." />
         </div>
       </div>
 
@@ -316,7 +315,7 @@ const cssApiDoc = `/* Nano UI Input Primitives & Form Controls */
           <span>Standard UI form controls (height: ~32px)</span>
         </div>
         <div class="matrix-actions">
-          <input type="text" class="nano-input" placeholder="Standard input..." style="max-width: 220px;" />
+          <input type="text" class="nano-input matrix-input-demo" placeholder="Standard input..." />
         </div>
       </div>
 
@@ -326,7 +325,7 @@ const cssApiDoc = `/* Nano UI Input Primitives & Form Controls */
           <span>Prominent search bars and hero inputs (height: ~40px)</span>
         </div>
         <div class="matrix-actions">
-          <input type="text" class="nano-input nano-input-lg" placeholder="Large input..." style="max-width: 220px;" />
+          <input type="text" class="nano-input nano-input-lg matrix-input-demo" placeholder="Large input..." />
         </div>
       </div>
     </div>
@@ -533,5 +532,9 @@ const cssApiDoc = `/* Nano UI Input Primitives & Form Controls */
   gap: 0.75rem;
   width: 100%;
   justify-content: flex-end;
+}
+
+.matrix-input-demo {
+  max-width: 220px;
 }
 </style>

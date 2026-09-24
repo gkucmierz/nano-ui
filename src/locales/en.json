@@ -10,6 +10,8 @@
     "primitives": "Primitives",
     "buttons": "Buttons & Groups",
     "inputs": "Inputs & Groups",
+    "cards": "Cards & Metrics",
+    "badges": "Badges & Indicators",
     "components": "Components",
     "directives": "Directives",
     "visualization": "Visualization",

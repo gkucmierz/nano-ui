@@ -2,6 +2,8 @@ import { createRouter, createWebHistory, createMemoryHistory } from 'vue-router'
 import OverviewDoc from '../docs/OverviewDoc.vue';
 import ButtonDoc from '../docs/ButtonDoc.vue';
 import InputDoc from '../docs/InputDoc.vue';
+import CardDoc from '../docs/CardDoc.vue';
+import BadgeDoc from '../docs/BadgeDoc.vue';
 import RippleDoc from '../docs/RippleDoc.vue';
 import TooltipDoc from '../docs/TooltipDoc.vue';
 import ModalDoc from '../docs/ModalDoc.vue';
@@ -51,6 +53,28 @@ export const routes = [
       componentName: 'Inputs',
       type: 'primitive',
       description: 'Clean, ergonomic form controls with native zero-outline focus glow, docked prefix/suffix addons, seamless action buttons, and validation states.',
+    },
+  },
+  {
+    path: '/docs/cards',
+    name: 'Cards',
+    component: CardDoc,
+    meta: {
+      title: 'Cards & Metrics | Nano UI',
+      componentName: 'Cards',
+      type: 'primitive',
+      description: 'Structural surface primitives, docked headers/footers, interactive clickable tiles, and responsive KPI metric grids for telemetry dashboards.',
+    },
+  },
+  {
+    path: '/docs/badges',
+    name: 'Badges',
+    component: BadgeDoc,
+    meta: {
+      title: 'Badges & Indicators | Nano UI',
+      componentName: 'Badges',
+      type: 'primitive',
+      description: 'Ultra-compact status indicators, pulsating telemetry dots, semantic badges, and filter pills with embedded counts for high-density applications.',
     },
   },
   {
