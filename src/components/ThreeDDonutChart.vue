@@ -95,10 +95,10 @@
               stroke-width="0.8"
               stroke-linejoin="round"
             />
-            <!-- Radial Start Cut -->
-            <path v-if="isExpanded && slice.startCutPath" :d="slice.startCutPath" :fill="getDarkerColor(slice.color, 0.65)" />
-            <!-- Radial End Cut -->
-            <path v-if="isExpanded && slice.endCutPath" :d="slice.endCutPath" :fill="getDarkerColor(slice.color, 0.75)" />
+            <!-- Radial Start Cut (only when slice is exploded on hover) -->
+            <path v-if="isExpanded && effectiveActiveId === slice.item.id && slice.startCutPath" :d="slice.startCutPath" :fill="getDarkerColor(slice.color, 0.65)" />
+            <!-- Radial End Cut (only when slice is exploded on hover) -->
+            <path v-if="isExpanded && effectiveActiveId === slice.item.id && slice.endCutPath" :d="slice.endCutPath" :fill="getDarkerColor(slice.color, 0.75)" />
             <!-- Outer Wall -->
             <path 
               v-if="isExpanded && slice.outerWallPath" 
@@ -196,10 +196,10 @@
               stroke-width="0.8"
               stroke-linejoin="round"
             />
-            <!-- Radial Start Cut -->
-            <path v-if="isExpanded && slice.startCutPath" :d="slice.startCutPath" :fill="getDarkerColor(slice.color, 0.65)" />
-            <!-- Radial End Cut -->
-            <path v-if="isExpanded && slice.endCutPath" :d="slice.endCutPath" :fill="getDarkerColor(slice.color, 0.75)" />
+            <!-- Radial Start Cut (only when slice is exploded on hover) -->
+            <path v-if="isExpanded && effectiveActiveId === slice.item.id && slice.startCutPath" :d="slice.startCutPath" :fill="getDarkerColor(slice.color, 0.65)" />
+            <!-- Radial End Cut (only when slice is exploded on hover) -->
+            <path v-if="isExpanded && effectiveActiveId === slice.item.id && slice.endCutPath" :d="slice.endCutPath" :fill="getDarkerColor(slice.color, 0.75)" />
             <!-- Outer Wall -->
             <path 
               v-if="isExpanded && slice.outerWallPath" 
@@ -1263,38 +1263,47 @@ const sortedSlices = computed(() => {
       let startCutPath = ''
       let endCutPath = ''
 
+      const isBackHalf = Math.sin(subMidAngle) < 0
+      const isFrontHalf = !isBackHalf
+
       if (depth > 0) {
-        outerWallPath = `M ${x_os} ${y_os} A ${rx} ${ry} 0 ${largeArc} 1 ${x_oe} ${y_oe} L ${x_oe} ${y_oe + depth} A ${rx} ${ry} 0 ${largeArc} 0 ${x_os} ${y_os + depth} Z`
-        innerWallPath = `M ${x_is} ${y_is} A ${irx} ${iry} 0 ${largeArc} 1 ${x_ie} ${y_ie} L ${x_ie} ${y_ie + depth} A ${irx} ${iry} 0 ${largeArc} 0 ${x_is} ${y_is + depth} Z`
-        
-        if (endSplit) {
-          outerWallStrokePath = `M ${x_os} ${y_os} A ${rx} ${ry} 0 ${largeArc} 1 ${x_oe} ${y_oe} M ${x_oe} ${y_oe + depth} A ${rx} ${ry} 0 ${largeArc} 0 ${x_os} ${y_os + depth}`
-          if (!startSplit) {
-            outerWallStrokePath += ` L ${x_os} ${y_os}`
-          }
-        } else {
-          outerWallStrokePath = `M ${x_os} ${y_os} A ${rx} ${ry} 0 ${largeArc} 1 ${x_oe} ${y_oe} L ${x_oe} ${y_oe + depth} A ${rx} ${ry} 0 ${largeArc} 0 ${x_os} ${y_os + depth}`
-          if (!startSplit) {
-            outerWallStrokePath += ' Z'
-          }
-        }
-
-        if (endSplit) {
-          innerWallStrokePath = `M ${x_is} ${y_is} A ${irx} ${iry} 0 ${largeArc} 1 ${x_ie} ${y_ie} M ${x_ie} ${y_ie + depth} A ${irx} ${iry} 0 ${largeArc} 0 ${x_is} ${y_is + depth}`
-          if (!startSplit) {
-            innerWallStrokePath += ` L ${x_is} ${y_is}`
-          }
-        } else {
-          innerWallStrokePath = `M ${x_is} ${y_is} A ${irx} ${iry} 0 ${largeArc} 1 ${x_ie} ${y_ie} L ${x_ie} ${y_ie + depth} A ${irx} ${iry} 0 ${largeArc} 0 ${x_is} ${y_is + depth}`
-          if (!startSplit) {
-            innerWallStrokePath += ' Z'
+        if (isFrontHalf) {
+          outerWallPath = `M ${x_os} ${y_os} A ${rx} ${ry} 0 ${largeArc} 1 ${x_oe} ${y_oe} L ${x_oe} ${y_oe + depth} A ${rx} ${ry} 0 ${largeArc} 0 ${x_os} ${y_os + depth} Z`
+          if (endSplit) {
+            outerWallStrokePath = `M ${x_os} ${y_os} A ${rx} ${ry} 0 ${largeArc} 1 ${x_oe} ${y_oe} M ${x_oe} ${y_oe + depth} A ${rx} ${ry} 0 ${largeArc} 0 ${x_os} ${y_os + depth}`
+            if (!startSplit) {
+              outerWallStrokePath += ` L ${x_os} ${y_os}`
+            }
+          } else {
+            outerWallStrokePath = `M ${x_os} ${y_os} A ${rx} ${ry} 0 ${largeArc} 1 ${x_oe} ${y_oe} L ${x_oe} ${y_oe + depth} A ${rx} ${ry} 0 ${largeArc} 0 ${x_os} ${y_os + depth}`
+            if (!startSplit) {
+              outerWallStrokePath += ' Z'
+            }
           }
         }
 
-        if (Math.abs(sAngle - normStart) < 0.001) {
+        if (isBackHalf) {
+          innerWallPath = `M ${x_is} ${y_is} A ${irx} ${iry} 0 ${largeArc} 1 ${x_ie} ${y_ie} L ${x_ie} ${y_ie + depth} A ${irx} ${iry} 0 ${largeArc} 0 ${x_is} ${y_is + depth} Z`
+          if (endSplit) {
+            innerWallStrokePath = `M ${x_is} ${y_is} A ${irx} ${iry} 0 ${largeArc} 1 ${x_ie} ${y_ie} M ${x_ie} ${y_ie + depth} A ${irx} ${iry} 0 ${largeArc} 0 ${x_is} ${y_is + depth}`
+            if (!startSplit) {
+              innerWallStrokePath += ` L ${x_is} ${y_is}`
+            }
+          } else {
+            innerWallStrokePath = `M ${x_is} ${y_is} A ${irx} ${iry} 0 ${largeArc} 1 ${x_ie} ${y_ie} L ${x_ie} ${y_ie + depth} A ${irx} ${iry} 0 ${largeArc} 0 ${x_is} ${y_is + depth}`
+            if (!startSplit) {
+              innerWallStrokePath += ' Z'
+            }
+          }
+        }
+
+        const isStartFacing = Math.cos(normStart) < 0
+        const isEndFacing = Math.cos(normEnd) > 0
+
+        if (Math.abs(sAngle - normStart) < 0.001 && isStartFacing) {
           startCutPath = `M ${x_os} ${y_os} L ${x_is} ${y_is} L ${x_is} ${y_is + depth} L ${x_os} ${y_os + depth} Z`
         }
-        if (Math.abs(eAngle - normEnd) < 0.001) {
+        if (Math.abs(eAngle - normEnd) < 0.001 && isEndFacing) {
           endCutPath = `M ${x_oe} ${y_oe} L ${x_ie} ${y_ie} L ${x_ie} ${y_ie + depth} L ${x_oe} ${y_oe + depth} Z`
         }
       }
