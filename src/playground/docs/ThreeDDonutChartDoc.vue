@@ -261,7 +261,7 @@ const setSingleDatapoint = () => {
           <div class="kinetic-control-row">
             <div class="kinetic-dial-container" title="Kinetic Rotator Dial (Geodesic S¹)">
               <KineticRotator
-                v-model="rotationAngle"
+                :modelValue="rotationAngle"
                 :size="56"
                 :duration="400"
                 :shortest-path="true"
@@ -441,7 +441,7 @@ h4 { margin: 0 0 0.5rem 0; color: var(--nano-text-secondary); font-size: 0.9rem;
   display: flex;
   flex-direction: column;
   gap: 8px;
-  max-height: 240px;
+  max-height: 440px;
   overflow-y: auto;
   padding-right: 5px;
   margin-bottom: 10px;

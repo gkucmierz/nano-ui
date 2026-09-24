@@ -197,9 +197,12 @@ const tick = (now) => {
     progress.value = 1;
     isMoving.value = false;
     const settledAngle = animRecord.targetAngle;
+    const wasFromProp = animRecord.fromProp;
     animRecord = null;
 
-    emit('update:modelValue', settledAngle);
+    if (!wasFromProp) {
+      emit('update:modelValue', settledAngle);
+    }
     emit('settled', {
       angle: settledAngle,
       normalizedAngle: normalizeAngle(settledAngle)
@@ -222,7 +225,7 @@ const tick = (now) => {
  * Start or chain a rotation to target orientation.
  * If called mid-flight, preserves instantaneous velocity v0 for seamless C1 continuity.
  */
-const startKineticTransition = (newTarget, { isRelative = false, delta = 0 } = {}) => {
+const startKineticTransition = (newTarget, { isRelative = false, delta = 0, fromProp = false } = {}) => {
   const now = performance.now();
   let currentPos = currentAngle.value;
   let currentVel = velocity.value; // deg/sec
@@ -281,7 +284,9 @@ const startKineticTransition = (newTarget, { isRelative = false, delta = 0 } = {
     progress.value = 1;
     isMoving.value = false;
     animRecord = null;
-    emit('update:modelValue', finalTarget);
+    if (!fromProp) {
+      emit('update:modelValue', finalTarget);
+    }
     return;
   }
 
@@ -309,7 +314,8 @@ const startKineticTransition = (newTarget, { isRelative = false, delta = 0 } = {
     targetAngle: finalTarget,
     startTime: now,
     duration: baseDuration,
-    v0: v0
+    v0: v0,
+    fromProp
   };
 
   if (rafId) {
@@ -326,8 +332,8 @@ const rotateBy = (deltaDegrees) => {
   });
 };
 
-const setAngle = (newAngle) => {
-  startKineticTransition(newAngle, { isRelative: false });
+const setAngle = (newAngle, fromProp = false) => {
+  startKineticTransition(newAngle, { isRelative: false, fromProp });
 };
 
 const reset = () => {
@@ -375,7 +381,7 @@ watch(
 // Watch modelValue updates from parent
 watch(() => props.modelValue, (newVal) => {
   if (Math.abs(newVal - targetAngle.value) > 0.01) {
-    setAngle(newVal);
+    setAngle(newVal, true);
   }
 });
 

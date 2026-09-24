@@ -912,9 +912,9 @@ const getOptimalRotationAngle = (items, defaultAngle = -90) => {
 
 const activeRotationAngle = computed(() => {
   if (props.autoRotate && normalizedData.value && normalizedData.value.length > 0) {
-    return getOptimalRotationAngle(normalizedData.value, props.rotationAngle)
+    return normalizeAngle(getOptimalRotationAngle(normalizedData.value, props.rotationAngle))
   }
-  return props.rotationAngle
+  return normalizeAngle(props.rotationAngle)
 })
 
 const animatedRotationAngle = ref(activeRotationAngle.value)
