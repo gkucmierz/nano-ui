@@ -729,18 +729,28 @@ const normalizedData = computed(() => {
     }))
   }
 
-  const thresholdValue = total * props.othersThreshold
+  const maxOthersValue = total * props.othersThreshold
 
-  const mainSlices = []
+  // Sort by value ascending to greedily aggregate smallest items up to threshold budget
+  const indexed = rawData.map((item, idx) => ({ ...item, _origIdx: idx }))
+  indexed.sort((a, b) => (a.value || 0) - (b.value || 0))
+
+  const otherIndices = new Set()
   let othersValue = 0
 
-  rawData.forEach(item => {
-    if ((item.value || 0) < thresholdValue) {
-      othersValue += item.value || 0
+  for (const item of indexed) {
+    const val = item.value || 0
+    if (othersValue + val <= maxOthersValue && otherIndices.size < rawData.length - 1) {
+      othersValue += val
+      otherIndices.add(item._origIdx)
     } else {
-      mainSlices.push({ ...item })
+      break
     }
-  })
+  }
+
+  const mainSlices = rawData
+    .filter((_, idx) => !otherIndices.has(idx))
+    .map(item => ({ ...item }))
 
   if (othersValue > 0) {
     const existingOtherIndex = mainSlices.findIndex(item => item.id === 'other' || item.name.toLowerCase() === props.othersLabel.toLowerCase())

@@ -302,7 +302,7 @@ const setSingleDatapoint = () => {
 
         <div class="slider-row" :style="!aggregateOthers ? 'opacity: 0.4; pointer-events: none;' : ''">
           <span class="slider-label">Others Threshold: {{ (othersThreshold * 100).toFixed(1) }}%</span>
-          <input type="range" v-model.number="othersThreshold" min="0.001" max="0.15" step="0.001" />
+          <input type="range" v-model.number="othersThreshold" min="0.001" max="0.30" step="0.001" />
         </div>
 
         <div class="input-row" :style="!aggregateOthers ? 'opacity: 0.4; pointer-events: none;' : ''" style="display: flex; gap: 8px; margin-top: 10px;">
