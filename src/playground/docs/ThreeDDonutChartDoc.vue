@@ -17,7 +17,7 @@ const showCenterText = ref(true);
 const isScrubbing = ref(false);
 
 const stepRotation = (delta) => {
-  rotationAngle.value = Math.round(rotationAngle.value + delta);
+  rotationAngle.value = Math.min(360, Math.max(-360, Math.round(rotationAngle.value + delta)));
 };
 
 const setRotation = (angle) => {
@@ -263,6 +263,9 @@ const setSingleDatapoint = () => {
               <KineticRotator
                 v-model="rotationAngle"
                 :interactive="true"
+                :wrap="true"
+                :min="-360"
+                :max="360"
                 :angle-offset="90"
                 :size="56"
                 :duration="400"

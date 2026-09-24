@@ -87,6 +87,13 @@ const props = defineProps({
     default: null
   },
   /**
+   * When true, wraps angle within [min, max] during interactive dragging instead of clamping.
+   */
+  wrap: {
+    type: Boolean,
+    default: false
+  },
+  /**
    * Visual angular offset in degrees added to the CSS transform: rotate(...)
    */
   angleOffset: {
@@ -409,10 +416,11 @@ watch(
   updateActiveDuration
 );
 
-// Interactive pointer dragging using pure Math.atan2
+// Interactive pointer dragging using pure Math.atan2 with additive delta accumulation
 const containerRef = ref(null);
 const isDragging = ref(false);
 let dragPointerId = null;
+let prevPointerAngle = null;
 
 // Calculate angle in degrees [-90, 270) where top is -90°, right is 0°, bottom is 90°, left is 180°
 const getAngleFromPointer = (clientX, clientY) => {
@@ -447,48 +455,70 @@ const onPointerDown = (e) => {
   animRecord = null;
   isMoving.value = false;
 
-  currentAngle.value = deg;
-  targetAngle.value = deg;
-
+  prevPointerAngle = deg;
   isDragging.value = true;
   dragPointerId = e.pointerId;
 
-  try {
-    e.currentTarget.setPointerCapture(e.pointerId);
-  } catch (err) {
-    // Ignore in unsupported environments
-  }
+  window.addEventListener('pointermove', onPointerMove);
+  window.addEventListener('pointerup', onPointerUp);
+  window.addEventListener('pointercancel', onPointerUp);
+  window.addEventListener('blur', onPointerUp);
 
-  emit('update:modelValue', deg);
-  emit('change', deg);
-  emit('drag-start', { angle: deg });
+  emit('drag-start', { angle: currentAngle.value });
 };
 
 const onPointerMove = (e) => {
-  if (!isDragging.value || (dragPointerId !== null && e.pointerId !== dragPointerId)) return;
+  if (!isDragging.value) return;
+  if (dragPointerId !== null && e.pointerId !== dragPointerId) return;
+
+  // Safeguard: if mouse button is no longer pressed, release drag
+  if (e.pointerType === 'mouse' && e.buttons === 0) {
+    onPointerUp(e);
+    return;
+  }
 
   const deg = getAngleFromPointer(e.clientX, e.clientY);
-  if (deg === null) return;
+  if (deg === null || prevPointerAngle === null) return;
 
-  currentAngle.value = deg;
-  targetAngle.value = deg;
+  // Shortest angular difference between consecutive pointer frames
+  let delta = deg - prevPointerAngle;
+  if (delta > 180) delta -= 360;
+  else if (delta < -180) delta += 360;
 
-  emit('update:modelValue', deg);
-  emit('change', deg);
-  emit('drag', { angle: deg });
+  prevPointerAngle = deg;
+
+  let nextAngle = currentAngle.value + delta;
+  if (props.wrap && props.min !== null && props.max !== null) {
+    const range = props.max - props.min;
+    if (range > 0) {
+      while (nextAngle > props.max) nextAngle -= range;
+      while (nextAngle < props.min) nextAngle += range;
+    }
+  } else {
+    if (props.max !== null && nextAngle > props.max) nextAngle = props.max;
+    if (props.min !== null && nextAngle < props.min) nextAngle = props.min;
+  }
+
+  currentAngle.value = nextAngle;
+  targetAngle.value = nextAngle;
+
+  emit('update:modelValue', nextAngle);
+  emit('change', nextAngle);
+  emit('drag', { angle: nextAngle });
 };
 
 const onPointerUp = (e) => {
-  if (!isDragging.value || (dragPointerId !== null && e.pointerId !== dragPointerId)) return;
+  if (!isDragging.value) return;
+  if (e && dragPointerId !== null && e.pointerId !== undefined && e.pointerId !== dragPointerId) return;
 
   isDragging.value = false;
   dragPointerId = null;
+  prevPointerAngle = null;
 
-  try {
-    e.currentTarget.releasePointerCapture(e.pointerId);
-  } catch (err) {
-    // Ignore
-  }
+  window.removeEventListener('pointermove', onPointerMove);
+  window.removeEventListener('pointerup', onPointerUp);
+  window.removeEventListener('pointercancel', onPointerUp);
+  window.removeEventListener('blur', onPointerUp);
 
   emit('drag-end', { angle: currentAngle.value });
   emit('settled', {
@@ -513,6 +543,12 @@ onMounted(() => {
 onUnmounted(() => {
   if (rafId) {
     cancelAnimationFrame(rafId);
+  }
+  if (typeof window !== 'undefined') {
+    window.removeEventListener('pointermove', onPointerMove);
+    window.removeEventListener('pointerup', onPointerUp);
+    window.removeEventListener('pointercancel', onPointerUp);
+    window.removeEventListener('blur', onPointerUp);
   }
 });
 
@@ -539,9 +575,6 @@ defineExpose({
     :class="{ 'is-interactive': interactive, 'is-dragging': isDragging }"
     :style="containerStyle"
     @pointerdown="onPointerDown"
-    @pointermove="onPointerMove"
-    @pointerup="onPointerUp"
-    @pointercancel="onPointerUp"
   >
     <div
       class="rotator-tile"
