@@ -259,17 +259,21 @@ const setSingleDatapoint = () => {
           />
 
           <div class="kinetic-control-row">
-            <div class="kinetic-dial-container" title="Kinetic Rotator Dial (Geodesic S¹)">
+            <div class="kinetic-dial-container">
               <KineticRotator
-                :modelValue="rotationAngle"
+                v-model="rotationAngle"
+                :interactive="true"
+                :angle-offset="90"
                 :size="56"
                 :duration="400"
                 :shortest-path="true"
+                @drag-start="isScrubbing = true"
+                @drag-end="isScrubbing = false"
               >
-                <template #default="{ currentAngle }">
-                  <div class="mini-dial-plate">
+                <template #default="{ currentAngle, isDragging }">
+                  <div class="mini-dial-plate" :class="{ 'is-dragging': isDragging }">
                     <div class="mini-dial-marker"></div>
-                    <div class="mini-dial-hub">
+                    <div class="mini-dial-hub" @pointerdown.stop @click.stop="setRotation(0)">
                       <NanoIcon name="rotate" :size="14" />
                     </div>
                   </div>
@@ -278,11 +282,11 @@ const setSingleDatapoint = () => {
             </div>
 
             <div class="step-buttons-grid">
-              <button type="button" class="btn-step" @click="stepRotation(-90)" title="Rotate -90°">-90°</button>
-              <button type="button" class="btn-step" @click="stepRotation(-45)" title="Rotate -45°">-45°</button>
-              <button type="button" class="btn-step" @click="setRotation(0)" title="Reset to 0°">0°</button>
-              <button type="button" class="btn-step" @click="stepRotation(45)" title="Rotate +45°">+45°</button>
-              <button type="button" class="btn-step" @click="stepRotation(90)" title="Rotate +90°">+90°</button>
+              <button type="button" class="btn-step" @click="stepRotation(-90)">-90°</button>
+              <button type="button" class="btn-step" @click="stepRotation(-45)">-45°</button>
+              <button type="button" class="btn-step" @click="setRotation(0)">0°</button>
+              <button type="button" class="btn-step" @click="stepRotation(45)">+45°</button>
+              <button type="button" class="btn-step" @click="stepRotation(90)">+90°</button>
             </div>
           </div>
         </div>
@@ -678,20 +682,33 @@ input[type="range"]::-moz-range-thumb:hover {
   justify-content: center;
   position: relative;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
-  transition: border-color var(--nano-transition-interactive);
+  cursor: grab;
+  user-select: none;
+  touch-action: none;
+  transition: border-color var(--nano-transition-interactive), box-shadow var(--nano-transition-interactive);
 }
 
 .mini-dial-plate:hover {
   border-color: var(--nano-accent-primary);
+  box-shadow: 0 0 10px color-mix(in srgb, var(--nano-accent-primary) 35%, transparent);
+}
+
+.mini-dial-plate:active,
+.mini-dial-plate.is-dragging {
+  cursor: grabbing;
+  border-color: var(--nano-accent-primary);
+  box-shadow: 0 0 16px color-mix(in srgb, var(--nano-accent-primary) 60%, transparent);
 }
 
 .mini-dial-marker {
   position: absolute;
   top: 3px;
+  left: calc(50% - 1.5px);
   width: 3px;
   height: 8px;
   background: var(--nano-accent-primary);
   border-radius: 2px;
+  box-shadow: 0 0 4px var(--nano-accent-primary);
 }
 
 .mini-dial-hub {
@@ -704,6 +721,14 @@ input[type="range"]::-moz-range-thumb:hover {
   justify-content: center;
   color: var(--nano-text-primary);
   border: 1px solid var(--nano-border-subtle);
+  cursor: pointer;
+  transition: background var(--nano-transition-interactive), border-color var(--nano-transition-interactive), color var(--nano-transition-interactive);
+}
+
+.mini-dial-hub:hover {
+  background: var(--nano-bg-hover);
+  border-color: var(--nano-accent-primary);
+  color: var(--nano-accent-primary);
 }
 
 .step-buttons-grid {

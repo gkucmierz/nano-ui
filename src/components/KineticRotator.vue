@@ -64,6 +64,34 @@ const props = defineProps({
   size: {
     type: [Number, String],
     default: 260
+  },
+  /**
+   * When true, allows dragging the rotator with mouse/touch to interactively rotate it.
+   */
+  interactive: {
+    type: Boolean,
+    default: false
+  },
+  /**
+   * Minimum allowed angle for interactive dragging (null = unbounded).
+   */
+  min: {
+    type: Number,
+    default: null
+  },
+  /**
+   * Maximum allowed angle for interactive dragging (null = unbounded).
+   */
+  max: {
+    type: Number,
+    default: null
+  },
+  /**
+   * Visual angular offset in degrees added to the CSS transform: rotate(...)
+   */
+  angleOffset: {
+    type: Number,
+    default: 0
   }
 });
 
@@ -71,7 +99,10 @@ const emit = defineEmits([
   'update:modelValue',
   'change',
   'settled',
-  'frame'
+  'frame',
+  'drag-start',
+  'drag',
+  'drag-end'
 ]);
 
 // Cubic Hermite polynomial matching boundary conditions:
@@ -378,8 +409,97 @@ watch(
   updateActiveDuration
 );
 
+// Interactive pointer dragging using pure Math.atan2
+const containerRef = ref(null);
+const isDragging = ref(false);
+let dragPointerId = null;
+
+// Calculate angle in degrees [-90, 270) where top is -90°, right is 0°, bottom is 90°, left is 180°
+const getAngleFromPointer = (clientX, clientY) => {
+  const rect = containerRef.value?.getBoundingClientRect();
+  if (!rect) return null;
+
+  const cx = rect.left + rect.width / 2;
+  const cy = rect.top + rect.height / 2;
+  const dx = clientX - cx;
+  const dy = clientY - cy;
+
+  // Pure Math.atan2
+  let deg = Math.round((Math.atan2(dy, dx) * 180) / Math.PI);
+
+  // Map to [-90, 270) range
+  if (deg < -90) deg += 360;
+
+  return deg;
+};
+
+const onPointerDown = (e) => {
+  if (!props.interactive) return;
+  if (e.button !== 0) return;
+
+  const deg = getAngleFromPointer(e.clientX, e.clientY);
+  if (deg === null) return;
+
+  if (rafId) {
+    cancelAnimationFrame(rafId);
+    rafId = null;
+  }
+  animRecord = null;
+  isMoving.value = false;
+
+  currentAngle.value = deg;
+  targetAngle.value = deg;
+
+  isDragging.value = true;
+  dragPointerId = e.pointerId;
+
+  try {
+    e.currentTarget.setPointerCapture(e.pointerId);
+  } catch (err) {
+    // Ignore in unsupported environments
+  }
+
+  emit('update:modelValue', deg);
+  emit('change', deg);
+  emit('drag-start', { angle: deg });
+};
+
+const onPointerMove = (e) => {
+  if (!isDragging.value || (dragPointerId !== null && e.pointerId !== dragPointerId)) return;
+
+  const deg = getAngleFromPointer(e.clientX, e.clientY);
+  if (deg === null) return;
+
+  currentAngle.value = deg;
+  targetAngle.value = deg;
+
+  emit('update:modelValue', deg);
+  emit('change', deg);
+  emit('drag', { angle: deg });
+};
+
+const onPointerUp = (e) => {
+  if (!isDragging.value || (dragPointerId !== null && e.pointerId !== dragPointerId)) return;
+
+  isDragging.value = false;
+  dragPointerId = null;
+
+  try {
+    e.currentTarget.releasePointerCapture(e.pointerId);
+  } catch (err) {
+    // Ignore
+  }
+
+  emit('drag-end', { angle: currentAngle.value });
+  emit('settled', {
+    angle: currentAngle.value,
+    normalizedAngle: normalizeAngle(currentAngle.value)
+  });
+};
+
 // Watch modelValue updates from parent
 watch(() => props.modelValue, (newVal) => {
+  if (isDragging.value) return;
   if (Math.abs(newVal - targetAngle.value) > 0.01) {
     setAngle(newVal, true);
   }
@@ -402,6 +522,7 @@ defineExpose({
   velocity,
   acceleration,
   isMoving,
+  isDragging,
   progress,
   v0: initialVelocityParam,
   rotateBy,
@@ -412,11 +533,20 @@ defineExpose({
 </script>
 
 <template>
-  <div class="nano-kinetic-rotator" :style="containerStyle">
+  <div
+    ref="containerRef"
+    class="nano-kinetic-rotator"
+    :class="{ 'is-interactive': interactive, 'is-dragging': isDragging }"
+    :style="containerStyle"
+    @pointerdown="onPointerDown"
+    @pointermove="onPointerMove"
+    @pointerup="onPointerUp"
+    @pointercancel="onPointerUp"
+  >
     <div
       class="rotator-tile"
       :style="{
-        transform: `rotate(${currentAngle}deg)`
+        transform: `rotate(${currentAngle + angleOffset}deg)`
       }"
     >
       <slot
@@ -426,6 +556,7 @@ defineExpose({
         :velocity="velocity"
         :acceleration="acceleration"
         :is-moving="isMoving"
+        :is-dragging="isDragging"
         :progress="progress"
       >
         <!-- Default fallback graphic if slot empty -->
@@ -448,6 +579,14 @@ defineExpose({
   user-select: none;
   -webkit-user-select: none;
   touch-action: none;
+}
+
+.nano-kinetic-rotator.is-interactive {
+  cursor: grab;
+}
+
+.nano-kinetic-rotator.is-interactive.is-dragging {
+  cursor: grabbing;
 }
 
 .rotator-tile {
