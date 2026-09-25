@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed } from 'vue';
+import { ref, computed, watch } from 'vue';
 import NanoCodeBlock from '../../components/NanoCodeBlock.vue';
 import NanoSwitch from '../../components/NanoSwitch.vue';
 import { t } from '../../locales.js';
@@ -11,6 +11,12 @@ const isInteractive = ref(true);
 const isEmpty = ref(false);
 const selectedRowId = ref('combat_simulations');
 const filterQuery = ref('');
+
+watch(isInteractive, (val) => {
+  if (!val) {
+    selectedRowId.value = null;
+  }
+});
 
 const allRows = [
   { id: 'matches', name: 'matches', category: 'telemetry', count: 107787, status: 'ok', statusText: 'Ready' },
@@ -68,7 +74,8 @@ const generatedCode = computed(() => {
     markup += `      </tr>\n`;
   } else {
     markup += `      <!-- Iterated Rows: click toggles .is-selected -->\n`;
-    markup += `      <tr class="is-selected">\n`;
+    const rowClass = isInteractive.value && selectedRowId.value ? ' class="is-selected"' : '';
+    markup += `      <tr${rowClass}>\n`;
     markup += `        <td class="nano-cell-shrink nano-cell-center">1</td>\n`;
     markup += `        <td class="nano-cell-truncate">matches</td>\n`;
     markup += `        <td>telemetry</td>\n`;
@@ -91,8 +98,8 @@ const cssApiDoc = `/* Nano UI Data Table Primitives */
 .nano-table-interactive  /* Sets cursor: pointer on rows indicating clickability */
 
 /* Row Selection States */
-.nano-table tr.is-selected td     /* Tinted accent fill (color-mix in srgb with --nano-state-active) */
-.nano-table tr.is-selected td:1st /* Inset 3px accent indicator bar on the left boundary */
+.nano-table tr.is-selected td             /* Tinted accent fill (color-mix in srgb with --nano-state-active) */
+.nano-table tr.is-selected td:first-child /* Inset 3px accent indicator bar on the left boundary */
 
 /* Column & Cell Formatting Utilities */
 .nano-cell-numeric,
@@ -159,7 +166,7 @@ const cssApiDoc = `/* Nano UI Data Table Primitives */
                   <tr
                     v-for="(row, idx) in filteredRows"
                     :key="row.id"
-                    :class="{ 'is-selected': selectedRowId === row.id }"
+                    :class="{ 'is-selected': isInteractive && selectedRowId === row.id }"
                     @click="handleRowClick(row.id)"
                   >
                     <td class="nano-cell-shrink nano-cell-center">{{ idx + 1 }}</td>
@@ -180,6 +187,7 @@ const cssApiDoc = `/* Nano UI Data Table Primitives */
                     <td class="nano-cell-shrink nano-cell-center">
                       <button
                         class="nano-btn nano-btn-secondary nano-btn-sm"
+                        :disabled="!isInteractive"
                         @click.stop="handleRowClick(row.id)"
                       >
                         Inspect
@@ -191,7 +199,7 @@ const cssApiDoc = `/* Nano UI Data Table Primitives */
             </div>
 
             <!-- Selected Row Details Footer -->
-            <div v-if="selectedRow && !isEmpty" class="selected-row-banner">
+            <div v-if="isInteractive && selectedRow && !isEmpty" class="selected-row-banner">
               <div class="selected-row-info">
                 <span class="selected-label">Selected:</span>
                 <code>{{ selectedRow.name }}</code>
