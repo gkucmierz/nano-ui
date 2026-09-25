@@ -46,6 +46,15 @@ const props = defineProps({
     default: '16px'
   },
   /**
+   * Border radius when stuck/docked. Default: undefined (falls back to CSS var --stuck-radius or '11px 11px 0 0').
+   * Accepts e.g. 11, '11px' (auto-expanded to '11px 11px 0 0'), 0, '0px', or full 4-corner CSS string.
+   * Can also be set/overridden via CSS variable `--stuck-radius`.
+   */
+  stuckRadius: {
+    type: [String, Number],
+    default: undefined
+  },
+  /**
    * Whether to enable backdrop blur glassmorphism
    */
   glassmorphism: {
@@ -76,6 +85,29 @@ const isStuck = computed({
       emit('unstick');
     }
   }
+});
+
+const resolvedStuckRadius = computed(() => {
+  if (props.stuckRadius === undefined || props.stuckRadius === null || props.stuckRadius === '') {
+    return undefined;
+  }
+  if (props.stuckRadius === 0 || props.stuckRadius === '0' || props.stuckRadius === '0px') {
+    return '0px';
+  }
+  if (typeof props.stuckRadius === 'number') {
+    return `${props.stuckRadius}px ${props.stuckRadius}px 0 0`;
+  }
+  const str = String(props.stuckRadius).trim();
+  const parts = str.split(/\s+/);
+  if (parts.length === 1) {
+    const num = parseFloat(parts[0]);
+    if (!isNaN(num)) {
+      if (num === 0) return '0px';
+      const unit = parts[0].replace(/^[0-9.-]+/, '') || 'px';
+      return `${num}${unit} ${num}${unit} 0 0`;
+    }
+  }
+  return str;
 });
 
 let targetContainer = null;
@@ -150,7 +182,8 @@ onUnmounted(() => {
     :style="{
       '--header-height': height,
       '--floating-margin': floatingMargin,
-      '--floating-radius': floatingRadius
+      '--floating-radius': floatingRadius,
+      '--stuck-radius': resolvedStuckRadius
     }"
   >
     <div class="header-inner">
@@ -209,8 +242,8 @@ onUnmounted(() => {
 }
 
 .nano-mutating-header.is-stuck {
-  margin: 0;
-  border-radius: 0;
+  margin: var(--stuck-margin, 0);
+  border-radius: var(--stuck-radius, 11px 11px 0 0);
   border-color: transparent transparent var(--nano-border-subtle, rgba(255, 255, 255, 0.1)) transparent;
   padding: 0 24px;
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25);

@@ -33,6 +33,7 @@
     "props": "Właściwości (Props)",
     "slots": "Sloty",
     "events": "Zdarzenia (Events)",
+    "cssVariables": "Zmienne CSS",
     "interactivePlayground": "Interaktywny Plac Zabaw",
     "copied": "Skopiowano do schowka!",
     "clickToCopy": "Kliknij, aby skopiować",
@@ -114,6 +115,7 @@
       "height": "Wysokość nagłówka",
       "floatingMargin": "Margines górny i boczny w stanie pływającym",
       "floatingRadius": "Promień zaokrąglenia narożników w stanie pływającym",
+      "stuckRadius": "Promień zaokrąglenia narożników po zadokowaniu (domyślnie: 11px 11px 0 0 lub zmienna CSS --stuck-radius)",
       "glassmorphism": "Efekt rozmycia tła (Backdrop blur glassmorphism)",
       "stuck": "Dwukierunkowy kontrolowany stan zadokowania (v-model:stuck)"
     },

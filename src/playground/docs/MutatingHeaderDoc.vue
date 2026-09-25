@@ -73,6 +73,7 @@ scrollContainer: String | HTMLElement (default: null -> window) - {{ t('mutating
 height: String (default: '60px') - {{ t('mutatingHeader.props.height') }}
 floatingMargin: String (default: '12px 24px 0 24px') - {{ t('mutatingHeader.props.floatingMargin') }}
 floatingRadius: String (default: '16px') - {{ t('mutatingHeader.props.floatingRadius') }}
+stuckRadius: String | Number (default: undefined -> '11px 11px 0 0') - {{ t('mutatingHeader.props.stuckRadius') }}
 glassmorphism: Boolean (default: true) - {{ t('mutatingHeader.props.glassmorphism') }}
 stuck: Boolean (v-model:stuck) - {{ t('mutatingHeader.props.stuck') }}
 
@@ -185,6 +186,7 @@ stuck: Boolean (v-model:stuck) - {{ t('mutatingHeader.props.stuck') }}
   border: 1px solid var(--viewport-border);
   background: var(--viewport-bg);
   box-shadow: var(--viewport-shadow);
+  --stuck-radius: 11px 11px 0 0;
 }
 
 .demo-brand {

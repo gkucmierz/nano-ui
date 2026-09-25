@@ -33,6 +33,7 @@
     "props": "Props",
     "slots": "Slots",
     "events": "Events",
+    "cssVariables": "CSS Variables",
     "interactivePlayground": "Interactive Playground",
     "copied": "Copied to clipboard!",
     "clickToCopy": "Click to copy",
@@ -114,6 +115,7 @@
       "height": "Height of header",
       "floatingMargin": "Top/side margin when floating",
       "floatingRadius": "Corner radius when floating",
+      "stuckRadius": "Corner radius when docked (default: 11px 11px 0 0 or CSS var --stuck-radius)",
       "glassmorphism": "Backdrop blur glassmorphism effect",
       "stuck": "Two-way controlled docking state (v-model:stuck)"
     },
