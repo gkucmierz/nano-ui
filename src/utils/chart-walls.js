@@ -266,6 +266,26 @@ export const resolveChartAspectRatio = ({
 }
 
 /**
+ * Parses an aspect ratio string or number into a numeric width/height ratio.
+ *
+ * @param {string|number} [ratioInput]
+ * @returns {number|null}
+ */
+export const parseAspectRatioNumeric = (ratioInput) => {
+  if (!ratioInput || ratioInput === 'auto') return null
+  if (typeof ratioInput === 'number') {
+    return ratioInput > 0 ? ratioInput : null
+  }
+  const str = String(ratioInput).trim()
+  const parts = str.split(/[\/:]/).map(p => parseFloat(p.trim()))
+  if (parts.length === 2 && !isNaN(parts[0]) && !isNaN(parts[1]) && parts[1] > 0) {
+    return parts[0] / parts[1]
+  }
+  const val = parseFloat(str)
+  return (!isNaN(val) && val > 0) ? val : null
+}
+
+/**
  * Calculates responsive SVG viewBox dimensions, radii, and center coordinates.
  *
  * @param {Object} [params={}]
@@ -274,6 +294,7 @@ export const resolveChartAspectRatio = ({
  * @param {boolean} [params.is3D=true] - 3D tilt/depth perspective enabled
  * @param {number} [params.slopeRatio=0.5] - Tilt ratio (0.2 to 1.0)
  * @param {number} [params.thickness=0.5] - Thickness ratio (0.0 to 1.0)
+ * @param {string|number} [params.aspectRatio='auto'] - Custom aspect ratio constraint
  * @returns {{ cx: number, cy: number, rx: number, ry: number, irx: number, iry: number, baseDepth: number, depth: number, vbWidth: number, vbHeight: number, opacity: number }}
  */
 export const calculateTargetGeometry = ({
@@ -282,9 +303,11 @@ export const calculateTargetGeometry = ({
   is3D = true,
   slopeRatio = 0.5,
   thickness = 0.5,
+  aspectRatio = 'auto',
 } = {}) => {
   const is3DMode = is3D
   const hasLabels = isExpanded && showLabels
+  const numRatio = parseAspectRatioNumeric(aspectRatio)
 
   if (!isExpanded) {
     return {
@@ -308,17 +331,22 @@ export const calculateTargetGeometry = ({
     : baseDepth
 
   if (hasLabels) {
+    const vbWidth = 760
+    const vbHeight = numRatio ? Math.round(vbWidth / numRatio) : 320
+    const cx = vbWidth / 2
+    const cy = vbHeight / 2
+
     return {
-      cx: 380,
-      cy: 160,
+      cx,
+      cy,
       rx: 180,
       ry: is3DMode ? 180 * slopeRatio : 180,
       irx: 180 * (1 - thickness),
       iry: is3DMode ? 180 * (1 - thickness) * slopeRatio : 180 * (1 - thickness),
       baseDepth,
       depth,
-      vbWidth: 760,
-      vbHeight: 320,
+      vbWidth,
+      vbHeight,
       opacity: 1,
     }
   }
@@ -326,19 +354,21 @@ export const calculateTargetGeometry = ({
   // Expanded without labels (compact / headless / dashboard mode):
   if (!is3DMode) {
     // 2D flat mode without labels is a circle (rx = ry)
+    const baseW = 320
+    const vbWidth = baseW
+    const vbHeight = numRatio ? Math.round(baseW / numRatio) : baseW
     const rx = 140
-    const vbSize = 320
     return {
-      cx: vbSize / 2,
-      cy: vbSize / 2,
+      cx: vbWidth / 2,
+      cy: vbHeight / 2,
       rx,
       ry: rx,
       irx: rx * (1 - thickness),
       iry: rx * (1 - thickness),
       baseDepth: 0,
       depth: 0,
-      vbWidth: vbSize,
-      vbHeight: vbSize,
+      vbWidth,
+      vbHeight,
       opacity: 0,
     }
   }
@@ -348,9 +378,9 @@ export const calculateTargetGeometry = ({
   const maxRxVertical = (290 - depth) / (2 * effSlope)
   const rx = Math.min(260, maxRxVertical)
   const vbWidth = Math.round(rx * 2 + 40)
+  const vbHeight = numRatio ? Math.round(vbWidth / numRatio) : 320
   const cx = vbWidth / 2
-  const cy = 160
-  const vbHeight = 320
+  const cy = vbHeight / 2
 
   return {
     cx,

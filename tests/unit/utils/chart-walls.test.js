@@ -430,6 +430,30 @@ describe('3D Donut Chart Wall Geometry & Visibility', () => {
       assert.equal(geom.rx, 260)
       assert.equal(geom.vbWidth, 560)
     })
+
+    test('should calculate dynamic viewBox and center anchor for 1/1 square aspect ratio', () => {
+      const geom = calculateTargetGeometry({ isExpanded: true, showLabels: true, is3D: true, aspectRatio: '1/1' })
+      assert.equal(geom.vbWidth, 760)
+      assert.equal(geom.vbHeight, 760)
+      assert.equal(geom.cx, 380)
+      assert.equal(geom.cy, 380)
+    })
+
+    test('should calculate dynamic viewBox and center anchor for 16/9 widescreen aspect ratio', () => {
+      const geom = calculateTargetGeometry({ isExpanded: true, showLabels: true, is3D: true, aspectRatio: '16/9' })
+      assert.equal(geom.vbWidth, 760)
+      assert.equal(geom.vbHeight, 428)
+      assert.equal(geom.cx, 380)
+      assert.equal(geom.cy, 214)
+    })
+
+    test('should calculate dynamic viewBox and center anchor for 4/3 aspect ratio', () => {
+      const geom = calculateTargetGeometry({ isExpanded: true, showLabels: true, is3D: true, aspectRatio: '4/3' })
+      assert.equal(geom.vbWidth, 760)
+      assert.equal(geom.vbHeight, 570)
+      assert.equal(geom.cx, 380)
+      assert.equal(geom.cy, 285)
+    })
   })
 
   describe('when aggregating threshold data (3d-chart-treshold-behaviour recipe)', () => {

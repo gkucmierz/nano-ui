@@ -1037,16 +1037,14 @@ const rotationKinetic = createKineticTransition({
 })
 const isAnimating = ref(false)
 
-// True during active coordinate mutations (spin, entry, data morphing)
-const isChartMoving = computed(() => isAnimating.value || isRotationMoving.value)
-
-const getTargetGeometry = (isExpanded, showLabels, is3D, slopeRatio, thickness) => {
+const getTargetGeometry = (isExpanded, showLabels, is3D, slopeRatio, thickness, aspectRatio = props.aspectRatio) => {
   return calculateTargetGeometry({
     isExpanded,
     showLabels,
     is3D,
     slopeRatio,
     thickness,
+    aspectRatio,
   })
 }
 
@@ -1077,7 +1075,7 @@ const wrapperStyle = computed(() => {
   return style
 })
 
-const initialGeom = getTargetGeometry(props.isExpanded, props.showLabels, props.is3D, props.slopeRatio, props.thickness)
+const initialGeom = getTargetGeometry(props.isExpanded, props.showLabels, props.is3D, props.slopeRatio, props.thickness, props.aspectRatio)
 
 const animCx = ref(initialGeom.cx)
 const animCy = ref(initialGeom.cy)
@@ -1089,6 +1087,65 @@ const animDepth = ref(initialGeom.depth)
 const animVbWidth = ref(initialGeom.vbWidth)
 const animVbHeight = ref(initialGeom.vbHeight)
 const labelOpacity = ref(initialGeom.opacity)
+
+const animSlopeRatio = ref(props.slopeRatio ?? 0.5)
+const animThickness = ref(props.thickness ?? 0.5)
+
+const isSlopeMoving = ref(false)
+const isThicknessMoving = ref(false)
+
+// True during active coordinate mutations (spin, entry, data morphing, kinetic tilt/thickness)
+const isChartMoving = computed(() => isAnimating.value || isRotationMoving.value || isSlopeMoving.value || isThicknessMoving.value)
+
+const recomputeGeometryRadii = () => {
+  const is3DMode = props.is3D
+  const slope = animSlopeRatio.value
+  const thick = animThickness.value
+  const rx = animRx.value
+
+  animRy.value = is3DMode ? rx * slope : rx
+  animIrx.value = rx * (1 - thick)
+  animIry.value = is3DMode ? rx * (1 - thick) * slope : rx * (1 - thick)
+
+  const baseDepth = is3DMode ? 32 : 0
+  animDepth.value = (is3DMode && slope > 0.5)
+    ? baseDepth * (2 - 2 * slope)
+    : (is3DMode ? baseDepth : 0)
+}
+
+const slopeKinetic = createKineticTransition({
+  initialValue: props.slopeRatio ?? 0.5,
+  duration: props.animationDuration ?? 350,
+  timingMode: 'proportional',
+  step: 0.5,
+  onUpdate: ({ value, isMoving }) => {
+    animSlopeRatio.value = value
+    isSlopeMoving.value = isMoving
+    recomputeGeometryRadii()
+  },
+  onSettled: ({ value }) => {
+    animSlopeRatio.value = value
+    isSlopeMoving.value = false
+    recomputeGeometryRadii()
+  },
+})
+
+const thicknessKinetic = createKineticTransition({
+  initialValue: props.thickness ?? 0.5,
+  duration: props.animationDuration ?? 350,
+  timingMode: 'proportional',
+  step: 0.5,
+  onUpdate: ({ value, isMoving }) => {
+    animThickness.value = value
+    isThicknessMoving.value = isMoving
+    recomputeGeometryRadii()
+  },
+  onSettled: ({ value }) => {
+    animThickness.value = value
+    isThicknessMoving.value = false
+    recomputeGeometryRadii()
+  },
+})
 
 const animFontSizeValue = computed(() => {
   const minRx = 48
@@ -1861,8 +1918,10 @@ const computedLabels = computed(() => {
     }
   })
 
-  resolveCollisions(leftList, 144, 320, 1.0)
-  resolveCollisions(rightList, 144, 320, 1.0)
+  const vbH = animVbHeight.value || 320
+  const topClearance = Math.round(animCy.value * 0.9)
+  resolveCollisions(leftList, topClearance, vbH, 1.0)
+  resolveCollisions(rightList, topClearance, vbH, 1.0)
 
   return {
     left: leftList,
@@ -1923,7 +1982,7 @@ const updateGeometryImmediate = () => {
     isAnimating.value = false
   }
 
-  const geom = getTargetGeometry(props.isExpanded, props.showLabels, props.is3D, props.slopeRatio, props.thickness)
+  const geom = getTargetGeometry(props.isExpanded, props.showLabels, props.is3D, props.slopeRatio, props.thickness, props.aspectRatio)
   animCx.value = geom.cx
   animCy.value = geom.cy
   animRx.value = geom.rx
@@ -1934,6 +1993,8 @@ const updateGeometryImmediate = () => {
   animVbWidth.value = geom.vbWidth
   animVbHeight.value = geom.vbHeight
   labelOpacity.value = geom.opacity
+  animSlopeRatio.value = props.slopeRatio ?? 0.5
+  animThickness.value = props.thickness ?? 0.5
 }
 
 const animateChart = (opts = {}) => {
@@ -1989,7 +2050,7 @@ const animateChart = (opts = {}) => {
   const startVbH = animVbHeight.value
   const startOpacity = labelOpacity.value
 
-  const geom = getTargetGeometry(props.isExpanded, props.showLabels, props.is3D, props.slopeRatio, props.thickness)
+  const geom = getTargetGeometry(props.isExpanded, props.showLabels, props.is3D, props.slopeRatio, props.thickness, props.aspectRatio)
   const targetCx = geom.cx
   const targetCy = geom.cy
   const targetRx = geom.rx
@@ -2022,10 +2083,12 @@ const animateChart = (opts = {}) => {
     animCx.value = startCx + (targetCx - startCx) * easedProgress
     animCy.value = startCy + (targetCy - startCy) * easedProgress
     animRx.value = startRx + (targetRx - startRx) * easedProgress
-    animRy.value = startRy + (targetRy - startRy) * easedProgress
-    animIrx.value = startIrx + (targetIrx - startIrx) * easedProgress
-    animIry.value = startIry + (targetIry - startIry) * easedProgress
-    animDepth.value = startDepth + (targetDepth - startDepth) * easedProgress
+    if (!slopeKinetic.isMoving() && !thicknessKinetic.isMoving()) {
+      animRy.value = startRy + (targetRy - startRy) * easedProgress
+      animIrx.value = startIrx + (targetIrx - startIrx) * easedProgress
+      animIry.value = startIry + (targetIry - startIry) * easedProgress
+      animDepth.value = startDepth + (targetDepth - startDepth) * easedProgress
+    }
     animVbWidth.value = startVbW + (targetVbW - startVbW) * easedProgress
     animVbHeight.value = startVbH + (targetVbH - startVbH) * easedProgress
     labelOpacity.value = startOpacity + (targetOpacity - startOpacity) * easedProgress
@@ -2050,10 +2113,12 @@ const animateChart = (opts = {}) => {
       animCx.value = targetCx
       animCy.value = targetCy
       animRx.value = targetRx
-      animRy.value = targetRy
-      animIrx.value = targetIrx
-      animIry.value = targetIry
-      animDepth.value = targetDepth
+      if (!slopeKinetic.isMoving() && !thicknessKinetic.isMoving()) {
+        animRy.value = targetRy
+        animIrx.value = targetIrx
+        animIry.value = targetIry
+        animDepth.value = targetDepth
+      }
       animVbWidth.value = targetVbW
       animVbHeight.value = targetVbH
       labelOpacity.value = targetOpacity
@@ -2120,20 +2185,42 @@ watch([activeRotationAngle, () => props.rotationAngle, () => props.autoRotate], 
   }
 })
 
-watch(() => props.slopeRatio, () => {
-  if (props.immediate || props.currentLowFxMode) {
-    updateGeometryImmediate()
+watch(() => props.slopeRatio, (newVal) => {
+  const isImmediate = props.immediate || props.currentLowFxMode || (props.animationDuration ?? 350) <= 0
+  slopeKinetic.setConfig({
+    duration: props.animationDuration ?? 350,
+    timingMode: 'proportional',
+    step: 0.5,
+  })
+  if (isImmediate) {
+    slopeKinetic.setTarget(newVal ?? 0.5, { immediate: true })
   } else {
-    animateChart()
+    slopeKinetic.setTarget(newVal ?? 0.5)
   }
 })
 
-watch(() => props.thickness, () => {
-  if (props.immediate || props.currentLowFxMode) {
-    updateGeometryImmediate()
+watch(() => props.thickness, (newVal) => {
+  const isImmediate = props.immediate || props.currentLowFxMode || (props.animationDuration ?? 350) <= 0
+  thicknessKinetic.setConfig({
+    duration: props.animationDuration ?? 350,
+    timingMode: 'proportional',
+    step: 0.5,
+  })
+  if (isImmediate) {
+    thicknessKinetic.setTarget(newVal ?? 0.5, { immediate: true })
   } else {
-    animateChart()
+    thicknessKinetic.setTarget(newVal ?? 0.5)
   }
+})
+
+watch(() => props.aspectRatio, () => {
+  nextTick(() => {
+    if (props.immediate || props.currentLowFxMode || (props.animationDuration ?? 350) <= 0) {
+      updateGeometryImmediate()
+    } else {
+      animateChart()
+    }
+  })
 })
 
 watch(() => props.isExpanded, () => {
@@ -2182,6 +2269,8 @@ watch(() => props.animationDuration, (newDur) => {
   extrusionTransitions.forEach((trans) => {
     trans.setConfig({ duration: newDur ?? 250 })
   })
+  slopeKinetic.setConfig({ duration: newDur ?? 350 })
+  thicknessKinetic.setConfig({ duration: newDur ?? 350 })
 })
 
 let fullOpacityListener = null
@@ -2227,6 +2316,8 @@ onUnmounted(() => {
     cancelAnimationFrame(currentAnimationId)
   }
   rotationKinetic.destroy()
+  slopeKinetic.destroy()
+  thicknessKinetic.destroy()
   extrusionTransitions.forEach((trans) => trans.destroy())
   extrusionTransitions.clear()
 })
@@ -2258,13 +2349,6 @@ defineExpose({
 .donut-canvas-wrapper.is-expanded {
   width: 100%;
   height: auto;
-  max-height: 480px;
-}
-
-@media (max-width: 760px) {
-  .donut-canvas-wrapper.is-expanded.has-labels {
-    height: 42vw;
-  }
 }
 
 .items-svg-chart {

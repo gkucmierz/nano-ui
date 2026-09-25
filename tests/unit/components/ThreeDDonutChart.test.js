@@ -142,4 +142,55 @@ describe('ThreeDDonutChart SVG Painter Architecture & Render Order', () => {
       )
     })
   })
+
+  describe('when validating kinetic geometry controllers (slopeKinetic and thicknessKinetic)', () => {
+    const scriptContent = descriptor.scriptSetup?.content || ''
+
+    test('should declare slopeKinetic and thicknessKinetic using createKineticTransition', () => {
+      assert.ok(
+        scriptContent.includes('const slopeKinetic = createKineticTransition('),
+        'slopeKinetic must be instantiated via createKineticTransition'
+      )
+      assert.ok(
+        scriptContent.includes('const thicknessKinetic = createKineticTransition('),
+        'thicknessKinetic must be instantiated via createKineticTransition'
+      )
+    })
+
+    test('should configure kinetic controllers with proportional timingMode for instant micro-drag response', () => {
+      assert.ok(
+        scriptContent.includes("timingMode: 'proportional'"),
+        'Controllers must use proportional timing mode for low-latency dragging'
+      )
+    })
+
+    test('should delegate slopeRatio and thickness prop changes to kinetic setTarget', () => {
+      assert.ok(
+        scriptContent.includes('slopeKinetic.setTarget('),
+        'watch slopeRatio must call slopeKinetic.setTarget'
+      )
+      assert.ok(
+        scriptContent.includes('thicknessKinetic.setTarget('),
+        'watch thickness must call thicknessKinetic.setTarget'
+      )
+    })
+
+    test('should include slopeKinetic and thicknessKinetic in isChartMoving for seam cut coordination', () => {
+      assert.ok(
+        scriptContent.includes('isSlopeMoving.value || isThicknessMoving.value'),
+        'isChartMoving must track isSlopeMoving and isThicknessMoving'
+      )
+    })
+
+    test('should cleanly destroy kinetic controllers on unmount', () => {
+      assert.ok(
+        scriptContent.includes('slopeKinetic.destroy()'),
+        'slopeKinetic must be destroyed in onUnmounted'
+      )
+      assert.ok(
+        scriptContent.includes('thicknessKinetic.destroy()'),
+        'thicknessKinetic must be destroyed in onUnmounted'
+      )
+    })
+  })
 })
