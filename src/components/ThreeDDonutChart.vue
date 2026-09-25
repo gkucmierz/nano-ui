@@ -167,83 +167,7 @@
             />
           </g>
 
-          <!-- 4. Back Top Upper Half of Surface -->
-          <g 
-            v-for="slice in backSlices" 
-            :key="'slice-back-top-' + slice.item.id + '-' + slice.midAngle"
-            class="slice-group-3d"
-            :class="{ 
-              'is-hovered': effectiveActiveId === slice.item.id,
-              'is-dimmed': effectiveActiveId !== null && effectiveActiveId !== slice.item.id 
-            }"
-            :style="getSliceStyle(slice)"
-            :data-testid="'slice-' + slice.item.id"
-            :data-slice-id="slice.item.id"
-            data-half="back"
-            :data-sub-index="slice.subIndex"
-          >
-            <path 
-              :d="slice.topPath" 
-              :fill="`url(#${getGradientId('top-grad', slice)})`" 
-              data-wall="top-face"
-              data-half="back"
-            />
-            <path 
-              v-if="slice.topStrokePath"
-              :d="slice.topStrokePath" 
-              fill="none"
-              :stroke="`url(#${getGradientId('top-grad', slice)})`" 
-              stroke-width="0.8"
-              stroke-linejoin="round"
-              data-wall="top-face-stroke"
-              data-half="back"
-            />
-            <path 
-              v-if="slice.topStrokePath"
-              :d="slice.topStrokePath" 
-              fill="none" 
-              stroke="rgba(255, 255, 255, 0.16)" 
-              :stroke-width="isExpanded ? 0.8 : 0.5" 
-              stroke-linejoin="round"
-              data-wall="top-face-highlight"
-              data-half="back"
-            />
-          </g>
-
-          <!-- 5. Center Hole Text / Label (sandwiched between back and front halves) -->
-          <g 
-            v-if="props.showCenterText" 
-            :transform="`translate(${animCx}, ${centerTextY})`" 
-            class="center-text-group"
-            :style="{ opacity: (isolateHovered && effectiveActiveId) ? 0 : 1 }"
-          >
-            <text 
-              x="0" 
-              y="-3" 
-              class="center-text-value"
-              :font-size="animFontSizeValue" 
-              font-weight="bold" 
-              font-family="'JetBrains Mono', monospace" 
-              text-anchor="middle" 
-              dominant-baseline="middle"
-            >
-              {{ displayCenterValue }}
-            </text>
-            <text 
-              x="0" 
-              y="10" 
-              class="center-text-label"
-              :font-size="animFontSizeLabel" 
-              font-family="system-ui, -apple-system, sans-serif" 
-              font-weight="600"
-              text-anchor="middle" 
-              dominant-baseline="middle"
-            >
-              {{ displayCenterLabel }}
-            </text>
-          </g>
-
-          <!-- 6. Front Inner Walls -->
+          <!-- 4. Front Inner Walls -->
           <g 
             v-for="slice in frontSlices" 
             :key="'slice-front-inner-' + slice.item.id + '-' + slice.midAngle"
@@ -277,7 +201,7 @@
             />
           </g>
 
-          <!-- 7. Front Cut Walls (sorted by angle order / depth cutY ascending) -->
+          <!-- 5. Front Cut Walls (sorted by angle order / depth cutY ascending) -->
           <g 
             v-for="cut in frontCutWallsSorted" 
             :key="'cut-front-' + cut.id"
@@ -303,7 +227,7 @@
             />
           </g>
 
-          <!-- 8. Front Outer Walls -->
+          <!-- 6. Front Outer Walls -->
           <g 
             v-for="slice in frontSlices" 
             :key="'slice-front-outer-' + slice.item.id + '-' + slice.midAngle"
@@ -337,10 +261,10 @@
             />
           </g>
 
-          <!-- 9. Front Top Upper Half of Surface -->
+          <!-- 7. Top Faces (unsplit continuous surfaces, 1 per data item) -->
           <g 
-            v-for="slice in frontSlices" 
-            :key="'slice-front-top-' + slice.item.id + '-' + slice.midAngle"
+            v-for="slice in topSlices"
+            :key="'slice-top-' + slice.item.id"
             class="slice-group-3d"
             :class="{ 
               'is-hovered': effectiveActiveId === slice.item.id,
@@ -349,35 +273,57 @@
             :style="getSliceStyle(slice)"
             :data-testid="'slice-' + slice.item.id"
             :data-slice-id="slice.item.id"
-            data-half="front"
-            :data-sub-index="slice.subIndex"
+            data-layer="top-face"
           >
             <path 
               :d="slice.topPath" 
               :fill="`url(#${getGradientId('top-grad', slice)})`" 
-              data-wall="top-face"
-              data-half="front"
-            />
-            <path 
-              v-if="slice.topStrokePath"
-              :d="slice.topStrokePath" 
-              fill="none"
               :stroke="`url(#${getGradientId('top-grad', slice)})`" 
               stroke-width="0.8"
               stroke-linejoin="round"
-              data-wall="top-face-stroke"
-              data-half="front"
+              data-wall="top-face"
             />
             <path 
-              v-if="slice.topStrokePath"
-              :d="slice.topStrokePath" 
+              :d="slice.topPath"
               fill="none" 
-              stroke="rgba(255, 255, 255, 0.16)" 
-              :stroke-width="isExpanded ? 0.8 : 0.5" 
+              :stroke="TOP_HIGHLIGHT_COLOR"
+              stroke-width="0.8"
               stroke-linejoin="round"
               data-wall="top-face-highlight"
-              data-half="front"
             />
+          </g>
+
+          <!-- 8. Center Hole Text / Label (strictly on top of all 3D geometry) -->
+          <g
+            v-if="props.showCenterText"
+            :transform="`translate(${animCx}, ${centerTextY})`"
+            class="center-text-group"
+            :style="{ opacity: (isolateHovered && effectiveActiveId) ? 0 : 1 }"
+          >
+            <text
+              x="0"
+              y="-3"
+              class="center-text-value"
+              :font-size="animFontSizeValue"
+              font-weight="bold"
+              font-family="'JetBrains Mono', monospace"
+              text-anchor="middle"
+              dominant-baseline="middle"
+            >
+              {{ displayCenterValue }}
+            </text>
+            <text
+              x="0"
+              y="10"
+              class="center-text-label"
+              :font-size="animFontSizeLabel"
+              font-family="system-ui, -apple-system, sans-serif"
+              font-weight="600"
+              text-anchor="middle"
+              dominant-baseline="middle"
+            >
+              {{ displayCenterLabel }}
+            </text>
           </g>
         </template>
 
@@ -385,8 +331,8 @@
         <!-- 2D FLAT MODE: All slices rendered first, center label strictly on top of all elements -->
         <template v-else>
           <g 
-            v-for="slice in sortedSlices" 
-            :key="'slice-sub-2d-' + slice.item.id + '-' + slice.midAngle"
+            v-for="slice in topSlices"
+            :key="'slice-2d-' + slice.item.id"
             class="slice-group-3d"
             :class="{ 
               'is-hovered': effectiveActiveId === slice.item.id,
@@ -398,13 +344,6 @@
             <path 
               :d="slice.topPath" 
               :fill="`url(#${getGradientId('top-grad', slice)})`" 
-            />
-
-            <!-- Top Face Outline -->
-            <path 
-              v-if="slice.topStrokePath"
-              :d="slice.topStrokePath" 
-              fill="none"
               :stroke="`url(#${getGradientId('top-grad', slice)})`" 
               stroke-width="0.8"
               stroke-linejoin="round"
@@ -412,11 +351,10 @@
 
             <!-- Top Face White Highlight Outline -->
             <path 
-              v-if="slice.topStrokePath"
-              :d="slice.topStrokePath" 
+              :d="slice.topPath"
               fill="none" 
-              stroke="rgba(255, 255, 255, 0.16)" 
-              :stroke-width="isExpanded ? 0.8 : 0.5" 
+              :stroke="TOP_HIGHLIGHT_COLOR"
+              stroke-width="0.8"
               stroke-linejoin="round"
             />
           </g>
@@ -569,7 +507,8 @@ import {
   aggregateThresholdData,
 } from '../utils/chart-walls.js'
 
-
+// Top surface edge highlight color (set to 'transparent' or alpha 0 to hide)
+const TOP_HIGHLIGHT_COLOR = 'rgba(255, 255, 255, 0.16)'
 const props = defineProps({
   // Array of: { id, name, value, percentage, color, unit }
   data: {
@@ -988,7 +927,7 @@ const displayCenterValue = computed(() => {
   if (props.centerValue !== undefined && props.centerValue !== '') {
     return props.centerValue
   }
-  const hovered = sortedSlices.value.find(s => s.item.id === effectiveActiveId.value)
+  const hovered = topSlices.value.find(s => s.item.id === effectiveActiveId.value)
   if (hovered) {
     if (props.centerValueFormatter) {
       return props.centerValueFormatter(hovered.item.value, hovered.item)
@@ -1002,7 +941,7 @@ const displayCenterValue = computed(() => {
 })
 
 const displayCenterLabel = computed(() => {
-  const hovered = sortedSlices.value.find(s => s.item.id === effectiveActiveId.value)
+  const hovered = topSlices.value.find(s => s.item.id === effectiveActiveId.value)
   if (hovered) {
     return truncateText(hovered.item.name, 12).toUpperCase()
   }
@@ -1080,19 +1019,26 @@ const activeRotationAngle = computed(() => {
 
 const animatedRotationAngle = ref(activeRotationAngle.value)
 
+const isRotationMoving = ref(false)
+
 const rotationKinetic = createKineticTransition({
   initialValue: activeRotationAngle.value,
   duration: props.rotationDuration ?? props.animationDuration ?? 350,
   timingMode: props.rotationTimingMode || 'fixed',
   modular: props.rotationModular || props.autoRotate || false,
-  onUpdate: ({ value }) => {
+  onUpdate: ({ value, isMoving }) => {
     animatedRotationAngle.value = value
+    isRotationMoving.value = isMoving
   },
   onSettled: ({ value }) => {
     animatedRotationAngle.value = value
+    isRotationMoving.value = false
   },
 })
 const isAnimating = ref(false)
+
+// True during active coordinate mutations (spin, entry, data morphing)
+const isChartMoving = computed(() => isAnimating.value || isRotationMoving.value)
 
 const getTargetGeometry = (isExpanded, showLabels, is3D, slopeRatio, thickness) => {
   return calculateTargetGeometry({
@@ -1211,14 +1157,19 @@ const sortedSlices = computed(() => {
     }
 
     // Half paths for splitting
-    // Back Half: from angle PI to 2PI (180deg to 360deg)
-    const backTopPath = `M ${cx - rx} ${drawCenterY} A ${rx} ${ry} 0 0 1 ${cx + rx} ${drawCenterY} L ${cx + irx} ${drawCenterY} A ${irx} ${iry} 0 0 0 ${cx - irx} ${drawCenterY} Z`
-    const backTopStrokePath = `M ${cx - rx} ${drawCenterY} A ${rx} ${ry} 0 0 1 ${cx + rx} ${drawCenterY} M ${cx + irx} ${drawCenterY} A ${irx} ${iry} 0 0 0 ${cx - irx} ${drawCenterY}`
+    const snappedCenterY = Math.round(drawCenterY)
+    const snappedOuterLeft = Math.round(cx - rx)
+    const snappedOuterRight = Math.round(cx + rx)
+    const snappedInnerLeft = Math.round(cx - irx)
+    const snappedInnerRight = Math.round(cx + irx)
+
+    const backTopPath = `M ${snappedOuterLeft} ${snappedCenterY} A ${rx} ${ry} 0 0 1 ${snappedOuterRight} ${snappedCenterY} L ${snappedInnerRight} ${snappedCenterY} A ${irx} ${iry} 0 0 0 ${snappedInnerLeft} ${snappedCenterY} Z`
+    const backTopStrokePath = `M ${snappedOuterLeft} ${snappedCenterY} A ${rx} ${ry} 0 0 1 ${snappedOuterRight} ${snappedCenterY} M ${snappedInnerRight} ${snappedCenterY} A ${irx} ${iry} 0 0 0 ${snappedInnerLeft} ${snappedCenterY}`
     const backInnerWallPath = fullInnerWallPath
 
     // Front Half: from angle 0 to PI (0deg to 180deg)
-    const frontTopPath = `M ${cx + rx} ${drawCenterY} A ${rx} ${ry} 0 0 1 ${cx - rx} ${drawCenterY} L ${cx - irx} ${drawCenterY} A ${irx} ${iry} 0 0 0 ${cx + irx} ${drawCenterY} Z`
-    const frontTopStrokePath = `M ${cx + rx} ${drawCenterY} A ${rx} ${ry} 0 0 1 ${cx - rx} ${drawCenterY} M ${cx - irx} ${drawCenterY} A ${irx} ${iry} 0 0 0 ${cx + irx} ${drawCenterY}`
+    const frontTopPath = `M ${snappedOuterRight} ${snappedCenterY} A ${rx} ${ry} 0 0 1 ${snappedOuterLeft} ${snappedCenterY} L ${snappedInnerLeft} ${snappedCenterY} A ${irx} ${iry} 0 0 0 ${snappedInnerRight} ${snappedCenterY} Z`
+    const frontTopStrokePath = `M ${snappedOuterRight} ${snappedCenterY} A ${rx} ${ry} 0 0 1 ${snappedOuterLeft} ${snappedCenterY} M ${snappedInnerLeft} ${snappedCenterY} A ${irx} ${iry} 0 0 0 ${snappedInnerRight} ${snappedCenterY}`
     const frontOuterWallPath = fullOuterWallPath
 
     const originalMidAngle = (animatedRotationAngle.value * Math.PI) / 180 + Math.PI
@@ -1360,22 +1311,38 @@ const sortedSlices = computed(() => {
       const eAngle = interval.end
       const subMidAngle = interval.midAngle
 
-      const x_os = cx + rx * Math.cos(sAngle)
-      const y_os = drawCenterY + ry * Math.sin(sAngle)
-      const x_oe = cx + rx * Math.cos(eAngle)
-      const y_oe = drawCenterY + ry * Math.sin(eAngle)
-      const x_ie = cx + irx * Math.cos(eAngle)
-      const y_ie = drawCenterY + iry * Math.sin(eAngle)
-      const x_is = cx + irx * Math.cos(sAngle)
-      const y_is = drawCenterY + iry * Math.sin(sAngle)
+      let x_os = cx + rx * Math.cos(sAngle)
+      let y_os = drawCenterY + ry * Math.sin(sAngle)
+      let x_oe = cx + rx * Math.cos(eAngle)
+      let y_oe = drawCenterY + ry * Math.sin(eAngle)
+      let x_ie = cx + irx * Math.cos(eAngle)
+      let y_ie = drawCenterY + iry * Math.sin(eAngle)
+      let x_is = cx + irx * Math.cos(sAngle)
+      let y_is = drawCenterY + iry * Math.sin(sAngle)
 
       const subAngleSize = eAngle - sAngle
       const largeArc = subAngleSize > Math.PI ? 1 : 0
 
-      const topPath = `M ${x_os} ${y_os} A ${rx} ${ry} 0 ${largeArc} 1 ${x_oe} ${y_oe} L ${x_ie} ${y_ie} A ${irx} ${iry} 0 ${largeArc} 0 ${x_is} ${y_is} Z`
-
       const endSplit = !interval.isEndEdge
       const startSplit = !interval.isStartEdge
+
+      // Snap intersection coordinates on equator to exact integer pixels (0 decimal places)
+      if (startSplit) {
+        y_os = Math.round(drawCenterY)
+        y_is = Math.round(drawCenterY)
+        const isWest = Math.cos(sAngle) < 0
+        x_os = Math.round(isWest ? cx - rx : cx + rx)
+        x_is = Math.round(isWest ? cx - irx : cx + irx)
+      }
+      if (endSplit) {
+        y_oe = Math.round(drawCenterY)
+        y_ie = Math.round(drawCenterY)
+        const isWest = Math.cos(eAngle) < 0
+        x_oe = Math.round(isWest ? cx - rx : cx + rx)
+        x_ie = Math.round(isWest ? cx - irx : cx + irx)
+      }
+
+      const topPath = `M ${x_os} ${y_os} A ${rx} ${ry} 0 ${largeArc} 1 ${x_oe} ${y_oe} L ${x_ie} ${y_ie} A ${irx} ${iry} 0 ${largeArc} 0 ${x_is} ${y_is} Z`
 
       let topStrokePath = ''
       if (endSplit) {
@@ -1501,16 +1468,138 @@ const sortedSlices = computed(() => {
   })
 })
 
-const uniqueSlices = computed(() => {
-  const seen = new Set()
+const topSlices = computed(() => {
+  const itemsList = animatedItems.value
+  const totalVal = totalValue.value
+  if (!totalVal || totalVal <= 0) return []
+
+  const cx = animCx.value
+  const rx = animRx.value
+  const ry = animRy.value
+  const irx = animIrx.value
+  const iry = animIry.value
+  const depth = animDepth.value
+  const drawCenterY = drawCenterYComputed.value
+
+  const activeSlices = itemsList.filter(item => item.value > 0.001)
+  if (activeSlices.length === 1) {
+    const item = activeSlices[0]
+    const index = itemsList.indexOf(item)
+    const color = getItemColor(item, index)
+    const fullTopPath = `M ${cx - rx} ${drawCenterY} A ${rx} ${ry} 0 0 1 ${cx + rx} ${drawCenterY} A ${rx} ${ry} 0 0 1 ${cx - rx} ${drawCenterY} M ${cx - irx} ${drawCenterY} A ${irx} ${iry} 0 0 0 ${cx + irx} ${drawCenterY} A ${irx} ${iry} 0 0 0 ${cx - irx} ${drawCenterY} Z`
+    const originalMidAngle = (animatedRotationAngle.value * Math.PI) / 180 + Math.PI
+
+    const x0 = cx + rx * Math.cos(originalMidAngle)
+    const y0 = drawCenterY + ry * Math.sin(originalMidAngle)
+    const x1 = cx + (rx + 25) * Math.cos(originalMidAngle)
+    const y1 = drawCenterY + (ry + 35 * props.slopeRatio) * Math.sin(originalMidAngle)
+
+    const midX = cx + ((rx + irx) / 2) * Math.cos(originalMidAngle)
+    const midY_local = drawCenterY + ((ry + iry) / 2) * Math.sin(originalMidAngle)
+    const w = rx - irx
+    const h = ry - iry
+
+    return [{
+      item,
+      index,
+      color,
+      isSingleSlice: true,
+      midAngle: originalMidAngle,
+      originalMidAngle,
+      topPath: fullTopPath,
+      topStrokePath: `M ${cx - rx} ${drawCenterY} A ${rx} ${ry} 0 0 1 ${cx + rx} ${drawCenterY} A ${rx} ${ry} 0 0 1 ${cx - rx} ${drawCenterY} M ${cx - irx} ${drawCenterY} A ${irx} ${iry} 0 0 0 ${cx + irx} ${drawCenterY} A ${irx} ${iry} 0 0 0 ${cx - irx} ${drawCenterY}`,
+      hoverPath: fullTopPath,
+      originalTopPath: fullTopPath,
+      originalOuterWallPath: depth > 0 ? `M ${cx + rx} ${drawCenterY} A ${rx} ${ry} 0 0 1 ${cx - rx} ${drawCenterY} L ${cx - rx} ${drawCenterY + depth} A ${rx} ${ry} 0 0 0 ${cx + rx} ${drawCenterY + depth} Z` : '',
+      midY: drawCenterY,
+      x0,
+      y0,
+      x1,
+      y1,
+      topGradX1: midX - w / 2,
+      topGradY1: midY_local - h / 2,
+      topGradX2: midX + w / 2,
+      topGradY2: midY_local + h / 2,
+      wallY1: drawCenterY,
+      wallY2: drawCenterY + depth
+    }]
+  }
+
+  let currentAngle = (animatedRotationAngle.value * Math.PI) / 180
   const result = []
-  sortedSlices.value.forEach(slice => {
-    if (!seen.has(slice.item.id)) {
-      seen.add(slice.item.id)
-      result.push(slice)
+
+  itemsList.forEach((item, index) => {
+    let sliceAngle = (item.value / totalVal) * Math.PI * 2
+    if (sliceAngle <= 0) return
+    if (sliceAngle >= Math.PI * 2 - 0.001) {
+      sliceAngle = Math.PI * 2 - 0.001
     }
+
+    const startAngle = currentAngle
+    const endAngle = currentAngle + sliceAngle
+    const originalMidAngle = startAngle + sliceAngle / 2
+    const color = getItemColor(item, index)
+
+    const x_os = cx + rx * Math.cos(startAngle)
+    const y_os = drawCenterY + ry * Math.sin(startAngle)
+    const x_oe = cx + rx * Math.cos(endAngle)
+    const y_oe = drawCenterY + ry * Math.sin(endAngle)
+    const x_ie = cx + irx * Math.cos(endAngle)
+    const y_ie = drawCenterY + iry * Math.sin(endAngle)
+    const x_is = cx + irx * Math.cos(startAngle)
+    const y_is = drawCenterY + iry * Math.sin(startAngle)
+
+    const origLargeArc = sliceAngle > Math.PI ? 1 : 0
+    const topPath = `M ${x_os} ${y_os} A ${rx} ${ry} 0 ${origLargeArc} 1 ${x_oe} ${y_oe} L ${x_ie} ${y_ie} A ${irx} ${iry} 0 ${origLargeArc} 0 ${x_is} ${y_is} Z`
+    const topStrokePath = topPath
+
+    const originalOuterWallPath = depth > 0
+      ? `M ${x_os} ${y_os} A ${rx} ${ry} 0 ${origLargeArc} 1 ${x_oe} ${y_oe} L ${x_oe} ${y_oe + depth} A ${rx} ${ry} 0 ${origLargeArc} 0 ${x_os} ${y_os + depth} Z`
+      : ''
+
+    const x0 = cx + rx * Math.cos(originalMidAngle)
+    const y0 = drawCenterY + ry * Math.sin(originalMidAngle)
+    const x1 = cx + (rx + 25) * Math.cos(originalMidAngle)
+    const y1 = drawCenterY + (ry + 35 * props.slopeRatio) * Math.sin(originalMidAngle)
+
+    const midX = cx + ((rx + irx) / 2) * Math.cos(originalMidAngle)
+    const midY_local = drawCenterY + ((ry + iry) / 2) * Math.sin(originalMidAngle)
+    const w = rx - irx
+    const h = ry - iry
+
+    result.push({
+      item,
+      index,
+      color,
+      isSingleSlice: false,
+      midAngle: originalMidAngle,
+      originalMidAngle,
+      topPath,
+      topStrokePath,
+      hoverPath: topPath,
+      originalTopPath: topPath,
+      originalOuterWallPath,
+      midY: midY_local,
+      x0,
+      y0,
+      x1,
+      y1,
+      topGradX1: midX - w / 2,
+      topGradY1: midY_local - h / 2,
+      topGradX2: midX + w / 2,
+      topGradY2: midY_local + h / 2,
+      wallY1: drawCenterY,
+      wallY2: drawCenterY + depth
+    })
+
+    currentAngle += sliceAngle
   })
-  return result
+
+  return result.sort((a, b) => a.midY - b.midY)
+})
+
+const uniqueSlices = computed(() => {
+  return topSlices.value
 })
 
 const isolateHovered = ref(false)

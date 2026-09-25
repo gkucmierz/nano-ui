@@ -51,9 +51,9 @@ describe('ThreeDDonutChart SVG Painter Architecture & Render Order', () => {
 
   const layers = block3D.children.filter(c => c.type === 1)
 
-  describe('when validating the 9-layer painter sequence', () => {
-    test('should strictly define exactly 9 top-level SVG layers inside the 3D block', () => {
-      assert.equal(layers.length, 9, 'Must have exactly 9 layers for 3D painter algorithm')
+  describe('when validating the 8-layer painter sequence', () => {
+    test('should strictly define exactly 8 top-level SVG layers inside the 3D block', () => {
+      assert.equal(layers.length, 8, 'Must have exactly 8 layers for 3D painter algorithm')
     })
 
     test('layer 1: should render back outer walls as the bottom-most layer', () => {
@@ -83,26 +83,8 @@ describe('ThreeDDonutChart SVG Painter Architecture & Render Order', () => {
       assert.ok(findChildWithAttr(layer, 'data-wall', 'inner-wall'), 'Must contain path with data-wall="inner-wall"')
     })
 
-    test('layer 4: should render back top upper surface after back walls', () => {
+    test('layer 4: should render front inner walls before front cut walls', () => {
       const layer = layers[3]
-      assert.equal(layer.tag, 'g')
-      const vFor = findAttr(layer, 'for')
-      assert.ok(vFor?.includes('backSlices'), 'Must iterate over backSlices')
-      assert.equal(findAttr(layer, 'data-half'), 'back')
-      assert.ok(findChildWithAttr(layer, 'data-wall', 'top-face'), 'Must contain path with data-wall="top-face"')
-    })
-
-    test('layer 5: should render center hole text/label sandwiched between back and front halves', () => {
-      const layer = layers[4]
-      assert.equal(layer.tag, 'g')
-      const vIf = findAttr(layer, 'if')
-      assert.ok(vIf?.includes('showCenterText'), 'Must be conditionally rendered with showCenterText')
-      const klass = findAttr(layer, 'class')
-      assert.ok(klass?.includes('center-text-group'), 'Must have center-text-group class')
-    })
-
-    test('layer 6: should render front inner walls before front cut walls', () => {
-      const layer = layers[5]
       assert.equal(layer.tag, 'g')
       const vFor = findAttr(layer, 'for')
       assert.ok(vFor?.includes('frontSlices'), 'Must iterate over frontSlices')
@@ -110,8 +92,8 @@ describe('ThreeDDonutChart SVG Painter Architecture & Render Order', () => {
       assert.ok(findChildWithAttr(layer, 'data-wall', 'inner-wall'), 'Must contain path with data-wall="inner-wall"')
     })
 
-    test('layer 7: should render front cut walls sorted by angle order before front outer walls', () => {
-      const layer = layers[6]
+    test('layer 5: should render front cut walls sorted by angle order before front outer walls', () => {
+      const layer = layers[4]
       assert.equal(layer.tag, 'g')
       const vFor = findAttr(layer, 'for')
       assert.ok(vFor?.includes('frontCutWallsSorted'), 'Must iterate over frontCutWallsSorted')
@@ -119,8 +101,8 @@ describe('ThreeDDonutChart SVG Painter Architecture & Render Order', () => {
       assert.equal(findAttr(layer, 'data-layer'), 'cut-wall')
     })
 
-    test('layer 8: should render front outer walls before front top surface', () => {
-      const layer = layers[7]
+    test('layer 6: should render front outer walls before top surfaces', () => {
+      const layer = layers[5]
       assert.equal(layer.tag, 'g')
       const vFor = findAttr(layer, 'for')
       assert.ok(vFor?.includes('frontSlices'), 'Must iterate over frontSlices')
@@ -128,13 +110,22 @@ describe('ThreeDDonutChart SVG Painter Architecture & Render Order', () => {
       assert.ok(findChildWithAttr(layer, 'data-wall', 'outer-wall'), 'Must contain path with data-wall="outer-wall"')
     })
 
-    test('layer 9: should render front top upper surface as the topmost 3D slice layer', () => {
-      const layer = layers[8]
+    test('layer 7: should render unsplit top surfaces across all slices', () => {
+      const layer = layers[6]
       assert.equal(layer.tag, 'g')
       const vFor = findAttr(layer, 'for')
-      assert.ok(vFor?.includes('frontSlices'), 'Must iterate over frontSlices')
-      assert.equal(findAttr(layer, 'data-half'), 'front')
+      assert.ok(vFor?.includes('topSlices'), 'Must iterate over topSlices')
+      assert.equal(findAttr(layer, 'data-layer'), 'top-face')
       assert.ok(findChildWithAttr(layer, 'data-wall', 'top-face'), 'Must contain path with data-wall="top-face"')
+    })
+
+    test('layer 8: should render center hole text/label on top of all 3D layers', () => {
+      const layer = layers[7]
+      assert.equal(layer.tag, 'g')
+      const vIf = findAttr(layer, 'if')
+      assert.ok(vIf?.includes('showCenterText'), 'Must be conditionally rendered with showCenterText')
+      const klass = findAttr(layer, 'class')
+      assert.ok(klass?.includes('center-text-group'), 'Must have center-text-group class')
     })
   })
 
