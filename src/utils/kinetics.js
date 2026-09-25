@@ -245,8 +245,10 @@ export const createKineticTransition = (options = {}) => {
     tick(now);
   };
 
-  const setTarget = (newTarget, { immediate = false, isRelative = false, delta = 0 } = {}) => {
-    const now = typeof performance !== 'undefined' && performance.now ? performance.now() : Date.now();
+  const setTarget = (newTarget, { immediate = false, isRelative = false, delta = 0, timestamp = undefined } = {}) => {
+    const now = timestamp !== undefined
+      ? timestamp
+      : (typeof performance !== 'undefined' && performance.now ? performance.now() : Date.now());
 
     let startVal = currentValue;
     let startVel = currentVelocity;

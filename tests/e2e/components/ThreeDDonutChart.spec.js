@@ -156,4 +156,47 @@ test.describe('3D Donut Chart Wall Geometry & Visibility Specs', () => {
       await expect(chart).toBeVisible()
     }
   })
+
+  test('should retract slice on deselection while mouse is stationary and re-extrude on mousemove', async ({ page }) => {
+    const chart = page.locator('.items-svg-chart')
+    await expect(chart).toBeVisible()
+
+    // 1. Click Russia label to select it
+    const russiaLabel = page.locator('svg text:has-text("Russia")')
+    await expect(russiaLabel).toBeVisible()
+    await russiaLabel.click()
+
+    const russiaSlice = page.locator('.items-svg-chart g[data-testid="slice-ru"]').first()
+    await expect(russiaSlice).toBeVisible()
+    await page.waitForTimeout(350)
+    const styleSelected = await russiaSlice.getAttribute('style')
+    expect(styleSelected).toContain('translate')
+
+    // 2. Click Russia label again to deselect WITHOUT moving the mouse
+    await russiaLabel.click()
+
+    // Slice must retract back to rest position (no extrusion translation)
+    await page.waitForTimeout(350)
+    const styleDeselected = await russiaSlice.getAttribute('style')
+    const hasTranslation = styleDeselected && styleDeselected.includes('translate')
+    expect(hasTranslation).toBeFalsy()
+
+    // 3. Move mouse deliberately over Russia label (simulate mousemove)
+    const box = await russiaLabel.boundingBox()
+    if (box) {
+      await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2)
+      await page.mouse.move(box.x + box.width / 2 + 5, box.y + box.height / 2)
+      await page.waitForTimeout(350)
+
+      // Hover re-engages and slice extrudes again
+      const styleRehovered = await russiaSlice.getAttribute('style')
+      expect(styleRehovered).toContain('translate')
+    }
+
+    // 4. Move mouse away to rest
+    await page.mouse.move(0, 0)
+    await page.waitForTimeout(350)
+    const styleRest = await russiaSlice.getAttribute('style')
+    expect(styleRest && styleRest.includes('translate')).toBeFalsy()
+  })
 })

@@ -6,6 +6,8 @@
       'is-expanded': isExpanded,
       'no-transitions': isAnimating || immediate
     }"
+    @mousemove="handleWrapperMouseMove"
+    @mouseleave="handleWrapperMouseLeave"
   >
     <svg 
       :viewBox="`0 0 ${animVbWidth} ${animVbHeight}`" 
@@ -453,8 +455,9 @@
           class="hover-trigger-group"
           :style="{ cursor: (props.selectable && !isSingleSlice) ? 'pointer' : 'default' }"
           @mouseenter="handleHoverStart(slice.item.id)"
-          @mouseleave="activeHoveredId = null"
-          @click="handleSliceClick(slice.item.id)"
+          @mouseleave="handleHoverEnd(slice.item.id)"
+          @click="handleSliceClick(slice.item.id, $event)"
+          @mousemove="handleSliceMouseMove(slice.item.id, $event)"
         >
           <!-- Transparent Top Face -->
           <path 
@@ -481,8 +484,9 @@
               'is-dimmed': effectiveActiveId !== null && effectiveActiveId !== label.item.id 
             }"
             @mouseenter="handleHoverStart(label.item.id)"
-            @mouseleave="activeHoveredId = null"
-            @click="handleSliceClick(label.item.id)"
+            @mouseleave="handleHoverEnd(label.item.id)"
+            @click="handleSliceClick(label.item.id, $event)"
+            @mousemove="handleSliceMouseMove(label.item.id, $event)"
             :style="getLabelGroupStyle(label)"
           >
             <path 
@@ -500,7 +504,7 @@
               font-family="system-ui, -apple-system, sans-serif" 
               text-anchor="end" 
               dominant-baseline="middle"
-              :style="effectiveActiveId === label.item.id ? 'transform: translate(0, -5px);' : ''"
+              :style="getLabelTextStyle(label)"
             >
               {{ truncateText(label.item.name, 24) }} {{ formatValue(label.item.value) }} {{ label.item.unit || '' }} ({{ label.item.percentage }}%)
             </text>
@@ -516,8 +520,9 @@
               'is-dimmed': effectiveActiveId !== null && effectiveActiveId !== label.item.id 
             }"
             @mouseenter="handleHoverStart(label.item.id)"
-            @mouseleave="activeHoveredId = null"
-            @click="handleSliceClick(label.item.id)"
+            @mouseleave="handleHoverEnd(label.item.id)"
+            @click="handleSliceClick(label.item.id, $event)"
+            @mousemove="handleSliceMouseMove(label.item.id, $event)"
             :style="getLabelGroupStyle(label)"
           >
             <path 
@@ -535,7 +540,7 @@
               font-family="system-ui, -apple-system, sans-serif" 
               text-anchor="start" 
               dominant-baseline="middle"
-              :style="effectiveActiveId === label.item.id ? 'transform: translate(0, -5px);' : ''"
+              :style="getLabelTextStyle(label)"
             >
               {{ truncateText(label.item.name, 24) }} {{ formatValue(label.item.value) }} {{ label.item.unit || '' }} ({{ label.item.percentage }}%)
             </text>
@@ -719,6 +724,8 @@ const leaderStrokeWidth = computed(() => {
 
 let currentAnimationId = null
 const activeHoveredId = ref(null)
+const suppressedHoverId = ref(null)
+let lastClickPos = { x: 0, y: 0 }
 
 const localSelectedId = ref(null)
 
@@ -736,7 +743,7 @@ const selectedId = computed({
 
 const effectiveActiveId = computed(() => {
   if (isSingleSlice.value) return null
-  if (activeHoveredId.value !== null) {
+  if (activeHoveredId.value !== null && activeHoveredId.value !== suppressedHoverId.value) {
     return activeHoveredId.value
   }
   return props.selectable ? selectedId.value : null
@@ -744,19 +751,67 @@ const effectiveActiveId = computed(() => {
 
 let clickedItemThisTick = false
 
-const handleSliceClick = (id) => {
+const handleSliceClick = (id, event) => {
   if (!props.selectable || isSingleSlice.value) return
   clickedItemThisTick = true
   if (selectedId.value === id) {
+    // Deselect: retract back to rest position immediately and suppress hover
     selectedId.value = null
+    activeHoveredId.value = null
+    suppressedHoverId.value = id
+    if (event) {
+      lastClickPos = { x: event.clientX || 0, y: event.clientY || 0 }
+    }
   } else {
+    suppressedHoverId.value = null
     selectedId.value = id
   }
 }
 
 const handleHoverStart = (id) => {
   if (isSingleSlice.value) return
+  if (suppressedHoverId.value === id) return
   activeHoveredId.value = id
+}
+
+const handleHoverEnd = (id) => {
+  if (activeHoveredId.value === id) {
+    activeHoveredId.value = null
+  }
+  if (suppressedHoverId.value === id) {
+    suppressedHoverId.value = null
+  }
+}
+
+const handleSliceMouseMove = (id, event) => {
+  if (isSingleSlice.value) return
+  if (suppressedHoverId.value === id) {
+    if (event) {
+      const dist = Math.hypot(event.clientX - lastClickPos.x, event.clientY - lastClickPos.y)
+      if (dist >= 3) {
+        // Deliberate movement detected: unsuppress and re-engage hover!
+        suppressedHoverId.value = null
+        activeHoveredId.value = id
+      }
+    } else {
+      suppressedHoverId.value = null
+      activeHoveredId.value = id
+    }
+  }
+}
+
+const handleWrapperMouseMove = (event) => {
+  if (suppressedHoverId.value !== null && event) {
+    const dist = Math.hypot(event.clientX - lastClickPos.x, event.clientY - lastClickPos.y)
+    if (dist >= 3) {
+      suppressedHoverId.value = null
+    }
+  }
+}
+
+const handleWrapperMouseLeave = () => {
+  activeHoveredId.value = null
+  suppressedHoverId.value = null
 }
 
 const wrapperRef = ref(null)
@@ -769,6 +824,7 @@ const handleDocumentClick = (event) => {
   }
   if (wrapperRef.value && wrapperRef.value.contains(event.target)) {
     selectedId.value = null
+    suppressedHoverId.value = null
   }
 }
 const animatedItems = ref([])
@@ -1539,28 +1595,63 @@ const uniqueSlices = computed(() => {
 
 const isolateHovered = ref(false)
 
-const isHoverTransitioning = ref(false)
+const sliceExtrusions = ref({})
+const extrusionTransitions = new Map()
+
+const getExtrusionTransition = (sliceId) => {
+  if (!extrusionTransitions.has(sliceId)) {
+    const transition = createKineticTransition({
+      initialValue: 0,
+      duration: props.animationDuration !== undefined ? props.animationDuration : 250,
+      timingMode: 'fixed',
+      modular: false,
+      onUpdate: ({ value }) => {
+        sliceExtrusions.value = {
+          ...sliceExtrusions.value,
+          [sliceId]: value
+        }
+      },
+      onSettled: ({ value }) => {
+        if (value <= 0.001) {
+          const next = { ...sliceExtrusions.value }
+          delete next[sliceId]
+          sliceExtrusions.value = next
+          if (transitioningSliceId.value === sliceId) {
+            transitioningSliceId.value = null
+          }
+        }
+      }
+    })
+    extrusionTransitions.set(sliceId, transition)
+  }
+  return extrusionTransitions.get(sliceId)
+}
+
 const transitioningSliceId = ref(null)
 
-watch(effectiveActiveId, (newId, oldId) => {
-  if (newId) {
-    if (hoverTransitionTimer) clearTimeout(hoverTransitionTimer)
-    isHoverTransitioning.value = true
-    transitioningSliceId.value = newId
-  } else if (oldId) {
-    const dur = props.animationDuration !== undefined ? props.animationDuration : 300
-    if (hoverTransitionTimer) clearTimeout(hoverTransitionTimer)
-    transitioningSliceId.value = oldId
-    isHoverTransitioning.value = true
-    hoverTransitionTimer = setTimeout(() => {
-      isHoverTransitioning.value = false
-      transitioningSliceId.value = null
-    }, dur + 60)
-  }
+const isHoverTransitioning = computed(() => {
+  return Object.values(sliceExtrusions.value).some(v => v > 0.001) || transitioningSliceId.value !== null
 })
 
+watch(effectiveActiveId, (newId, oldId) => {
+  if (oldId && oldId !== newId) {
+    transitioningSliceId.value = oldId
+    const trans = getExtrusionTransition(oldId)
+    trans.setTarget(0, { immediate: props.immediate })
+  }
+  if (newId) {
+    transitioningSliceId.value = null
+    const trans = getExtrusionTransition(newId)
+    trans.setTarget(1, { immediate: props.immediate })
+  }
+}, { immediate: true })
+
 const activeOrTransitioningId = computed(() => {
-  return effectiveActiveId.value || transitioningSliceId.value
+  if (effectiveActiveId.value) return effectiveActiveId.value
+  if (transitioningSliceId.value) return transitioningSliceId.value
+  const entries = Object.entries(sliceExtrusions.value)
+  const activeEntry = entries.find(([, v]) => v > 0.001)
+  return activeEntry ? activeEntry[0] : null
 })
 
 const neighborSliceIds = computed(() => {
@@ -1680,9 +1771,12 @@ const frontCutWallsSorted = computed(() => {
 
 
 const getSliceStyle = (slice) => {
-  const isHovered = effectiveActiveId.value === slice.item.id
-  if (isHovered) {
-    const dist = 10
+  const p = sliceExtrusions.value[slice.item.id] !== undefined
+    ? sliceExtrusions.value[slice.item.id]
+    : (effectiveActiveId.value === slice.item.id ? 1 : 0)
+
+  if (p > 0.0001) {
+    const dist = 10 * p
     const tx = dist * Math.cos(slice.originalMidAngle)
     const ty = dist * Math.sin(slice.originalMidAngle)
     return {
@@ -1696,6 +1790,16 @@ const getSliceStyle = (slice) => {
     }
   }
   return {}
+}
+
+const getLabelTextStyle = (label) => {
+  const p = sliceExtrusions.value[label.item.id] !== undefined
+    ? sliceExtrusions.value[label.item.id]
+    : (effectiveActiveId.value === label.item.id ? 1 : 0)
+  if (p > 0.0001) {
+    return `transform: translate(0, ${-5 * p}px);`
+  }
+  return ''
 }
 
 const getLabelGroupStyle = (label) => {
@@ -1755,18 +1859,21 @@ const leftLabels = computed(() => computedLabels.value.left)
 const rightLabels = computed(() => computedLabels.value.right)
 
 const getLeaderLinePath = (label) => {
-  const isHovered = effectiveActiveId.value === label.item.id
+  const p = sliceExtrusions.value[label.item.id] !== undefined
+    ? sliceExtrusions.value[label.item.id]
+    : (effectiveActiveId.value === label.item.id ? 1 : 0)
+
   let startX = label.x0
   let startY = label.y0
   let endY = label.finalY
 
-  if (isHovered) {
-    const dist = 10
+  if (p > 0.0001) {
+    const dist = 10 * p
     const tx = dist * Math.cos(label.originalMidAngle || 0)
     const ty = dist * Math.sin(label.originalMidAngle || 0)
     startX += tx
     startY += ty
-    endY -= 5
+    endY -= 5 * p
   }
 
   const R = 30
@@ -2055,6 +2162,12 @@ watch(activeHoveredId, (newId) => {
   }
 })
 
+watch(() => props.animationDuration, (newDur) => {
+  extrusionTransitions.forEach((trans) => {
+    trans.setConfig({ duration: newDur ?? 250 })
+  })
+})
+
 onMounted(() => {
   document.addEventListener('click', handleDocumentClick)
   if (typeof window !== 'undefined') {
@@ -2084,6 +2197,8 @@ onUnmounted(() => {
     cancelAnimationFrame(currentAnimationId)
   }
   rotationKinetic.destroy()
+  extrusionTransitions.forEach((trans) => trans.destroy())
+  extrusionTransitions.clear()
 })
 
 defineExpose({
@@ -2132,7 +2247,7 @@ defineExpose({
 /* Beautiful Interactive 3D hover effects */
 .slice-group-3d {
   cursor: pointer;
-  transition: transform var(--nano-transition-chart), opacity var(--nano-transition-interactive);
+  transition: opacity var(--nano-transition-interactive);
 }
 
 .slice-group-3d.is-dimmed {
@@ -2149,7 +2264,7 @@ defineExpose({
 }
 
 .label-group text {
-  transition: transform var(--nano-transition-chart), font-weight var(--nano-transition-interactive), opacity var(--nano-transition-interactive);
+  transition: font-weight var(--nano-transition-interactive), opacity var(--nano-transition-interactive);
 }
 
 .label-group.is-hovered path {

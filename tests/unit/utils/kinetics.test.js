@@ -152,6 +152,46 @@ describe('Pure JS Kinetics & Velocity Chaining Engine', () => {
       assert.ok(typeof latestV0 === 'number');
     });
 
+    test('should smoothly reverse mid-flight when target is reset back to zero during extrusion', () => {
+      let latestProgress = 0;
+      let latestVelocity = 0;
+      let latestV0 = 0;
+
+      const kt = createKineticTransition({
+        initialValue: 0,
+        duration: 300,
+        timingMode: 'fixed',
+        modular: false,
+        onUpdate: ({ progress, velocity, v0 }) => {
+          latestProgress = progress;
+          latestVelocity = velocity;
+          latestV0 = v0;
+        },
+      });
+
+      // 1. Start extrusion towards target = 1.0
+      const now = typeof performance !== 'undefined' && performance.now ? performance.now() : Date.now();
+      kt.setTarget(1.0);
+      kt.step(now + 150);
+
+      assert.ok(latestProgress > 0 && latestProgress < 1, `Should be mid-way through extension, got ${latestProgress}`);
+      assert.ok(latestVelocity > 0, 'Velocity should be positive towards target');
+
+      // 2. Interrupt mid-flight: target reset to 0
+      const interruptNow = now + 150;
+      kt.setTarget(0.0, { timestamp: interruptNow });
+
+      assert.equal(kt.getTarget(), 0.0);
+      assert.equal(kt.isMoving(), true);
+      assert.ok(latestV0 !== 0, 'v0 must be non-zero to preserve velocity continuity');
+
+      // 3. Step forward to completion
+      kt.step(interruptNow + 600);
+      assert.equal(kt.getValue(), 0.0);
+      assert.equal(kt.isMoving(), false);
+      kt.destroy();
+    });
+
     test('should allow dynamic configuration updates via setConfig', () => {
       const kt = createKineticTransition({ initialValue: 0, timingMode: 'fixed' });
       kt.setConfig({ timingMode: 'proportional', step: 45 });
@@ -160,4 +200,4 @@ describe('Pure JS Kinetics & Velocity Chaining Engine', () => {
       kt.destroy();
     });
   });
-})
+});
