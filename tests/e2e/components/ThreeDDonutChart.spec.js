@@ -38,35 +38,6 @@ test.describe('3D Donut Chart Wall Geometry & Visibility Specs', () => {
     expect(activeCutsCount).toBeGreaterThan(0)
   })
 
-  test('should isolate single hovered slice when window.fullOpacity is true', async ({ page }) => {
-    // Set window.fullOpacity to true via page evaluation
-    await page.evaluate(() => {
-      window.fullOpacity = true
-    })
-
-    // Hover over Russia slice
-    const russiaLabel = page.locator('.label-group text:has-text("Russia")').first()
-    await expect(russiaLabel).toBeVisible()
-    await russiaLabel.hover({ force: true })
-
-    // Confirm that non-hovered slice groups receive opacity: 0 style
-    const dimmedSlices = page.locator('.items-svg-chart .slice-group-3d.is-dimmed')
-    const dimmedCount = await dimmedSlices.count()
-    expect(dimmedCount).toBeGreaterThan(0)
-
-    for (let i = 0; i < dimmedCount; i++) {
-      const sliceEl = dimmedSlices.nth(i)
-      const opacity = await sliceEl.evaluate((el) => window.getComputedStyle(el).opacity)
-      expect(Number(opacity)).toBe(0)
-    }
-
-    // Confirm that the active hovered slice group retains opacity: 1
-    const activeSlice = page.locator('.items-svg-chart .slice-group-3d.is-hovered').first()
-    await expect(activeSlice).toBeVisible()
-    const activeOpacity = await activeSlice.evaluate((el) => window.getComputedStyle(el).opacity)
-    expect(Number(activeOpacity)).toBe(1)
-  })
-
   test('should synchronize cut wall extrusion animation and transform with hovered slice', async ({ page }) => {
     // Hover over Russia slice
     const russiaLabel = page.locator('.label-group text:has-text("Russia")').first()
@@ -112,21 +83,6 @@ test.describe('3D Donut Chart Wall Geometry & Visibility Specs', () => {
       const opacity = await dimmedEl.evaluate((el) => window.getComputedStyle(el).opacity)
       expect(Number(opacity)).toBeCloseTo(0.35, 1)
     }
-
-    // 2. Isolated hover state (opacity: 0 on dimmed cut walls when window.fullOpacity = true)
-    await page.evaluate(() => {
-      window.fullOpacity = true
-    })
-
-    for (let i = 0; i < dimmedCount; i++) {
-      const dimmedEl = dimmedCutGroups.nth(i)
-      const opacity = await dimmedEl.evaluate((el) => window.getComputedStyle(el).opacity)
-      expect(Number(opacity)).toBe(0)
-    }
-
-    // Active cut wall must remain opacity 1
-    const activeOpacityAfterIsolate = await activeCutGroup.evaluate((el) => window.getComputedStyle(el).opacity)
-    expect(Number(activeOpacityAfterIsolate)).toBe(1)
   })
 
   test('should smoothly clean up partition cuts when unhovered back to rest', async ({ page }) => {

@@ -298,7 +298,6 @@
             v-if="props.showCenterText"
             :transform="`translate(${animCx}, ${centerTextY})`"
             class="center-text-group"
-            :style="{ opacity: (isolateHovered && effectiveActiveId) ? 0 : 1 }"
           >
             <text
               x="0"
@@ -1183,7 +1182,7 @@ const drawCenterYComputed = computed(() => {
 const effectiveCenterTextZ = computed(() => {
   if (props.centerTextZ === 'auto' || props.centerTextZ === undefined || props.centerTextZ === null) {
     const slope = Math.max(0, Math.min(1, animSlopeRatio.value))
-    return 1.0 - slope
+    return 0.5 * (1.0 - slope)
   }
   const num = typeof props.centerTextZ === 'string' ? parseFloat(props.centerTextZ) : props.centerTextZ
   return (!isNaN(num) && num !== null && num !== undefined) ? Math.max(0, Math.min(1, num)) : 0.0
@@ -1677,8 +1676,6 @@ const uniqueSlices = computed(() => {
   return topSlices.value
 })
 
-const isolateHovered = ref(false)
-
 const sliceExtrusions = ref({})
 const extrusionTransitions = new Map()
 
@@ -1874,12 +1871,6 @@ const getSliceStyle = (slice) => {
       transform: `translate(${tx}px, ${ty}px)`
     }
   }
-  if (isolateHovered.value && effectiveActiveId.value) {
-    return {
-      opacity: 0,
-      pointerEvents: 'none'
-    }
-  }
   return {}
 }
 
@@ -1887,12 +1878,8 @@ const getLabelTextStyle = () => {
   return ''
 }
 
-const getLabelGroupStyle = (label) => {
-  const base = { cursor: (props.selectable && !isSingleSlice.value) ? 'pointer' : 'default' }
-  if (isolateHovered.value && effectiveActiveId.value && effectiveActiveId.value !== label.item.id) {
-    return { ...base, opacity: 0, pointerEvents: 'none' }
-  }
-  return base
+const getLabelGroupStyle = () => {
+  return { cursor: (props.selectable && !isSingleSlice.value) ? 'pointer' : 'default' }
 }
 
 const computedLabels = computed(() => {
@@ -2297,35 +2284,8 @@ watch(() => props.animationDuration, (newDur) => {
   thicknessKinetic.setConfig({ duration: newDur ?? 350 })
 })
 
-let fullOpacityListener = null
-
 onMounted(() => {
   document.addEventListener('click', handleDocumentClick)
-  if (typeof window !== 'undefined') {
-    try {
-      if (!window.__nanoFullOpacityListeners) {
-        window.__nanoFullOpacityListeners = new Set()
-        Object.defineProperty(window, 'fullOpacity', {
-          get: () => Array.from(window.__nanoFullOpacityListeners).some(fn => fn()),
-          set: (v) => {
-            window.__nanoFullOpacityVal = !!v
-            window.__nanoFullOpacityListeners.forEach(fn => fn(!!v))
-          },
-          configurable: true
-        })
-      }
-      fullOpacityListener = (v) => {
-        if (v !== undefined) isolateHovered.value = v
-        return isolateHovered.value
-      }
-      window.__nanoFullOpacityListeners.add(fullOpacityListener)
-      if (window.__nanoFullOpacityVal !== undefined) {
-        isolateHovered.value = window.__nanoFullOpacityVal
-      }
-    } catch (e) {
-      // Ignore in SSR
-    }
-  }
   nextTick(() => {
     animateChart()
   })
@@ -2333,9 +2293,6 @@ onMounted(() => {
 
 onUnmounted(() => {
   document.removeEventListener('click', handleDocumentClick)
-  if (typeof window !== 'undefined' && window.__nanoFullOpacityListeners && fullOpacityListener) {
-    window.__nanoFullOpacityListeners.delete(fullOpacityListener)
-  }
   if (currentAnimationId) {
     cancelAnimationFrame(currentAnimationId)
   }

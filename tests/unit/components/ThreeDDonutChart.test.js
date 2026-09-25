@@ -265,14 +265,14 @@ describe('ThreeDDonutChart SVG Painter Architecture & Render Order', () => {
       )
     })
 
-    test('should compute effectiveCenterTextZ dynamically: 1.0 at slope 0, 0.0 at slope 1', () => {
+    test('should compute effectiveCenterTextZ dynamically: 0.5 at slope 0, 0.0 at slope 1', () => {
       assert.ok(
         scriptContent.includes('const effectiveCenterTextZ = computed('),
         'must compute effectiveCenterTextZ'
       )
       assert.ok(
-        scriptContent.includes('1.0 - slope'),
-        'must compute 1.0 - slope when auto'
+        scriptContent.includes('0.5 * (1.0 - slope)'),
+        'must compute 0.5 * (1.0 - slope) when auto'
       )
     })
   })

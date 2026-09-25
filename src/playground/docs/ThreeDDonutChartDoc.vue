@@ -10,22 +10,6 @@ import { getOptimalRotationAngle } from '../../utils/chart-walls.js';
 
 const isExpanded = ref(true);
 const is3D = ref(true);
-const isolateHovered = ref(false);
-
-watch(isolateHovered, (v) => {
-  if (typeof window !== 'undefined') {
-    window.fullOpacity = v;
-  }
-});
-
-onMounted(() => {
-  const syncTimer = setInterval(() => {
-    if (typeof window !== 'undefined' && window.fullOpacity !== undefined && window.fullOpacity !== isolateHovered.value) {
-      isolateHovered.value = window.fullOpacity;
-    }
-  }, 250);
-  onUnmounted(() => clearInterval(syncTimer));
-});
 const showLabels = ref(true);
 const rotationAngle = ref(-90);
 const autoRotate = ref(true);
@@ -34,7 +18,7 @@ const thickness = ref(0.5);
 const depth = ref(32);
 const showCenterText = ref(true);
 const centerTextZ = ref('auto'); // 'auto', 0.0 = top, 0.5 = center, 1.0 = bottom
-const autoZValue = computed(() => 1.0 - Math.max(0, Math.min(1, slopeRatio.value)));
+const autoZValue = computed(() => 0.5 * (1.0 - Math.max(0, Math.min(1, slopeRatio.value))));
 
 const sliderCenterTextZ = computed({
   get: () => (centerTextZ.value === 'auto' ? autoZValue.value : Number(centerTextZ.value)),
@@ -453,7 +437,7 @@ const networkData = [
 
         <div class="slider-row" :style="!showCenterText || !is3D ? 'opacity: 0.35; pointer-events: none;' : ''">
           <span class="slider-label">Center Text Z (Depth): {{ centerTextZ === 'auto' ? `Auto (${autoZValue.toFixed(2)})` : (centerTextZ === 0 ? 'Top (0.0)' : centerTextZ === 0.5 ? 'Center (0.5)' : centerTextZ === 1 ? 'Bottom (1.0)' : Number(centerTextZ).toFixed(2)) }}</span>
-          <input type="range" v-model.number="sliderCenterTextZ" min="0.0" max="1.0" step="0.05" />
+          <input type="range" v-model.number="sliderCenterTextZ" min="0.0" max="1.0" step="0.01" />
           <div class="nano-btn-group" style="width: 100%; margin-top: 4px;">
             <button 
               type="button" 
@@ -502,11 +486,6 @@ const networkData = [
         <div class="switch-row" style="margin-top: 10px;">
           <span class="switch-label">Selectable (Click to lock)</span>
           <NanoSwitch v-model="selectable" size="compact" />
-        </div>
-
-        <div class="switch-row" style="margin-top: 10px;">
-          <span class="switch-label">Isolate Hovered (window.fullOpacity)</span>
-          <NanoSwitch v-model="isolateHovered" size="compact" />
         </div>
 
         <div class="slider-row" style="margin-top: 10px;">
@@ -933,7 +912,7 @@ selectedItemId: String | Number (default: null) - Currently selected/locked item
 thickness: Number (default: 0.5) - Thickness from 0.0 (thin ring) to 1.0 (full pie chart)
 depth: Number (default: 32) - 3D wall height/depth in px (clamped >= 0)
 showCenterText: Boolean (default: true) - Show/hide center value and label texts
-centerTextZ: Number | String (default: 'auto') - Z position of center text in depth ('auto' = dynamically adapts from 1.0 at slope 0 to 0.0 at slope 1, 0.0 = top plane, 0.5 = volumetric center, 1.0 = bottom plane)
+centerTextZ: Number | String (default: 'auto') - Z position of center text in depth ('auto' = dynamically adapts from 0.5 at slope 0 to 0.0 at slope 1, 0.0 = top plane, 0.5 = volumetric center, 1.0 = bottom plane)
 animationDuration: Number (default: 350) - Duration of chart transitions in ms (0 for instant)
 labelSize: String (default: 'md') - Preset size for callout labels ('sm', 'md', 'lg', 'xl')
 labelFontSize: Number | String (default: undefined) - Custom font size in px for callout labels (e.g. 13 or '13px')
