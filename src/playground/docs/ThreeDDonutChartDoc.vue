@@ -143,6 +143,7 @@ const createLongTailItems = () => {
     0.44, 3.84, 2.77, 4.78, 4.83, 1.13, 1.93, 4.45, 0.63, 3.99,
     1.60, 2.15, 2.60, 4.30, 0.67, 1.48
   ];
+  sampleValues.sort((a, b) => b - a);
   const items = [
     { id: 'dominant-1', name: 'Dominant Category', value: 100.0, color: '#3b82f6', unit: '%' }
   ];
