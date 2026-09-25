@@ -62,13 +62,16 @@ import { Database, Terminal, Cpu } from 'lucide-vue-next';
 </NanoIcon>
 
 <!-- 4. Global registration for app-wide custom icons -->
+<script>
 import { registerIcons } from '@gkucmierz/nano-ui';
 
 registerIcons({
   'my-custom-badge': MyCustomIconComponent
-});`;
+});
+<\/script>`;
 
-const apiDoc = `<!-- NanoIcon Props -->
+const apiDoc = `<script>
+// NanoIcon Props
 props: {
   name: String,            // Icon identifier from built-in or custom registry (e.g. 'warn', 'close', 'search')
   icon: [Object, Function],// Optional direct Vue component (e.g. imported Lucide component)
@@ -76,6 +79,7 @@ props: {
   strokeWidth: [Number, String], // Vector stroke width. Default: 2
   viewBox: String          // SVG viewBox (used when rendering default slot). Default: '0 0 24 24'
 }
+<\/script>
 
 <!-- Direct slot support -->
 <NanoIcon :size="20">
@@ -152,11 +156,11 @@ props: {
 
     <!-- Usage Guide -->
     <h3 class="section-title">Usage & Architecture</h3>
-    <NanoCodeBlock :code="basicUsageCode" lang="html" title="Example Implementations" />
+    <NanoCodeBlock :code="basicUsageCode" lang="vue" title="Example Implementations" />
 
     <!-- Props Reference -->
     <h3 class="section-title">API Reference</h3>
-    <NanoCodeBlock :code="apiDoc" lang="html" title="NanoIcon API" />
+    <NanoCodeBlock :code="apiDoc" lang="vue" title="NanoIcon API" />
   </div>
 </template>
 

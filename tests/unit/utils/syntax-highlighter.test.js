@@ -80,4 +80,57 @@ describe('Nano UI Syntax Highlighter (highlight.js integration)', () => {
       assert.ok(txt.includes('&lt;invalid &amp; unescaped&gt;'))
     })
   })
+
+  describe('when highlighting Bash commands', () => {
+    test('should highlight CLI built_in commands, subcommands, and scoped packages', () => {
+      const cmd = 'npm install @gkucmierz/nano-ui --save-dev'
+      const html = highlightCode(cmd, 'bash')
+
+      assert.ok(html.includes('hljs-built_in') && html.includes('npm'), 'npm must be highlighted as built_in')
+      assert.ok(html.includes('hljs-keyword') && html.includes('install'), 'install must be highlighted as keyword')
+      assert.ok(html.includes('hljs-string') && html.includes('@gkucmierz/nano-ui'), 'scoped package must be highlighted as string')
+      assert.ok(html.includes('hljs-attr') && html.includes('--save-dev'), 'flags must be highlighted as attr')
+    })
+
+    test('should highlight git commands with single-letter flags and strings', () => {
+      const cmd = 'git commit -S -m "feat: great feature"'
+      const html = highlightCode(cmd, 'bash')
+
+      assert.ok(html.includes('hljs-built_in') && html.includes('git'))
+      assert.ok(html.includes('hljs-keyword') && html.includes('commit'))
+      assert.ok(html.includes('hljs-attr') && html.includes('-S'))
+      assert.ok(html.includes('hljs-string') && html.includes('feat: great feature'))
+    })
+
+    test('should highlight prompt prefix and shell variables', () => {
+      const cmd = '$ echo $NODE_ENV'
+      const html = highlightCode(cmd, 'bash')
+
+      assert.ok(html.includes('hljs-punctuation') && html.includes('$'))
+      assert.ok(html.includes('hljs-built_in') && html.includes('echo'))
+      assert.ok(html.includes('hljs-variable') && html.includes('$NODE_ENV'))
+    })
+  })
+
+  describe('when highlighting API documentation blocks', () => {
+    test('should highlight prop definitions and treat descriptions after hyphen as comments', () => {
+      const doc = 'data: Array (required) - Array of { id, name, value }'
+      const html = highlightCode(doc, 'api')
+
+      assert.ok(html.includes('hljs-attr') && html.includes('data'), 'Prop names must be highlighted as attr')
+      assert.ok(html.includes('hljs-title') && html.includes('Array'), 'Type names must be highlighted as class/title')
+      assert.ok(html.includes('hljs-keyword') && html.includes('required'), 'Keywords like required must be highlighted')
+      assert.ok(html.includes('hljs-comment') && html.includes('Array of { id, name, value }'), 'Description after hyphen must be treated as comment')
+    })
+
+    test('should highlight Vue events and slots alongside methods', () => {
+      const doc = '@update:modelValue - Emitted on drag\n#default - Content slot\nrotateBy(delta: Number) - Method'
+      const html = highlightCode(doc, 'api')
+
+      assert.ok(html.includes('hljs-variable') && html.includes('@update:modelValue'), 'Events must be highlighted as variable')
+      assert.ok(html.includes('hljs-symbol') && html.includes('#default'), 'Slots must be highlighted as symbol')
+      assert.ok(html.includes('hljs-title') && html.includes('rotateBy'), 'Methods must be highlighted as function/title')
+      assert.ok(html.includes('hljs-comment') && html.includes('Emitted on drag'), 'Event description must be comment')
+    })
+  })
 })

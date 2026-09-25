@@ -1,6 +1,8 @@
 <script setup>
-import { ref, computed, watch } from 'vue';
+import { ref, computed, watch, useSlots } from 'vue';
 import { highlightCode } from '../utils/syntax-highlighter.js';
+
+const slots = useSlots();
 
 const props = defineProps({
   /**
@@ -95,9 +97,33 @@ const currentLang = computed(() => {
   return props.lang;
 });
 
+const extractSlotText = (nodes) => {
+  if (!nodes) return '';
+  let str = '';
+  for (const node of nodes) {
+    if (node == null) continue;
+    if (typeof node === 'string') {
+      str += node;
+    } else if (typeof node.children === 'string') {
+      str += node.children;
+    } else if (Array.isArray(node.children)) {
+      str += extractSlotText(node.children);
+    }
+  }
+  return str;
+};
+
+const rawSlotText = computed(() => {
+  if (props.tabs && props.tabs.length > 0) return '';
+  if (!slots.default) return '';
+  const text = extractSlotText(slots.default());
+  return text ? text.replace(/^\n+/, '').replace(/\s+$/, '') : '';
+});
+
 const currentCode = computed(() => {
   if (activeTab.value && activeTab.value.code !== undefined) return activeTab.value.code;
-  return props.code;
+  if (props.code) return props.code;
+  return rawSlotText.value;
 });
 
 const highlightedCode = computed(() => {
@@ -544,6 +570,7 @@ const containerMaxHeight = computed(() => {
 
 :deep(.hljs-selector-class),
 :deep(.hljs-selector-id),
+:deep(.hljs-symbol),
 :deep(.hl-selector) {
   color: #e879f9;
 }
@@ -551,6 +578,22 @@ const containerMaxHeight = computed(() => {
 :deep(.hljs-punctuation),
 :deep(.hl-punct) {
   color: #94a3b8;
+}
+
+:deep(.hljs-built_in) {
+  color: #60a5fa;
+  font-weight: 600;
+}
+
+:deep(.hljs-title),
+:deep(.hljs-title.class_),
+:deep(.hljs-type) {
+  color: #fbbf24;
+  font-weight: 600;
+}
+
+:deep(.hljs-params) {
+  color: #e2e8f0;
 }
 
 /* Light theme high-contrast adjustments: darkened green and yellow/amber */
@@ -568,5 +611,19 @@ html[data-theme="light"] :deep(.hljs-number),
 :root[data-theme="light"] :deep(.hl-number),
 [data-theme="light"] :deep(.hl-number) {
   color: #d97706;
+}
+
+:root[data-theme="light"] :deep(.hljs-built_in),
+html[data-theme="light"] :deep(.hljs-built_in),
+[data-theme="light"] :deep(.hljs-built_in) {
+  color: #2563eb;
+}
+
+:root[data-theme="light"] :deep(.hljs-title),
+:root[data-theme="light"] :deep(.hljs-title.class_),
+:root[data-theme="light"] :deep(.hljs-type),
+html[data-theme="light"] :deep(.hljs-title.class_),
+[data-theme="light"] :deep(.hljs-title.class_) {
+  color: #b45309;
 }
 </style>
