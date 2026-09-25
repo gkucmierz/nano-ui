@@ -28,10 +28,16 @@ describe('NanoCodeBlock Component Structure & Slot Fallback', () => {
 
   test('should include scoped styling tokens for syntax highlight classes', () => {
     const styleContent = descriptor.styles.map(s => s.content).join('\n')
-    assert.match(styleContent, /\.hl-keyword/)
-    assert.match(styleContent, /\.hl-string/)
-    assert.match(styleContent, /\.hl-number/)
-    assert.match(styleContent, /\.hl-comment/)
-    assert.match(styleContent, /\.hl-tag/)
+    assert.match(styleContent, /\.hljs-keyword/)
+    assert.match(styleContent, /\.hljs-string/)
+    assert.match(styleContent, /\.hljs-number/)
+    assert.match(styleContent, /\.hljs-comment/)
+    assert.match(styleContent, /\.hljs-tag/)
+  })
+
+  test('should include light mode high-contrast overrides for strings and numbers', () => {
+    const styleContent = descriptor.styles.map(s => s.content).join('\n')
+    assert.match(styleContent, /#059669/, 'Should have darkened green for light mode strings')
+    assert.match(styleContent, /#d97706/, 'Should have darkened amber/yellow for light mode numbers')
   })
 })

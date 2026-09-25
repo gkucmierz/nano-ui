@@ -142,6 +142,8 @@
   --nano-code-bg: #0b1120;
   --nano-code-header-bg: rgba(0, 0, 0, 0.25);
   --nano-code-header-border: rgba(255, 255, 255, var(--nano-alpha-subtle));
+  --nano-code-hl-string: #34d399;
+  --nano-code-hl-number: #fbbf24;
 }
 
 :root[data-theme="light"],
@@ -273,4 +275,6 @@ html[data-theme="light"] {
   --nano-code-bg: #ffffff;
   --nano-code-header-bg: #f1f5f9;
   --nano-code-header-border: #e2e8f0;
+  --nano-code-hl-string: #059669;
+  --nano-code-hl-number: #d97706;
 }
