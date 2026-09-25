@@ -130,12 +130,166 @@ const setSingleDatapoint = () => {
     { name: 'Poland', value: 0.31, color: '#ec4899' }
   ];
 };
+
+const loadLongTailData = () => {
+  const colors = ['#ec4899', '#a855f7', '#14b8a6', '#f43f5e', '#6366f1'];
+  const sampleValues = [
+    3.28, 4.78, 4.11, 3.48, 3.90, 4.78, 1.63, 1.46, 5.08, 4.98,
+    0.44, 3.84, 2.77, 4.78, 4.83, 1.13, 1.93, 4.45, 0.63, 3.99,
+    1.60, 2.15, 2.60, 4.30, 0.67, 1.48
+  ];
+  const items = [
+    { name: 'Big', value: 100.0, color: '#ec4899' }
+  ];
+  sampleValues.forEach((v, idx) => {
+    items.push({
+      name: `New Country ${idx + 2}`,
+      value: v,
+      color: colors[idx % colors.length]
+    });
+  });
+  testData.value = items;
+};
+
+const activePresetId = ref('default');
+
+const presets = [
+  {
+    id: 'default',
+    label: 'Top 10 Countries',
+    tag: 'Balanced',
+    tipTitle: 'Standard 10-Item Dataset:',
+    tipBody: 'Balanced geographic dataset demonstrating 3D oblique perspective, painter\'s algorithm depth sorting, and bilateral label distribution.',
+    apply: () => {
+      resetToDefault();
+      autoRotate.value = true;
+      aggregateOthers.value = false;
+      othersThreshold.value = 0.01;
+      othersLabel.value = 'Other';
+      othersColor.value = '#64748b';
+      rotationAngle.value = -90;
+      is3D.value = true;
+    }
+  },
+  {
+    id: 'long-tail',
+    label: 'Auto-Rotate & Threshold Showcase',
+    tag: '1 Big + 26 Micro Slices',
+    tipTitle: 'Auto-Rotate & Threshold Showcase:',
+    tipBody: 'Features 1 dominant slice (Big: 100, 56%) and 26 micro-slices. With Auto-Rotate ON, the 26 micro-slices wrap across the top, evenly balancing 14 labels on the left and 13 on the right! Toggle Auto-Rotate OFF (Column 3) to see all 26 labels squashed on the left, or toggle Aggregate into "Other" (Column 4) to consolidate all slices < 3% into one clean slice.',
+    apply: () => {
+      loadLongTailData();
+      autoRotate.value = true;
+      aggregateOthers.value = false;
+      othersThreshold.value = 0.03;
+      othersLabel.value = 'Other (< 3%)';
+      othersColor.value = '#64748b';
+      rotationAngle.value = -90;
+      is3D.value = true;
+    }
+  },
+  {
+    id: 'threshold-active',
+    label: 'Threshold Grouped ("Other")',
+    tag: 'Consolidated',
+    tipTitle: 'Threshold Aggregation Active:',
+    tipBody: 'Automatically consolidates all micro-slices smaller than 3% into a single clean "Other" slice (44%). Drag the Others Threshold slider in Column 4 to watch items dynamically join or leave the aggregate!',
+    apply: () => {
+      loadLongTailData();
+      autoRotate.value = true;
+      aggregateOthers.value = true;
+      othersThreshold.value = 0.03;
+      othersLabel.value = 'Other (< 3%)';
+      othersColor.value = '#64748b';
+      rotationAngle.value = -90;
+      is3D.value = true;
+    }
+  },
+  {
+    id: 'duopoly',
+    label: 'Market Duopoly',
+    tag: '55% / 45%',
+    tipTitle: '2 Large Slices:',
+    tipBody: 'Ideal for inspecting opposing 180° cut walls, front/back X-axis depth sorting, and bilateral leader lines.',
+    apply: () => {
+      testData.value = [
+        { name: 'Enterprise Alpha', value: 55, color: '#3b82f6' },
+        { name: 'Enterprise Beta', value: 45, color: '#ec4899' }
+      ];
+      autoRotate.value = true;
+      aggregateOthers.value = false;
+      othersThreshold.value = 0.01;
+      othersLabel.value = 'Other';
+      rotationAngle.value = -90;
+      is3D.value = true;
+    }
+  },
+  {
+    id: 'single',
+    label: 'Single Datapoint',
+    tag: '100% Edge Case',
+    tipTitle: 'Single 100% Slice:',
+    tipBody: 'Tests full 360° seamless cylinder geometry without partition cuts and centered radial label leader.',
+    apply: () => {
+      setSingleDatapoint();
+      autoRotate.value = true;
+      aggregateOthers.value = false;
+      othersThreshold.value = 0.01;
+      othersLabel.value = 'Other';
+      rotationAngle.value = -90;
+      is3D.value = true;
+    }
+  }
+];
+
+const currentPreset = computed(() => {
+  return presets.find(p => p.id === activePresetId.value);
+});
+
+const selectPreset = (p) => {
+  if (!p) return;
+  activePresetId.value = p.id;
+  p.apply();
+};
 </script>
 
 <template>
   <div class="doc-page">
     <h2>ThreeDDonutChart Component</h2>
     <p>A glossy 3D donut / pie chart component built on SVG, featuring responsive painter's algorithm Z-index layers, auto-balancing label leader lines, and dynamic data aggregation.</p>
+
+    <!-- Showcase Scenarios & Presets Toolbar -->
+    <div class="presets-toolbar">
+      <div class="presets-header">
+        <div class="presets-title-wrap">
+          <NanoIcon name="sparkles" :size="16" class="presets-icon" />
+          <span class="presets-title">Example Scenarios & Presets</span>
+        </div>
+        <span class="presets-subtitle">Switch scenarios to test auto-rotate column balancing and threshold aggregation</span>
+      </div>
+
+      <div class="presets-chips">
+        <button
+          v-for="p in presets"
+          :key="p.id"
+          type="button"
+          class="preset-chip"
+          :class="{ 'is-active': activePresetId === p.id }"
+          @click="selectPreset(p)"
+        >
+          <span class="chip-label">{{ p.label }}</span>
+          <span v-if="p.tag" class="chip-tag">{{ p.tag }}</span>
+        </button>
+      </div>
+
+      <div v-if="currentPreset" class="preset-tip-banner">
+        <NanoIcon name="info" :size="15" class="tip-icon" />
+        <div class="tip-content">
+          <span class="tip-title">{{ currentPreset.tipTitle }}</span>
+          <span class="tip-body">{{ currentPreset.tipBody }}</span>
+        </div>
+      </div>
+    </div>
 
     <!-- 1. Full-Width Live Preview Stage on Top -->
     <div class="stage-container">
@@ -149,8 +303,8 @@ const setSingleDatapoint = () => {
             <span class="status-badge">
               {{ is3D ? '3D Oblique' : '2D Flat' }}
             </span>
-            <span class="status-badge">
-              Angle: {{ Math.round(normalizeAngle(rotationAngle)) }}°
+            <span class="status-badge" :class="{ 'auto-badge': autoRotate }">
+              {{ autoRotate ? 'Auto-Rotate: Balanced' : `Angle: ${Math.round(normalizeAngle(rotationAngle))}°` }}
             </span>
           </div>
         </div>
@@ -195,13 +349,24 @@ const setSingleDatapoint = () => {
             <input type="text" v-model="item.name" class="input-name" placeholder="Name" />
             <input type="number" v-model.number="item.value" class="input-value" min="0.01" step="0.01" placeholder="Value" />
             <input type="color" v-model="item.color" class="input-color" />
-            <button @click="removeItem(idx)" class="btn-remove">🗑️</button>
+            <button @click="removeItem(idx)" class="btn-remove" aria-label="Remove slice">
+              <NanoIcon name="trash" :size="13" />
+            </button>
           </div>
         </div>
         <div class="action-buttons">
-          <button @click="addItem" class="demo-btn secondary-btn">Add Slice</button>
-          <button @click="setSingleDatapoint" class="demo-btn secondary-btn">1 Datapoint Test</button>
-          <button @click="resetToDefault" class="demo-btn secondary-btn">Reset</button>
+          <button @click="addItem" class="demo-btn secondary-btn">
+            <NanoIcon name="plus" :size="13" />
+            <span>Add</span>
+          </button>
+          <button @click="selectPreset(presets.find(p => p.id === 'long-tail'))" class="demo-btn secondary-btn">
+            <NanoIcon name="sparkles" :size="13" />
+            <span>Long Tail</span>
+          </button>
+          <button @click="selectPreset(presets.find(p => p.id === 'default'))" class="demo-btn secondary-btn">
+            <NanoIcon name="rotate" :size="13" />
+            <span>Reset</span>
+          </button>
         </div>
       </div>
 
@@ -445,6 +610,126 @@ h2 { margin: 0; color: var(--nano-text-main); }
 h3 { margin-bottom: 1rem; color: var(--nano-text-muted); border-bottom: 1px solid var(--nano-border-subtle); padding-bottom: 0.5rem; }
 h4 { margin: 0 0 0.5rem 0; color: var(--nano-text-secondary); font-size: 0.9rem; }
 
+.presets-toolbar {
+  background: var(--nano-bg-card);
+  border: 1px solid var(--nano-border-card);
+  border-radius: var(--nano-radius-md, 8px);
+  padding: 1.1rem 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+}
+
+.presets-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.presets-title-wrap {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 600;
+  color: var(--nano-text-main);
+  font-size: 0.95rem;
+}
+
+.presets-icon {
+  color: var(--nano-accent-primary);
+}
+
+.presets-subtitle {
+  font-size: 0.8rem;
+  color: var(--nano-text-muted);
+}
+
+.presets-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.preset-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: var(--nano-radius-sm, 6px);
+  background: var(--nano-bg-muted);
+  border: 1px solid var(--nano-border-subtle);
+  color: var(--nano-text-secondary);
+  cursor: pointer;
+  font-size: 0.825rem;
+  font-weight: 500;
+  transition: background var(--nano-transition-interactive), border-color var(--nano-transition-interactive), color var(--nano-transition-interactive);
+  user-select: none;
+}
+
+.preset-chip:hover {
+  background: var(--nano-bg-hover);
+  border-color: var(--nano-border-hover);
+  color: var(--nano-text-main);
+}
+
+.preset-chip.is-active {
+  background: color-mix(in srgb, var(--nano-accent-primary) 12%, var(--nano-bg-card));
+  border-color: var(--nano-accent-primary);
+  color: var(--nano-accent-primary);
+  font-weight: 600;
+}
+
+.chip-tag {
+  font-size: 0.7rem;
+  padding: 1px 6px;
+  border-radius: 4px;
+  background: var(--nano-bg-card);
+  border: 1px solid var(--nano-border-subtle);
+  color: var(--nano-text-muted);
+}
+
+.preset-chip.is-active .chip-tag {
+  background: var(--nano-accent-primary);
+  color: #fff;
+  border-color: var(--nano-accent-primary);
+}
+
+.preset-tip-banner {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 10px 14px;
+  border-radius: var(--nano-radius-sm, 6px);
+  background: color-mix(in srgb, var(--nano-accent-primary) 8%, var(--nano-bg-muted));
+  border: 1px solid color-mix(in srgb, var(--nano-accent-primary) 22%, transparent);
+  color: var(--nano-text-secondary);
+  font-size: 0.825rem;
+  line-height: 1.45;
+}
+
+.tip-icon {
+  color: var(--nano-accent-primary);
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.tip-content {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.tip-title {
+  font-weight: 600;
+  color: var(--nano-text-main);
+}
+
+.tip-body {
+  color: var(--nano-text-secondary);
+}
+
 .stage-container {
   width: 100%;
 }
@@ -486,6 +771,12 @@ h4 { margin: 0 0 0.5rem 0; color: var(--nano-text-secondary); font-size: 0.9rem;
   border-color: color-mix(in srgb, #10b981 30%, transparent);
 }
 
+.status-badge.auto-badge {
+  background: color-mix(in srgb, var(--nano-accent-primary) 15%, transparent);
+  color: var(--nano-accent-primary);
+  border-color: color-mix(in srgb, var(--nano-accent-primary) 30%, transparent);
+}
+
 .controls-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
@@ -515,10 +806,15 @@ h4 { margin: 0 0 0.5rem 0; color: var(--nano-text-secondary); font-size: 0.9rem;
   background: var(--nano-accent-primary);
   color: #fff;
   border: none;
-  padding: 8px 16px;
+  padding: 8px 14px;
   border-radius: var(--nano-radius-sm, 6px);
   cursor: pointer;
   font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  font-size: 0.825rem;
   transition: background var(--nano-transition-interactive);
 }
 
@@ -603,7 +899,18 @@ h4 { margin: 0 0 0.5rem 0; color: var(--nano-text-secondary); font-size: 0.9rem;
   background: transparent;
   border: none;
   cursor: pointer;
-  padding: 4px;
+  padding: 6px;
+  color: var(--nano-text-muted);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--nano-radius-sm, 6px);
+  transition: color var(--nano-transition-interactive), background var(--nano-transition-interactive);
+}
+
+.btn-remove:hover {
+  color: #ef4444;
+  background: color-mix(in srgb, #ef4444 12%, transparent);
 }
 
 .checkbox-label {
