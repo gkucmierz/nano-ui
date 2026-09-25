@@ -193,4 +193,31 @@ describe('ThreeDDonutChart SVG Painter Architecture & Render Order', () => {
       )
     })
   })
+
+  describe('when validating zero-layout-shift (CLS = 0) wrapper synchronization', () => {
+    const scriptContent = descriptor.scriptSetup?.content || ''
+    const styleContent = descriptor.styles?.[0]?.content || ''
+
+    test('should dynamically bind wrapper maxWidth and maxHeight to animVbWidth and animVbHeight', () => {
+      assert.ok(
+        scriptContent.includes('maxWidth: `${animVbWidth.value}px`'),
+        'wrapperStyle must dynamically bind maxWidth to animVbWidth'
+      )
+      assert.ok(
+        scriptContent.includes('maxHeight: `${animVbHeight.value}px`'),
+        'wrapperStyle must clamp maxHeight to animVbHeight to eliminate height ballooning'
+      )
+      assert.ok(
+        scriptContent.includes('`${animVbWidth.value} / ${animVbHeight.value}`'),
+        'wrapperStyle must compute aspectRatio dynamically from animVbWidth and animVbHeight'
+      )
+    })
+
+    test('should disable transitions on .donut-canvas-wrapper during active animations to avoid fighting RAF', () => {
+      assert.ok(
+        styleContent.includes('.donut-canvas-wrapper.no-transitions'),
+        '.donut-canvas-wrapper.no-transitions must be defined'
+      )
+    })
+  })
 })

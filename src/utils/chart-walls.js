@@ -336,13 +336,25 @@ export const calculateTargetGeometry = ({
     const cx = vbWidth / 2
     const cy = vbHeight / 2
 
+    const clearance = Math.max(30, cy - 45)
+    let rx = 180
+    let ry = is3DMode ? 180 * slopeRatio : Math.min(180, clearance)
+    if (is3DMode) {
+      const max3DRy = (vbHeight - depth - 50) / 2
+      if (ry > max3DRy && max3DRy > 30) {
+        ry = max3DRy
+      }
+    } else {
+      rx = ry
+    }
+
     return {
       cx,
       cy,
-      rx: 180,
-      ry: is3DMode ? 180 * slopeRatio : 180,
-      irx: 180 * (1 - thickness),
-      iry: is3DMode ? 180 * (1 - thickness) * slopeRatio : 180 * (1 - thickness),
+      rx,
+      ry,
+      irx: rx * (1 - thickness),
+      iry: is3DMode ? ry * (1 - thickness) : rx * (1 - thickness),
       baseDepth,
       depth,
       vbWidth,
@@ -357,7 +369,8 @@ export const calculateTargetGeometry = ({
     const baseW = 320
     const vbWidth = baseW
     const vbHeight = numRatio ? Math.round(baseW / numRatio) : baseW
-    const rx = 140
+    const maxRadius = Math.round(Math.min(vbWidth, vbHeight) / 2 - 20)
+    const rx = Math.max(40, maxRadius)
     return {
       cx: vbWidth / 2,
       cy: vbHeight / 2,
@@ -375,10 +388,11 @@ export const calculateTargetGeometry = ({
 
   // 3D without labels:
   const effSlope = Math.max(0.15, slopeRatio)
-  const maxRxVertical = (290 - depth) / (2 * effSlope)
+  const availableVertical = Math.max(40, 320 - depth - 30)
+  const maxRxVertical = availableVertical / (2 * effSlope)
   const rx = Math.min(260, maxRxVertical)
-  const vbWidth = Math.round(rx * 2 + 40)
-  const vbHeight = numRatio ? Math.round(vbWidth / numRatio) : 320
+  const vbWidth = numRatio ? (numRatio >= 1 ? Math.round(320 * numRatio) : 320) : Math.round(rx * 2 + 40)
+  const vbHeight = numRatio ? (numRatio >= 1 ? 320 : Math.round(320 / numRatio)) : 320
   const cx = vbWidth / 2
   const cy = vbHeight / 2
 

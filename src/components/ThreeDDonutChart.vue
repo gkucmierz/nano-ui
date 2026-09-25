@@ -327,7 +327,6 @@
           </g>
         </template>
 
-
         <!-- 2D FLAT MODE: All slices rendered first, center label strictly on top of all elements -->
         <template v-else>
           <g 
@@ -430,10 +429,12 @@
             :style="getLabelGroupStyle(label)"
           >
             <path 
+              class="leader-line"
               :d="getLeaderLinePath(label)" 
               fill="none" 
               :stroke="label.color" 
               :stroke-width="leaderStrokeWidth" 
+              pointer-events="none"
             />
             <text 
               x="85" 
@@ -466,10 +467,12 @@
             :style="getLabelGroupStyle(label)"
           >
             <path 
+              class="leader-line"
               :d="getLeaderLinePath(label)" 
               fill="none" 
               :stroke="label.color" 
               :stroke-width="leaderStrokeWidth" 
+              pointer-events="none"
             />
             <text 
               x="675" 
@@ -1057,24 +1060,6 @@ const resolvedAspectRatio = computed(() => {
   })
 })
 
-const wrapperStyle = computed(() => {
-  const ar = resolvedAspectRatio.value
-  if (!props.isExpanded) {
-    return { aspectRatio: ar }
-  }
-  const style = {
-    aspectRatio: ar,
-  }
-  if (props.showLabels) {
-    style.maxWidth = '760px'
-  } else if (!props.is3D) {
-    style.maxWidth = '360px'
-  } else {
-    style.maxWidth = '560px'
-  }
-  return style
-})
-
 const initialGeom = getTargetGeometry(props.isExpanded, props.showLabels, props.is3D, props.slopeRatio, props.thickness, props.aspectRatio)
 
 const animCx = ref(initialGeom.cx)
@@ -1087,6 +1072,22 @@ const animDepth = ref(initialGeom.depth)
 const animVbWidth = ref(initialGeom.vbWidth)
 const animVbHeight = ref(initialGeom.vbHeight)
 const labelOpacity = ref(initialGeom.opacity)
+
+const wrapperStyle = computed(() => {
+  if (!props.isExpanded) {
+    return { aspectRatio: resolvedAspectRatio.value }
+  }
+  const isCustomRatio = Boolean(props.aspectRatio && props.aspectRatio !== 'auto')
+  const ar = isCustomRatio
+    ? resolvedAspectRatio.value
+    : `${animVbWidth.value} / ${animVbHeight.value}`
+
+  return {
+    aspectRatio: ar,
+    maxWidth: `${animVbWidth.value}px`,
+    maxHeight: `${animVbHeight.value}px`,
+  }
+})
 
 const animSlopeRatio = ref(props.slopeRatio ?? 0.5)
 const animThickness = ref(props.thickness ?? 0.5)
@@ -1353,7 +1354,7 @@ const sortedSlices = computed(() => {
     const origLargeArc = sliceAngle > Math.PI ? 1 : 0
     const originalTopPath = `M ${x_os_orig} ${y_os_orig} A ${rx} ${ry} 0 ${origLargeArc} 1 ${x_oe_orig} ${y_oe_orig} L ${x_ie_orig} ${y_ie_orig} A ${irx} ${iry} 0 ${origLargeArc} 0 ${x_is_orig} ${y_is_orig} Z`
 
-    const originalOuterWallPath = depth > 0 
+    const originalOuterWallPath = depth > 0
       ? `M ${x_os_orig} ${y_os_orig} A ${rx} ${ry} 0 ${origLargeArc} 1 ${x_oe_orig} ${y_oe_orig} L ${x_oe_orig} ${y_oe_orig + depth} A ${rx} ${ry} 0 ${origLargeArc} 0 ${x_os_orig} ${y_os_orig + depth} Z`
       : ''
 
@@ -1864,13 +1865,7 @@ const getSliceStyle = (slice) => {
   return {}
 }
 
-const getLabelTextStyle = (label) => {
-  const p = sliceExtrusions.value[label.item.id] !== undefined
-    ? sliceExtrusions.value[label.item.id]
-    : (effectiveActiveId.value === label.item.id ? 1 : 0)
-  if (p > 0.0001) {
-    return `transform: translate(0, ${-5 * p}px);`
-  }
+const getLabelTextStyle = () => {
   return ''
 }
 
@@ -1896,7 +1891,7 @@ const computedLabels = computed(() => {
     const depth = animDepth.value
     const adjustedY0 = slice.y0 + (isBottomHalf ? depth : 0)
     const adjustedY1 = slice.y1 + (isBottomHalf ? depth : 0)
-    
+
     const label = {
       item: slice.item,
       index: slice.index,
@@ -1939,7 +1934,7 @@ const getLeaderLinePath = (label) => {
 
   let startX = label.x0
   let startY = label.y0
-  let endY = label.finalY
+  const endY = label.finalY
 
   if (p > 0.0001) {
     const dist = 10 * p
@@ -1947,7 +1942,6 @@ const getLeaderLinePath = (label) => {
     const ty = dist * Math.sin(label.originalMidAngle || 0)
     startX += tx
     startY += ty
-    endY -= 5 * p
   }
 
   const R = 30
@@ -1956,22 +1950,22 @@ const getLeaderLinePath = (label) => {
 
   const isLeft = label.isLeft
   const isTopHalf = Math.sin(label.originalMidAngle || 0) < 0
-  
+
   const cx = animCx.value
   const rx = animRx.value
-  
+
   const clearanceX = isLeft ? cx - rx - 15 : cx + rx + 15
-  
-  const cp2_x = isLeft 
-    ? Math.min(clearanceX, cp1_x - 30) 
+
+  const cp2_x = isLeft
+    ? Math.min(clearanceX, cp1_x - 30)
     : Math.max(clearanceX, cp1_x + 30)
-    
-  const cp2_y = isTopHalf 
-    ? Math.min(cp1_y, endY) 
+
+  const cp2_y = isTopHalf
+    ? Math.min(cp1_y, endY)
     : Math.max(cp1_y, endY)
 
   const alignX = isLeft ? 90 : 670
-  
+
   return `M ${startX} ${startY} C ${cp1_x} ${cp1_y}, ${cp2_x} ${cp2_y}, ${alignX} ${endY}`
 }
 
@@ -2016,7 +2010,7 @@ const animateChart = (opts = {}) => {
       animatedItems.value = animatedItems.value.filter(item => item.targetValue > 0)
     }
     animatedRotationAngle.value = activeRotationAngle.value
-    
+
     updateGeometryImmediate()
     isAnimating.value = false
     return
@@ -2109,7 +2103,7 @@ const animateChart = (opts = {}) => {
         })
         animatedItems.value = animatedItems.value.filter(item => item.targetValue > 0)
       }
-      
+
       animCx.value = targetCx
       animCy.value = targetCy
       animRx.value = targetRx
@@ -2122,7 +2116,7 @@ const animateChart = (opts = {}) => {
       animVbWidth.value = targetVbW
       animVbHeight.value = targetVbH
       labelOpacity.value = targetOpacity
-      
+
       isAnimating.value = false
     }
   }
@@ -2168,8 +2162,8 @@ watch([() => props.othersColor, () => props.othersLabel, () => props.othersThres
 
 watch([activeRotationAngle, () => props.rotationAngle, () => props.autoRotate], () => {
   const isImmediate = props.immediate || props.currentLowFxMode || props.immediateRotation || (props.animationDuration ?? 350) <= 0
-  const effDuration = props.rotationDuration !== undefined 
-    ? props.rotationDuration 
+  const effDuration = props.rotationDuration !== undefined
+    ? props.rotationDuration
     : (props.animationDuration !== undefined ? props.animationDuration : 350)
 
   rotationKinetic.setConfig({
@@ -2374,6 +2368,7 @@ defineExpose({
 }
 
 .label-group path {
+  pointer-events: none;
   transition: stroke-width var(--nano-transition-interactive), opacity var(--nano-transition-interactive);
 }
 
@@ -2394,6 +2389,7 @@ defineExpose({
 }
 
 /* Disable transitions during animations and dragging to keep elements synchronized */
+.donut-canvas-wrapper.no-transitions,
 .no-transitions .label-group,
 .no-transitions .label-group path,
 .no-transitions .label-group text,
