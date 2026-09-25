@@ -7,6 +7,7 @@
       'has-labels': isExpanded && showLabels,
       'no-transitions': isAnimating || immediate
     }"
+    :style="wrapperStyle"
     @mousemove="handleWrapperMouseMove"
     @mouseleave="handleWrapperMouseLeave"
   >
@@ -563,6 +564,8 @@ import {
   calculateCutY,
   sortCutWallsByDepth,
   getOptimalRotationAngle,
+  calculateTargetGeometry,
+  resolveChartAspectRatio,
 } from '../utils/chart-walls.js'
 
 
@@ -696,6 +699,10 @@ const props = defineProps({
     type: Number,
     default: 0.0,
     validator: (val) => val >= 0 && val <= 1
+  },
+  aspectRatio: {
+    type: [String, Number],
+    default: 'auto'
   }
 })
 
@@ -1090,10 +1097,10 @@ const updateAnimatedData = (newData, immediate = false) => {
       nextList.push({
         id: item.id,
         name: item.name,
-        value: 0,
-        startValue: 0,
+        value: immediate ? item.value : 0,
+        startValue: immediate ? item.value : 0,
         targetValue: item.value,
-        startPercentage: 0,
+        startPercentage: immediate ? (item.percentage || 0) : 0,
         targetPercentage: item.percentage || 0,
         percentage: immediate ? (item.percentage || 0) : 0,
         color: item.color,
@@ -1151,70 +1158,41 @@ const rotationKinetic = createKineticTransition({
 const isAnimating = ref(false)
 
 const getTargetGeometry = (isExpanded, showLabels, is3D, slopeRatio, thickness) => {
-  const is3DMode = is3D
-  const hasLabels = isExpanded && showLabels
-
-  if (!isExpanded) {
-    return {
-      cx: 60,
-      cy: 60,
-      rx: 48,
-      ry: is3DMode ? 48 * slopeRatio : 48,
-      irx: 48 * (1 - thickness),
-      iry: is3DMode ? 48 * (1 - thickness) * slopeRatio : 48 * (1 - thickness),
-      baseDepth: 0,
-      depth: 0,
-      vbWidth: 120,
-      vbHeight: 120,
-      opacity: 0
-    }
-  }
-
-  const baseDepth = is3DMode ? 32 : 0
-  const depth = (is3DMode && slopeRatio > 0.5)
-    ? baseDepth * (2 - 2 * slopeRatio)
-    : baseDepth
-
-  if (hasLabels) {
-    return {
-      cx: 380,
-      cy: 160,
-      rx: 180,
-      ry: is3DMode ? 180 * slopeRatio : 180,
-      irx: 180 * (1 - thickness),
-      iry: is3DMode ? 180 * (1 - thickness) * slopeRatio : 180 * (1 - thickness),
-      baseDepth,
-      depth,
-      vbWidth: 760,
-      vbHeight: 320,
-      opacity: 1
-    }
-  }
-
-  // Expanded without labels (compact / headless / dashboard mode):
-  // The chart stretches to fill the SVG width instead of reserving 200px side margins for labels
-  const effSlope = is3DMode ? Math.max(0.15, slopeRatio) : 1.0
-  const maxRxVertical = (290 - depth) / (2 * effSlope)
-  const rx = Math.min(260, maxRxVertical)
-  const vbWidth = Math.round(rx * 2 + 40)
-  const cx = vbWidth / 2
-  const cy = 160
-  const vbHeight = 320
-
-  return {
-    cx,
-    cy,
-    rx,
-    ry: is3DMode ? rx * slopeRatio : rx,
-    irx: rx * (1 - thickness),
-    iry: is3DMode ? rx * (1 - thickness) * slopeRatio : rx * (1 - thickness),
-    baseDepth,
-    depth,
-    vbWidth,
-    vbHeight,
-    opacity: 0
-  }
+  return calculateTargetGeometry({
+    isExpanded,
+    showLabels,
+    is3D,
+    slopeRatio,
+    thickness,
+  })
 }
+
+const resolvedAspectRatio = computed(() => {
+  return resolveChartAspectRatio({
+    aspectRatio: props.aspectRatio,
+    isExpanded: props.isExpanded,
+    showLabels: props.showLabels,
+    is3D: props.is3D,
+  })
+})
+
+const wrapperStyle = computed(() => {
+  const ar = resolvedAspectRatio.value
+  if (!props.isExpanded) {
+    return { aspectRatio: ar }
+  }
+  const style = {
+    aspectRatio: ar,
+  }
+  if (props.showLabels) {
+    style.maxWidth = '760px'
+  } else if (!props.is3D) {
+    style.maxWidth = '360px'
+  } else {
+    style.maxWidth = '560px'
+  }
+  return style
+})
 
 const initialGeom = getTargetGeometry(props.isExpanded, props.showLabels, props.is3D, props.slopeRatio, props.thickness)
 
@@ -1926,18 +1904,24 @@ const updateGeometryImmediate = () => {
   labelOpacity.value = geom.opacity
 }
 
-const animateChart = (customDuration) => {
-  const duration = customDuration !== undefined ? customDuration : (props.animationDuration ?? 350)
+const animateChart = (opts = {}) => {
+  const duration = typeof opts === 'number' ? opts : (opts.duration !== undefined ? opts.duration : (props.animationDuration ?? 350))
+  const shouldAnimateData = typeof opts === 'object' && opts.animateData === true
+
   if (props.currentLowFxMode || props.immediate || duration <= 0) {
     if (currentAnimationId) {
       cancelAnimationFrame(currentAnimationId)
       currentAnimationId = null
     }
-    animatedItems.value.forEach(item => {
-      item.value = item.targetValue
-      item.percentage = item.targetPercentage !== undefined ? item.targetPercentage : 0
-    })
-    animatedItems.value = animatedItems.value.filter(item => item.targetValue > 0)
+    if (shouldAnimateData) {
+      animatedItems.value.forEach(item => {
+        item.value = item.targetValue
+        item.startValue = item.targetValue
+        item.percentage = item.targetPercentage !== undefined ? item.targetPercentage : 0
+        item.startPercentage = item.percentage
+      })
+      animatedItems.value = animatedItems.value.filter(item => item.targetValue > 0)
+    }
     animatedRotationAngle.value = activeRotationAngle.value
     
     updateGeometryImmediate()
@@ -1990,12 +1974,14 @@ const animateChart = (customDuration) => {
     const progress = Math.min(1.0, elapsed / duration)
     const easedProgress = 1 - Math.pow(1 - progress, 3)
 
-    animatedItems.value.forEach(item => {
-      item.value = item.startValue + (item.targetValue - item.startValue) * easedProgress
-      const startPct = item.startPercentage !== undefined ? item.startPercentage : 0
-      const targetPct = item.targetPercentage !== undefined ? item.targetPercentage : 0
-      item.percentage = Math.round(startPct + (targetPct - startPct) * easedProgress)
-    })
+    if (shouldAnimateData) {
+      animatedItems.value.forEach(item => {
+        item.value = item.startValue + (item.targetValue - item.startValue) * easedProgress
+        const startPct = item.startPercentage !== undefined ? item.startPercentage : 0
+        const targetPct = item.targetPercentage !== undefined ? item.targetPercentage : 0
+        item.percentage = Math.round(startPct + (targetPct - startPct) * easedProgress)
+      })
+    }
 
     if (!rotationKinetic.isMoving()) {
       animatedRotationAngle.value = startRotation + deltaRotation * easedProgress
@@ -2019,11 +2005,15 @@ const animateChart = (customDuration) => {
       if (!rotationKinetic.isMoving()) {
         animatedRotationAngle.value = targetRotation
       }
-      animatedItems.value.forEach(item => {
-        item.value = item.targetValue
-        item.percentage = item.targetPercentage !== undefined ? item.targetPercentage : 0
-      })
-      animatedItems.value = animatedItems.value.filter(item => item.targetValue > 0)
+      if (shouldAnimateData) {
+        animatedItems.value.forEach(item => {
+          item.value = item.targetValue
+          item.startValue = item.targetValue
+          item.percentage = item.targetPercentage !== undefined ? item.targetPercentage : 0
+          item.startPercentage = item.percentage
+        })
+        animatedItems.value = animatedItems.value.filter(item => item.targetValue > 0)
+      }
       
       animCx.value = targetCx
       animCy.value = targetCy
@@ -2067,7 +2057,7 @@ watch(normalizedData, (newData) => {
   updateAnimatedData(newData || [], isImmediate)
 
   if (!isImmediate) {
-    animateChart()
+    animateChart({ animateData: true })
   }
 }, { deep: true })
 
@@ -2075,7 +2065,7 @@ watch([() => props.othersColor, () => props.othersLabel, () => props.othersThres
   const isImmediate = props.immediate || props.currentLowFxMode
   updateAnimatedData(normalizedData.value || [], isImmediate)
   if (!isImmediate) {
-    animateChart()
+    animateChart({ animateData: true })
   }
 })
 
@@ -2216,20 +2206,13 @@ defineExpose({
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: width var(--nano-transition-motion), height var(--nano-transition-motion);
+  transition: width var(--nano-transition-motion), height var(--nano-transition-motion), max-width var(--nano-transition-motion);
 }
 
 .donut-canvas-wrapper.is-expanded {
   width: 100%;
-  max-width: 760px;
-  height: 320px;
-}
-
-.donut-canvas-wrapper.is-expanded:not(.has-labels) {
-  max-width: 560px;
   height: auto;
-  aspect-ratio: 560 / 320;
-  max-height: 320px;
+  max-height: 480px;
 }
 
 @media (max-width: 760px) {

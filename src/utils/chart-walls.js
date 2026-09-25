@@ -243,3 +243,139 @@ export const sortCutWallsByDepth = (cutWalls) => {
   if (!cutWalls || cutWalls.length === 0) return []
   return [...cutWalls].sort((a, b) => a.cutY - b.cutY)
 }
+
+/**
+ * Resolves the CSS aspect-ratio string for the chart wrapper container.
+ *
+ * @param {Object} [params={}]
+ * @param {string|number} [params.aspectRatio='auto'] - Custom user aspect-ratio or 'auto'
+ * @param {boolean} [params.isExpanded=false] - Whether chart is in expanded mode
+ * @param {boolean} [params.showLabels=true] - Whether labels & callouts are visible
+ * @param {boolean} [params.is3D=true] - Whether 3D mode is active
+ * @returns {string} CSS aspect-ratio value (e.g. '1 / 1', '760 / 320', '560 / 320')
+ */
+export const resolveChartAspectRatio = ({
+  aspectRatio = 'auto',
+  isExpanded = false,
+  showLabels = true,
+  is3D = true,
+} = {}) => {
+  if (aspectRatio && aspectRatio !== 'auto') {
+    return String(aspectRatio).trim().replace(/\s*[/:]\s*/g, ' / ')
+  }
+  if (!isExpanded) {
+    return '1 / 1'
+  }
+  if (!showLabels) {
+    // 2D flat mode without labels is a pure circle -> 1:1!
+    if (!is3D) {
+      return '1 / 1'
+    }
+    // 3D tilted mode without labels: wide ellipse
+    return '560 / 320'
+  }
+  // Expanded with side labels
+  return '760 / 320'
+}
+
+/**
+ * Calculates responsive SVG viewBox dimensions, radii, and center coordinates.
+ *
+ * @param {Object} [params={}]
+ * @param {boolean} [params.isExpanded=false] - Expanded layout vs mini badge
+ * @param {boolean} [params.showLabels=true] - Side labels and callout lines visible
+ * @param {boolean} [params.is3D=true] - 3D tilt/depth perspective enabled
+ * @param {number} [params.slopeRatio=0.5] - Tilt ratio (0.2 to 1.0)
+ * @param {number} [params.thickness=0.5] - Thickness ratio (0.0 to 1.0)
+ * @returns {{ cx: number, cy: number, rx: number, ry: number, irx: number, iry: number, baseDepth: number, depth: number, vbWidth: number, vbHeight: number, opacity: number }}
+ */
+export const calculateTargetGeometry = ({
+  isExpanded = false,
+  showLabels = true,
+  is3D = true,
+  slopeRatio = 0.5,
+  thickness = 0.5,
+} = {}) => {
+  const is3DMode = is3D
+  const hasLabels = isExpanded && showLabels
+
+  if (!isExpanded) {
+    return {
+      cx: 60,
+      cy: 60,
+      rx: 48,
+      ry: is3DMode ? 48 * slopeRatio : 48,
+      irx: 48 * (1 - thickness),
+      iry: is3DMode ? 48 * (1 - thickness) * slopeRatio : 48 * (1 - thickness),
+      baseDepth: 0,
+      depth: 0,
+      vbWidth: 120,
+      vbHeight: 120,
+      opacity: 0,
+    }
+  }
+
+  const baseDepth = is3DMode ? 32 : 0
+  const depth = (is3DMode && slopeRatio > 0.5)
+    ? baseDepth * (2 - 2 * slopeRatio)
+    : baseDepth
+
+  if (hasLabels) {
+    return {
+      cx: 380,
+      cy: 160,
+      rx: 180,
+      ry: is3DMode ? 180 * slopeRatio : 180,
+      irx: 180 * (1 - thickness),
+      iry: is3DMode ? 180 * (1 - thickness) * slopeRatio : 180 * (1 - thickness),
+      baseDepth,
+      depth,
+      vbWidth: 760,
+      vbHeight: 320,
+      opacity: 1,
+    }
+  }
+
+  // Expanded without labels (compact / headless / dashboard mode):
+  if (!is3DMode) {
+    // 2D flat mode without labels is a circle (rx = ry)
+    const rx = 140
+    const vbSize = 320
+    return {
+      cx: vbSize / 2,
+      cy: vbSize / 2,
+      rx,
+      ry: rx,
+      irx: rx * (1 - thickness),
+      iry: rx * (1 - thickness),
+      baseDepth: 0,
+      depth: 0,
+      vbWidth: vbSize,
+      vbHeight: vbSize,
+      opacity: 0,
+    }
+  }
+
+  // 3D without labels:
+  const effSlope = Math.max(0.15, slopeRatio)
+  const maxRxVertical = (290 - depth) / (2 * effSlope)
+  const rx = Math.min(260, maxRxVertical)
+  const vbWidth = Math.round(rx * 2 + 40)
+  const cx = vbWidth / 2
+  const cy = 160
+  const vbHeight = 320
+
+  return {
+    cx,
+    cy,
+    rx,
+    ry: rx * slopeRatio,
+    irx: rx * (1 - thickness),
+    iry: rx * (1 - thickness) * slopeRatio,
+    baseDepth,
+    depth,
+    vbWidth,
+    vbHeight,
+    opacity: 0,
+  }
+}

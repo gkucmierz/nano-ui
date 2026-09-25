@@ -199,4 +199,43 @@ test.describe('3D Donut Chart Wall Geometry & Visibility Specs', () => {
     const styleRest = await russiaSlice.getAttribute('style')
     expect(styleRest && styleRest.includes('translate')).toBeFalsy()
   })
+
+  test('should strictly render the 9-layer painter sequence in SVG DOM order', async ({ page }) => {
+    const chart = page.locator('.items-svg-chart')
+    await expect(chart).toBeVisible()
+
+    const firstBackOuterWall = page.locator('.items-svg-chart path[data-wall="outer-wall"][data-half="back"]').first()
+    const firstBackTopFace = page.locator('.items-svg-chart path[data-wall="top-face"][data-half="back"]').first()
+    const centerText = page.locator('.items-svg-chart .center-text-group').first()
+    const firstFrontInnerWall = page.locator('.items-svg-chart path[data-wall="inner-wall"][data-half="front"]').first()
+    const firstFrontTopFace = page.locator('.items-svg-chart path[data-wall="top-face"][data-half="front"]').first()
+
+    await expect(firstBackOuterWall).toBeAttached()
+    await expect(firstBackTopFace).toBeAttached()
+    await expect(centerText).toBeAttached()
+    await expect(firstFrontInnerWall).toBeAttached()
+    await expect(firstFrontTopFace).toBeAttached()
+
+    const order = await page.evaluate(() => {
+      const all = Array.from(document.querySelectorAll('.items-svg-chart *'))
+      const backOuter = document.querySelector('.items-svg-chart path[data-wall="outer-wall"][data-half="back"]')
+      const backTop = document.querySelector('.items-svg-chart path[data-wall="top-face"][data-half="back"]')
+      const center = document.querySelector('.items-svg-chart .center-text-group')
+      const frontInner = document.querySelector('.items-svg-chart path[data-wall="inner-wall"][data-half="front"]')
+      const frontTop = document.querySelector('.items-svg-chart path[data-wall="top-face"][data-half="front"]')
+
+      return {
+        backOuterIdx: all.indexOf(backOuter),
+        backTopIdx: all.indexOf(backTop),
+        centerIdx: all.indexOf(center),
+        frontInnerIdx: all.indexOf(frontInner),
+        frontTopIdx: all.indexOf(frontTop)
+      }
+    })
+
+    expect(order.backOuterIdx).toBeLessThan(order.backTopIdx)
+    expect(order.backTopIdx).toBeLessThan(order.centerIdx)
+    expect(order.centerIdx).toBeLessThan(order.frontInnerIdx)
+    expect(order.frontInnerIdx).toBeLessThan(order.frontTopIdx)
+  })
 })

@@ -35,6 +35,7 @@ const showCenterText = ref(true);
 const centerTextZ = ref(0.0); // 0.0 = top, 0.5 = center, 1.0 = bottom
 const chartAnimationDuration = ref(300); // 0, 150, 300, 500
 const labelFontSize = ref(13); // 11, 13, 15, 17
+const selectedAspectRatio = ref('auto');
 
 const stepRotation = (delta) => {
   rotationAngle.value = Math.min(360, Math.max(-360, Math.round(rotationAngle.value + delta)));
@@ -363,6 +364,7 @@ const networkData = [
             v-model:selectedItemId="selectedItemId"
             :selectable="selectable"
             :data="computedChartData"
+            :aspectRatio="selectedAspectRatio"
             :isExpanded="isExpanded"
             :showLabels="showLabels"
             :labelFontSize="labelFontSize"
@@ -474,6 +476,23 @@ const networkData = [
         <div class="switch-row" style="margin-top: 10px;">
           <span class="switch-label">Isolate Hovered (window.fullOpacity)</span>
           <NanoSwitch v-model="isolateHovered" size="compact" />
+        </div>
+
+        <div class="slider-row" style="margin-top: 10px;">
+          <span class="slider-label">Aspect Ratio: {{ selectedAspectRatio }}</span>
+          <div class="nano-btn-group" style="width: 100%; margin-top: 4px;">
+            <button 
+              v-for="ratio in ['auto', '1/1', '16/9', '4/3', '560/320']" 
+              :key="ratio"
+              type="button" 
+              class="nano-btn nano-btn-sm" 
+              :class="selectedAspectRatio === ratio ? 'nano-btn-primary' : 'nano-btn-secondary'" 
+              style="flex: 1; text-align: center; justify-content: center; font-weight: 600;" 
+              @click="selectedAspectRatio = ratio"
+            >
+              {{ ratio }}
+            </button>
+          </div>
         </div>
 
         <div class="slider-row" :style="!is3D ? 'opacity: 0.35; pointer-events: none;' : ''">
@@ -881,6 +900,7 @@ centerTextZ: Number (default: 0.0) - Z position of center text in depth (0.0 = t
 animationDuration: Number (default: 350) - Duration of chart transitions in ms (0 for instant)
 labelSize: String (default: 'md') - Preset size for callout labels ('sm', 'md', 'lg', 'xl')
 labelFontSize: Number | String (default: undefined) - Custom font size in px for callout labels (e.g. 13 or '13px')
+aspectRatio: String | Number (default: 'auto') - CSS aspect-ratio constraint for chart container (e.g. 'auto', '1/1', '16/9', '560/320')
     </NanoCodeBlock>
   </div>
 </template>

@@ -5,6 +5,8 @@ import {
   getNeighborSliceIds,
   resolvePartitionCutVisibility,
   getOptimalRotationAngle,
+  resolveChartAspectRatio,
+  calculateTargetGeometry,
 } from '../../../src/utils/chart-walls.js'
 
 describe('3D Donut Chart Wall Geometry & Visibility', () => {
@@ -352,6 +354,116 @@ describe('3D Donut Chart Wall Geometry & Visibility', () => {
       assert.equal(left, 3, 'Left column must have 3 labels')
       assert.equal(right, 3, 'Right column must have 3 labels')
       assert.equal(Math.abs(left - right), 0, 'Difference between left and right must be 0')
+    })
+  })
+
+  describe('when resolving chart aspect-ratio', () => {
+    test('should return 1 / 1 for compact mode when not expanded', () => {
+      const ar = resolveChartAspectRatio({ isExpanded: false })
+      assert.equal(ar, '1 / 1')
+    })
+
+    test('should return 760 / 320 when expanded with labels', () => {
+      const ar = resolveChartAspectRatio({ isExpanded: true, showLabels: true, is3D: true })
+      assert.equal(ar, '760 / 320')
+    })
+
+    test('should return 1 / 1 for 2D flat mode without labels', () => {
+      const ar = resolveChartAspectRatio({ isExpanded: true, showLabels: false, is3D: false })
+      assert.equal(ar, '1 / 1')
+    })
+
+    test('should return 560 / 320 for 3D tilted mode without labels', () => {
+      const ar = resolveChartAspectRatio({ isExpanded: true, showLabels: false, is3D: true })
+      assert.equal(ar, '560 / 320')
+    })
+
+    test('should respect custom user aspect-ratio prop when provided', () => {
+      assert.equal(resolveChartAspectRatio({ aspectRatio: '16/9' }), '16 / 9')
+      assert.equal(resolveChartAspectRatio({ aspectRatio: '4/3' }), '4 / 3')
+      assert.equal(resolveChartAspectRatio({ aspectRatio: '1/1' }), '1 / 1')
+      assert.equal(resolveChartAspectRatio({ aspectRatio: '2:1' }), '2 / 1')
+      assert.equal(resolveChartAspectRatio({ aspectRatio: 1.77 }), '1.77')
+    })
+
+    test('should fall back to automatic ratios when aspectRatio is empty, null, or auto', () => {
+      assert.equal(resolveChartAspectRatio({ aspectRatio: '', isExpanded: false }), '1 / 1')
+      assert.equal(resolveChartAspectRatio({ aspectRatio: null, isExpanded: true, showLabels: true }), '760 / 320')
+      assert.equal(resolveChartAspectRatio({ aspectRatio: 'auto', isExpanded: true, showLabels: false, is3D: false }), '1 / 1')
+      assert.equal(resolveChartAspectRatio({ aspectRatio: 'auto', isExpanded: true, showLabels: false, is3D: true }), '560 / 320')
+    })
+  })
+
+  describe('when calculating target geometry', () => {
+    test('should return 120x120 mini badge geometry when collapsed', () => {
+      const geom = calculateTargetGeometry({ isExpanded: false })
+      assert.equal(geom.vbWidth, 120)
+      assert.equal(geom.vbHeight, 120)
+      assert.equal(geom.cx, 60)
+      assert.equal(geom.cy, 60)
+      assert.equal(geom.rx, 48)
+      assert.equal(geom.opacity, 0)
+    })
+
+    test('should return 760x320 wide geometry with opacity 1 when expanded with labels', () => {
+      const geom = calculateTargetGeometry({ isExpanded: true, showLabels: true, is3D: true, slopeRatio: 0.5 })
+      assert.equal(geom.vbWidth, 760)
+      assert.equal(geom.vbHeight, 320)
+      assert.equal(geom.cx, 380)
+      assert.equal(geom.cy, 160)
+      assert.equal(geom.rx, 180)
+      assert.equal(geom.ry, 90)
+      assert.equal(geom.opacity, 1)
+    })
+
+    test('should return 320x320 square geometry for 2D flat mode without labels', () => {
+      const geom = calculateTargetGeometry({ isExpanded: true, showLabels: false, is3D: false })
+      assert.equal(geom.vbWidth, 320)
+      assert.equal(geom.vbHeight, 320)
+      assert.equal(geom.cx, 160)
+      assert.equal(geom.cy, 160)
+      assert.equal(geom.rx, 140)
+      assert.equal(geom.ry, 140)
+      assert.equal(geom.opacity, 0)
+    })
+
+    test('should return wider geometry and depth for 3D tilted mode without labels', () => {
+      const geom = calculateTargetGeometry({ isExpanded: true, showLabels: false, is3D: true, slopeRatio: 0.5 })
+      assert.equal(geom.vbHeight, 320)
+      assert.ok(geom.vbWidth >= 550 && geom.vbWidth <= 560)
+      assert.ok(geom.rx >= 250 && geom.rx <= 260)
+      assert.equal(geom.opacity, 0)
+    })
+
+    test('should correctly scale inner radii irx and iry based on thickness', () => {
+      // Full pie (thickness = 1.0) -> inner radii are 0
+      const fullPie = calculateTargetGeometry({ isExpanded: true, showLabels: true, is3D: true, slopeRatio: 0.5, thickness: 1.0 })
+      assert.equal(fullPie.irx, 0)
+      assert.equal(fullPie.iry, 0)
+
+      // Thin ring (thickness = 0.0) -> inner radii equal outer radii
+      const thinRing = calculateTargetGeometry({ isExpanded: true, showLabels: true, is3D: true, slopeRatio: 0.5, thickness: 0.0 })
+      assert.equal(thinRing.irx, thinRing.rx)
+      assert.equal(thinRing.iry, thinRing.ry)
+
+      // Standard donut (thickness = 0.5) -> inner radii are half outer radii
+      const standard = calculateTargetGeometry({ isExpanded: true, showLabels: true, is3D: true, slopeRatio: 0.5, thickness: 0.5 })
+      assert.equal(standard.irx, standard.rx * 0.5)
+      assert.equal(standard.iry, standard.ry * 0.5)
+    })
+
+    test('should constrain rx vertically when slopeRatio is steep to prevent vertical clipping', () => {
+      const geom = calculateTargetGeometry({ isExpanded: true, showLabels: false, is3D: true, slopeRatio: 1.0 })
+      assert.equal(geom.vbHeight, 320)
+      // When slopeRatio is 1.0 (vertical circle in 3D), rx must be <= 145 to fit in 320 height
+      assert.ok(geom.rx <= 150)
+      assert.ok(geom.vbWidth <= 340)
+    })
+
+    test('should clamp slopeRatio to safe minimum when calculating vertical constraints', () => {
+      const geom = calculateTargetGeometry({ isExpanded: true, showLabels: false, is3D: true, slopeRatio: 0.05 })
+      assert.equal(geom.rx, 260)
+      assert.equal(geom.vbWidth, 560)
     })
   })
 })
