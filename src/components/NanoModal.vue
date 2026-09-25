@@ -1,6 +1,7 @@
 <script setup>
 import { ref, watch, onMounted, onUnmounted, nextTick, computed } from 'vue';
 import NanoIcon from './NanoIcon.vue';
+import vRipple from '../directives/ripple.js';
 
 const isMounted = ref(false);
 
