@@ -67,45 +67,30 @@
 
       <!-- Donut Slices (walls and top faces grouped for perfect Z-indexing) -->
       <g v-else>
-        <!-- 3D MODE: Layered Z-index Sandwich (Back Slices -> Center Text -> Front Slices) -->
+        <!-- 3D MODE: 9-Layer Painter's Algorithm Architecture -->
         <template v-if="props.is3D">
-          <!-- Back Half Slices (drawn behind center text) -->
+          <!-- 1. Back Outer Walls -->
           <g 
-            v-for="slice in sortedSlices.filter(s => s.midY < drawCenterYComputed)" 
-            :key="'slice-sub-back-' + slice.item.id + '-' + slice.midAngle"
+            v-for="slice in backSlices" 
+            :key="'slice-back-outer-' + slice.item.id + '-' + slice.midAngle"
             class="slice-group-3d"
             :class="{ 
               'is-hovered': effectiveActiveId === slice.item.id,
               'is-dimmed': effectiveActiveId !== null && effectiveActiveId !== slice.item.id 
             }"
             :style="getSliceStyle(slice)"
+            :data-testid="'slice-' + slice.item.id"
+            :data-slice-id="slice.item.id"
+            data-half="back"
+            :data-sub-index="slice.subIndex"
           >
-            <!-- Inner Wall -->
-            <path 
-              v-if="isExpanded && slice.innerWallPath" 
-              :d="slice.innerWallPath" 
-              :fill="`url(#inner-grad-${getSafeId(slice.item.id)})`" 
-            />
-            <!-- Inner Wall Outline (Stroke only on the non-split edges) -->
-            <path 
-              v-if="isExpanded && slice.innerWallStrokePath" 
-              :d="slice.innerWallStrokePath" 
-              fill="none"
-              :stroke="`url(#inner-grad-${getSafeId(slice.item.id)})`" 
-              stroke-width="0.8"
-              stroke-linejoin="round"
-            />
-            <!-- Radial Start Cut (only when slice is exploded on hover) -->
-            <path v-if="isExpanded && effectiveActiveId === slice.item.id && slice.startCutPath" :d="slice.startCutPath" :fill="getDarkerColor(slice.color, 0.65)" />
-            <!-- Radial End Cut (only when slice is exploded on hover) -->
-            <path v-if="isExpanded && effectiveActiveId === slice.item.id && slice.endCutPath" :d="slice.endCutPath" :fill="getDarkerColor(slice.color, 0.75)" />
-            <!-- Outer Wall -->
             <path 
               v-if="isExpanded && slice.outerWallPath" 
               :d="slice.outerWallPath" 
               :fill="`url(#outer-grad-${getSafeId(slice.item.id)})`" 
+              data-wall="outer-wall"
+              data-half="back"
             />
-            <!-- Outer Wall Outline (Stroke only on the non-split edges) -->
             <path 
               v-if="isExpanded && slice.outerWallStrokePath" 
               :d="slice.outerWallStrokePath" 
@@ -113,15 +98,92 @@
               :stroke="`url(#outer-grad-${getSafeId(slice.item.id)})`" 
               stroke-width="0.8"
               stroke-linejoin="round"
+              data-wall="outer-wall-stroke"
+              data-half="back"
             />
+          </g>
 
-            <!-- Top Face for Back Half -->
+          <!-- 2. Back Cut Walls (sorted by angle order / depth cutY ascending) -->
+          <g 
+            v-for="cut in backCutWallsSorted" 
+            :key="'cut-back-' + cut.id"
+            class="slice-group-3d"
+            :class="{ 
+              'is-hovered': effectiveActiveId === cut.slice.item.id,
+              'is-dimmed': effectiveActiveId !== null && effectiveActiveId !== cut.slice.item.id 
+            }"
+            :style="getSliceStyle(cut.slice)"
+            :data-testid="'slice-' + cut.slice.item.id"
+            :data-slice-id="cut.slice.item.id"
+            :data-cut-type="cut.type"
+            data-layer="cut-wall"
+            data-half="back"
+            :data-sub-index="cut.slice.subIndex"
+          >
+            <path 
+              v-if="isExpanded && shouldRenderCut(cut) && cut.path"
+              :d="cut.path" 
+              :fill="cut.fill" 
+              :data-wall="cut.type"
+              data-half="back"
+            />
+          </g>
+
+          <!-- 3. Back Inner Walls (drawn after back cut walls so cuts never clip inner walls) -->
+          <g 
+            v-for="slice in backSlices" 
+            :key="'slice-back-inner-' + slice.item.id + '-' + slice.midAngle"
+            class="slice-group-3d"
+            :class="{ 
+              'is-hovered': effectiveActiveId === slice.item.id,
+              'is-dimmed': effectiveActiveId !== null && effectiveActiveId !== slice.item.id 
+            }"
+            :style="getSliceStyle(slice)"
+            :data-testid="'slice-' + slice.item.id"
+            :data-slice-id="slice.item.id"
+            data-half="back"
+            :data-sub-index="slice.subIndex"
+          >
+            <path 
+              v-if="isExpanded && slice.innerWallPath" 
+              :d="slice.innerWallPath" 
+              :fill="`url(#inner-grad-${getSafeId(slice.item.id)})`" 
+              data-wall="inner-wall"
+              data-half="back"
+            />
+            <path 
+              v-if="isExpanded && slice.innerWallStrokePath" 
+              :d="slice.innerWallStrokePath" 
+              fill="none"
+              :stroke="`url(#inner-grad-${getSafeId(slice.item.id)})`" 
+              stroke-width="0.8"
+              stroke-linejoin="round"
+              data-wall="inner-wall-stroke"
+              data-half="back"
+            />
+          </g>
+
+          <!-- 4. Back Top Upper Half of Surface -->
+          <g 
+            v-for="slice in backSlices" 
+            :key="'slice-back-top-' + slice.item.id + '-' + slice.midAngle"
+            class="slice-group-3d"
+            :class="{ 
+              'is-hovered': effectiveActiveId === slice.item.id,
+              'is-dimmed': effectiveActiveId !== null && effectiveActiveId !== slice.item.id 
+            }"
+            :style="getSliceStyle(slice)"
+            :data-testid="'slice-' + slice.item.id"
+            :data-slice-id="slice.item.id"
+            data-half="back"
+            :data-sub-index="slice.subIndex"
+          >
             <path 
               :d="slice.topPath" 
               :fill="`url(#top-grad-${getSafeId(slice.item.id)})`" 
+              data-wall="top-face"
+              data-half="back"
             />
-
-            <!-- Top Face Outline -->
             <path 
               v-if="slice.topStrokePath"
               :d="slice.topStrokePath" 
@@ -129,9 +191,9 @@
               :stroke="`url(#top-grad-${getSafeId(slice.item.id)})`" 
               stroke-width="0.8"
               stroke-linejoin="round"
+              data-wall="top-face-stroke"
+              data-half="back"
             />
-
-            <!-- Top Face White Highlight Outline -->
             <path 
               v-if="slice.topStrokePath"
               :d="slice.topStrokePath" 
@@ -139,11 +201,18 @@
               stroke="rgba(255, 255, 255, 0.16)" 
               :stroke-width="isExpanded ? 0.8 : 0.5" 
               stroke-linejoin="round"
+              data-wall="top-face-highlight"
+              data-half="back"
             />
           </g>
 
-          <!-- Center Hole Text details (at centerTextY, sandwiched between back and front) -->
-          <g v-if="props.showCenterText" :transform="`translate(${animCx}, ${centerTextY})`" class="center-text-group">
+          <!-- 5. Center Hole Text / Label (sandwiched between back and front halves) -->
+          <g 
+            v-if="props.showCenterText" 
+            :transform="`translate(${animCx}, ${centerTextY})`" 
+            class="center-text-group"
+            :style="{ opacity: (isolateHovered && effectiveActiveId) ? 0 : 1 }"
+          >
             <text 
               x="0" 
               y="-3" 
@@ -170,24 +239,28 @@
             </text>
           </g>
 
-          <!-- Front Half Slices (drawn in front of center text) -->
+          <!-- 6. Front Inner Walls -->
           <g 
-            v-for="slice in sortedSlices.filter(s => s.midY >= drawCenterYComputed)" 
-            :key="'slice-sub-front-' + slice.item.id + '-' + slice.midAngle"
+            v-for="slice in frontSlices" 
+            :key="'slice-front-inner-' + slice.item.id + '-' + slice.midAngle"
             class="slice-group-3d"
             :class="{ 
               'is-hovered': effectiveActiveId === slice.item.id,
               'is-dimmed': effectiveActiveId !== null && effectiveActiveId !== slice.item.id 
             }"
             :style="getSliceStyle(slice)"
+            :data-testid="'slice-' + slice.item.id"
+            :data-slice-id="slice.item.id"
+            data-half="front"
+            :data-sub-index="slice.subIndex"
           >
-            <!-- Inner Wall -->
             <path 
               v-if="isExpanded && slice.innerWallPath" 
               :d="slice.innerWallPath" 
               :fill="`url(#inner-grad-${getSafeId(slice.item.id)})`" 
+              data-wall="inner-wall"
+              data-half="front"
             />
-            <!-- Inner Wall Outline (Stroke only on the non-split edges) -->
             <path 
               v-if="isExpanded && slice.innerWallStrokePath" 
               :d="slice.innerWallStrokePath" 
@@ -195,18 +268,59 @@
               :stroke="`url(#inner-grad-${getSafeId(slice.item.id)})`" 
               stroke-width="0.8"
               stroke-linejoin="round"
+              data-wall="inner-wall-stroke"
+              data-half="front"
             />
-            <!-- Radial Start Cut (only when slice is exploded on hover) -->
-            <path v-if="isExpanded && effectiveActiveId === slice.item.id && slice.startCutPath" :d="slice.startCutPath" :fill="getDarkerColor(slice.color, 0.65)" />
-            <!-- Radial End Cut (only when slice is exploded on hover) -->
-            <path v-if="isExpanded && effectiveActiveId === slice.item.id && slice.endCutPath" :d="slice.endCutPath" :fill="getDarkerColor(slice.color, 0.75)" />
-            <!-- Outer Wall -->
+          </g>
+
+          <!-- 7. Front Cut Walls (sorted by angle order / depth cutY ascending) -->
+          <g 
+            v-for="cut in frontCutWallsSorted" 
+            :key="'cut-front-' + cut.id"
+            class="slice-group-3d"
+            :class="{ 
+              'is-hovered': effectiveActiveId === cut.slice.item.id,
+              'is-dimmed': effectiveActiveId !== null && effectiveActiveId !== cut.slice.item.id 
+            }"
+            :style="getSliceStyle(cut.slice)"
+            :data-testid="'slice-' + cut.slice.item.id"
+            :data-slice-id="cut.slice.item.id"
+            :data-cut-type="cut.type"
+            data-layer="cut-wall"
+            data-half="front"
+            :data-sub-index="cut.slice.subIndex"
+          >
+            <path 
+              v-if="isExpanded && shouldRenderCut(cut) && cut.path"
+              :d="cut.path" 
+              :fill="cut.fill" 
+              :data-wall="cut.type"
+              data-half="front"
+            />
+          </g>
+
+          <!-- 8. Front Outer Walls -->
+          <g 
+            v-for="slice in frontSlices" 
+            :key="'slice-front-outer-' + slice.item.id + '-' + slice.midAngle"
+            class="slice-group-3d"
+            :class="{ 
+              'is-hovered': effectiveActiveId === slice.item.id,
+              'is-dimmed': effectiveActiveId !== null && effectiveActiveId !== slice.item.id 
+            }"
+            :style="getSliceStyle(slice)"
+            :data-testid="'slice-' + slice.item.id"
+            :data-slice-id="slice.item.id"
+            data-half="front"
+            :data-sub-index="slice.subIndex"
+          >
             <path 
               v-if="isExpanded && slice.outerWallPath" 
               :d="slice.outerWallPath" 
               :fill="`url(#outer-grad-${getSafeId(slice.item.id)})`" 
+              data-wall="outer-wall"
+              data-half="front"
             />
-            <!-- Outer Wall Outline (Stroke only on the non-split edges) -->
             <path 
               v-if="isExpanded && slice.outerWallStrokePath" 
               :d="slice.outerWallStrokePath" 
@@ -214,15 +328,32 @@
               :stroke="`url(#outer-grad-${getSafeId(slice.item.id)})`" 
               stroke-width="0.8"
               stroke-linejoin="round"
+              data-wall="outer-wall-stroke"
+              data-half="front"
             />
+          </g>
 
-            <!-- Top Face for Front Half -->
+          <!-- 9. Front Top Upper Half of Surface -->
+          <g 
+            v-for="slice in frontSlices" 
+            :key="'slice-front-top-' + slice.item.id + '-' + slice.midAngle"
+            class="slice-group-3d"
+            :class="{ 
+              'is-hovered': effectiveActiveId === slice.item.id,
+              'is-dimmed': effectiveActiveId !== null && effectiveActiveId !== slice.item.id 
+            }"
+            :style="getSliceStyle(slice)"
+            :data-testid="'slice-' + slice.item.id"
+            :data-slice-id="slice.item.id"
+            data-half="front"
+            :data-sub-index="slice.subIndex"
+          >
             <path 
               :d="slice.topPath" 
               :fill="`url(#top-grad-${getSafeId(slice.item.id)})`" 
+              data-wall="top-face"
+              data-half="front"
             />
-
-            <!-- Top Face Outline -->
             <path 
               v-if="slice.topStrokePath"
               :d="slice.topStrokePath" 
@@ -230,9 +361,9 @@
               :stroke="`url(#top-grad-${getSafeId(slice.item.id)})`" 
               stroke-width="0.8"
               stroke-linejoin="round"
+              data-wall="top-face-stroke"
+              data-half="front"
             />
-
-            <!-- Top Face White Highlight Outline -->
             <path 
               v-if="slice.topStrokePath"
               :d="slice.topStrokePath" 
@@ -240,9 +371,12 @@
               stroke="rgba(255, 255, 255, 0.16)" 
               :stroke-width="isExpanded ? 0.8 : 0.5" 
               stroke-linejoin="round"
+              data-wall="top-face-highlight"
+              data-half="front"
             />
           </g>
         </template>
+
 
         <!-- 2D FLAT MODE: All slices rendered first, center label strictly on top of all elements -->
         <template v-else>
@@ -349,7 +483,7 @@
             @mouseenter="handleHoverStart(label.item.id)"
             @mouseleave="activeHoveredId = null"
             @click="handleSliceClick(label.item.id)"
-            :style="{ cursor: (props.selectable && !isSingleSlice) ? 'pointer' : 'default' }"
+            :style="getLabelGroupStyle(label)"
           >
             <path 
               :d="getLeaderLinePath(label)" 
@@ -384,7 +518,7 @@
             @mouseenter="handleHoverStart(label.item.id)"
             @mouseleave="activeHoveredId = null"
             @click="handleSliceClick(label.item.id)"
-            :style="{ cursor: (props.selectable && !isSingleSlice) ? 'pointer' : 'default' }"
+            :style="getLabelGroupStyle(label)"
           >
             <path 
               :d="getLeaderLinePath(label)" 
@@ -415,6 +549,14 @@
 <script setup>
 import { ref, computed, watch, onMounted, onUnmounted, nextTick } from 'vue'
 import { normalizeAngle, shortestAngleDiff } from '../utils/math.js'
+import {
+  splitAngleIntervals,
+  getNeighborSliceIds,
+  resolvePartitionCutVisibility,
+  calculateCutY,
+  sortCutWallsByDepth,
+} from '../utils/chart-walls.js'
+
 
 const props = defineProps({
   // Array of: { id, name, value, percentage, color, unit }
@@ -1095,6 +1237,10 @@ const sortedSlices = computed(() => {
         index,
         color,
         isSingleSlice: true,
+        half: 'back',
+        subIndex: 0,
+        isStartEdge: false,
+        isEndEdge: false,
         midAngle: 3 * Math.PI / 2, // 270 degrees
         originalMidAngle,
         originalTopPath: backTopPath,
@@ -1111,6 +1257,10 @@ const sortedSlices = computed(() => {
         innerWallPath: backInnerWallPath,
         startCutPath: '',
         endCutPath: '',
+        startCutAngle: null,
+        endCutAngle: null,
+        startCutY: 0,
+        endCutY: 0,
         x0,
         y0,
         x1,
@@ -1127,6 +1277,10 @@ const sortedSlices = computed(() => {
         index,
         color,
         isSingleSlice: true,
+        half: 'front',
+        subIndex: 1,
+        isStartEdge: false,
+        isEndEdge: false,
         midAngle: Math.PI / 2, // 90 degrees
         originalMidAngle,
         originalTopPath: frontTopPath,
@@ -1143,7 +1297,12 @@ const sortedSlices = computed(() => {
         innerWallPath: '',
         startCutPath: '',
         endCutPath: '',
+        startCutAngle: null,
+        endCutAngle: null,
+        startCutY: 0,
+        endCutY: 0,
         x0,
+
         y0,
         x1,
         y1,
@@ -1191,40 +1350,12 @@ const sortedSlices = computed(() => {
       ? `M ${x_is_orig} ${y_is_orig} A ${irx} ${iry} 0 ${origLargeArc} 1 ${x_ie_orig} ${y_ie_orig} L ${x_ie_orig} ${y_ie_orig + depth} A ${irx} ${iry} 0 ${origLargeArc} 0 ${x_is_orig} ${y_is_orig + depth} Z`
       : ''
 
-    const normalizeAngle = (angle) => {
-      let a = angle % (Math.PI * 2)
-      if (a < 0) a += Math.PI * 2
-      return a
-    }
-
-    const normStart = normalizeAngle(startAngle)
-    const normEnd = normStart + sliceAngle
-
-    const splitPoints = []
-    const startK = Math.ceil(normStart / Math.PI)
-    const endK = Math.floor(normEnd / Math.PI)
-    for (let k = startK; k <= endK; k++) {
-      splitPoints.push(k * Math.PI)
-    }
-
-    let intervals = [{ start: normStart, end: normEnd }]
-    splitPoints.forEach(split => {
-      const nextIntervals = []
-      intervals.forEach(interval => {
-        if (interval.start < split && interval.end > split) {
-          nextIntervals.push({ start: interval.start, end: Math.min(interval.end, split + 0.0002) })
-          nextIntervals.push({ start: Math.max(interval.start, split - 0.0002), end: interval.end })
-        } else {
-          nextIntervals.push(interval)
-        }
-      })
-      intervals = nextIntervals
-    })
+    const intervals = splitAngleIntervals(startAngle, sliceAngle)
 
     intervals.forEach(interval => {
       const sAngle = interval.start
       const eAngle = interval.end
-      const subMidAngle = (sAngle + eAngle) / 2
+      const subMidAngle = interval.midAngle
 
       const x_os = cx + rx * Math.cos(sAngle)
       const y_os = drawCenterY + ry * Math.sin(sAngle)
@@ -1240,8 +1371,8 @@ const sortedSlices = computed(() => {
 
       const topPath = `M ${x_os} ${y_os} A ${rx} ${ry} 0 ${largeArc} 1 ${x_oe} ${y_oe} L ${x_ie} ${y_ie} A ${irx} ${iry} 0 ${largeArc} 0 ${x_is} ${y_is} Z`
 
-      const endSplit = Math.abs(eAngle - normEnd) >= 0.001
-      const startSplit = Math.abs(sAngle - normStart) >= 0.001
+      const endSplit = !interval.isEndEdge
+      const startSplit = !interval.isStartEdge
 
       let topStrokePath = ''
       if (endSplit) {
@@ -1262,51 +1393,50 @@ const sortedSlices = computed(() => {
       let innerWallStrokePath = ''
       let startCutPath = ''
       let endCutPath = ''
-
-      const isBackHalf = Math.sin(subMidAngle) < 0
-      const isFrontHalf = !isBackHalf
+      let startCutAngle = null
+      let endCutAngle = null
+      let startCutY = 0
+      let endCutY = 0
 
       if (depth > 0) {
-        if (isFrontHalf) {
-          outerWallPath = `M ${x_os} ${y_os} A ${rx} ${ry} 0 ${largeArc} 1 ${x_oe} ${y_oe} L ${x_oe} ${y_oe + depth} A ${rx} ${ry} 0 ${largeArc} 0 ${x_os} ${y_os + depth} Z`
-          if (endSplit) {
-            outerWallStrokePath = `M ${x_os} ${y_os} A ${rx} ${ry} 0 ${largeArc} 1 ${x_oe} ${y_oe} M ${x_oe} ${y_oe + depth} A ${rx} ${ry} 0 ${largeArc} 0 ${x_os} ${y_os + depth}`
-            if (!startSplit) {
-              outerWallStrokePath += ` L ${x_os} ${y_os}`
-            }
-          } else {
-            outerWallStrokePath = `M ${x_os} ${y_os} A ${rx} ${ry} 0 ${largeArc} 1 ${x_oe} ${y_oe} L ${x_oe} ${y_oe + depth} A ${rx} ${ry} 0 ${largeArc} 0 ${x_os} ${y_os + depth}`
-            if (!startSplit) {
-              outerWallStrokePath += ' Z'
-            }
+        outerWallPath = `M ${x_os} ${y_os} A ${rx} ${ry} 0 ${largeArc} 1 ${x_oe} ${y_oe} L ${x_oe} ${y_oe + depth} A ${rx} ${ry} 0 ${largeArc} 0 ${x_os} ${y_os + depth} Z`
+        if (endSplit) {
+          outerWallStrokePath = `M ${x_os} ${y_os} A ${rx} ${ry} 0 ${largeArc} 1 ${x_oe} ${y_oe} M ${x_oe} ${y_oe + depth} A ${rx} ${ry} 0 ${largeArc} 0 ${x_os} ${y_os + depth}`
+          if (!startSplit) {
+            outerWallStrokePath += ` L ${x_os} ${y_os}`
+          }
+        } else {
+          outerWallStrokePath = `M ${x_os} ${y_os} A ${rx} ${ry} 0 ${largeArc} 1 ${x_oe} ${y_oe} L ${x_oe} ${y_oe + depth} A ${rx} ${ry} 0 ${largeArc} 0 ${x_os} ${y_os + depth}`
+          if (!startSplit) {
+            outerWallStrokePath += ' Z'
           }
         }
 
-        if (isBackHalf) {
-          innerWallPath = `M ${x_is} ${y_is} A ${irx} ${iry} 0 ${largeArc} 1 ${x_ie} ${y_ie} L ${x_ie} ${y_ie + depth} A ${irx} ${iry} 0 ${largeArc} 0 ${x_is} ${y_is + depth} Z`
-          if (endSplit) {
-            innerWallStrokePath = `M ${x_is} ${y_is} A ${irx} ${iry} 0 ${largeArc} 1 ${x_ie} ${y_ie} M ${x_ie} ${y_ie + depth} A ${irx} ${iry} 0 ${largeArc} 0 ${x_is} ${y_is + depth}`
-            if (!startSplit) {
-              innerWallStrokePath += ` L ${x_is} ${y_is}`
-            }
-          } else {
-            innerWallStrokePath = `M ${x_is} ${y_is} A ${irx} ${iry} 0 ${largeArc} 1 ${x_ie} ${y_ie} L ${x_ie} ${y_ie + depth} A ${irx} ${iry} 0 ${largeArc} 0 ${x_is} ${y_is + depth}`
-            if (!startSplit) {
-              innerWallStrokePath += ' Z'
-            }
+        innerWallPath = `M ${x_is} ${y_is} A ${irx} ${iry} 0 ${largeArc} 1 ${x_ie} ${y_ie} L ${x_ie} ${y_ie + depth} A ${irx} ${iry} 0 ${largeArc} 0 ${x_is} ${y_is + depth} Z`
+        if (endSplit) {
+          innerWallStrokePath = `M ${x_is} ${y_is} A ${irx} ${iry} 0 ${largeArc} 1 ${x_ie} ${y_ie} M ${x_ie} ${y_ie + depth} A ${irx} ${iry} 0 ${largeArc} 0 ${x_is} ${y_is + depth}`
+          if (!startSplit) {
+            innerWallStrokePath += ` L ${x_is} ${y_is}`
+          }
+        } else {
+          innerWallStrokePath = `M ${x_is} ${y_is} A ${irx} ${iry} 0 ${largeArc} 1 ${x_ie} ${y_ie} L ${x_ie} ${y_ie + depth} A ${irx} ${iry} 0 ${largeArc} 0 ${x_is} ${y_is + depth}`
+          if (!startSplit) {
+            innerWallStrokePath += ' Z'
           }
         }
 
-        const isStartFacing = Math.cos(normStart) < 0
-        const isEndFacing = Math.cos(normEnd) > 0
-
-        if (Math.abs(sAngle - normStart) < 0.001 && isStartFacing) {
+        if (interval.isStartEdge) {
           startCutPath = `M ${x_os} ${y_os} L ${x_is} ${y_is} L ${x_is} ${y_is + depth} L ${x_os} ${y_os + depth} Z`
+          startCutAngle = interval.start
+          startCutY = calculateCutY(interval.start, drawCenterY, ry)
         }
-        if (Math.abs(eAngle - normEnd) < 0.001 && isEndFacing) {
+        if (interval.isEndEdge) {
           endCutPath = `M ${x_oe} ${y_oe} L ${x_ie} ${y_ie} L ${x_ie} ${y_ie + depth} L ${x_oe} ${y_oe + depth} Z`
+          endCutAngle = interval.end
+          endCutY = calculateCutY(interval.end, drawCenterY, ry)
         }
       }
+
 
       const midY = drawCenterY + ry * Math.sin(subMidAngle)
 
@@ -1324,6 +1454,10 @@ const sortedSlices = computed(() => {
         item,
         index,
         color,
+        half: interval.half,
+        subIndex: interval.subIndex,
+        isStartEdge: interval.isStartEdge,
+        isEndEdge: interval.isEndEdge,
         midAngle: subMidAngle,
         originalMidAngle,
         originalTopPath,
@@ -1338,6 +1472,10 @@ const sortedSlices = computed(() => {
         innerWallPath,
         startCutPath,
         endCutPath,
+        startCutAngle,
+        endCutAngle,
+        startCutY,
+        endCutY,
         x0,
         y0,
         x1,
@@ -1349,6 +1487,7 @@ const sortedSlices = computed(() => {
         wallY1: y0,
         wallY2: y0 + depth
       })
+
     })
 
     currentAngle += sliceAngle
@@ -1371,8 +1510,151 @@ const uniqueSlices = computed(() => {
   return result
 })
 
+const isolateHovered = ref(false)
+
+const isHoverTransitioning = ref(false)
+const transitioningSliceId = ref(null)
+
+watch(effectiveActiveId, (newId, oldId) => {
+  if (newId) {
+    if (hoverTransitionTimer) clearTimeout(hoverTransitionTimer)
+    isHoverTransitioning.value = true
+    transitioningSliceId.value = newId
+  } else if (oldId) {
+    const dur = props.animationDuration !== undefined ? props.animationDuration : 300
+    if (hoverTransitionTimer) clearTimeout(hoverTransitionTimer)
+    transitioningSliceId.value = oldId
+    isHoverTransitioning.value = true
+    hoverTransitionTimer = setTimeout(() => {
+      isHoverTransitioning.value = false
+      transitioningSliceId.value = null
+    }, dur + 60)
+  }
+})
+
+const activeOrTransitioningId = computed(() => {
+  return effectiveActiveId.value || transitioningSliceId.value
+})
+
+const neighborSliceIds = computed(() => {
+  const activeItems = animatedItems.value.filter(item => item.value > 0)
+  return getNeighborSliceIds(activeItems, activeOrTransitioningId.value)
+})
+
+const shouldRenderStartCut = (slice) => {
+  return resolvePartitionCutVisibility({
+    sliceItemId: slice.item.id,
+    isStartEdge: slice.isStartEdge,
+    isEndEdge: slice.isEndEdge,
+    effectiveActiveId: activeOrTransitioningId.value,
+    leftNeighborId: neighborSliceIds.value.leftNeighborId,
+    rightNeighborId: neighborSliceIds.value.rightNeighborId,
+    isHoverTransitioning: isHoverTransitioning.value,
+    isAnimating: isAnimating.value,
+  }).renderStartCut
+}
+
+const shouldRenderEndCut = (slice) => {
+  return resolvePartitionCutVisibility({
+    sliceItemId: slice.item.id,
+    isStartEdge: slice.isStartEdge,
+    isEndEdge: slice.isEndEdge,
+    effectiveActiveId: activeOrTransitioningId.value,
+    leftNeighborId: neighborSliceIds.value.leftNeighborId,
+    rightNeighborId: neighborSliceIds.value.rightNeighborId,
+    isHoverTransitioning: isHoverTransitioning.value,
+    isAnimating: isAnimating.value,
+  }).renderEndCut
+}
+
+const shouldRenderCut = (cut) => {
+  if (cut.type === 'start-cut') {
+    return shouldRenderStartCut(cut.slice)
+  }
+  if (cut.type === 'end-cut') {
+    return shouldRenderEndCut(cut.slice)
+  }
+  return false
+}
+
+const backSlices = computed(() => {
+  return sortedSlices.value.filter(s => s.half === 'back')
+})
+
+const frontSlices = computed(() => {
+  return sortedSlices.value.filter(s => s.half === 'front')
+})
+
+const backCutWallsSorted = computed(() => {
+  if (!props.is3D || !props.isExpanded) return []
+  const cuts = []
+  sortedSlices.value.forEach(slice => {
+    if (slice.half !== 'back') return
+    if (slice.startCutPath) {
+      cuts.push({
+        id: `cut-start-${slice.item.id}-${slice.subIndex}`,
+        type: 'start-cut',
+        slice,
+        path: slice.startCutPath,
+        fill: getDarkerColor(slice.color, 0.65),
+        angle: slice.startCutAngle,
+        cutY: slice.startCutY,
+        half: 'back'
+      })
+    }
+    if (slice.endCutPath) {
+      cuts.push({
+        id: `cut-end-${slice.item.id}-${slice.subIndex}`,
+        type: 'end-cut',
+        slice,
+        path: slice.endCutPath,
+        fill: getDarkerColor(slice.color, 0.75),
+        angle: slice.endCutAngle,
+        cutY: slice.endCutY,
+        half: 'back'
+      })
+    }
+  })
+  return sortCutWallsByDepth(cuts)
+})
+
+const frontCutWallsSorted = computed(() => {
+  if (!props.is3D || !props.isExpanded) return []
+  const cuts = []
+  sortedSlices.value.forEach(slice => {
+    if (slice.half !== 'front') return
+    if (slice.startCutPath) {
+      cuts.push({
+        id: `cut-start-${slice.item.id}-${slice.subIndex}`,
+        type: 'start-cut',
+        slice,
+        path: slice.startCutPath,
+        fill: getDarkerColor(slice.color, 0.65),
+        angle: slice.startCutAngle,
+        cutY: slice.startCutY,
+        half: 'front'
+      })
+    }
+    if (slice.endCutPath) {
+      cuts.push({
+        id: `cut-end-${slice.item.id}-${slice.subIndex}`,
+        type: 'end-cut',
+        slice,
+        path: slice.endCutPath,
+        fill: getDarkerColor(slice.color, 0.75),
+        angle: slice.endCutAngle,
+        cutY: slice.endCutY,
+        half: 'front'
+      })
+    }
+  })
+  return sortCutWallsByDepth(cuts)
+})
+
+
 const getSliceStyle = (slice) => {
-  if (effectiveActiveId.value === slice.item.id) {
+  const isHovered = effectiveActiveId.value === slice.item.id
+  if (isHovered) {
     const dist = 10
     const tx = dist * Math.cos(slice.originalMidAngle)
     const ty = dist * Math.sin(slice.originalMidAngle)
@@ -1380,7 +1662,21 @@ const getSliceStyle = (slice) => {
       transform: `translate(${tx}px, ${ty}px)`
     }
   }
+  if (isolateHovered.value && effectiveActiveId.value) {
+    return {
+      opacity: 0,
+      pointerEvents: 'none'
+    }
+  }
   return {}
+}
+
+const getLabelGroupStyle = (label) => {
+  const base = { cursor: (props.selectable && !isSingleSlice.value) ? 'pointer' : 'default' }
+  if (isolateHovered.value && effectiveActiveId.value && effectiveActiveId.value !== label.item.id) {
+    return { ...base, opacity: 0, pointerEvents: 'none' }
+  }
+  return base
 }
 
 const computedLabels = computed(() => {
@@ -1721,6 +2017,17 @@ watch(activeHoveredId, (newId) => {
 
 onMounted(() => {
   document.addEventListener('click', handleDocumentClick)
+  if (typeof window !== 'undefined') {
+    try {
+      Object.defineProperty(window, 'fullOpacity', {
+        get: () => isolateHovered.value,
+        set: (v) => { isolateHovered.value = !!v },
+        configurable: true
+      })
+    } catch (e) {
+      // Ignore in SSR
+    }
+  }
   nextTick(() => {
     animateChart()
   })
@@ -1728,6 +2035,11 @@ onMounted(() => {
 
 onUnmounted(() => {
   document.removeEventListener('click', handleDocumentClick)
+  if (typeof window !== 'undefined') {
+    try {
+      delete window.fullOpacity
+    } catch (e) {}
+  }
   if (currentAnimationId) {
     cancelAnimationFrame(currentAnimationId)
   }
