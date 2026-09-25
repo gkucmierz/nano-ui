@@ -4,7 +4,9 @@ import ThreeDDonutChart from '../../components/ThreeDDonutChart.vue';
 import NanoSwitch from '../../components/NanoSwitch.vue';
 import KineticRotator from '../../components/KineticRotator.vue';
 import NanoIcon from '../../components/NanoIcon.vue';
+import NanoCodeBlock from '../../components/NanoCodeBlock.vue';
 import { normalizeAngle } from '../../utils/math.js';
+import { getOptimalRotationAngle } from '../../utils/chart-walls.js';
 
 const isExpanded = ref(true);
 const is3D = ref(true);
@@ -125,13 +127,9 @@ const resetToDefault = () => {
   ];
 };
 
-const setSingleDatapoint = () => {
-  testData.value = [
-    { name: 'Poland', value: 0.31, color: '#ec4899' }
-  ];
-};
+const showcaseTab = ref('auto-rotate');
 
-const loadLongTailData = () => {
+const createLongTailItems = () => {
   const colors = ['#ec4899', '#a855f7', '#14b8a6', '#f43f5e', '#6366f1'];
   const sampleValues = [
     3.28, 4.78, 4.11, 3.48, 3.90, 4.78, 1.63, 1.46, 5.08, 4.98,
@@ -139,157 +137,206 @@ const loadLongTailData = () => {
     1.60, 2.15, 2.60, 4.30, 0.67, 1.48
   ];
   const items = [
-    { name: 'Big', value: 100.0, color: '#ec4899' }
+    { id: 'dominant-1', name: 'Dominant Category', value: 100.0, color: '#3b82f6', unit: '%' }
   ];
   sampleValues.forEach((v, idx) => {
     items.push({
-      name: `New Country ${idx + 2}`,
+      id: `small-${idx + 1}`,
+      name: `Slice ${idx + 1}`,
       value: v,
-      color: colors[idx % colors.length]
+      color: colors[idx % colors.length],
+      unit: '%'
     });
   });
-  testData.value = items;
+  return items;
 };
 
-const activePresetId = ref('default');
+const longTailData = ref(createLongTailItems());
 
-const presets = [
-  {
-    id: 'default',
-    label: 'Top 10 Countries',
-    tag: 'Balanced',
-    tipTitle: 'Standard 10-Item Dataset:',
-    tipBody: 'Balanced geographic dataset demonstrating 3D oblique perspective, painter\'s algorithm depth sorting, and bilateral label distribution.',
-    apply: () => {
-      resetToDefault();
-      autoRotate.value = true;
-      aggregateOthers.value = false;
-      othersThreshold.value = 0.01;
-      othersLabel.value = 'Other';
-      othersColor.value = '#64748b';
-      rotationAngle.value = -90;
-      is3D.value = true;
-    }
-  },
-  {
-    id: 'long-tail',
-    label: 'Auto-Rotate & Threshold Showcase',
-    tag: '1 Big + 26 Micro Slices',
-    tipTitle: 'Auto-Rotate & Threshold Showcase:',
-    tipBody: 'Features 1 dominant slice (Big: 100, 56%) and 26 micro-slices. With Auto-Rotate ON, the 26 micro-slices wrap across the top, evenly balancing 14 labels on the left and 13 on the right! Toggle Auto-Rotate OFF (Column 3) to see all 26 labels squashed on the left, or toggle Aggregate into "Other" (Column 4) to consolidate all slices < 3% into one clean slice.',
-    apply: () => {
-      loadLongTailData();
-      autoRotate.value = true;
-      aggregateOthers.value = false;
-      othersThreshold.value = 0.03;
-      othersLabel.value = 'Other (< 3%)';
-      othersColor.value = '#64748b';
-      rotationAngle.value = -90;
-      is3D.value = true;
-    }
-  },
-  {
-    id: 'threshold-active',
-    label: 'Threshold Grouped ("Other")',
-    tag: 'Consolidated',
-    tipTitle: 'Threshold Aggregation Active:',
-    tipBody: 'Automatically consolidates all micro-slices smaller than 3% into a single clean "Other" slice (44%). Drag the Others Threshold slider in Column 4 to watch items dynamically join or leave the aggregate!',
-    apply: () => {
-      loadLongTailData();
-      autoRotate.value = true;
-      aggregateOthers.value = true;
-      othersThreshold.value = 0.03;
-      othersLabel.value = 'Other (< 3%)';
-      othersColor.value = '#64748b';
-      rotationAngle.value = -90;
-      is3D.value = true;
-    }
-  },
-  {
-    id: 'duopoly',
-    label: 'Market Duopoly',
-    tag: '55% / 45%',
-    tipTitle: '2 Large Slices:',
-    tipBody: 'Ideal for inspecting opposing 180° cut walls, front/back X-axis depth sorting, and bilateral leader lines.',
-    apply: () => {
-      testData.value = [
-        { name: 'Enterprise Alpha', value: 55, color: '#3b82f6' },
-        { name: 'Enterprise Beta', value: 45, color: '#ec4899' }
-      ];
-      autoRotate.value = true;
-      aggregateOthers.value = false;
-      othersThreshold.value = 0.01;
-      othersLabel.value = 'Other';
-      rotationAngle.value = -90;
-      is3D.value = true;
-    }
-  },
-  {
-    id: 'single',
-    label: 'Single Datapoint',
-    tag: '100% Edge Case',
-    tipTitle: 'Single 100% Slice:',
-    tipBody: 'Tests full 360° seamless cylinder geometry without partition cuts and centered radial label leader.',
-    apply: () => {
-      setSingleDatapoint();
-      autoRotate.value = true;
-      aggregateOthers.value = false;
-      othersThreshold.value = 0.01;
-      othersLabel.value = 'Other';
-      rotationAngle.value = -90;
-      is3D.value = true;
-    }
-  }
-];
+// Auto-Rotate showcase isolated state
+const autoRotateDemo = ref(true);
+const autoRotateDemoAngle = ref(-90);
 
-const currentPreset = computed(() => {
-  return presets.find(p => p.id === activePresetId.value);
+const autoRotateBalanceStats = computed(() => {
+  const items = longTailData.value;
+  const total = items.reduce((s, it) => s + (it.value || 0), 0);
+  if (!total) return { left: 0, right: 0, diff: 0 };
+
+  const angleDeg = autoRotateDemo.value
+    ? getOptimalRotationAngle(items, -90)
+    : autoRotateDemoAngle.value;
+  const rad = (angleDeg * Math.PI) / 180;
+  let cur = 0;
+  let left = 0;
+  let right = 0;
+  items.forEach((it) => {
+    const sweep = (it.value / total) * Math.PI * 2;
+    const mid = cur + sweep / 2 + rad;
+    cur += sweep;
+    if (Math.cos(mid) < 0) left++;
+    else right++;
+  });
+  return { left, right, diff: Math.abs(left - right) };
 });
 
-const selectPreset = (p) => {
-  if (!p) return;
-  activePresetId.value = p.id;
-  p.apply();
-};
+const autoRotateCode = computed(() => {
+  const rotAngleProp = !autoRotateDemo.value ? `\n    :rotationAngle="${Math.round(autoRotateDemoAngle.value)}"` : '';
+  return `<script setup>
+import { ThreeDDonutChart } from '@gkucmierz/nano-ui';
+
+// Asymmetric dataset: 1 dominant category (56%) and 26 micro-slices
+const chartData = [
+  { name: 'Dominant Category', value: 100, color: '#3b82f6' },
+  { name: 'Slice 1', value: 3.28, color: '#ec4899' },
+  { name: 'Slice 2', value: 4.78, color: '#a855f7' },
+  // ... 24 more small slices ...
+];
+<\/script>
+
+<template>
+  <!-- autoRotate automatically balances callout labels 50/50 across left & right columns -->
+  <ThreeDDonutChart
+    :data="chartData"
+    :autoRotate="${autoRotateDemo.value}"${rotAngleProp}
+    :showLabels="true"
+    :animationDuration="300"
+  />
+</template>`;
+});
+
+// Threshold Aggregation showcase isolated state
+const thresholdDemoAggregate = ref(true);
+const thresholdDemoThreshold = ref(0.03); // 3%
+const thresholdDemoLabel = ref('Other (< 3%)');
+const thresholdDemoColor = ref('#64748b');
+
+const thresholdConsolidatedCount = computed(() => {
+  const items = longTailData.value;
+  const total = items.reduce((s, it) => s + (it.value || 0), 0);
+  if (!total || !thresholdDemoAggregate.value) return 0;
+  return items.filter((it) => (it.value / total) < thresholdDemoThreshold.value).length;
+});
+
+const thresholdCode = computed(() => {
+  return `<script setup>
+import { ThreeDDonutChart } from '@gkucmierz/nano-ui';
+
+const chartData = [
+  { name: 'Dominant Category', value: 100, color: '#3b82f6' },
+  { name: 'Slice 1', value: 3.28, color: '#ec4899' },
+  // ... 25 micro-slices ...
+];
+<\/script>
+
+<template>
+  <!-- Consolidates micro-slices below ${(thresholdDemoThreshold.value * 100).toFixed(1)}% into a single clean slice -->
+  <ThreeDDonutChart
+    :data="chartData"
+    :aggregateOthers="${thresholdDemoAggregate.value}"
+    :othersThreshold="${thresholdDemoThreshold.value}"
+    othersLabel="${thresholdDemoLabel.value}"
+    othersColor="${thresholdDemoColor.value}"
+    :autoRotate="true"
+  />
+</template>`;
+});
+
+// KPI / Headless Showcase Data (3 smaller charts side-by-side without labels)
+const kpiStorageData = [
+  { id: 'storage-used', name: 'Used', value: 72, color: '#3b82f6', unit: '%' },
+  { id: 'storage-free', name: 'Free', value: 28, color: '#334155', unit: '%' }
+];
+
+const kpiMemoryData = [
+  { id: 'ram-used', name: 'Used', value: 45, color: '#10b981', unit: '%' },
+  { id: 'ram-free', name: 'Free', value: 55, color: '#334155', unit: '%' }
+];
+
+const kpiNetworkData = [
+  { id: 'net-in', name: 'Inbound', value: 58, color: '#a855f7', unit: '%' },
+  { id: 'net-out', name: 'Outbound', value: 30, color: '#ec4899', unit: '%' },
+  { id: 'net-idle', name: 'Idle', value: 12, color: '#334155', unit: '%' }
+];
+
+const kpiCode = `<script setup>
+import { ThreeDDonutChart } from '@gkucmierz/nano-ui';
+
+const storageData = [
+  { name: 'Used', value: 72, color: '#3b82f6' },
+  { name: 'Free', value: 28, color: '#334155' }
+];
+
+const memoryData = [
+  { name: 'Used', value: 45, color: '#10b981' },
+  { name: 'Free', value: 55, color: '#334155' }
+];
+
+const networkData = [
+  { name: 'Inbound', value: 58, color: '#a855f7' },
+  { name: 'Outbound', value: 30, color: '#ec4899' },
+  { name: 'Idle', value: 12, color: '#334155' }
+];
+<\/script>
+
+<template>
+  <!-- Multi-Metric Dashboard: Simply set :showLabels="false" and size via parent CSS container -->
+  <div class="kpi-grid">
+    <div class="kpi-card">
+      <h4>NVMe Storage</h4>
+      <ThreeDDonutChart
+        :data="storageData"
+        :is3D="true"
+        :showLabels="false"
+        :isExpanded="true"
+        centerValue="72%"
+        centerLabel="Used"
+      />
+    </div>
+
+    <div class="kpi-card">
+      <h4>Active Memory</h4>
+      <ThreeDDonutChart
+        :data="memoryData"
+        :is3D="true"
+        :showLabels="false"
+        :isExpanded="true"
+        centerValue="45%"
+        centerLabel="RAM"
+      />
+    </div>
+
+    <div class="kpi-card">
+      <h4>Bandwidth</h4>
+      <ThreeDDonutChart
+        :data="networkData"
+        :is3D="true"
+        :showLabels="false"
+        :isExpanded="true"
+        centerValue="880M"
+        centerLabel="Traffic"
+      />
+    </div>
+  </div>
+</template>
+
+<style scoped>
+.kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+}
+.kpi-card {
+  background: var(--nano-bg-card);
+  padding: 1.25rem;
+  border-radius: 8px;
+}
+</style>`;
 </script>
 
 <template>
   <div class="doc-page">
     <h2>ThreeDDonutChart Component</h2>
     <p>A glossy 3D donut / pie chart component built on SVG, featuring responsive painter's algorithm Z-index layers, auto-balancing label leader lines, and dynamic data aggregation.</p>
-
-    <!-- Showcase Scenarios & Presets Toolbar -->
-    <div class="presets-toolbar">
-      <div class="presets-header">
-        <div class="presets-title-wrap">
-          <NanoIcon name="sparkles" :size="16" class="presets-icon" />
-          <span class="presets-title">Example Scenarios & Presets</span>
-        </div>
-        <span class="presets-subtitle">Switch scenarios to test auto-rotate column balancing and threshold aggregation</span>
-      </div>
-
-      <div class="presets-chips">
-        <button
-          v-for="p in presets"
-          :key="p.id"
-          type="button"
-          class="preset-chip"
-          :class="{ 'is-active': activePresetId === p.id }"
-          @click="selectPreset(p)"
-        >
-          <span class="chip-label">{{ p.label }}</span>
-          <span v-if="p.tag" class="chip-tag">{{ p.tag }}</span>
-        </button>
-      </div>
-
-      <div v-if="currentPreset" class="preset-tip-banner">
-        <NanoIcon name="info" :size="15" class="tip-icon" />
-        <div class="tip-content">
-          <span class="tip-title">{{ currentPreset.tipTitle }}</span>
-          <span class="tip-body">{{ currentPreset.tipBody }}</span>
-        </div>
-      </div>
-    </div>
 
     <!-- 1. Full-Width Live Preview Stage on Top -->
     <div class="stage-container">
@@ -357,15 +404,11 @@ const selectPreset = (p) => {
         <div class="action-buttons">
           <button @click="addItem" class="demo-btn secondary-btn">
             <NanoIcon name="plus" :size="13" />
-            <span>Add</span>
+            <span>Add Country</span>
           </button>
-          <button @click="selectPreset(presets.find(p => p.id === 'long-tail'))" class="demo-btn secondary-btn">
-            <NanoIcon name="sparkles" :size="13" />
-            <span>Long Tail</span>
-          </button>
-          <button @click="selectPreset(presets.find(p => p.id === 'default'))" class="demo-btn secondary-btn">
+          <button @click="resetToDefault" class="demo-btn secondary-btn">
             <NanoIcon name="rotate" :size="13" />
-            <span>Reset</span>
+            <span>Reset Data</span>
           </button>
         </div>
       </div>
@@ -415,11 +458,6 @@ const selectPreset = (p) => {
               Bottom (1.0)
             </button>
           </div>
-        </div>
-
-        <div class="switch-row" style="margin-top: 10px;">
-          <span class="switch-label">Compact (Mini) Layout</span>
-          <NanoSwitch :modelValue="!isExpanded" @update:modelValue="isExpanded = !$event" size="compact" />
         </div>
 
         <div class="switch-row" style="margin-top: 10px;">
@@ -570,6 +608,246 @@ const selectPreset = (p) => {
       </div>
     </div>
 
+    <!-- Dedicated Feature Showcases (Outside & Below Main View) -->
+    <div class="showcases-section">
+      <div class="section-header-wrap">
+        <h3>Feature Showcases & Isolated Use Cases</h3>
+        <p class="section-subtitle">
+          Dedicated views focusing on key architectural features with isolated options and copy-pasteable code examples.
+        </p>
+      </div>
+
+      <div class="showcases-card">
+        <!-- Docked Segmented Tabs Bar (Rule 9) -->
+        <div class="showcases-header-bar">
+          <div class="docked-tabs-group">
+            <button
+              type="button"
+              class="docked-tab-btn"
+              :class="{ active: showcaseTab === 'auto-rotate' }"
+              @click="showcaseTab = 'auto-rotate'"
+            >
+              <NanoIcon name="rotate" :size="15" />
+              <span>Auto-Rotate (Label Balancing)</span>
+            </button>
+            <button
+              type="button"
+              class="docked-tab-btn"
+              :class="{ active: showcaseTab === 'threshold' }"
+              @click="showcaseTab = 'threshold'"
+            >
+              <NanoIcon name="sparkles" :size="15" />
+              <span>Threshold Aggregation ("Other")</span>
+            </button>
+            <button
+              type="button"
+              class="docked-tab-btn"
+              :class="{ active: showcaseTab === 'compact' }"
+              @click="showcaseTab = 'compact'"
+            >
+              <NanoIcon name="layout-grid" :size="15" />
+              <span>Compact Dashboards (3 Charts)</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Tab 1: Auto-Rotate View -->
+        <div v-if="showcaseTab === 'auto-rotate'" class="showcase-view-body">
+          <div class="showcase-desc-bar">
+            <div class="desc-text-group">
+              <h4 class="showcase-title">Bilateral Label Balancing (autoRotate)</h4>
+              <p class="showcase-text">
+                When rendering highly skewed datasets (such as 1 dominant slice of 56% and 26 micro-slices), standard fixed top-rotation squashes all 26 labels onto one column. Enabling <code>autoRotate</code> computes the optimal angular centroid to balance callout lines symmetrically across left and right columns (14 vs 13).
+              </p>
+            </div>
+            <div class="desc-badge-group">
+              <span class="status-badge" :class="autoRotateDemo ? 'status-badge-success' : 'status-badge-warning'">
+                {{ autoRotateDemo ? `Balanced: ${autoRotateBalanceStats.left} Left / ${autoRotateBalanceStats.right} Right` : `Unbalanced: ${autoRotateBalanceStats.left} Left / ${autoRotateBalanceStats.right} Right (${autoRotateBalanceStats.diff} delta)` }}
+              </span>
+            </div>
+          </div>
+
+          <div class="showcase-interactive-stage">
+            <div class="showcase-chart-panel">
+              <ThreeDDonutChart
+                :data="longTailData"
+                :is3D="true"
+                :showLabels="true"
+                :autoRotate="autoRotateDemo"
+                :rotationAngle="autoRotateDemoAngle"
+                :animationDuration="300"
+                :selectable="true"
+                centerLabel="Label Balancing"
+              />
+            </div>
+
+            <div class="showcase-controls-panel">
+              <h4>Isolated Options</h4>
+              <div class="switch-row" style="margin-top: 10px;">
+                <span class="switch-label">autoRotate</span>
+                <NanoSwitch v-model="autoRotateDemo" size="compact" />
+              </div>
+
+              <div class="slider-row" :style="autoRotateDemo ? 'opacity: 0.35; pointer-events: none;' : ''">
+                <span class="slider-label">Manual Rotation: {{ Math.round(autoRotateDemoAngle) }}°</span>
+                <input type="range" v-model.number="autoRotateDemoAngle" min="-180" max="180" step="1" :disabled="autoRotateDemo" />
+              </div>
+
+              <div class="showcase-info-box">
+                <span v-if="autoRotateDemo">
+                  ✨ <strong>Auto-Rotate active:</strong> Notice how the 26 micro-slices smoothly wrap across the top apex so exactly 14 labels stay on the left and 13 on the right.
+                </span>
+                <span v-else>
+                  ⚠️ <strong>Auto-Rotate OFF:</strong> Notice how all 26 micro-slice labels get squashed onto the left column, leaving the right column with only 1 label.
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <NanoCodeBlock :code="autoRotateCode" lang="vue" title="Implementation Code" :default-wrap="true" />
+        </div>
+
+        <!-- Tab 2: Threshold Aggregation View -->
+        <div v-else-if="showcaseTab === 'threshold'" class="showcase-view-body">
+          <div class="showcase-desc-bar">
+            <div class="desc-text-group">
+              <h4 class="showcase-title">Long-Tail Consolidation (aggregateOthers & othersThreshold)</h4>
+              <p class="showcase-text">
+                Automatically consolidates micro-slices smaller than <code>othersThreshold</code> (e.g. 3%) into a single clean "Other" slice. This eliminates visual clutter on long-tail distributions while keeping total dataset values 100% accurate.
+              </p>
+            </div>
+            <div class="desc-badge-group">
+              <span class="status-badge" :class="thresholdDemoAggregate ? 'status-badge-info' : 'status-badge-neutral'">
+                {{ thresholdDemoAggregate ? `Consolidated: ${thresholdConsolidatedCount} micro-slices into "${thresholdDemoLabel}"` : 'Ungrouped: all 27 slices rendered' }}
+              </span>
+            </div>
+          </div>
+
+          <div class="showcase-interactive-stage">
+            <div class="showcase-chart-panel">
+              <ThreeDDonutChart
+                :data="longTailData"
+                :is3D="true"
+                :showLabels="true"
+                :autoRotate="true"
+                :aggregateOthers="thresholdDemoAggregate"
+                :othersThreshold="thresholdDemoThreshold"
+                :othersLabel="thresholdDemoLabel"
+                :othersColor="thresholdDemoColor"
+                :animationDuration="300"
+                :selectable="true"
+                centerLabel="Consolidated"
+              />
+            </div>
+
+            <div class="showcase-controls-panel">
+              <h4>Isolated Options</h4>
+              <div class="switch-row" style="margin-top: 10px;">
+                <span class="switch-label">aggregateOthers</span>
+                <NanoSwitch v-model="thresholdDemoAggregate" size="compact" />
+              </div>
+
+              <div class="slider-row" :style="!thresholdDemoAggregate ? 'opacity: 0.35; pointer-events: none;' : ''">
+                <span class="slider-label">othersThreshold: {{ (thresholdDemoThreshold * 100).toFixed(1) }}%</span>
+                <input type="range" v-model.number="thresholdDemoThreshold" min="0.005" max="0.15" step="0.005" :disabled="!thresholdDemoAggregate" />
+              </div>
+
+              <div class="input-row" :style="!thresholdDemoAggregate ? 'opacity: 0.35; pointer-events: none;' : ''" style="display: flex; gap: 8px; margin-top: 10px;">
+                <input type="text" v-model="thresholdDemoLabel" class="input-name" placeholder="othersLabel" :disabled="!thresholdDemoAggregate" />
+                <input type="color" v-model="thresholdDemoColor" class="input-color" style="height: 32px;" :disabled="!thresholdDemoAggregate" />
+              </div>
+
+              <div class="showcase-info-box">
+                <span v-if="thresholdDemoAggregate">
+                  📊 <strong>Aggregation active:</strong> {{ thresholdConsolidatedCount }} micro-slices under {{ (thresholdDemoThreshold * 100).toFixed(1) }}% are bundled into one clean slice. Drag the slider to watch items dynamically join or exit!
+                </span>
+                <span v-else>
+                  ⚠️ <strong>Aggregation OFF:</strong> All 26 micro-slices are rendered as individual tiny slices.
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <NanoCodeBlock :code="thresholdCode" lang="vue" title="Implementation Code" :default-wrap="true" />
+        </div>
+
+        <!-- Tab 3: Compact / Headless Dashboards (3 Charts Without Labels) -->
+        <div v-else-if="showcaseTab === 'compact'" class="showcase-view-body">
+          <div class="showcase-desc-bar">
+            <div class="desc-text-group">
+              <h4 class="showcase-title">Headless Metric Cards & Compact Grids (:showLabels="false")</h4>
+              <p class="showcase-text">
+                For dense telemetry cards, dashboard grids, or multi-metric rows, disable callout lines with <code>:showLabels="false"</code>. The 3D donut scales cleanly to fit its parent container without needing custom logic or flat layout hacks.
+              </p>
+            </div>
+            <div class="desc-badge-group">
+              <span class="status-badge status-badge-info">
+                3 KPIs Side-by-Side
+              </span>
+            </div>
+          </div>
+
+          <div class="kpi-showcase-grid">
+            <div class="kpi-showcase-card">
+              <div class="kpi-card-header">
+                <span class="kpi-card-title">NVMe Storage</span>
+                <span class="status-badge status-badge-info">72%</span>
+              </div>
+              <div class="kpi-chart-box">
+                <ThreeDDonutChart
+                  :data="kpiStorageData"
+                  :is3D="true"
+                  :showLabels="false"
+                  :isExpanded="true"
+                  :animationDuration="300"
+                  centerValue="72%"
+                  centerLabel="Used"
+                />
+              </div>
+            </div>
+
+            <div class="kpi-showcase-card">
+              <div class="kpi-card-header">
+                <span class="kpi-card-title">Active Memory</span>
+                <span class="status-badge status-badge-success">45%</span>
+              </div>
+              <div class="kpi-chart-box">
+                <ThreeDDonutChart
+                  :data="kpiMemoryData"
+                  :is3D="true"
+                  :showLabels="false"
+                  :isExpanded="true"
+                  :animationDuration="300"
+                  centerValue="45%"
+                  centerLabel="RAM"
+                />
+              </div>
+            </div>
+
+            <div class="kpi-showcase-card">
+              <div class="kpi-card-header">
+                <span class="kpi-card-title">Bandwidth Traffic</span>
+                <span class="status-badge status-badge-warning">88%</span>
+              </div>
+              <div class="kpi-chart-box">
+                <ThreeDDonutChart
+                  :data="kpiNetworkData"
+                  :is3D="true"
+                  :showLabels="false"
+                  :isExpanded="true"
+                  :animationDuration="300"
+                  centerValue="880M"
+                  centerLabel="Traffic"
+                />
+              </div>
+            </div>
+          </div>
+
+          <NanoCodeBlock :code="kpiCode" lang="vue" title="Implementation Code (:showLabels=false)" :default-wrap="true" />
+        </div>
+      </div>
+    </div>
+
     <NanoCodeBlock title="API Reference" lang="api">
 // Props
 data: Array (required) - Array of { id, name, value, percentage, color, unit }
@@ -610,124 +888,254 @@ h2 { margin: 0; color: var(--nano-text-main); }
 h3 { margin-bottom: 1rem; color: var(--nano-text-muted); border-bottom: 1px solid var(--nano-border-subtle); padding-bottom: 0.5rem; }
 h4 { margin: 0 0 0.5rem 0; color: var(--nano-text-secondary); font-size: 0.9rem; }
 
-.presets-toolbar {
+.showcases-section {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  margin-top: 1rem;
+}
+
+.section-header-wrap h3 {
+  margin: 0;
+  color: var(--nano-text-main);
+  border: none;
+  padding: 0;
+}
+
+.section-subtitle {
+  font-size: 0.85rem;
+  color: var(--nano-text-muted);
+  margin: 4px 0 0 0;
+}
+
+.showcases-card {
   background: var(--nano-bg-card);
   border: 1px solid var(--nano-border-card);
   border-radius: var(--nano-radius-md, 8px);
-  padding: 1.1rem 1.25rem;
+  overflow: hidden;
   display: flex;
   flex-direction: column;
-  gap: 0.85rem;
 }
 
-.presets-header {
+.showcases-header-bar {
+  height: 46px;
+  background: var(--nano-bg-muted);
+  border-bottom: 1px solid var(--nano-border-subtle);
   display: flex;
-  justify-content: space-between;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 8px;
+  align-items: stretch;
+  padding: 0;
+  margin: 0;
+  overflow-x: auto;
 }
 
-.presets-title-wrap {
+.docked-tabs-group {
+  height: 100%;
   display: flex;
-  align-items: center;
-  gap: 6px;
-  font-weight: 600;
-  color: var(--nano-text-main);
-  font-size: 0.95rem;
+  align-items: stretch;
+  gap: 0;
+  padding: 0;
+  margin: 0;
 }
 
-.presets-icon {
-  color: var(--nano-accent-primary);
-}
-
-.presets-subtitle {
-  font-size: 0.8rem;
-  color: var(--nano-text-muted);
-}
-
-.presets-chips {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-}
-
-.preset-chip {
+.docked-tab-btn {
+  height: 100%;
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  padding: 6px 12px;
-  border-radius: var(--nano-radius-sm, 6px);
-  background: var(--nano-bg-muted);
-  border: 1px solid var(--nano-border-subtle);
+  gap: 8px;
+  padding: 0 20px;
+  border: none;
+  border-right: 1px solid var(--nano-border-subtle);
+  border-radius: 0;
+  background: transparent;
   color: var(--nano-text-secondary);
+  font-size: 0.875rem;
+  font-weight: 600;
   cursor: pointer;
-  font-size: 0.825rem;
-  font-weight: 500;
-  transition: background var(--nano-transition-interactive), border-color var(--nano-transition-interactive), color var(--nano-transition-interactive);
+  outline: none !important;
   user-select: none;
+  -webkit-user-select: none;
+  transition: color var(--nano-transition-interactive), background var(--nano-transition-interactive);
 }
 
-.preset-chip:hover {
-  background: var(--nano-bg-hover);
-  border-color: var(--nano-border-hover);
+.docked-tab-btn:hover:not(.active) {
+  background: var(--nano-bg-hover, rgba(255, 255, 255, 0.05));
   color: var(--nano-text-main);
 }
 
-.preset-chip.is-active {
-  background: color-mix(in srgb, var(--nano-accent-primary) 12%, var(--nano-bg-card));
-  border-color: var(--nano-accent-primary);
+.docked-tab-btn.active {
   color: var(--nano-accent-primary);
-  font-weight: 600;
-}
-
-.chip-tag {
-  font-size: 0.7rem;
-  padding: 1px 6px;
-  border-radius: 4px;
   background: var(--nano-bg-card);
-  border: 1px solid var(--nano-border-subtle);
-  color: var(--nano-text-muted);
+  box-shadow: inset 0 -2px 0 var(--nano-accent-primary);
 }
 
-.preset-chip.is-active .chip-tag {
-  background: var(--nano-accent-primary);
-  color: #fff;
-  border-color: var(--nano-accent-primary);
-}
-
-.preset-tip-banner {
+.showcase-view-body {
+  padding: 1.5rem;
   display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.showcase-desc-bar {
+  display: flex;
+  justify-content: space-between;
   align-items: flex-start;
-  gap: 10px;
-  padding: 10px 14px;
-  border-radius: var(--nano-radius-sm, 6px);
-  background: color-mix(in srgb, var(--nano-accent-primary) 8%, var(--nano-bg-muted));
-  border: 1px solid color-mix(in srgb, var(--nano-accent-primary) 22%, transparent);
+  gap: 16px;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid var(--nano-border-subtle);
+  flex-wrap: wrap;
+}
+
+.desc-text-group {
+  flex: 1;
+  min-width: 280px;
+}
+
+.showcase-title {
+  margin: 0 0 4px 0;
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--nano-text-main);
+}
+
+.showcase-text {
+  margin: 0;
+  font-size: 0.85rem;
   color: var(--nano-text-secondary);
-  font-size: 0.825rem;
+  line-height: 1.5;
+}
+
+.showcase-text code {
+  color: var(--nano-accent-primary);
+  background: color-mix(in srgb, var(--nano-accent-primary) 12%, transparent);
+  padding: 2px 5px;
+  border-radius: 4px;
+  font-size: 0.8rem;
+}
+
+.desc-badge-group {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.showcase-interactive-stage {
+  display: grid;
+  grid-template-columns: 1fr 340px;
+  gap: 20px;
+  align-items: start;
+}
+
+@media (max-width: 992px) {
+  .showcase-interactive-stage {
+    grid-template-columns: 1fr;
+  }
+}
+
+.showcase-chart-panel {
+  background: var(--nano-bg-muted);
+  border: 1px solid var(--nano-border-subtle);
+  border-radius: var(--nano-radius-md, 8px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 380px;
+  padding: 1rem;
+  width: 100%;
+}
+
+.showcase-controls-panel {
+  background: var(--nano-bg-muted);
+  border: 1px solid var(--nano-border-subtle);
+  border-radius: var(--nano-radius-md, 8px);
+  padding: 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.showcase-controls-panel h4 {
+  margin: 0 0 6px 0;
+  color: var(--nano-text-main);
+  font-size: 0.9rem;
+}
+
+.showcase-info-box {
+  margin-top: 10px;
+  padding: 10px 12px;
+  border-radius: var(--nano-radius-sm, 6px);
+  background: color-mix(in srgb, var(--nano-accent-primary) 8%, var(--nano-bg-card));
+  border: 1px solid color-mix(in srgb, var(--nano-accent-primary) 20%, transparent);
+  font-size: 0.8rem;
+  color: var(--nano-text-secondary);
   line-height: 1.45;
 }
 
-.tip-icon {
-  color: var(--nano-accent-primary);
-  flex-shrink: 0;
-  margin-top: 2px;
+.status-badge-success {
+  background: color-mix(in srgb, #10b981 15%, transparent);
+  color: #10b981;
+  border-color: color-mix(in srgb, #10b981 30%, transparent);
 }
 
-.tip-content {
+.status-badge-warning {
+  background: color-mix(in srgb, #f59e0b 15%, transparent);
+  color: #f59e0b;
+  border-color: color-mix(in srgb, #f59e0b 30%, transparent);
+}
+
+.status-badge-info {
+  background: color-mix(in srgb, var(--nano-accent-primary) 15%, transparent);
+  color: var(--nano-accent-primary);
+  border-color: color-mix(in srgb, var(--nano-accent-primary) 30%, transparent);
+}
+
+.status-badge-neutral {
+  background: var(--nano-bg-muted);
+  color: var(--nano-text-muted);
+  border-color: var(--nano-border-subtle);
+}
+
+.kpi-showcase-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+  width: 100%;
+}
+
+@media (max-width: 860px) {
+  .kpi-showcase-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.kpi-showcase-card {
+  background: var(--nano-bg-muted);
+  border: 1px solid var(--nano-border-subtle);
+  border-radius: var(--nano-radius-md, 8px);
+  padding: 1.1rem;
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 10px;
 }
 
-.tip-title {
+.kpi-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.kpi-card-title {
+  font-size: 0.875rem;
   font-weight: 600;
   color: var(--nano-text-main);
 }
 
-.tip-body {
-  color: var(--nano-text-secondary);
+.kpi-chart-box {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  max-width: 220px;
+  margin: 0 auto;
 }
 
 .stage-container {
