@@ -1,5 +1,6 @@
 <script setup>
 import { ref, computed, watch } from 'vue';
+import { highlightCode } from '../utils/syntax-highlighter.js';
 
 const props = defineProps({
   /**
@@ -97,6 +98,11 @@ const currentLang = computed(() => {
 const currentCode = computed(() => {
   if (activeTab.value && activeTab.value.code !== undefined) return activeTab.value.code;
   return props.code;
+});
+
+const highlightedCode = computed(() => {
+  if (!currentCode.value) return '';
+  return highlightCode(currentCode.value, currentLang.value);
 });
 
 const selectTab = (idx) => {
@@ -218,7 +224,7 @@ const containerMaxHeight = computed(() => {
     </div>
 
     <div class="code-block-body" :style="{ maxHeight: containerMaxHeight }">
-      <pre ref="preRef" class="code-block-pre"><slot :name="activeTab?.id || `tab-${currentTabIndex}`"><slot>{{ currentCode }}</slot></slot></pre>
+      <pre ref="preRef" class="code-block-pre"><slot :name="activeTab?.id || `tab-${currentTabIndex}`"><code v-if="highlightedCode" class="nano-syntax-code" v-html="highlightedCode"></code><code v-else-if="currentCode">{{ currentCode }}</code><slot v-else /></slot></pre>
     </div>
   </div>
 </template>
@@ -470,5 +476,58 @@ const containerMaxHeight = computed(() => {
   white-space: pre-wrap !important;
   word-break: break-word !important;
   overflow-wrap: break-word !important;
+}
+
+/* Built-in Syntax Highlighting Tokens */
+:deep(.hl-keyword) {
+  color: #c084fc;
+  font-weight: 600;
+}
+
+:deep(.hl-string) {
+  color: #34d399;
+}
+
+:deep(.hl-number) {
+  color: #fbbf24;
+}
+
+:deep(.hl-boolean) {
+  color: #f472b6;
+  font-weight: 600;
+}
+
+:deep(.hl-comment) {
+  color: #64748b;
+  font-style: italic;
+}
+
+:deep(.hl-tag) {
+  color: #38bdf8;
+  font-weight: 600;
+}
+
+:deep(.hl-attr) {
+  color: #a78bfa;
+}
+
+:deep(.hl-function) {
+  color: #60a5fa;
+}
+
+:deep(.hl-property) {
+  color: #38bdf8;
+}
+
+:deep(.hl-var) {
+  color: #f43f5e;
+}
+
+:deep(.hl-selector) {
+  color: #e879f9;
+}
+
+:deep(.hl-punct) {
+  color: #94a3b8;
 }
 </style>

@@ -22,6 +22,7 @@ import NanoIcon from './components/NanoIcon.vue';
 import { registerIcons, getAvailableIcons, BUILTIN_ICONS } from './icons/index.js';
 import { normalizeAngle, shortestAngleDiff } from './utils/math.js';
 import { createKineticTransition, cubicHermite, sampleKinematics } from './utils/kinetics.js';
+import { highlightCode } from './utils/syntax-highlighter.js';
 import { transitions, durations, easings, transitionVariables } from './config/transitions.js';
 import './style.css';
 
@@ -49,6 +50,7 @@ export {
   createKineticTransition,
   cubicHermite,
   sampleKinematics,
+  highlightCode,
   initTheme,
   getZeroFoucScript,
   getZeroFoucStyle,
