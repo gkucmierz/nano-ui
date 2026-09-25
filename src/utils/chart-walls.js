@@ -164,57 +164,44 @@ export const getNeighborSliceIds = (items, activeId) => {
 /**
  * Determines whether a sub-slice's startCut and endCut partition walls should be rendered.
  *
- * Rules:
- * 1. Internal partition walls between touching resting slices are NOT rendered (prevents seam bleed).
- * 2. When a slice is hovered (or transitioning), its own true startCut and true endCut are rendered.
- * 3. The immediate left neighbor renders its true endCut (facing the gap left by the hovered slice).
- * 4. The immediate right neighbor renders its true startCut (facing the gap left by the hovered slice).
- * 5. Cuts are NEVER rendered on internal X-axis split boundaries within the same slice.
+ * Rule:
+ * Cut walls are ALWAYS rendered. The ONLY condition when they are NOT rendered is:
+ * - opacity is 100% (max visibility, >= 0.999) AND
+ * - all pie elements are completely retracted / tucked in (steady state t = 0/1, no animation).
  *
  * @param {Object} params
- * @param {string|number} params.sliceItemId
- * @param {boolean} params.isStartEdge
- * @param {boolean} params.isEndEdge
- * @param {string|number|null} params.effectiveActiveId
- * @param {string|number|null} params.leftNeighborId
- * @param {string|number|null} params.rightNeighborId
- * @param {boolean} params.isHoverTransitioning
- * @param {boolean} params.isAnimating
+ * @param {string|number} [params.sliceItemId]
+ * @param {boolean} [params.isStartEdge=false]
+ * @param {boolean} [params.isEndEdge=false]
+ * @param {string|number|null} [params.effectiveActiveId=null]
+ * @param {string|number|null} [params.leftNeighborId=null]
+ * @param {string|number|null} [params.rightNeighborId=null]
+ * @param {boolean} [params.isHoverTransitioning=false]
+ * @param {boolean} [params.isAnimating=false]
+ * @param {number} [params.opacity=1]
  * @returns {{ renderStartCut: boolean, renderEndCut: boolean }}
  */
 export const resolvePartitionCutVisibility = ({
-  sliceItemId,
-  isStartEdge,
-  isEndEdge,
-  effectiveActiveId,
-  leftNeighborId,
-  rightNeighborId,
+  isStartEdge = false,
+  isEndEdge = false,
+  effectiveActiveId = null,
   isHoverTransitioning = false,
   isAnimating = false,
-}) => {
-  const isTargetActive = effectiveActiveId !== null && effectiveActiveId !== undefined
-  const shouldRenderPartitions = isTargetActive || isHoverTransitioning || isAnimating
+  opacity = 1,
+} = {}) => {
+  const isFullOpacity = opacity >= 0.999
+  const allElementsRetracted =
+    (effectiveActiveId === null || effectiveActiveId === undefined) &&
+    !isHoverTransitioning &&
+    !isAnimating
 
-  if (!shouldRenderPartitions) {
+  if (isFullOpacity && allElementsRetracted) {
     return { renderStartCut: false, renderEndCut: false }
   }
 
-  // If general loading animation is running with no target active slice, render true edges
-  if (!isTargetActive && isAnimating && !isHoverTransitioning) {
-    return {
-      renderStartCut: isStartEdge,
-      renderEndCut: isEndEdge,
-    }
-  }
-
-  // When a target slice is active (or transitioning back), only render for the target and gap-facing neighbors
-  const isCurrentActive = isTargetActive && sliceItemId === effectiveActiveId
-  const isLeftNeighbor = isTargetActive && sliceItemId === leftNeighborId
-  const isRightNeighbor = isTargetActive && sliceItemId === rightNeighborId
-
   return {
-    renderStartCut: isStartEdge && (isCurrentActive || isRightNeighbor),
-    renderEndCut: isEndEdge && (isCurrentActive || isLeftNeighbor),
+    renderStartCut: Boolean(isStartEdge),
+    renderEndCut: Boolean(isEndEdge),
   }
 }
 
@@ -378,4 +365,101 @@ export const calculateTargetGeometry = ({
     vbHeight,
     opacity: 0,
   }
+}
+
+/**
+ * Normalizes and aggregates chart dataset based on threshold options.
+ *
+ * Rules:
+ * 1. When aggregateOthers is false, preserves data as-is with recalculated percentages.
+ * 2. When aggregateOthers is true:
+ *    - Micro-slices below fraction threshold (val / total < othersThreshold) are consolidated into a single "Other" slice.
+ *    - Slices above threshold are sorted descending by value (e.g. 50, 42...), ensuring predictable angular positions.
+ *    - The consolidated "Other" slice is ALWAYS placed at the end of the list.
+ *    - At least 1 slice is preserved.
+ *
+ * @param {Object} params
+ * @param {Array<{ value?: number, name?: string, id?: string|number, color?: string, unit?: string }>} params.data
+ * @param {boolean} [params.aggregateOthers=false]
+ * @param {number} [params.othersThreshold=0.01]
+ * @param {string} [params.othersLabel='Other']
+ * @param {string} [params.othersColor='#64748b']
+ * @returns {Array<Object>}
+ */
+export const aggregateThresholdData = ({
+  data = [],
+  aggregateOthers = false,
+  othersThreshold = 0.01,
+  othersLabel = 'Other',
+  othersColor = '#64748b',
+} = {}) => {
+  const rawData = data || []
+  if (rawData.length === 0) return []
+
+  const total = rawData.reduce((sum, item) => sum + (item.value || 0), 0)
+
+  if (!aggregateOthers) {
+    return rawData.map(item => {
+      const val = item.value || 0
+      const pct = total > 0 ? Math.round((val / total) * 100) : 0
+      return {
+        ...item,
+        percentage: pct,
+      }
+    })
+  }
+
+  if (total === 0) {
+    return rawData.map(item => ({
+      ...item,
+      percentage: 0,
+    }))
+  }
+
+  const thresholdVal = total * othersThreshold
+  const aboveThreshold = []
+  let othersValue = 0
+
+  // Sort rawData descending so largest elements are always first
+  const sortedRaw = [...rawData].sort((a, b) => (b.value || 0) - (a.value || 0))
+
+  sortedRaw.forEach((item) => {
+    const val = item.value || 0
+    const isOtherItem = item.id === 'other' || (item.name && item.name.toLowerCase() === othersLabel.toLowerCase())
+    if (isOtherItem) {
+      othersValue += val
+    } else if (val < thresholdVal && aboveThreshold.length > 0) {
+      // Below threshold: accumulate into others
+      othersValue += val
+    } else {
+      aboveThreshold.push({ ...item })
+    }
+  })
+
+  if (aboveThreshold.length === 0 && sortedRaw.length > 0) {
+    aboveThreshold.push({ ...sortedRaw[0] })
+    othersValue = Math.max(0, total - (sortedRaw[0].value || 0))
+  }
+
+  const result = [...aboveThreshold]
+
+  if (othersValue > 0) {
+    result.push({
+      id: 'other',
+      name: othersLabel,
+      value: othersValue,
+      color: othersColor,
+      unit: rawData[0]?.unit || 'x',
+    })
+  }
+
+  const newTotal = result.reduce((sum, item) => sum + (item.value || 0), 0)
+  return result.map(item => {
+    const val = item.value || 0
+    const pct = newTotal > 0 ? Math.round((val / newTotal) * 100) : 0
+    return {
+      ...item,
+      percentage: pct,
+    }
+  })
 }

@@ -566,6 +566,7 @@ import {
   getOptimalRotationAngle,
   calculateTargetGeometry,
   resolveChartAspectRatio,
+  aggregateThresholdData,
 } from '../utils/chart-walls.js'
 
 
@@ -970,76 +971,12 @@ const getGradientId = (prefix, slice) => `${prefix}-${getSafeId(slice.item.id)}-
 
 // Normalized and aggregated input data structure
 const normalizedData = computed(() => {
-  const rawData = props.data || []
-  if (rawData.length === 0) return []
-
-  const total = rawData.reduce((sum, item) => sum + (item.value || 0), 0)
-
-  if (!props.aggregateOthers) {
-    return rawData.map(item => {
-      const val = item.value || 0
-      const pct = total > 0 ? Math.round((val / total) * 100) : 0
-      return {
-        ...item,
-        percentage: pct
-      }
-    })
-  }
-
-  if (total === 0) {
-    return rawData.map(item => ({
-      ...item,
-      percentage: 0
-    }))
-  }
-
-  const maxOthersValue = total * props.othersThreshold
-
-  // Sort by value ascending to greedily aggregate smallest items up to threshold budget
-  const indexed = rawData.map((item, idx) => ({ ...item, _origIdx: idx }))
-  indexed.sort((a, b) => (a.value || 0) - (b.value || 0))
-
-  const otherIndices = new Set()
-  let othersValue = 0
-
-  for (const item of indexed) {
-    const val = item.value || 0
-    if (othersValue + val <= maxOthersValue && otherIndices.size < rawData.length - 1) {
-      othersValue += val
-      otherIndices.add(item._origIdx)
-    } else {
-      break
-    }
-  }
-
-  const mainSlices = rawData
-    .filter((_, idx) => !otherIndices.has(idx))
-    .map(item => ({ ...item }))
-
-  if (othersValue > 0) {
-    const existingOtherIndex = mainSlices.findIndex(item => item.id === 'other' || item.name.toLowerCase() === props.othersLabel.toLowerCase())
-    if (existingOtherIndex !== -1) {
-      mainSlices[existingOtherIndex].value += othersValue
-    } else {
-      mainSlices.push({
-        id: 'other',
-        name: props.othersLabel,
-        value: othersValue,
-        color: props.othersColor,
-        unit: rawData[0]?.unit || 'x'
-      })
-    }
-  }
-
-  // Re-calculate percentages for all slices
-  const newTotal = mainSlices.reduce((sum, item) => sum + (item.value || 0), 0)
-  return mainSlices.map(item => {
-    const val = item.value || 0
-    const pct = newTotal > 0 ? Math.round((val / newTotal) * 100) : 0
-    return {
-      ...item,
-      percentage: pct
-    }
+  return aggregateThresholdData({
+    data: props.data || [],
+    aggregateOthers: props.aggregateOthers,
+    othersThreshold: props.othersThreshold,
+    othersLabel: props.othersLabel,
+    othersColor: props.othersColor,
   })
 })
 
@@ -1643,6 +1580,8 @@ const neighborSliceIds = computed(() => {
 })
 
 const shouldRenderStartCut = (slice) => {
+  const isDimmed = effectiveActiveId.value !== null && effectiveActiveId.value !== slice.item.id
+  const sliceOpacity = isDimmed ? 0.35 : 1
   return resolvePartitionCutVisibility({
     sliceItemId: slice.item.id,
     isStartEdge: slice.isStartEdge,
@@ -1652,10 +1591,13 @@ const shouldRenderStartCut = (slice) => {
     rightNeighborId: neighborSliceIds.value.rightNeighborId,
     isHoverTransitioning: isHoverTransitioning.value,
     isAnimating: isAnimating.value,
+    opacity: sliceOpacity,
   }).renderStartCut
 }
 
 const shouldRenderEndCut = (slice) => {
+  const isDimmed = effectiveActiveId.value !== null && effectiveActiveId.value !== slice.item.id
+  const sliceOpacity = isDimmed ? 0.35 : 1
   return resolvePartitionCutVisibility({
     sliceItemId: slice.item.id,
     isStartEdge: slice.isStartEdge,
@@ -1665,6 +1607,7 @@ const shouldRenderEndCut = (slice) => {
     rightNeighborId: neighborSliceIds.value.rightNeighborId,
     isHoverTransitioning: isHoverTransitioning.value,
     isAnimating: isAnimating.value,
+    opacity: sliceOpacity,
   }).renderEndCut
 }
 
@@ -2152,15 +2095,31 @@ watch(() => props.animationDuration, (newDur) => {
   })
 })
 
+let fullOpacityListener = null
+
 onMounted(() => {
   document.addEventListener('click', handleDocumentClick)
   if (typeof window !== 'undefined') {
     try {
-      Object.defineProperty(window, 'fullOpacity', {
-        get: () => isolateHovered.value,
-        set: (v) => { isolateHovered.value = !!v },
-        configurable: true
-      })
+      if (!window.__nanoFullOpacityListeners) {
+        window.__nanoFullOpacityListeners = new Set()
+        Object.defineProperty(window, 'fullOpacity', {
+          get: () => Array.from(window.__nanoFullOpacityListeners).some(fn => fn()),
+          set: (v) => {
+            window.__nanoFullOpacityVal = !!v
+            window.__nanoFullOpacityListeners.forEach(fn => fn(!!v))
+          },
+          configurable: true
+        })
+      }
+      fullOpacityListener = (v) => {
+        if (v !== undefined) isolateHovered.value = v
+        return isolateHovered.value
+      }
+      window.__nanoFullOpacityListeners.add(fullOpacityListener)
+      if (window.__nanoFullOpacityVal !== undefined) {
+        isolateHovered.value = window.__nanoFullOpacityVal
+      }
     } catch (e) {
       // Ignore in SSR
     }
@@ -2172,10 +2131,8 @@ onMounted(() => {
 
 onUnmounted(() => {
   document.removeEventListener('click', handleDocumentClick)
-  if (typeof window !== 'undefined') {
-    try {
-      delete window.fullOpacity
-    } catch (e) {}
+  if (typeof window !== 'undefined' && window.__nanoFullOpacityListeners && fullOpacityListener) {
+    window.__nanoFullOpacityListeners.delete(fullOpacityListener)
   }
   if (currentAnimationId) {
     cancelAnimationFrame(currentAnimationId)

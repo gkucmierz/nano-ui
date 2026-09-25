@@ -7,6 +7,7 @@ import {
   getOptimalRotationAngle,
   resolveChartAspectRatio,
   calculateTargetGeometry,
+  aggregateThresholdData,
 } from '../../../src/utils/chart-walls.js'
 
 describe('3D Donut Chart Wall Geometry & Visibility', () => {
@@ -100,8 +101,8 @@ describe('3D Donut Chart Wall Geometry & Visibility', () => {
     })
   })
 
-  describe('when resolving partition cut visibility', () => {
-    test('should hide all partition cuts when all slices are at rest', () => {
+  describe('when resolving partition cut visibility (3d-chart-cutting-walls recipe)', () => {
+    test('should hide all partition cuts only when opacity is 100% and all elements are completely at rest', () => {
       const result = resolvePartitionCutVisibility({
         sliceItemId: 'purple',
         isStartEdge: true,
@@ -111,132 +112,96 @@ describe('3D Donut Chart Wall Geometry & Visibility', () => {
         rightNeighborId: null,
         isHoverTransitioning: false,
         isAnimating: false,
+        opacity: 1,
       })
 
       assert.equal(result.renderStartCut, false)
       assert.equal(result.renderEndCut, false)
     })
 
-    test('should render both start and end cuts for active slice when hovered', () => {
-      const result = resolvePartitionCutVisibility({
+    test('should render cuts when all elements are at rest but opacity is less than 100%', () => {
+      const dimmedResult = resolvePartitionCutVisibility({
+        sliceItemId: 'purple',
+        isStartEdge: true,
+        isEndEdge: true,
+        effectiveActiveId: null,
+        isHoverTransitioning: false,
+        isAnimating: false,
+        opacity: 0.35,
+      })
+
+      assert.equal(dimmedResult.renderStartCut, true, 'Start cut must render when opacity < 1')
+      assert.equal(dimmedResult.renderEndCut, true, 'End cut must render when opacity < 1')
+    })
+
+    test('should render cuts for true edges when an element is active / extruded', () => {
+      const activeResult = resolvePartitionCutVisibility({
         sliceItemId: 'purple',
         isStartEdge: true,
         isEndEdge: true,
         effectiveActiveId: 'purple',
-        leftNeighborId: 'pink',
-        rightNeighborId: 'yellow',
-        isHoverTransitioning: true,
+        isHoverTransitioning: false,
         isAnimating: false,
+        opacity: 1,
       })
 
-      assert.equal(result.renderStartCut, true)
-      assert.equal(result.renderEndCut, true)
+      assert.equal(activeResult.renderStartCut, true)
+      assert.equal(activeResult.renderEndCut, true)
+
+      // Other slices also render cut walls when an element is extruded
+      const otherResult = resolvePartitionCutVisibility({
+        sliceItemId: 'pink',
+        isStartEdge: true,
+        isEndEdge: true,
+        effectiveActiveId: 'purple',
+        isHoverTransitioning: false,
+        isAnimating: false,
+        opacity: 0.35,
+      })
+      assert.equal(otherResult.renderStartCut, true)
+      assert.equal(otherResult.renderEndCut, true)
     })
 
-    test('should not render cuts on internal X-axis sub-slice of active item', () => {
+    test('should not render cuts on internal X-axis sub-slice even when active or animating', () => {
       // Middle sub-slice (front half) of purple slice: isStartEdge = false, isEndEdge = false
       const result = resolvePartitionCutVisibility({
         sliceItemId: 'purple',
         isStartEdge: false,
         isEndEdge: false,
         effectiveActiveId: 'purple',
-        leftNeighborId: 'pink',
-        rightNeighborId: 'yellow',
         isHoverTransitioning: true,
-        isAnimating: false,
+        isAnimating: true,
+        opacity: 0.35,
       })
 
       assert.equal(result.renderStartCut, false)
       assert.equal(result.renderEndCut, false)
     })
 
-    test('should expose left neighbor endCut and right neighbor startCut facing the gap while keeping internal cuts hidden', () => {
-      // Left neighbor (pink): should render endCut facing purple, but NOT startCut (which touches yellow)
-      const leftResult = resolvePartitionCutVisibility({
-        sliceItemId: 'pink',
-        isStartEdge: true,
-        isEndEdge: true,
-        effectiveActiveId: 'purple',
-        leftNeighborId: 'pink',
-        rightNeighborId: 'yellow',
-        isHoverTransitioning: true,
-        isAnimating: false,
-      })
-      assert.equal(leftResult.renderStartCut, false, 'Left neighbor startCut touches another resting slice and must stay hidden')
-      assert.equal(leftResult.renderEndCut, true, 'Left neighbor endCut faces into the gap and must be rendered')
-
-      // Right neighbor (yellow): should render startCut facing purple, but NOT endCut (which touches pink)
-      const rightResult = resolvePartitionCutVisibility({
-        sliceItemId: 'yellow',
-        isStartEdge: true,
-        isEndEdge: true,
-        effectiveActiveId: 'purple',
-        leftNeighborId: 'pink',
-        rightNeighborId: 'yellow',
-        isHoverTransitioning: true,
-        isAnimating: false,
-      })
-      assert.equal(rightResult.renderStartCut, true, 'Right neighbor startCut faces into the gap and must be rendered')
-      assert.equal(rightResult.renderEndCut, false, 'Right neighbor endCut touches another resting slice and must stay hidden')
-    })
-
-    test('should maintain partition wall visibility for returning slice and gap neighbors during hover return transition window', () => {
-      // During return transition window, activeOrTransitioningId passes the returning slice ID:
-      const returningSliceResult = resolvePartitionCutVisibility({
-        sliceItemId: 'purple',
-        isStartEdge: true,
-        isEndEdge: true,
-        effectiveActiveId: 'purple',
-        leftNeighborId: 'pink',
-        rightNeighborId: 'yellow',
-        isHoverTransitioning: true,
-        isAnimating: false,
-      })
-
-      assert.equal(returningSliceResult.renderStartCut, true, 'Returning slice startCut must remain visible during return animation')
-      assert.equal(returningSliceResult.renderEndCut, true, 'Returning slice endCut must remain visible during return animation')
-
-      // Left neighbor facing gap must also maintain endCut
-      const leftNeighborResult = resolvePartitionCutVisibility({
-        sliceItemId: 'pink',
-        isStartEdge: true,
-        isEndEdge: true,
-        effectiveActiveId: 'purple',
-        leftNeighborId: 'pink',
-        rightNeighborId: 'yellow',
-        isHoverTransitioning: true,
-        isAnimating: false,
-      })
-      assert.equal(leftNeighborResult.renderStartCut, false)
-      assert.equal(leftNeighborResult.renderEndCut, true, 'Left neighbor endCut facing returning slice must stay visible')
-
-      // Unrelated slices not bordering the gap must NOT render cuts
-      const unrelatedResult = resolvePartitionCutVisibility({
-        sliceItemId: 'orange',
-        isStartEdge: true,
-        isEndEdge: true,
-        effectiveActiveId: 'purple',
-        leftNeighborId: 'pink',
-        rightNeighborId: 'yellow',
-        isHoverTransitioning: true,
-        isAnimating: false,
-      })
-      assert.equal(unrelatedResult.renderStartCut, false, 'Unrelated resting slices must never show cuts during return transition')
-      assert.equal(unrelatedResult.renderEndCut, false, 'Unrelated resting slices must never show cuts during return transition')
-
-      // When transition ends completely (effectiveActiveId is null and isHoverTransitioning is false)
-      const restingResult = resolvePartitionCutVisibility({
+    test('should render cuts during animations (intro or hover transition)', () => {
+      const animResult = resolvePartitionCutVisibility({
         sliceItemId: 'purple',
         isStartEdge: true,
         isEndEdge: true,
         effectiveActiveId: null,
-        leftNeighborId: null,
-        rightNeighborId: null,
         isHoverTransitioning: false,
-        isAnimating: false,
+        isAnimating: true,
+        opacity: 1,
       })
-      assert.equal(restingResult.renderStartCut, false, 'At complete rest, startCut must be hidden')
-      assert.equal(restingResult.renderEndCut, false, 'At complete rest, endCut must be hidden')
+      assert.equal(animResult.renderStartCut, true)
+      assert.equal(animResult.renderEndCut, true)
+
+      const hoverTransResult = resolvePartitionCutVisibility({
+        sliceItemId: 'purple',
+        isStartEdge: true,
+        isEndEdge: true,
+        effectiveActiveId: null,
+        isHoverTransitioning: true,
+        isAnimating: false,
+        opacity: 1,
+      })
+      assert.equal(hoverTransResult.renderStartCut, true)
+      assert.equal(hoverTransResult.renderEndCut, true)
     })
   })
 
@@ -464,6 +429,97 @@ describe('3D Donut Chart Wall Geometry & Visibility', () => {
       const geom = calculateTargetGeometry({ isExpanded: true, showLabels: false, is3D: true, slopeRatio: 0.05 })
       assert.equal(geom.rx, 260)
       assert.equal(geom.vbWidth, 560)
+    })
+  })
+
+  describe('when aggregating threshold data (3d-chart-treshold-behaviour recipe)', () => {
+    test('should place aggregated others slice at the end of the list with sorted descending main slices (e.g. D: 50, D: 42, D: 5, D: 3)', () => {
+      const input = [
+        { id: 'd1', name: 'D: 50', value: 50 },
+        { id: 'd2', name: 'D: 42', value: 42 },
+        { id: 'd3', name: 'D: 5', value: 5 },
+        { id: 'd4', name: 'D: 3', value: 3 },
+      ]
+
+      // Threshold 0.1 (10% of 100 = 10): items 5 and 3 are < 10, consolidated into "Other" (value: 8)
+      const result = aggregateThresholdData({
+        data: input,
+        aggregateOthers: true,
+        othersThreshold: 0.1,
+        othersLabel: 'Other',
+        othersColor: '#64748b',
+      })
+
+      assert.equal(result.length, 3, 'Should have D: 50, D: 42, and Other at the end')
+      assert.equal(result[0].id, 'd1')
+      assert.equal(result[0].value, 50)
+      assert.equal(result[0].percentage, 50)
+
+      assert.equal(result[1].id, 'd2')
+      assert.equal(result[1].value, 42)
+      assert.equal(result[1].percentage, 42)
+
+      // Other MUST be strictly at the end of the list
+      assert.equal(result[2].id, 'other')
+      assert.equal(result[2].name, 'Other')
+      assert.equal(result[2].value, 8)
+      assert.equal(result[2].percentage, 8)
+      assert.equal(result[2].color, '#64748b')
+    })
+
+    test('should sort main slices descending even if raw input is in arbitrary order', () => {
+      const input = [
+        { id: 'd4', name: 'D: 3', value: 3 },
+        { id: 'd1', name: 'D: 50', value: 50 },
+        { id: 'd3', name: 'D: 5', value: 5 },
+        { id: 'd2', name: 'D: 42', value: 42 },
+      ]
+
+      const result = aggregateThresholdData({
+        data: input,
+        aggregateOthers: true,
+        othersThreshold: 0.1,
+      })
+
+      assert.equal(result.length, 3)
+      assert.equal(result[0].value, 50)
+      assert.equal(result[1].value, 42)
+      assert.equal(result[2].id, 'other')
+      assert.equal(result[2].value, 8)
+    })
+
+    test('should preserve original order and percentages when aggregateOthers is false', () => {
+      const input = [
+        { id: 'd4', name: 'D: 3', value: 3 },
+        { id: 'd1', name: 'D: 50', value: 50 },
+      ]
+
+      const result = aggregateThresholdData({
+        data: input,
+        aggregateOthers: false,
+      })
+
+      assert.equal(result.length, 2)
+      assert.equal(result[0].id, 'd4')
+      assert.equal(result[1].id, 'd1')
+    })
+
+    test('should preserve at least 1 slice even if threshold is set to 100%', () => {
+      const input = [
+        { id: 'd1', name: 'D: 50', value: 50 },
+        { id: 'd2', name: 'D: 42', value: 42 },
+      ]
+
+      const result = aggregateThresholdData({
+        data: input,
+        aggregateOthers: true,
+        othersThreshold: 1.0,
+      })
+
+      assert.equal(result.length, 2)
+      assert.equal(result[0].value, 50, 'Largest slice must remain')
+      assert.equal(result[1].id, 'other')
+      assert.equal(result[1].value, 42)
     })
   })
 })

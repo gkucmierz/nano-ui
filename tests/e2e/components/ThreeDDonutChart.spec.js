@@ -27,7 +27,7 @@ test.describe('3D Donut Chart Wall Geometry & Visibility Specs', () => {
 
   test('should render start and end partition cuts when a slice is hovered', async ({ page }) => {
     // Hover over Russia label to activate Russia slice
-    const russiaLabel = page.locator('svg text:has-text("Russia")')
+    const russiaLabel = page.locator('.label-group text:has-text("Russia")').first()
     await expect(russiaLabel).toBeVisible()
     await russiaLabel.hover({ force: true })
 
@@ -45,7 +45,7 @@ test.describe('3D Donut Chart Wall Geometry & Visibility Specs', () => {
     })
 
     // Hover over Russia slice
-    const russiaLabel = page.locator('svg text:has-text("Russia")')
+    const russiaLabel = page.locator('.label-group text:has-text("Russia")').first()
     await expect(russiaLabel).toBeVisible()
     await russiaLabel.hover({ force: true })
 
@@ -69,7 +69,7 @@ test.describe('3D Donut Chart Wall Geometry & Visibility Specs', () => {
 
   test('should synchronize cut wall extrusion animation and transform with hovered slice', async ({ page }) => {
     // Hover over Russia slice
-    const russiaLabel = page.locator('svg text:has-text("Russia")')
+    const russiaLabel = page.locator('.label-group text:has-text("Russia")').first()
     await expect(russiaLabel).toBeVisible()
     await russiaLabel.hover({ force: true })
 
@@ -89,7 +89,7 @@ test.describe('3D Donut Chart Wall Geometry & Visibility Specs', () => {
 
   test('should synchronize cut wall opacity states between active and dimmed/isolated slices', async ({ page }) => {
     // 1. Normal hover state (opacity: 0.35 on dimmed neighbor cut walls)
-    const russiaLabel = page.locator('svg text:has-text("Russia")')
+    const russiaLabel = page.locator('.label-group text:has-text("Russia")').first()
     await expect(russiaLabel).toBeVisible()
     await russiaLabel.hover({ force: true })
 
@@ -125,7 +125,7 @@ test.describe('3D Donut Chart Wall Geometry & Visibility Specs', () => {
 
   test('should smoothly clean up partition cuts when unhovered back to rest', async ({ page }) => {
     // Hover Russia slice
-    const russiaLabel = page.locator('svg text:has-text("Russia")')
+    const russiaLabel = page.locator('.label-group text:has-text("Russia")').first()
     await expect(russiaLabel).toBeVisible()
     await russiaLabel.hover({ force: true })
 
@@ -144,10 +144,10 @@ test.describe('3D Donut Chart Wall Geometry & Visibility Specs', () => {
   })
 
   test('should smoothly rotate chart without abrupt direction flips across 180 degrees', async ({ page }) => {
-    const chart = page.locator('.items-svg-chart')
+    const chart = page.locator('.items-svg-chart').first()
     await expect(chart).toBeVisible()
 
-    const angleSlider = page.locator('input[type="range"]').first()
+    const angleSlider = page.locator('input[type="range"][min="-360"]').first()
     if (await angleSlider.count() > 0) {
       await angleSlider.fill('180')
       await page.waitForTimeout(100)
@@ -158,15 +158,15 @@ test.describe('3D Donut Chart Wall Geometry & Visibility Specs', () => {
   })
 
   test('should retract slice on deselection while mouse is stationary and re-extrude on mousemove', async ({ page }) => {
-    const chart = page.locator('.items-svg-chart')
+    const chart = page.locator('.items-svg-chart').first()
     await expect(chart).toBeVisible()
 
     // 1. Click Russia label to select it
-    const russiaLabel = page.locator('svg text:has-text("Russia")')
+    const russiaLabel = page.locator('.label-group text:has-text("Russia")').first()
     await expect(russiaLabel).toBeVisible()
     await russiaLabel.click()
 
-    const russiaSlice = page.locator('.items-svg-chart g[data-testid="slice-ru"]').first()
+    const russiaSlice = page.locator('.items-svg-chart g[data-testid="slice-Russia"]').first()
     await expect(russiaSlice).toBeVisible()
     await page.waitForTimeout(350)
     const styleSelected = await russiaSlice.getAttribute('style')
@@ -201,7 +201,7 @@ test.describe('3D Donut Chart Wall Geometry & Visibility Specs', () => {
   })
 
   test('should strictly render the 9-layer painter sequence in SVG DOM order', async ({ page }) => {
-    const chart = page.locator('.items-svg-chart')
+    const chart = page.locator('.items-svg-chart').first()
     await expect(chart).toBeVisible()
 
     const firstBackOuterWall = page.locator('.items-svg-chart path[data-wall="outer-wall"][data-half="back"]').first()
