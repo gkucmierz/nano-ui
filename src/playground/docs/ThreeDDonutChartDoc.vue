@@ -209,6 +209,7 @@ const thresholdDemoAggregate = ref(true);
 const thresholdDemoThreshold = ref(0.03); // 3%
 const thresholdDemoLabel = ref('Other (< 3%)');
 const thresholdDemoColor = ref('#64748b');
+const thresholdDemoAutoRotate = ref(false);
 
 const thresholdConsolidatedCount = computed(() => {
   const items = longTailData.value;
@@ -236,7 +237,7 @@ const chartData = [
     :othersThreshold="${thresholdDemoThreshold.value}"
     othersLabel="${thresholdDemoLabel.value}"
     othersColor="${thresholdDemoColor.value}"
-    :autoRotate="true"
+    :autoRotate="${thresholdDemoAutoRotate.value}"
   />
 </template>`;
 });
@@ -672,6 +673,7 @@ const networkData = [
               <ThreeDDonutChart
                 :data="longTailData"
                 :is3D="true"
+                :isExpanded="true"
                 :showLabels="true"
                 :autoRotate="autoRotateDemo"
                 :rotationAngle="autoRotateDemoAngle"
@@ -728,8 +730,9 @@ const networkData = [
               <ThreeDDonutChart
                 :data="longTailData"
                 :is3D="true"
+                :isExpanded="true"
                 :showLabels="true"
-                :autoRotate="true"
+                :autoRotate="thresholdDemoAutoRotate"
                 :aggregateOthers="thresholdDemoAggregate"
                 :othersThreshold="thresholdDemoThreshold"
                 :othersLabel="thresholdDemoLabel"
@@ -745,6 +748,11 @@ const networkData = [
               <div class="switch-row" style="margin-top: 10px;">
                 <span class="switch-label">aggregateOthers</span>
                 <NanoSwitch v-model="thresholdDemoAggregate" size="compact" />
+              </div>
+
+              <div class="switch-row" style="margin-top: 10px;">
+                <span class="switch-label">autoRotate</span>
+                <NanoSwitch v-model="thresholdDemoAutoRotate" size="compact" />
               </div>
 
               <div class="slider-row" :style="!thresholdDemoAggregate ? 'opacity: 0.35; pointer-events: none;' : ''">

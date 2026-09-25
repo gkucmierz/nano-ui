@@ -19,8 +19,8 @@
         <!-- Glossy top face gradient -->
         <linearGradient 
           v-for="slice in uniqueSlices" 
-          :key="'top-grad-' + getSafeId(slice.item.id)" 
-          :id="'top-grad-' + getSafeId(slice.item.id)"
+          :key="getGradientId('top-grad', slice)" 
+          :id="getGradientId('top-grad', slice)"
           gradientUnits="userSpaceOnUse"
           :x1="slice.topGradX1" :y1="slice.topGradY1" :x2="slice.topGradX2" :y2="slice.topGradY2"
         >
@@ -31,8 +31,8 @@
         <!-- 3D Outer Wall vertical gradient -->
         <linearGradient 
           v-for="slice in uniqueSlices" 
-          :key="'outer-grad-' + getSafeId(slice.item.id)" 
-          :id="'outer-grad-' + getSafeId(slice.item.id)"
+          :key="getGradientId('outer-grad', slice)" 
+          :id="getGradientId('outer-grad', slice)"
           gradientUnits="userSpaceOnUse"
           x1="0" :y1="slice.wallY1" x2="0" :y2="slice.wallY2"
         >
@@ -43,8 +43,8 @@
         <!-- 3D Inner Wall vertical gradient -->
         <linearGradient 
           v-for="slice in uniqueSlices" 
-          :key="'inner-grad-' + getSafeId(slice.item.id)" 
-          :id="'inner-grad-' + getSafeId(slice.item.id)"
+          :key="getGradientId('inner-grad', slice)" 
+          :id="getGradientId('inner-grad', slice)"
           gradientUnits="userSpaceOnUse"
           x1="0" :y1="slice.wallY1" x2="0" :y2="slice.wallY2"
         >
@@ -90,7 +90,7 @@
             <path 
               v-if="isExpanded && slice.outerWallPath" 
               :d="slice.outerWallPath" 
-              :fill="`url(#outer-grad-${getSafeId(slice.item.id)})`" 
+              :fill="`url(#${getGradientId('outer-grad', slice)})`" 
               data-wall="outer-wall"
               data-half="back"
             />
@@ -98,7 +98,7 @@
               v-if="isExpanded && slice.outerWallStrokePath" 
               :d="slice.outerWallStrokePath" 
               fill="none"
-              :stroke="`url(#outer-grad-${getSafeId(slice.item.id)})`" 
+              :stroke="`url(#${getGradientId('outer-grad', slice)})`" 
               stroke-width="0.8"
               stroke-linejoin="round"
               data-wall="outer-wall-stroke"
@@ -150,7 +150,7 @@
             <path 
               v-if="isExpanded && slice.innerWallPath" 
               :d="slice.innerWallPath" 
-              :fill="`url(#inner-grad-${getSafeId(slice.item.id)})`" 
+              :fill="`url(#${getGradientId('inner-grad', slice)})`" 
               data-wall="inner-wall"
               data-half="back"
             />
@@ -158,7 +158,7 @@
               v-if="isExpanded && slice.innerWallStrokePath" 
               :d="slice.innerWallStrokePath" 
               fill="none"
-              :stroke="`url(#inner-grad-${getSafeId(slice.item.id)})`" 
+              :stroke="`url(#${getGradientId('inner-grad', slice)})`" 
               stroke-width="0.8"
               stroke-linejoin="round"
               data-wall="inner-wall-stroke"
@@ -183,7 +183,7 @@
           >
             <path 
               :d="slice.topPath" 
-              :fill="`url(#top-grad-${getSafeId(slice.item.id)})`" 
+              :fill="`url(#${getGradientId('top-grad', slice)})`" 
               data-wall="top-face"
               data-half="back"
             />
@@ -191,7 +191,7 @@
               v-if="slice.topStrokePath"
               :d="slice.topStrokePath" 
               fill="none"
-              :stroke="`url(#top-grad-${getSafeId(slice.item.id)})`" 
+              :stroke="`url(#${getGradientId('top-grad', slice)})`" 
               stroke-width="0.8"
               stroke-linejoin="round"
               data-wall="top-face-stroke"
@@ -260,7 +260,7 @@
             <path 
               v-if="isExpanded && slice.innerWallPath" 
               :d="slice.innerWallPath" 
-              :fill="`url(#inner-grad-${getSafeId(slice.item.id)})`" 
+              :fill="`url(#${getGradientId('inner-grad', slice)})`" 
               data-wall="inner-wall"
               data-half="front"
             />
@@ -268,7 +268,7 @@
               v-if="isExpanded && slice.innerWallStrokePath" 
               :d="slice.innerWallStrokePath" 
               fill="none"
-              :stroke="`url(#inner-grad-${getSafeId(slice.item.id)})`" 
+              :stroke="`url(#${getGradientId('inner-grad', slice)})`" 
               stroke-width="0.8"
               stroke-linejoin="round"
               data-wall="inner-wall-stroke"
@@ -320,7 +320,7 @@
             <path 
               v-if="isExpanded && slice.outerWallPath" 
               :d="slice.outerWallPath" 
-              :fill="`url(#outer-grad-${getSafeId(slice.item.id)})`" 
+              :fill="`url(#${getGradientId('outer-grad', slice)})`" 
               data-wall="outer-wall"
               data-half="front"
             />
@@ -328,7 +328,7 @@
               v-if="isExpanded && slice.outerWallStrokePath" 
               :d="slice.outerWallStrokePath" 
               fill="none"
-              :stroke="`url(#outer-grad-${getSafeId(slice.item.id)})`" 
+              :stroke="`url(#${getGradientId('outer-grad', slice)})`" 
               stroke-width="0.8"
               stroke-linejoin="round"
               data-wall="outer-wall-stroke"
@@ -353,7 +353,7 @@
           >
             <path 
               :d="slice.topPath" 
-              :fill="`url(#top-grad-${getSafeId(slice.item.id)})`" 
+              :fill="`url(#${getGradientId('top-grad', slice)})`" 
               data-wall="top-face"
               data-half="front"
             />
@@ -361,7 +361,7 @@
               v-if="slice.topStrokePath"
               :d="slice.topStrokePath" 
               fill="none"
-              :stroke="`url(#top-grad-${getSafeId(slice.item.id)})`" 
+              :stroke="`url(#${getGradientId('top-grad', slice)})`" 
               stroke-width="0.8"
               stroke-linejoin="round"
               data-wall="top-face-stroke"
@@ -396,7 +396,7 @@
             <!-- Top Face in 2D -->
             <path 
               :d="slice.topPath" 
-              :fill="`url(#top-grad-${getSafeId(slice.item.id)})`" 
+              :fill="`url(#${getGradientId('top-grad', slice)})`" 
             />
 
             <!-- Top Face Outline -->
@@ -404,7 +404,7 @@
               v-if="slice.topStrokePath"
               :d="slice.topStrokePath" 
               fill="none"
-              :stroke="`url(#top-grad-${getSafeId(slice.item.id)})`" 
+              :stroke="`url(#${getGradientId('top-grad', slice)})`" 
               stroke-width="0.8"
               stroke-linejoin="round"
             />
@@ -959,6 +959,7 @@ const truncateText = (str, len = 15) => {
 }
 
 const getSafeId = (id) => String(id).replace(/[^a-zA-Z0-9_-]/g, '_')
+const getGradientId = (prefix, slice) => `${prefix}-${getSafeId(slice.item.id)}-${getSafeId(slice.color || '')}`
 
 // Normalized and aggregated input data structure
 const normalizedData = computed(() => {
@@ -2069,6 +2070,14 @@ watch(normalizedData, (newData) => {
     animateChart()
   }
 }, { deep: true })
+
+watch([() => props.othersColor, () => props.othersLabel, () => props.othersThreshold, () => props.aggregateOthers], () => {
+  const isImmediate = props.immediate || props.currentLowFxMode
+  updateAnimatedData(normalizedData.value || [], isImmediate)
+  if (!isImmediate) {
+    animateChart()
+  }
+})
 
 watch([activeRotationAngle, () => props.rotationAngle, () => props.autoRotate], () => {
   const isImmediate = props.immediate || props.currentLowFxMode || props.immediateRotation || (props.animationDuration ?? 350) <= 0
