@@ -4,6 +4,7 @@
     class="donut-canvas-wrapper" 
     :class="{ 
       'is-expanded': isExpanded,
+      'has-labels': isExpanded && showLabels,
       'no-transitions': isAnimating || immediate
     }"
     @mousemove="handleWrapperMouseMove"
@@ -55,8 +56,8 @@
       <!-- Centered text for empty state -->
       <g v-if="!normalizedData || normalizedData.length === 0">
         <text 
-          :x="isExpanded ? 380 : 60" 
-          :y="isExpanded ? 160 : 60" 
+          :x="animCx" 
+          :y="animCy" 
           fill="#64748b" 
           font-size="12" 
           font-family="system-ui, -apple-system, sans-serif"
@@ -1148,38 +1149,90 @@ const rotationKinetic = createKineticTransition({
 })
 const isAnimating = ref(false)
 
-const is3DMode = props.is3D
-const animCx = ref(props.isExpanded ? 380 : 60)
-const animCy = ref(props.isExpanded ? 160 : 60)
-const animRx = ref(props.isExpanded ? 180 : 48)
-const animRy = ref(props.isExpanded 
-  ? (is3DMode ? 180 * props.slopeRatio : 180) 
-  : (is3DMode ? 48 * props.slopeRatio : 48)
-)
-const animIrx = ref(props.isExpanded 
-  ? 180 * (1 - props.thickness) 
-  : 48 * (1 - props.thickness)
-)
-const animIry = ref(props.isExpanded 
-  ? (is3DMode ? 180 * (1 - props.thickness) * props.slopeRatio : 180 * (1 - props.thickness)) 
-  : (is3DMode ? 48 * (1 - props.thickness) * props.slopeRatio : 48 * (1 - props.thickness))
-)
+const getTargetGeometry = (isExpanded, showLabels, is3D, slopeRatio, thickness) => {
+  const is3DMode = is3D
+  const hasLabels = isExpanded && showLabels
 
-const initialBaseDepth = (props.isExpanded && is3DMode) ? 32 : 0
-const initialDepth = (is3DMode && props.slopeRatio > 0.5)
-  ? initialBaseDepth * (2 - 2 * props.slopeRatio) 
-  : initialBaseDepth
+  if (!isExpanded) {
+    return {
+      cx: 60,
+      cy: 60,
+      rx: 48,
+      ry: is3DMode ? 48 * slopeRatio : 48,
+      irx: 48 * (1 - thickness),
+      iry: is3DMode ? 48 * (1 - thickness) * slopeRatio : 48 * (1 - thickness),
+      baseDepth: 0,
+      depth: 0,
+      vbWidth: 120,
+      vbHeight: 120,
+      opacity: 0
+    }
+  }
 
-const animDepth = ref(initialDepth)
-const animVbWidth = ref(props.isExpanded ? 760 : 120)
-const animVbHeight = ref(props.isExpanded ? 320 : 120)
-const labelOpacity = ref((props.isExpanded && props.showLabels) ? 1 : 0)
+  const baseDepth = is3DMode ? 32 : 0
+  const depth = (is3DMode && slopeRatio > 0.5)
+    ? baseDepth * (2 - 2 * slopeRatio)
+    : baseDepth
+
+  if (hasLabels) {
+    return {
+      cx: 380,
+      cy: 160,
+      rx: 180,
+      ry: is3DMode ? 180 * slopeRatio : 180,
+      irx: 180 * (1 - thickness),
+      iry: is3DMode ? 180 * (1 - thickness) * slopeRatio : 180 * (1 - thickness),
+      baseDepth,
+      depth,
+      vbWidth: 760,
+      vbHeight: 320,
+      opacity: 1
+    }
+  }
+
+  // Expanded without labels (compact / headless / dashboard mode):
+  // The chart stretches to fill the SVG width instead of reserving 200px side margins for labels
+  const effSlope = is3DMode ? Math.max(0.15, slopeRatio) : 1.0
+  const maxRxVertical = (290 - depth) / (2 * effSlope)
+  const rx = Math.min(260, maxRxVertical)
+  const vbWidth = Math.round(rx * 2 + 40)
+  const cx = vbWidth / 2
+  const cy = 160
+  const vbHeight = 320
+
+  return {
+    cx,
+    cy,
+    rx,
+    ry: is3DMode ? rx * slopeRatio : rx,
+    irx: rx * (1 - thickness),
+    iry: is3DMode ? rx * (1 - thickness) * slopeRatio : rx * (1 - thickness),
+    baseDepth,
+    depth,
+    vbWidth,
+    vbHeight,
+    opacity: 0
+  }
+}
+
+const initialGeom = getTargetGeometry(props.isExpanded, props.showLabels, props.is3D, props.slopeRatio, props.thickness)
+
+const animCx = ref(initialGeom.cx)
+const animCy = ref(initialGeom.cy)
+const animRx = ref(initialGeom.rx)
+const animRy = ref(initialGeom.ry)
+const animIrx = ref(initialGeom.irx)
+const animIry = ref(initialGeom.iry)
+const animDepth = ref(initialGeom.depth)
+const animVbWidth = ref(initialGeom.vbWidth)
+const animVbHeight = ref(initialGeom.vbHeight)
+const labelOpacity = ref(initialGeom.opacity)
 
 const animFontSizeValue = computed(() => {
   const minRx = 48
-  const maxRx = 180
+  const maxRx = 260
   const minFs = 13
-  const maxFs = 19
+  const maxFs = 26
   const ratio = (animRx.value - minRx) / (maxRx - minRx)
   const clampedRatio = Math.max(0, Math.min(1, ratio))
   return minFs + (maxFs - minFs) * clampedRatio
@@ -1187,9 +1240,9 @@ const animFontSizeValue = computed(() => {
 
 const animFontSizeLabel = computed(() => {
   const minRx = 48
-  const maxRx = 180
+  const maxRx = 260
   const minFs = 7
-  const maxFs = 8.5
+  const maxFs = 11
   const ratio = (animRx.value - minRx) / (maxRx - minRx)
   const clampedRatio = Math.max(0, Math.min(1, ratio))
   return minFs + (maxFs - minFs) * clampedRatio
@@ -1859,28 +1912,17 @@ const updateGeometryImmediate = () => {
     isAnimating.value = false
   }
 
-  const is3DMode = props.is3D
-  animCx.value = props.isExpanded ? 380 : 60
-  animCy.value = props.isExpanded ? 160 : 60
-  animRx.value = props.isExpanded ? 180 : 48
-  animRy.value = props.isExpanded 
-    ? (is3DMode ? 180 * props.slopeRatio : 180) 
-    : (is3DMode ? 48 * props.slopeRatio : 48)
-  animIrx.value = props.isExpanded 
-    ? 180 * (1 - props.thickness) 
-    : 48 * (1 - props.thickness)
-  animIry.value = props.isExpanded 
-    ? (is3DMode ? 180 * (1 - props.thickness) * props.slopeRatio : 180 * (1 - props.thickness)) 
-    : (is3DMode ? 48 * (1 - props.thickness) * props.slopeRatio : 48 * (1 - props.thickness))
-  
-  const baseDepth = (props.isExpanded && is3DMode) ? 32 : 0
-  animDepth.value = (is3DMode && props.slopeRatio > 0.5) 
-    ? baseDepth * (2 - 2 * props.slopeRatio) 
-    : baseDepth
-    
-  animVbWidth.value = props.isExpanded ? 760 : 120
-  animVbHeight.value = props.isExpanded ? 320 : 120
-  labelOpacity.value = (props.isExpanded && props.showLabels) ? 1 : 0
+  const geom = getTargetGeometry(props.isExpanded, props.showLabels, props.is3D, props.slopeRatio, props.thickness)
+  animCx.value = geom.cx
+  animCy.value = geom.cy
+  animRx.value = geom.rx
+  animRy.value = geom.ry
+  animIrx.value = geom.irx
+  animIry.value = geom.iry
+  animDepth.value = geom.depth
+  animVbWidth.value = geom.vbWidth
+  animVbHeight.value = geom.vbHeight
+  labelOpacity.value = geom.opacity
 }
 
 const animateChart = (customDuration) => {
@@ -1930,28 +1972,17 @@ const animateChart = (customDuration) => {
   const startVbH = animVbHeight.value
   const startOpacity = labelOpacity.value
 
-  const is3DMode = props.is3D
-  const targetCx = props.isExpanded ? 380 : 60
-  const targetCy = props.isExpanded ? 160 : 60
-  const targetRx = props.isExpanded ? 180 : 48
-  const targetRy = props.isExpanded 
-    ? (is3DMode ? 180 * props.slopeRatio : 180) 
-    : (is3DMode ? 48 * props.slopeRatio : 48)
-  const targetIrx = props.isExpanded 
-    ? 180 * (1 - props.thickness) 
-    : 48 * (1 - props.thickness)
-  const targetIry = props.isExpanded 
-    ? (is3DMode ? 180 * (1 - props.thickness) * props.slopeRatio : 180 * (1 - props.thickness)) 
-    : (is3DMode ? 48 * (1 - props.thickness) * props.slopeRatio : 48 * (1 - props.thickness))
-  
-  const targetBaseDepth = (props.isExpanded && is3DMode) ? 32 : 0
-  const targetDepth = (is3DMode && props.slopeRatio > 0.5) 
-    ? targetBaseDepth * (2 - 2 * props.slopeRatio) 
-    : targetBaseDepth
-    
-  const targetVbW = props.isExpanded ? 760 : 120
-  const targetVbH = props.isExpanded ? 320 : 120
-  const targetOpacity = (props.isExpanded && props.showLabels) ? 1 : 0
+  const geom = getTargetGeometry(props.isExpanded, props.showLabels, props.is3D, props.slopeRatio, props.thickness)
+  const targetCx = geom.cx
+  const targetCy = geom.cy
+  const targetRx = geom.rx
+  const targetRy = geom.ry
+  const targetIrx = geom.irx
+  const targetIry = geom.iry
+  const targetDepth = geom.depth
+  const targetVbW = geom.vbWidth
+  const targetVbH = geom.vbHeight
+  const targetOpacity = geom.opacity
 
   const tick = (now) => {
     const elapsed = now - startTime
@@ -2185,8 +2216,15 @@ defineExpose({
   height: 320px;
 }
 
+.donut-canvas-wrapper.is-expanded:not(.has-labels) {
+  max-width: 560px;
+  height: auto;
+  aspect-ratio: 560 / 320;
+  max-height: 320px;
+}
+
 @media (max-width: 760px) {
-  .donut-canvas-wrapper.is-expanded {
+  .donut-canvas-wrapper.is-expanded.has-labels {
     height: 42vw;
   }
 }
