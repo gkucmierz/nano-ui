@@ -508,7 +508,7 @@ const networkData = [
 
         <div class="slider-row" :style="!is3D ? 'opacity: 0.35; pointer-events: none;' : ''">
           <span class="slider-label">Slope Ratio (Tilt): {{ slopeRatio }}</span>
-          <input type="range" v-model.number="slopeRatio" min="0.2" max="1.0" step="0.01" :disabled="!is3D" />
+          <input type="range" v-model.number="slopeRatio" min="0" max="1.0" step="0.01" :disabled="!is3D" />
         </div>
 
         <div class="slider-row">
@@ -897,7 +897,7 @@ centerLabel: String (default: '') - Label shown below center value
 centerValueFormatter: Function (default: null) - Custom formatter function: (value, item) =&gt; string
 rotationAngle: Number (default: -90) - Starting rotation of the donut chart
 autoRotate: Boolean (default: false) - Balances labels evenly across left &amp; right columns
-slopeRatio: Number (default: 0.5) - Vertical tilt of the chart (0.2 to 1.0)
+slopeRatio: Number (default: 0.5) - Vertical tilt of the chart (0.0 to 1.0)
 aggregateOthers: Boolean (default: false) - Aggregates small values below threshold
 othersThreshold: Number (default: 0.01) - Fraction below which values are merged (e.g. 0.05 for 5%)
 othersLabel: String (default: 'Other') - Merged slice label name

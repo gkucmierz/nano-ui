@@ -651,6 +651,8 @@ const props = defineProps({
 
 const emit = defineEmits(['update:hoveredItemId', 'update:selectedItemId'])
 
+const HOVER_EXTRUSION_DISTANCE = 10
+
 const SIZE_MAP = {
   sm: 11,
   md: 13,
@@ -1235,7 +1237,7 @@ const sortedSlices = computed(() => {
     const x0 = cx + rx * Math.cos(originalMidAngle)
     const y0 = drawCenterY + ry * Math.sin(originalMidAngle)
     const x1 = cx + (rx + 25) * Math.cos(originalMidAngle)
-    const y1 = drawCenterY + (ry + 35 * props.slopeRatio) * Math.sin(originalMidAngle)
+    const y1 = drawCenterY + (ry + 35 * animSlopeRatio.value) * Math.sin(originalMidAngle)
 
     const midX = cx + ((rx + irx) / 2) * Math.cos(originalMidAngle)
     const midY_local = drawCenterY + ((ry + iry) / 2) * Math.sin(originalMidAngle)
@@ -1471,7 +1473,7 @@ const sortedSlices = computed(() => {
       const x0 = cx + rx * Math.cos(originalMidAngle)
       const y0 = drawCenterY + ry * Math.sin(originalMidAngle)
       const x1 = cx + (rx + 25) * Math.cos(originalMidAngle)
-      const y1 = drawCenterY + (ry + 35 * props.slopeRatio) * Math.sin(originalMidAngle)
+      const y1 = drawCenterY + (ry + 35 * animSlopeRatio.value) * Math.sin(originalMidAngle)
 
       const midX = cx + ((rx + irx) / 2) * Math.cos(originalMidAngle)
       const midY_local = drawCenterY + ((ry + iry) / 2) * Math.sin(originalMidAngle)
@@ -1550,7 +1552,7 @@ const topSlices = computed(() => {
     const x0 = cx + rx * Math.cos(originalMidAngle)
     const y0 = drawCenterY + ry * Math.sin(originalMidAngle)
     const x1 = cx + (rx + 25) * Math.cos(originalMidAngle)
-    const y1 = drawCenterY + (ry + 35 * props.slopeRatio) * Math.sin(originalMidAngle)
+    const y1 = drawCenterY + (ry + 35) * Math.sin(originalMidAngle)
 
     const midX = cx + ((rx + irx) / 2) * Math.cos(originalMidAngle)
     const midY_local = drawCenterY + ((ry + iry) / 2) * Math.sin(originalMidAngle)
@@ -1618,7 +1620,7 @@ const topSlices = computed(() => {
     const x0 = cx + rx * Math.cos(originalMidAngle)
     const y0 = drawCenterY + ry * Math.sin(originalMidAngle)
     const x1 = cx + (rx + 25) * Math.cos(originalMidAngle)
-    const y1 = drawCenterY + (ry + 35 * props.slopeRatio) * Math.sin(originalMidAngle)
+    const y1 = drawCenterY + (ry + 35) * Math.sin(originalMidAngle)
 
     const midX = cx + ((rx + irx) / 2) * Math.cos(originalMidAngle)
     const midY_local = drawCenterY + ((ry + iry) / 2) * Math.sin(originalMidAngle)
@@ -1849,9 +1851,10 @@ const getSliceStyle = (slice) => {
     : (effectiveActiveId.value === slice.item.id ? 1 : 0)
 
   if (p > 0.0001) {
-    const dist = 10 * p
+    const dist = HOVER_EXTRUSION_DISTANCE * p
+    const effSlope = props.is3D ? animSlopeRatio.value : 1.0
     const tx = dist * Math.cos(slice.originalMidAngle)
-    const ty = dist * Math.sin(slice.originalMidAngle)
+    const ty = dist * Math.sin(slice.originalMidAngle) * effSlope
     return {
       transform: `translate(${tx}px, ${ty}px)`
     }
@@ -1937,9 +1940,10 @@ const getLeaderLinePath = (label) => {
   const endY = label.finalY
 
   if (p > 0.0001) {
-    const dist = 10 * p
+    const dist = HOVER_EXTRUSION_DISTANCE * p
+    const effSlope = props.is3D ? animSlopeRatio.value : 1.0
     const tx = dist * Math.cos(label.originalMidAngle || 0)
-    const ty = dist * Math.sin(label.originalMidAngle || 0)
+    const ty = dist * Math.sin(label.originalMidAngle || 0) * effSlope
     startX += tx
     startY += ty
   }
