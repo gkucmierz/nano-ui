@@ -561,6 +561,7 @@ import {
   resolvePartitionCutVisibility,
   calculateCutY,
   sortCutWallsByDepth,
+  getOptimalRotationAngle,
 } from '../utils/chart-walls.js'
 
 
@@ -1123,60 +1124,10 @@ const updateAnimatedData = (newData, immediate = false) => {
   }
 }
 
-const getOptimalRotationAngle = (items, defaultAngle = -90) => {
-  if (!items || items.length === 0) return defaultAngle
-
-  const total = items.reduce((sum, item) => sum + (item.value || 0), 0)
-  if (total === 0) return defaultAngle
-
-  let currentAngle = 0
-  const slices = items.map(item => {
-    const sliceAngle = ((item.value || 0) / total) * Math.PI * 2
-    const originalMidAngleNoRot = currentAngle + sliceAngle / 2
-    currentAngle += sliceAngle
-    return { originalMidAngleNoRot }
-  })
-
-  let bestAngle = defaultAngle
-  let minDiff = Infinity
-  let bestClutterScore = Infinity
-
-  for (let deg = -180; deg <= 180; deg += 2) {
-    const rad = (deg * Math.PI) / 180
-    let leftCount = 0
-    let rightCount = 0
-
-    slices.forEach(slice => {
-      const midAngle = slice.originalMidAngleNoRot + rad
-      const isLeft = Math.cos(midAngle) < 0
-      if (isLeft) {
-        leftCount++
-      } else {
-        rightCount++
-      }
-    })
-
-    const diff = Math.abs(leftCount - rightCount)
-    const distanceToDefault = Math.abs(deg - defaultAngle)
-
-    if (diff < minDiff) {
-      minDiff = diff
-      bestAngle = deg
-      bestClutterScore = distanceToDefault
-    } else if (diff === minDiff) {
-      if (distanceToDefault < bestClutterScore) {
-        bestAngle = deg
-        bestClutterScore = distanceToDefault
-      }
-    }
-  }
-
-  return bestAngle
-}
-
 const activeRotationAngle = computed(() => {
   if (props.autoRotate && normalizedData.value && normalizedData.value.length > 0) {
-    return normalizeAngle(getOptimalRotationAngle(normalizedData.value, props.rotationAngle))
+    const optimal = getOptimalRotationAngle(normalizedData.value, props.rotationAngle)
+    return (props.rotationModular || props.autoRotate) ? normalizeAngle(optimal) : optimal
   }
   return props.rotationModular ? normalizeAngle(props.rotationAngle) : props.rotationAngle
 })
@@ -1187,7 +1138,7 @@ const rotationKinetic = createKineticTransition({
   initialValue: activeRotationAngle.value,
   duration: props.rotationDuration ?? props.animationDuration ?? 350,
   timingMode: props.rotationTimingMode || 'fixed',
-  modular: props.rotationModular || false,
+  modular: props.rotationModular || props.autoRotate || false,
   onUpdate: ({ value }) => {
     animatedRotationAngle.value = value
   },
@@ -1957,11 +1908,14 @@ const animateChart = (customDuration) => {
 
   isAnimating.value = true
   const startTime = performance.now()
-  const startRotation = props.rotationModular
+  const isModular = props.rotationModular || props.autoRotate
+  const startRotation = isModular
     ? normalizeAngle(animatedRotationAngle.value)
     : animatedRotationAngle.value
-  const targetRotation = activeRotationAngle.value
-  const deltaRotation = props.rotationModular
+  const targetRotation = isModular
+    ? normalizeAngle(activeRotationAngle.value)
+    : activeRotationAngle.value
+  const deltaRotation = isModular
     ? shortestAngleDiff(startRotation, targetRotation)
     : (targetRotation - startRotation)
 
@@ -2094,7 +2048,7 @@ watch([activeRotationAngle, () => props.rotationAngle, () => props.autoRotate], 
   rotationKinetic.setConfig({
     duration: effDuration,
     timingMode: props.rotationTimingMode || 'fixed',
-    modular: props.rotationModular || false,
+    modular: props.rotationModular || props.autoRotate || false,
   })
 
   if (isImmediate) {

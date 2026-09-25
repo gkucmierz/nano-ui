@@ -4,6 +4,8 @@
  * and neighbor partition cut visibility.
  */
 
+import { shortestAngleDiff } from './math.js'
+
 /**
  * Normalizes an angle in radians to [0, 2π).
  * @param {number} rad
@@ -13,6 +15,65 @@ export const normalizeRad = (rad) => {
   let a = rad % (Math.PI * 2)
   if (a < 0) a += Math.PI * 2
   return a
+}
+
+/**
+ * Calculates the optimal chart rotation angle in degrees to balance leader line labels
+ * evenly across left and right sides of the 3D donut chart.
+ *
+ * @param {Array<{ value?: number }>} items - List of items with values
+ * @param {number} [defaultAngle=-90] - Preferred default rotation angle
+ * @returns {number} Optimal rotation angle in degrees
+ */
+export const getOptimalRotationAngle = (items, defaultAngle = -90) => {
+  if (!items || items.length === 0) return defaultAngle
+
+  const total = items.reduce((sum, item) => sum + (item.value || 0), 0)
+  if (total === 0) return defaultAngle
+
+  let currentAngle = 0
+  const slices = items.map((item) => {
+    const sliceAngle = ((item.value || 0) / total) * Math.PI * 2
+    const originalMidAngleNoRot = currentAngle + sliceAngle / 2
+    currentAngle += sliceAngle
+    return { originalMidAngleNoRot }
+  })
+
+  let bestAngle = defaultAngle
+  let minDiff = Infinity
+  let bestClutterScore = Infinity
+
+  for (let deg = -180; deg <= 180; deg += 2) {
+    const rad = (deg * Math.PI) / 180
+    let leftCount = 0
+    let rightCount = 0
+
+    slices.forEach((slice) => {
+      const midAngle = slice.originalMidAngleNoRot + rad
+      const isLeft = Math.cos(midAngle) < 0
+      if (isLeft) {
+        leftCount++
+      } else {
+        rightCount++
+      }
+    })
+
+    const diff = Math.abs(leftCount - rightCount)
+    const distanceToDefault = Math.abs(shortestAngleDiff(defaultAngle, deg))
+
+    if (diff < minDiff) {
+      minDiff = diff
+      bestAngle = deg
+      bestClutterScore = distanceToDefault
+    } else if (diff === minDiff) {
+      if (distanceToDefault < bestClutterScore) {
+        bestAngle = deg
+        bestClutterScore = distanceToDefault
+      }
+    }
+  }
+
+  return defaultAngle + shortestAngleDiff(defaultAngle, bestAngle)
 }
 
 /**

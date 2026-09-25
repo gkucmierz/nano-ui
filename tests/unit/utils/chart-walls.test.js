@@ -4,6 +4,7 @@ import {
   splitAngleIntervals,
   getNeighborSliceIds,
   resolvePartitionCutVisibility,
+  getOptimalRotationAngle,
 } from '../../../src/utils/chart-walls.js'
 
 describe('3D Donut Chart Wall Geometry & Visibility', () => {
@@ -279,6 +280,78 @@ describe('3D Donut Chart Wall Geometry & Visibility', () => {
       assert.ok(firstIds.includes('cut-0deg') && firstIds.includes('cut-180deg'), '0° and 180° must be drawn first in front half')
       assert.equal(sorted[2].id, 'cut-plus-30deg')
       assert.equal(sorted[3].id, 'cut-plus-90deg', '+90° (6 o\'clock) must be drawn last (closest to camera)')
+    })
+  })
+
+  describe('when computing optimal rotation angle (autoRotate)', () => {
+    test('should return defaultAngle when items are empty or total is 0', () => {
+      assert.equal(getOptimalRotationAngle([], -90), -90)
+      assert.equal(getOptimalRotationAngle([{ value: 0 }, { value: 0 }], -90), -90)
+      assert.equal(getOptimalRotationAngle(null, 45), 45)
+    })
+
+    test('should balance labels 5-on-left and 5-on-right for the 10-country dataset', () => {
+      const testData = [
+        { name: 'Russia', value: 17.1 },
+        { name: 'Canada', value: 9.98 },
+        { name: 'China', value: 9.59 },
+        { name: 'United States', value: 9.52 },
+        { name: 'Brazil', value: 8.51 },
+        { name: 'Australia', value: 7.69 },
+        { name: 'India', value: 3.29 },
+        { name: 'Argentina', value: 2.78 },
+        { name: 'Poland', value: 0.31 },
+        { name: 'Iceland', value: 0.10 },
+      ]
+
+      const optimalAngle = getOptimalRotationAngle(testData, -90)
+      assert.equal(optimalAngle, -88, 'Should find optimal angle -88° close to default -90°')
+
+      // Verify label count balance at -88°
+      const total = testData.reduce((s, it) => s + it.value, 0)
+      let cur = 0
+      let left = 0
+      let right = 0
+      testData.forEach((it) => {
+        const sweep = (it.value / total) * Math.PI * 2
+        const mid = cur + sweep / 2 + (-88 * Math.PI) / 180
+        cur += sweep
+        if (Math.cos(mid) < 0) left++
+        else right++
+      })
+      assert.equal(left, 5, 'Left column must have exactly 5 labels')
+      assert.equal(right, 5, 'Right column must have exactly 5 labels')
+      assert.equal(Math.abs(left - right), 0, 'Label difference must be 0')
+    })
+
+    test('should rotate asymmetrical dataset to achieve perfect label balance', () => {
+      // 1 dominant slice (50%) and 5 small slices (10% each)
+      const data = [
+        { name: 'A', value: 50 },
+        { name: 'B', value: 10 },
+        { name: 'C', value: 10 },
+        { name: 'D', value: 10 },
+        { name: 'E', value: 10 },
+        { name: 'F', value: 10 },
+      ]
+
+      const optimalAngle = getOptimalRotationAngle(data, -90)
+
+      // Verify that at optimalAngle, 3 items are on left and 3 items are on right
+      const total = data.reduce((s, it) => s + it.value, 0)
+      let cur = 0
+      let left = 0
+      let right = 0
+      data.forEach((it) => {
+        const sweep = (it.value / total) * Math.PI * 2
+        const mid = cur + sweep / 2 + (optimalAngle * Math.PI) / 180
+        cur += sweep
+        if (Math.cos(mid) < 0) left++
+        else right++
+      })
+      assert.equal(left, 3, 'Left column must have 3 labels')
+      assert.equal(right, 3, 'Right column must have 3 labels')
+      assert.equal(Math.abs(left - right), 0, 'Difference between left and right must be 0')
     })
   })
 })
