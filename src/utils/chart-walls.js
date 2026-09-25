@@ -304,6 +304,7 @@ export const calculateTargetGeometry = ({
   slopeRatio = 0.5,
   thickness = 0.5,
   aspectRatio = 'auto',
+  depth = 32,
 } = {}) => {
   const is3DMode = is3D
   const hasLabels = isExpanded && showLabels
@@ -325,8 +326,8 @@ export const calculateTargetGeometry = ({
     }
   }
 
-  const baseDepth = is3DMode ? 32 : 0
-  const depth = (is3DMode && slopeRatio > 0.5)
+  const baseDepth = is3DMode ? Math.max(0, depth) : 0
+  const effDepth = (is3DMode && slopeRatio > 0.5)
     ? baseDepth * (2 - 2 * slopeRatio)
     : baseDepth
 
@@ -340,7 +341,7 @@ export const calculateTargetGeometry = ({
     let rx = 180
     let ry = is3DMode ? 180 * slopeRatio : Math.min(180, clearance)
     if (is3DMode) {
-      const max3DRy = (vbHeight - depth - 50) / 2
+      const max3DRy = (vbHeight - effDepth - 50) / 2
       if (ry > max3DRy && max3DRy > 30) {
         ry = max3DRy
       }
@@ -356,7 +357,7 @@ export const calculateTargetGeometry = ({
       irx: rx * (1 - thickness),
       iry: is3DMode ? ry * (1 - thickness) : rx * (1 - thickness),
       baseDepth,
-      depth,
+      depth: effDepth,
       vbWidth,
       vbHeight,
       opacity: 1,
@@ -388,7 +389,7 @@ export const calculateTargetGeometry = ({
 
   // 3D without labels:
   const effSlope = Math.max(0.15, slopeRatio)
-  const availableVertical = Math.max(40, 320 - depth - 30)
+  const availableVertical = Math.max(40, 320 - effDepth - 30)
   const maxRxVertical = availableVertical / (2 * effSlope)
   const rx = Math.min(260, maxRxVertical)
   const vbWidth = numRatio ? (numRatio >= 1 ? Math.round(320 * numRatio) : 320) : Math.round(rx * 2 + 40)
@@ -404,7 +405,7 @@ export const calculateTargetGeometry = ({
     irx: rx * (1 - thickness),
     iry: rx * (1 - thickness) * slopeRatio,
     baseDepth,
-    depth,
+    depth: effDepth,
     vbWidth,
     vbHeight,
     opacity: 0,

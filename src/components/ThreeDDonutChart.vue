@@ -617,6 +617,11 @@ const props = defineProps({
     default: 0.5,
     validator: (val) => val >= 0 && val <= 1
   },
+  depth: {
+    type: Number,
+    default: 32,
+    validator: (val) => val >= 0
+  },
   showCenterText: {
     type: Boolean,
     default: true
@@ -1042,7 +1047,7 @@ const rotationKinetic = createKineticTransition({
 })
 const isAnimating = ref(false)
 
-const getTargetGeometry = (isExpanded, showLabels, is3D, slopeRatio, thickness, aspectRatio = props.aspectRatio) => {
+const getTargetGeometry = (isExpanded, showLabels, is3D, slopeRatio, thickness, aspectRatio = props.aspectRatio, depth = props.depth) => {
   return calculateTargetGeometry({
     isExpanded,
     showLabels,
@@ -1050,6 +1055,7 @@ const getTargetGeometry = (isExpanded, showLabels, is3D, slopeRatio, thickness, 
     slopeRatio,
     thickness,
     aspectRatio,
+    depth: depth !== undefined ? depth : props.depth,
   })
 }
 
@@ -1062,7 +1068,7 @@ const resolvedAspectRatio = computed(() => {
   })
 })
 
-const initialGeom = getTargetGeometry(props.isExpanded, props.showLabels, props.is3D, props.slopeRatio, props.thickness, props.aspectRatio)
+const initialGeom = getTargetGeometry(props.isExpanded, props.showLabels, props.is3D, props.slopeRatio, props.thickness, props.aspectRatio, props.depth)
 
 const animCx = ref(initialGeom.cx)
 const animCy = ref(initialGeom.cy)
@@ -1110,7 +1116,7 @@ const recomputeGeometryRadii = () => {
   animIrx.value = rx * (1 - thick)
   animIry.value = is3DMode ? rx * (1 - thick) * slope : rx * (1 - thick)
 
-  const baseDepth = is3DMode ? 32 : 0
+  const baseDepth = is3DMode ? (props.depth ?? 32) : 0
   animDepth.value = (is3DMode && slope > 0.5)
     ? baseDepth * (2 - 2 * slope)
     : (is3DMode ? baseDepth : 0)
@@ -2234,6 +2240,17 @@ watch(() => props.isExpanded, () => {
 watch(() => props.is3D, () => {
   nextTick(() => {
     if (props.immediate || props.currentLowFxMode) {
+      updateGeometryImmediate()
+    } else {
+      animateChart()
+    }
+  })
+})
+
+watch(() => props.depth, () => {
+  recomputeGeometryRadii()
+  nextTick(() => {
+    if (props.immediate || props.currentLowFxMode || (props.animationDuration ?? 350) <= 0) {
       updateGeometryImmediate()
     } else {
       animateChart()

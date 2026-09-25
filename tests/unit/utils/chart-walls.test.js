@@ -454,6 +454,20 @@ describe('3D Donut Chart Wall Geometry & Visibility', () => {
       assert.equal(geom.cx, 380)
       assert.equal(geom.cy, 285)
     })
+
+    test('should calculate baseDepth and effDepth based on depth and slopeRatio props', () => {
+      const geom3D = calculateTargetGeometry({ isExpanded: true, showLabels: true, is3D: true, slopeRatio: 0.5, depth: 48 })
+      assert.equal(geom3D.baseDepth, 48)
+      assert.equal(geom3D.depth, 48)
+
+      const geomSteep = calculateTargetGeometry({ isExpanded: true, showLabels: true, is3D: true, slopeRatio: 0.75, depth: 48 })
+      assert.equal(geomSteep.baseDepth, 48)
+      assert.equal(geomSteep.depth, 24)
+
+      const geom2D = calculateTargetGeometry({ isExpanded: true, showLabels: true, is3D: false, depth: 48 })
+      assert.equal(geom2D.baseDepth, 0)
+      assert.equal(geom2D.depth, 0)
+    })
   })
 
   describe('when aggregating threshold data (3d-chart-treshold-behaviour recipe)', () => {

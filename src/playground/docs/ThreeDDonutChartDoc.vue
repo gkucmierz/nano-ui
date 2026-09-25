@@ -31,6 +31,7 @@ const rotationAngle = ref(-90);
 const autoRotate = ref(true);
 const slopeRatio = ref(0.5);
 const thickness = ref(0.5);
+const depth = ref(32);
 const showCenterText = ref(true);
 const centerTextZ = ref(0.0); // 0.0 = top, 0.5 = center, 1.0 = bottom
 const chartAnimationDuration = ref(300); // 0, 150, 300, 500
@@ -381,6 +382,7 @@ const networkData = [
             :autoRotate="autoRotate"
             :slopeRatio="slopeRatio"
             :thickness="thickness"
+            :depth="depth"
             :showCenterText="showCenterText"
             :centerTextZ="centerTextZ"
             :aggregateOthers="aggregateOthers"
@@ -509,6 +511,11 @@ const networkData = [
         <div class="slider-row" :style="!is3D ? 'opacity: 0.35; pointer-events: none;' : ''">
           <span class="slider-label">Slope Ratio (Tilt): {{ slopeRatio }}</span>
           <input type="range" v-model.number="slopeRatio" min="0" max="1.0" step="0.01" :disabled="!is3D" />
+        </div>
+
+        <div class="slider-row" :style="!is3D ? 'opacity: 0.35; pointer-events: none;' : ''">
+          <span class="slider-label">3D Wall Depth: {{ depth }}px</span>
+          <input type="range" v-model.number="depth" min="0" max="80" step="1" :disabled="!is3D" />
         </div>
 
         <div class="slider-row">
@@ -906,6 +913,7 @@ valueDecimals: Number (default: undefined) - Decimal places to round slice value
 selectable: Boolean (default: false) - Enables locking of items on click/tap
 selectedItemId: String | Number (default: null) - Currently selected/locked item ID (supports v-model:selectedItemId)
 thickness: Number (default: 0.5) - Thickness from 0.0 (thin ring) to 1.0 (full pie chart)
+depth: Number (default: 32) - 3D wall height/depth in px (clamped >= 0)
 showCenterText: Boolean (default: true) - Show/hide center value and label texts
 centerTextZ: Number (default: 0.0) - Z position of center text in depth (0.0 = top plane, 0.5 = volumetric center, 1.0 = bottom plane)
 animationDuration: Number (default: 350) - Duration of chart transitions in ms (0 for instant)

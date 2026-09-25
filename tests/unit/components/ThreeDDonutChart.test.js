@@ -220,4 +220,34 @@ describe('ThreeDDonutChart SVG Painter Architecture & Render Order', () => {
       )
     })
   })
+
+  describe('when validating depth prop and wall height configuration', () => {
+    const scriptContent = descriptor.scriptSetup?.content || ''
+
+    test('should declare depth prop with default 32 and positive validator', () => {
+      assert.ok(
+        scriptContent.includes('depth: {'),
+        'depth prop must be declared in defineProps'
+      )
+      assert.ok(
+        scriptContent.includes('default: 32'),
+        'depth prop must default to 32'
+      )
+      assert.ok(
+        scriptContent.includes('validator: (val) => val >= 0'),
+        'depth prop must validate val >= 0'
+      )
+    })
+
+    test('should watch props.depth and trigger recomputeGeometryRadii', () => {
+      assert.ok(
+        scriptContent.includes('watch(() => props.depth'),
+        'must watch props.depth'
+      )
+      assert.ok(
+        scriptContent.includes('recomputeGeometryRadii()'),
+        'must recompute geometry radii on depth change'
+      )
+    })
+  })
 })
