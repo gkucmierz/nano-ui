@@ -81,8 +81,14 @@ test.describe('3D Donut Chart Wall Geometry & Visibility Specs', () => {
     await expect(hoveredTopFaceGroup).toBeVisible()
 
     // Assert that the cut wall group transform exactly matches the slice top face transform
-    const cutTransform = await hoveredCutWallGroup.evaluate((el) => el.style.transform || window.getComputedStyle(el).transform)
-    const topTransform = await hoveredTopFaceGroup.evaluate((el) => el.style.transform || window.getComputedStyle(el).transform)
+    const { cutTransform, topTransform } = await page.evaluate(() => {
+      const cut = document.querySelector('.items-svg-chart g[data-layer="cut-wall"].is-hovered')
+      const top = document.querySelector('.items-svg-chart g:not([data-layer="cut-wall"]).is-hovered')
+      return {
+        cutTransform: cut ? (cut.style.transform || window.getComputedStyle(cut).transform) : null,
+        topTransform: top ? (top.style.transform || window.getComputedStyle(top).transform) : null
+      }
+    })
     expect(cutTransform).toBeTruthy()
     expect(cutTransform).toBe(topTransform)
   })

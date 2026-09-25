@@ -685,17 +685,17 @@ const networkData = [
         <!-- Tab 1: Auto-Rotate View -->
         <div v-if="showcaseTab === 'auto-rotate'" class="showcase-view-body">
           <div class="showcase-desc-bar">
-            <div class="desc-text-group">
+            <div class="showcase-header-row">
               <h4 class="showcase-title">Bilateral Label Balancing (autoRotate)</h4>
-              <p class="showcase-text">
-                When rendering highly skewed datasets (such as 1 dominant slice of 56% and 26 micro-slices), standard fixed top-rotation squashes all 26 labels onto one column. Enabling <code>autoRotate</code> computes the optimal angular centroid to balance callout lines symmetrically across left and right columns (14 vs 13).
-              </p>
+              <div class="desc-badge-group">
+                <span class="status-badge" :class="autoRotateDemo ? 'status-badge-success' : 'status-badge-warning'">
+                  {{ autoRotateDemo ? `Balanced: ${autoRotateBalanceStats.left} Left / ${autoRotateBalanceStats.right} Right` : `Unbalanced: ${autoRotateBalanceStats.left} Left / ${autoRotateBalanceStats.right} Right (${autoRotateBalanceStats.diff} delta)` }}
+                </span>
+              </div>
             </div>
-            <div class="desc-badge-group">
-              <span class="status-badge" :class="autoRotateDemo ? 'status-badge-success' : 'status-badge-warning'">
-                {{ autoRotateDemo ? `Balanced: ${autoRotateBalanceStats.left} Left / ${autoRotateBalanceStats.right} Right` : `Unbalanced: ${autoRotateBalanceStats.left} Left / ${autoRotateBalanceStats.right} Right (${autoRotateBalanceStats.diff} delta)` }}
-              </span>
-            </div>
+            <p class="showcase-text">
+              When rendering highly skewed datasets (such as 1 dominant slice of 56% and 26 micro-slices), standard fixed top-rotation squashes all 26 labels onto one column. Enabling <code>autoRotate</code> computes the optimal angular centroid to balance callout lines symmetrically across left and right columns (14 vs 13).
+            </p>
           </div>
 
           <div class="showcase-interactive-stage">
@@ -742,17 +742,17 @@ const networkData = [
         <!-- Tab 2: Threshold Aggregation View -->
         <div v-else-if="showcaseTab === 'threshold'" class="showcase-view-body">
           <div class="showcase-desc-bar">
-            <div class="desc-text-group">
+            <div class="showcase-header-row">
               <h4 class="showcase-title">Long-Tail Consolidation (aggregateOthers & othersThreshold)</h4>
-              <p class="showcase-text">
-                Automatically consolidates micro-slices smaller than <code>othersThreshold</code> (e.g. 3%) into a single clean "Other" slice. This eliminates visual clutter on long-tail distributions while keeping total dataset values 100% accurate.
-              </p>
+              <div class="desc-badge-group">
+                <span class="status-badge" :class="thresholdDemoAggregate ? 'status-badge-info' : 'status-badge-neutral'">
+                  {{ thresholdDemoAggregate ? `Consolidated: ${thresholdConsolidatedCount} micro-slices into "${thresholdDemoLabel}"` : 'Ungrouped: all 27 slices rendered' }}
+                </span>
+              </div>
             </div>
-            <div class="desc-badge-group">
-              <span class="status-badge" :class="thresholdDemoAggregate ? 'status-badge-info' : 'status-badge-neutral'">
-                {{ thresholdDemoAggregate ? `Consolidated: ${thresholdConsolidatedCount} micro-slices into "${thresholdDemoLabel}"` : 'Ungrouped: all 27 slices rendered' }}
-              </span>
-            </div>
+            <p class="showcase-text">
+              Automatically consolidates micro-slices smaller than <code>othersThreshold</code> (e.g. 3%) into a single clean "Other" slice. This eliminates visual clutter on long-tail distributions while keeping total dataset values 100% accurate.
+            </p>
           </div>
 
           <div class="showcase-interactive-stage">
@@ -812,17 +812,17 @@ const networkData = [
         <!-- Tab 3: Compact / Headless Dashboards (3 Charts Without Labels) -->
         <div v-else-if="showcaseTab === 'compact'" class="showcase-view-body">
           <div class="showcase-desc-bar">
-            <div class="desc-text-group">
+            <div class="showcase-header-row">
               <h4 class="showcase-title">Headless Metric Cards & Compact Grids (:showLabels="false")</h4>
-              <p class="showcase-text">
-                For dense telemetry cards, dashboard grids, or multi-metric rows, disable callout lines with <code>:showLabels="false"</code>. The 3D donut scales cleanly to fit its parent container without needing custom logic or flat layout hacks.
-              </p>
+              <div class="desc-badge-group">
+                <span class="status-badge status-badge-info">
+                  3 KPIs Side-by-Side
+                </span>
+              </div>
             </div>
-            <div class="desc-badge-group">
-              <span class="status-badge status-badge-info">
-                3 KPIs Side-by-Side
-              </span>
-            </div>
+            <p class="showcase-text">
+              For dense telemetry cards, dashboard grids, or multi-metric rows, disable callout lines with <code>:showLabels="false"</code>. The 3D donut scales cleanly to fit its parent container without needing custom logic or flat layout hacks.
+            </p>
           </div>
 
           <div class="kpi-showcase-grid">
@@ -1016,21 +1016,23 @@ h4 { margin: 0 0 0.5rem 0; color: var(--nano-text-secondary); font-size: 0.9rem;
 
 .showcase-desc-bar {
   display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  gap: 16px;
+  flex-direction: column;
+  gap: 8px;
   padding-bottom: 1rem;
   border-bottom: 1px solid var(--nano-border-subtle);
+  min-height: 84px;
+}
+
+.showcase-header-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
   flex-wrap: wrap;
 }
 
-.desc-text-group {
-  flex: 1;
-  min-width: 280px;
-}
-
 .showcase-title {
-  margin: 0 0 4px 0;
+  margin: 0;
   font-size: 1rem;
   font-weight: 600;
   color: var(--nano-text-main);
@@ -1107,6 +1109,9 @@ h4 { margin: 0 0 0.5rem 0; color: var(--nano-text-secondary); font-size: 0.9rem;
   font-size: 0.8rem;
   color: var(--nano-text-secondary);
   line-height: 1.45;
+  min-height: 68px;
+  display: flex;
+  align-items: center;
 }
 
 .status-badge-success {
