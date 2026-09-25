@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed } from 'vue';
+import { ref, computed, watch, onMounted, onUnmounted } from 'vue';
 import ThreeDDonutChart from '../../components/ThreeDDonutChart.vue';
 import NanoSwitch from '../../components/NanoSwitch.vue';
 import KineticRotator from '../../components/KineticRotator.vue';
@@ -8,6 +8,22 @@ import { normalizeAngle } from '../../utils/math.js';
 
 const isExpanded = ref(true);
 const is3D = ref(true);
+const isolateHovered = ref(false);
+
+watch(isolateHovered, (v) => {
+  if (typeof window !== 'undefined') {
+    window.fullOpacity = v;
+  }
+});
+
+onMounted(() => {
+  const syncTimer = setInterval(() => {
+    if (typeof window !== 'undefined' && window.fullOpacity !== undefined && window.fullOpacity !== isolateHovered.value) {
+      isolateHovered.value = window.fullOpacity;
+    }
+  }, 250);
+  onUnmounted(() => clearInterval(syncTimer));
+});
 const showLabels = ref(true);
 const rotationAngle = ref(-90);
 const autoRotate = ref(true);
@@ -249,6 +265,11 @@ const setSingleDatapoint = () => {
         <div class="switch-row" style="margin-top: 10px;">
           <span class="switch-label">Selectable (Click to lock)</span>
           <NanoSwitch v-model="selectable" size="compact" />
+        </div>
+
+        <div class="switch-row" style="margin-top: 10px;">
+          <span class="switch-label">Isolate Hovered (window.fullOpacity)</span>
+          <NanoSwitch v-model="isolateHovered" size="compact" />
         </div>
 
         <div class="slider-row" :style="!is3D ? 'opacity: 0.35; pointer-events: none;' : ''">

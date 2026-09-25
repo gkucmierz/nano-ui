@@ -7,3 +7,6 @@ test-results
 *.local
 
 scr/
+
+# Misc
+code-recipes

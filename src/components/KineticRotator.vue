@@ -1,6 +1,14 @@
 <script setup>
 import { ref, computed, watch, onMounted, onUnmounted } from 'vue';
 import { normalizeAngle, shortestAngleDiff } from '../utils/math.js';
+import {
+  cubicHermite as cubicEaseWithInitialVelocity,
+  cubicHermiteDerivative as cubicEaseWithInitialVelocityDerivative,
+  cubicHermiteSecondDerivative as cubicEaseWithInitialVelocitySecondDerivative,
+  easeInOutCubic,
+  easeInOutCubicDerivative,
+  easeInOutCubicSecondDerivative,
+} from '../utils/kinetics.js';
 
 const props = defineProps({
   /**
@@ -111,38 +119,6 @@ const emit = defineEmits([
   'drag',
   'drag-end'
 ]);
-
-// Cubic Hermite polynomial matching boundary conditions:
-// P(0) = 0, P'(0) = v0, P(1) = 1, P'(1) = 0
-const cubicEaseWithInitialVelocity = (t, v0) => {
-  return (v0 - 2) * t * t * t + (3 - 2 * v0) * t * t + v0 * t;
-};
-
-// Derivative of the Hermite cubic polynomial for instantaneous velocity
-const cubicEaseWithInitialVelocityDerivative = (t, v0) => {
-  return 3 * (v0 - 2) * t * t + 2 * (3 - 2 * v0) * t + v0;
-};
-
-// Second derivative of the Hermite cubic polynomial for instantaneous acceleration
-const cubicEaseWithInitialVelocitySecondDerivative = (t, v0) => {
-  return 6 * (v0 - 2) * t + 2 * (3 - 2 * v0);
-};
-
-// Standard cubic ease-in-out for fresh starts from rest (v0 = 0)
-const easeInOutCubic = (t) => {
-  if (t < 0.5) return 4 * t * t * t;
-  return 1 - Math.pow(-2 * t + 2, 3) / 2;
-};
-
-const easeInOutCubicDerivative = (t) => {
-  if (t < 0.5) return 12 * t * t;
-  return 3 * Math.pow(-2 * t + 2, 2);
-};
-
-const easeInOutCubicSecondDerivative = (t) => {
-  if (t < 0.5) return 24 * t;
-  return 24 * t - 24;
-};
 
 // Kinematic State
 const currentAngle = ref(props.modelValue);

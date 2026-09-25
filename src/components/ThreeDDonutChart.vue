@@ -549,6 +549,7 @@
 <script setup>
 import { ref, computed, watch, onMounted, onUnmounted, nextTick } from 'vue'
 import { normalizeAngle, shortestAngleDiff } from '../utils/math.js'
+import { createKineticTransition } from '../utils/kinetics.js'
 import {
   splitAngleIntervals,
   getNeighborSliceIds,
@@ -599,6 +600,19 @@ const props = defineProps({
   rotationAngle: {
     type: Number,
     default: -90
+  },
+  rotationTimingMode: {
+    type: String,
+    default: 'fixed',
+    validator: (v) => ['fixed', 'proportional'].includes(v)
+  },
+  rotationModular: {
+    type: Boolean,
+    default: false
+  },
+  rotationDuration: {
+    type: Number,
+    default: undefined
   },
   autoRotate: {
     type: Boolean,
@@ -1108,10 +1122,23 @@ const activeRotationAngle = computed(() => {
   if (props.autoRotate && normalizedData.value && normalizedData.value.length > 0) {
     return normalizeAngle(getOptimalRotationAngle(normalizedData.value, props.rotationAngle))
   }
-  return normalizeAngle(props.rotationAngle)
+  return props.rotationModular ? normalizeAngle(props.rotationAngle) : props.rotationAngle
 })
 
 const animatedRotationAngle = ref(activeRotationAngle.value)
+
+const rotationKinetic = createKineticTransition({
+  initialValue: activeRotationAngle.value,
+  duration: props.rotationDuration ?? props.animationDuration ?? 350,
+  timingMode: props.rotationTimingMode || 'fixed',
+  modular: props.rotationModular || false,
+  onUpdate: ({ value }) => {
+    animatedRotationAngle.value = value
+  },
+  onSettled: ({ value }) => {
+    animatedRotationAngle.value = value
+  },
+})
 const isAnimating = ref(false)
 
 const is3DMode = props.is3D
@@ -1823,9 +1850,13 @@ const animateChart = (customDuration) => {
 
   isAnimating.value = true
   const startTime = performance.now()
-  const startRotation = normalizeAngle(animatedRotationAngle.value)
+  const startRotation = props.rotationModular
+    ? normalizeAngle(animatedRotationAngle.value)
+    : animatedRotationAngle.value
   const targetRotation = activeRotationAngle.value
-  const deltaRotation = shortestAngleDiff(startRotation, targetRotation)
+  const deltaRotation = props.rotationModular
+    ? shortestAngleDiff(startRotation, targetRotation)
+    : (targetRotation - startRotation)
 
   const startCx = animCx.value
   const startCy = animCy.value
@@ -1873,7 +1904,9 @@ const animateChart = (customDuration) => {
       item.percentage = Math.round(startPct + (targetPct - startPct) * easedProgress)
     })
 
-    animatedRotationAngle.value = startRotation + deltaRotation * easedProgress
+    if (!rotationKinetic.isMoving()) {
+      animatedRotationAngle.value = startRotation + deltaRotation * easedProgress
+    }
 
     animCx.value = startCx + (targetCx - startCx) * easedProgress
     animCy.value = startCy + (targetCy - startCy) * easedProgress
@@ -1890,7 +1923,9 @@ const animateChart = (customDuration) => {
       currentAnimationId = requestAnimationFrame(tick)
     } else {
       currentAnimationId = null
-      animatedRotationAngle.value = targetRotation
+      if (!rotationKinetic.isMoving()) {
+        animatedRotationAngle.value = targetRotation
+      }
       animatedItems.value.forEach(item => {
         item.value = item.targetValue
         item.percentage = item.targetPercentage !== undefined ? item.targetPercentage : 0
@@ -1945,15 +1980,20 @@ watch(normalizedData, (newData) => {
 
 watch([activeRotationAngle, () => props.rotationAngle, () => props.autoRotate], () => {
   const isImmediate = props.immediate || props.currentLowFxMode || props.immediateRotation || (props.animationDuration ?? 350) <= 0
+  const effDuration = props.rotationDuration !== undefined 
+    ? props.rotationDuration 
+    : (props.animationDuration !== undefined ? props.animationDuration : 350)
+
+  rotationKinetic.setConfig({
+    duration: effDuration,
+    timingMode: props.rotationTimingMode || 'fixed',
+    modular: props.rotationModular || false,
+  })
+
   if (isImmediate) {
-    if (currentAnimationId) {
-      cancelAnimationFrame(currentAnimationId)
-      currentAnimationId = null
-      isAnimating.value = false
-    }
-    animatedRotationAngle.value = activeRotationAngle.value
+    rotationKinetic.setTarget(activeRotationAngle.value, { immediate: true })
   } else {
-    animateChart()
+    rotationKinetic.setTarget(activeRotationAngle.value)
   }
 })
 
@@ -2043,6 +2083,7 @@ onUnmounted(() => {
   if (currentAnimationId) {
     cancelAnimationFrame(currentAnimationId)
   }
+  rotationKinetic.destroy()
 })
 
 defineExpose({

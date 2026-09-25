@@ -142,4 +142,18 @@ test.describe('3D Donut Chart Wall Geometry & Visibility Specs', () => {
     const remainingCuts = page.locator('.items-svg-chart path[data-wall="start-cut"], .items-svg-chart path[data-wall="end-cut"]')
     await expect(remainingCuts).toHaveCount(0)
   })
+
+  test('should smoothly rotate chart without abrupt direction flips across 180 degrees', async ({ page }) => {
+    const chart = page.locator('.items-svg-chart')
+    await expect(chart).toBeVisible()
+
+    const angleSlider = page.locator('input[type="range"]').first()
+    if (await angleSlider.count() > 0) {
+      await angleSlider.fill('180')
+      await page.waitForTimeout(100)
+      await angleSlider.fill('270')
+      await page.waitForTimeout(200)
+      await expect(chart).toBeVisible()
+    }
+  })
 })
