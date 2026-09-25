@@ -33,7 +33,16 @@ const slopeRatio = ref(0.5);
 const thickness = ref(0.5);
 const depth = ref(32);
 const showCenterText = ref(true);
-const centerTextZ = ref(0.0); // 0.0 = top, 0.5 = center, 1.0 = bottom
+const centerTextZ = ref('auto'); // 'auto', 0.0 = top, 0.5 = center, 1.0 = bottom
+const autoZValue = computed(() => 1.0 - Math.max(0, Math.min(1, slopeRatio.value)));
+
+const sliderCenterTextZ = computed({
+  get: () => (centerTextZ.value === 'auto' ? autoZValue.value : Number(centerTextZ.value)),
+  set: (val) => {
+    centerTextZ.value = val;
+  }
+});
+
 const chartAnimationDuration = ref(300); // 0, 150, 300, 500
 const labelFontSize = ref(13); // 11, 13, 15, 17
 const selectedAspectRatio = ref('auto');
@@ -443,14 +452,23 @@ const networkData = [
         </div>
 
         <div class="slider-row" :style="!showCenterText || !is3D ? 'opacity: 0.35; pointer-events: none;' : ''">
-          <span class="slider-label">Center Text Z (Depth): {{ centerTextZ === 0 ? 'Top (0.0)' : centerTextZ === 0.5 ? 'Center (0.5)' : centerTextZ === 1 ? 'Bottom (1.0)' : centerTextZ.toFixed(2) }}</span>
-          <input type="range" v-model.number="centerTextZ" min="0.0" max="1.0" step="0.05" />
+          <span class="slider-label">Center Text Z (Depth): {{ centerTextZ === 'auto' ? `Auto (${autoZValue.toFixed(2)})` : (centerTextZ === 0 ? 'Top (0.0)' : centerTextZ === 0.5 ? 'Center (0.5)' : centerTextZ === 1 ? 'Bottom (1.0)' : Number(centerTextZ).toFixed(2)) }}</span>
+          <input type="range" v-model.number="sliderCenterTextZ" min="0.0" max="1.0" step="0.05" />
           <div class="nano-btn-group" style="width: 100%; margin-top: 4px;">
             <button 
               type="button" 
               class="nano-btn nano-btn-sm" 
+              :class="centerTextZ === 'auto' ? 'nano-btn-primary' : 'nano-btn-secondary'" 
+              style="flex: 1; text-align: center; justify-content: center; font-weight: 600; padding: 4px 2px; font-size: 0.74rem; white-space: nowrap;" 
+              @click="centerTextZ = 'auto'"
+            >
+              Auto
+            </button>
+            <button 
+              type="button" 
+              class="nano-btn nano-btn-sm" 
               :class="centerTextZ === 0 ? 'nano-btn-primary' : 'nano-btn-secondary'" 
-              style="flex: 1; text-align: center; justify-content: center; font-weight: 600;" 
+              style="flex: 1; text-align: center; justify-content: center; font-weight: 600; padding: 4px 2px; font-size: 0.74rem; white-space: nowrap;" 
               @click="centerTextZ = 0"
             >
               Top (0.0)
@@ -459,7 +477,7 @@ const networkData = [
               type="button" 
               class="nano-btn nano-btn-sm" 
               :class="centerTextZ === 0.5 ? 'nano-btn-primary' : 'nano-btn-secondary'" 
-              style="flex: 1; text-align: center; justify-content: center; font-weight: 600;" 
+              style="flex: 1; text-align: center; justify-content: center; font-weight: 600; padding: 4px 2px; font-size: 0.74rem; white-space: nowrap;" 
               @click="centerTextZ = 0.5"
             >
               Center (0.5)
@@ -468,7 +486,7 @@ const networkData = [
               type="button" 
               class="nano-btn nano-btn-sm" 
               :class="centerTextZ === 1 ? 'nano-btn-primary' : 'nano-btn-secondary'" 
-              style="flex: 1; text-align: center; justify-content: center; font-weight: 600;" 
+              style="flex: 1; text-align: center; justify-content: center; font-weight: 600; padding: 4px 2px; font-size: 0.74rem; white-space: nowrap;" 
               @click="centerTextZ = 1"
             >
               Bottom (1.0)
@@ -915,7 +933,7 @@ selectedItemId: String | Number (default: null) - Currently selected/locked item
 thickness: Number (default: 0.5) - Thickness from 0.0 (thin ring) to 1.0 (full pie chart)
 depth: Number (default: 32) - 3D wall height/depth in px (clamped >= 0)
 showCenterText: Boolean (default: true) - Show/hide center value and label texts
-centerTextZ: Number (default: 0.0) - Z position of center text in depth (0.0 = top plane, 0.5 = volumetric center, 1.0 = bottom plane)
+centerTextZ: Number | String (default: 'auto') - Z position of center text in depth ('auto' = dynamically adapts from 1.0 at slope 0 to 0.0 at slope 1, 0.0 = top plane, 0.5 = volumetric center, 1.0 = bottom plane)
 animationDuration: Number (default: 350) - Duration of chart transitions in ms (0 for instant)
 labelSize: String (default: 'md') - Preset size for callout labels ('sm', 'md', 'lg', 'xl')
 labelFontSize: Number | String (default: undefined) - Custom font size in px for callout labels (e.g. 13 or '13px')
@@ -1536,6 +1554,20 @@ input[type="range"]::-moz-range-thumb:hover {
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  transition: box-shadow var(--nano-transition-interactive);
+}
+
+.kinetic-dial-container:hover {
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2), 0 0 10px color-mix(in srgb, var(--nano-accent-primary) 35%, transparent);
+}
+
+.kinetic-dial-container:has(.is-dragging),
+.kinetic-dial-container:active {
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.25), 0 0 16px color-mix(in srgb, var(--nano-accent-primary) 60%, transparent);
 }
 
 .mini-dial-plate {
@@ -1548,23 +1580,20 @@ input[type="range"]::-moz-range-thumb:hover {
   align-items: center;
   justify-content: center;
   position: relative;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
   cursor: grab;
   user-select: none;
   touch-action: none;
-  transition: border-color var(--nano-transition-interactive), box-shadow var(--nano-transition-interactive);
+  transition: border-color var(--nano-transition-interactive);
 }
 
 .mini-dial-plate:hover {
   border-color: var(--nano-accent-primary);
-  box-shadow: 0 0 10px color-mix(in srgb, var(--nano-accent-primary) 35%, transparent);
 }
 
 .mini-dial-plate:active,
 .mini-dial-plate.is-dragging {
   cursor: grabbing;
   border-color: var(--nano-accent-primary);
-  box-shadow: 0 0 16px color-mix(in srgb, var(--nano-accent-primary) 60%, transparent);
 }
 
 .mini-dial-marker {

@@ -250,4 +250,30 @@ describe('ThreeDDonutChart SVG Painter Architecture & Render Order', () => {
       )
     })
   })
+
+  describe('when validating centerTextZ prop and auto slope transition', () => {
+    const scriptContent = descriptor.scriptSetup?.content || ''
+
+    test('should declare centerTextZ prop supporting [Number, String] with default "auto"', () => {
+      assert.ok(
+        scriptContent.includes('centerTextZ: {'),
+        'centerTextZ prop must be declared'
+      )
+      assert.ok(
+        scriptContent.includes("default: 'auto'"),
+        "centerTextZ prop must default to 'auto'"
+      )
+    })
+
+    test('should compute effectiveCenterTextZ dynamically: 1.0 at slope 0, 0.0 at slope 1', () => {
+      assert.ok(
+        scriptContent.includes('const effectiveCenterTextZ = computed('),
+        'must compute effectiveCenterTextZ'
+      )
+      assert.ok(
+        scriptContent.includes('1.0 - slope'),
+        'must compute 1.0 - slope when auto'
+      )
+    })
+  })
 })

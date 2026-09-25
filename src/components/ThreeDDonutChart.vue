@@ -644,9 +644,9 @@ const props = defineProps({
     default: undefined
   },
   centerTextZ: {
-    type: Number,
-    default: 0.0,
-    validator: (val) => val >= 0 && val <= 1
+    type: [Number, String],
+    default: 'auto',
+    validator: (val) => val === 'auto' || (typeof val === 'number' && val >= 0 && val <= 1) || (!isNaN(parseFloat(val)) && parseFloat(val) >= 0 && parseFloat(val) <= 1)
   },
   aspectRatio: {
     type: [String, Number],
@@ -1180,10 +1180,19 @@ const drawCenterYComputed = computed(() => {
   return animCy.value - animDepth.value / 2
 })
 
+const effectiveCenterTextZ = computed(() => {
+  if (props.centerTextZ === 'auto' || props.centerTextZ === undefined || props.centerTextZ === null) {
+    const slope = Math.max(0, Math.min(1, animSlopeRatio.value))
+    return 1.0 - slope
+  }
+  const num = typeof props.centerTextZ === 'string' ? parseFloat(props.centerTextZ) : props.centerTextZ
+  return (!isNaN(num) && num !== null && num !== undefined) ? Math.max(0, Math.min(1, num)) : 0.0
+})
+
 const centerTextY = computed(() => {
   const depth = animDepth.value
   const topY = drawCenterYComputed.value
-  const zRatio = props.centerTextZ !== undefined && props.centerTextZ !== null ? props.centerTextZ : 0.0
+  const zRatio = effectiveCenterTextZ.value
   return topY + depth * zRatio
 })
 
