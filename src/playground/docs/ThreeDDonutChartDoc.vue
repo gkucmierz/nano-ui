@@ -128,6 +128,12 @@ const resetToDefault = () => {
   ];
 };
 
+const setSingleDatapoint = () => {
+  testData.value = [
+    { name: 'Poland', value: 0.31, color: '#ec4899' }
+  ];
+};
+
 const showcaseTab = ref('auto-rotate');
 
 const createLongTailItems = () => {
@@ -408,6 +414,10 @@ const networkData = [
           <button @click="addItem" class="demo-btn secondary-btn">
             <NanoIcon name="plus" :size="13" />
             <span>Add Country</span>
+          </button>
+          <button @click="setSingleDatapoint" class="demo-btn secondary-btn">
+            <NanoIcon name="sparkles" :size="13" />
+            <span>1 Data Point</span>
           </button>
           <button @click="resetToDefault" class="demo-btn secondary-btn">
             <NanoIcon name="rotate" :size="13" />
