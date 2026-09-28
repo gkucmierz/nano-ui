@@ -276,4 +276,27 @@ describe('ThreeDDonutChart SVG Painter Architecture & Render Order', () => {
       )
     })
   })
+
+  describe('when validating interactive hover trigger layers', () => {
+    test('should include transparent inner wall path in hover-trigger-group', () => {
+      const templateContent = descriptor.template?.content || ''
+      assert.ok(
+        templateContent.includes('slice.originalInnerWallPath'),
+        'hover-trigger-group must include slice.originalInnerWallPath for inner cylinder hover'
+      )
+    })
+
+    test('should disable pointer events on center-text-group so inner hole hover is never intercepted', () => {
+      const styleContent = descriptor.styles?.[0]?.content || ''
+      assert.ok(
+        styleContent.includes('.center-text-group'),
+        '.center-text-group rule must exist'
+      )
+      assert.ok(
+        styleContent.includes('pointer-events: none'),
+        '.center-text-group must specify pointer-events: none'
+      )
+    })
+  })
 })
+

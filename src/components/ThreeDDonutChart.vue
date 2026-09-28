@@ -408,6 +408,12 @@
             :d="slice.originalOuterWallPath" 
             fill="transparent"
           />
+          <!-- Transparent Inner Wall -->
+          <path 
+            v-if="slice.originalInnerWallPath" 
+            :d="slice.originalInnerWallPath" 
+            fill="transparent"
+          />
         </g>
 
         <!-- Leader Lines & Text Labels (only in expanded view) -->
@@ -1587,6 +1593,7 @@ const topSlices = computed(() => {
       hoverPath: fullTopPath,
       originalTopPath: fullTopPath,
       originalOuterWallPath: depth > 0 ? `M ${cx + rx} ${drawCenterY} A ${rx} ${ry} 0 0 1 ${cx - rx} ${drawCenterY} L ${cx - rx} ${drawCenterY + depth} A ${rx} ${ry} 0 0 0 ${cx + rx} ${drawCenterY + depth} Z` : '',
+      originalInnerWallPath: depth > 0 ? `M ${cx - irx} ${drawCenterY} A ${irx} ${iry} 0 0 1 ${cx + irx} ${drawCenterY} L ${cx + irx} ${drawCenterY + depth} A ${irx} ${iry} 0 0 0 ${cx - irx} ${drawCenterY + depth} Z` : '',
       midY: drawCenterY,
       x0,
       y0,
@@ -1633,6 +1640,10 @@ const topSlices = computed(() => {
       ? `M ${x_os} ${y_os} A ${rx} ${ry} 0 ${origLargeArc} 1 ${x_oe} ${y_oe} L ${x_oe} ${y_oe + depth} A ${rx} ${ry} 0 ${origLargeArc} 0 ${x_os} ${y_os + depth} Z`
       : ''
 
+    const originalInnerWallPath = depth > 0
+      ? `M ${x_is} ${y_is} A ${irx} ${iry} 0 ${origLargeArc} 1 ${x_ie} ${y_ie} L ${x_ie} ${y_ie + depth} A ${irx} ${iry} 0 ${origLargeArc} 0 ${x_is} ${y_is + depth} Z`
+      : ''
+
     const x0 = cx + rx * Math.cos(originalMidAngle)
     const y0 = drawCenterY + ry * Math.sin(originalMidAngle)
     const x1 = cx + (rx + 25) * Math.cos(originalMidAngle)
@@ -1655,6 +1666,7 @@ const topSlices = computed(() => {
       hoverPath: topPath,
       originalTopPath: topPath,
       originalOuterWallPath,
+      originalInnerWallPath,
       midY: midY_local,
       x0,
       y0,
@@ -2384,6 +2396,10 @@ defineExpose({
 .no-transitions .label-group text,
 .no-transitions .slice-group-3d {
   transition: none;
+}
+
+.center-text-group {
+  pointer-events: none;
 }
 
 .center-text-value {
