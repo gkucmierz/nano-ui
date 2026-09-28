@@ -337,13 +337,14 @@ export const calculateTargetGeometry = ({
     const cx = vbWidth / 2
     const cy = vbHeight / 2
 
-    const clearance = Math.max(30, cy - 45)
+    const clearance = (vbHeight - 50) / 2
     let rx = 180
     let ry = is3DMode ? 180 * slopeRatio : Math.min(180, clearance)
     if (is3DMode) {
       const max3DRy = (vbHeight - effDepth - 50) / 2
       if (ry > max3DRy && max3DRy > 30) {
         ry = max3DRy
+        rx = Math.round(ry / slopeRatio)
       }
     } else {
       rx = ry

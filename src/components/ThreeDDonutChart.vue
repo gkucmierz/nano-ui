@@ -1106,19 +1106,21 @@ const isThicknessMoving = ref(false)
 const isChartMoving = computed(() => isAnimating.value || isRotationMoving.value || isSlopeMoving.value || isThicknessMoving.value)
 
 const recomputeGeometryRadii = () => {
-  const is3DMode = props.is3D
-  const slope = animSlopeRatio.value
-  const thick = animThickness.value
-  const rx = animRx.value
+  const geom = calculateTargetGeometry({
+    isExpanded: props.isExpanded,
+    showLabels: props.showLabels,
+    is3D: props.is3D,
+    slopeRatio: animSlopeRatio.value,
+    thickness: animThickness.value,
+    aspectRatio: props.aspectRatio,
+    depth: props.depth,
+  })
 
-  animRy.value = is3DMode ? rx * slope : rx
-  animIrx.value = rx * (1 - thick)
-  animIry.value = is3DMode ? rx * (1 - thick) * slope : rx * (1 - thick)
-
-  const baseDepth = is3DMode ? (props.depth ?? 32) : 0
-  animDepth.value = (is3DMode && slope > 0.5)
-    ? baseDepth * (2 - 2 * slope)
-    : (is3DMode ? baseDepth : 0)
+  animRx.value = geom.rx
+  animRy.value = geom.ry
+  animIrx.value = geom.irx
+  animIry.value = geom.iry
+  animDepth.value = geom.depth
 }
 
 const slopeKinetic = createKineticTransition({

@@ -425,6 +425,35 @@ describe('3D Donut Chart Wall Geometry & Visibility', () => {
       assert.ok(geom.vbWidth <= 340)
     })
 
+    test('should maintain exact 1:1 circular aspect ratio without horizontal flattening when slopeRatio is 1.0 (3d-chart-aspect-ratio-error recipe)', () => {
+      // Scenario 1: slopeRatio = 1.0 with labels
+      const geom3D = calculateTargetGeometry({ isExpanded: true, showLabels: true, is3D: true, slopeRatio: 1.0 })
+      assert.equal(geom3D.rx, 135, '3D mode rx must equal 135 to fit vertically without clipping')
+      assert.equal(geom3D.ry, 135, '3D mode ry must equal 135')
+      assert.equal(geom3D.ry / geom3D.rx, 1.0, '3D mode ry/rx must strictly equal 1.0 (no horizontal flattening to 0.75)')
+
+      // Scenario 1b: 2D flat mode with labels
+      const geom2D = calculateTargetGeometry({ isExpanded: true, showLabels: true, is3D: false })
+      assert.equal(geom2D.rx, 135, '2D mode rx must equal 135')
+      assert.equal(geom2D.ry, 135, '2D mode ry must equal 135')
+
+      // Radii between 2D and 3D at slope 1.0 must be identical (no ballooning or shrinking)
+      assert.equal(geom3D.rx, geom2D.rx, 'rx must not balloon when switching between 2D and 3D at slope 1.0')
+      assert.equal(geom3D.ry, geom2D.ry, 'ry must not shrink when switching between 2D and 3D at slope 1.0')
+    })
+
+    test('should maintain proportional aspect ratio for steep slopes (slopeRatio > 0.75) in expanded labeled mode', () => {
+      const slopes = [0.8, 0.85, 0.9, 0.95, 1.0]
+      for (const s of slopes) {
+        const geom = calculateTargetGeometry({ isExpanded: true, showLabels: true, is3D: true, slopeRatio: s })
+        const actualRatio = geom.ry / geom.rx
+        assert.ok(
+          Math.abs(actualRatio - s) <= 0.015,
+          `slopeRatio ${s} must maintain geometric proportion (actual: ${actualRatio.toFixed(3)})`
+        )
+      }
+    })
+
     test('should clamp slopeRatio to safe minimum when calculating vertical constraints', () => {
       const geom = calculateTargetGeometry({ isExpanded: true, showLabels: false, is3D: true, slopeRatio: 0.05 })
       assert.equal(geom.rx, 260)
