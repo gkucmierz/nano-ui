@@ -385,6 +385,22 @@ export const createKineticTransition = (options = {}) => {
 
   const setConfig = (newOptions = {}) => {
     config = { ...config, ...newOptions };
+    if (animRecord && isMoving) {
+      const now = typeof performance !== 'undefined' && performance.now ? performance.now() : Date.now();
+      const elapsed = now - animRecord.startTime;
+      const p = Math.max(0, Math.min(1, elapsed / animRecord.duration));
+      if (p < 1) {
+        const totalDelta = animRecord.targetValue - animRecord.startValue;
+        const effectiveSpeed = Math.max(0.01, config.speedMultiplier || 1);
+        let newDuration = config.duration / effectiveSpeed;
+        if (config.timingMode === 'proportional') {
+          const stepQuantum = Math.max(0.1, config.step || 90);
+          newDuration = (config.duration / effectiveSpeed) * Math.max(0.2, Math.abs(totalDelta) / stepQuantum);
+        }
+        animRecord.duration = newDuration;
+        animRecord.startTime = now - p * newDuration;
+      }
+    }
   };
 
   const destroy = () => {

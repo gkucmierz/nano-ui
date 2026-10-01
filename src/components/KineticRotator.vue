@@ -1,14 +1,7 @@
 <script setup>
 import { ref, computed, watch, onMounted, onUnmounted } from 'vue';
-import { normalizeAngle, shortestAngleDiff } from '../utils/math.js';
-import {
-  cubicHermite as cubicEaseWithInitialVelocity,
-  cubicHermiteDerivative as cubicEaseWithInitialVelocityDerivative,
-  cubicHermiteSecondDerivative as cubicEaseWithInitialVelocitySecondDerivative,
-  easeInOutCubic,
-  easeInOutCubicDerivative,
-  easeInOutCubicSecondDerivative,
-} from '../utils/kinetics.js';
+import { normalizeAngle } from '../utils/math.js';
+import { createKineticTransition } from '../utils/kinetics.js';
 
 const props = defineProps({
   /**
@@ -129,9 +122,7 @@ const isMoving = ref(false);
 const progress = ref(1);
 const initialVelocityParam = ref(0);
 
-// Animation record
-let animRecord = null;
-let rafId = null;
+let isFromProp = false;
 
 // Container dimension styling
 const containerStyle = computed(() => {
@@ -142,219 +133,90 @@ const containerStyle = computed(() => {
   };
 });
 
-// Calculate current angular position, velocity, and acceleration at given timestamp
-const sampleKinematics = (now) => {
-  if (!animRecord) {
-    return { angle: currentAngle.value, vel: 0, acc: 0, p: 1 };
-  }
+// Pure Headless Kinetic Transition Controller
+const transition = createKineticTransition({
+  initialValue: props.modelValue,
+  duration: props.duration,
+  speedMultiplier: props.speedMultiplier,
+  step: props.step,
+  timingMode: props.timingMode,
+  modular: props.shortestPath,
+  inertiaThreshold: props.inertiaThreshold,
+  onUpdate: ({ value, target, velocity: vel, acceleration: acc, progress: p, v0, timestamp }) => {
+    currentAngle.value = value;
+    targetAngle.value = target;
+    velocity.value = vel;
+    acceleration.value = acc;
+    progress.value = p;
+    initialVelocityParam.value = v0 || 0;
+    isMoving.value = true;
 
-  const elapsed = now - animRecord.startTime;
-  const p = Math.max(0, Math.min(1, elapsed / animRecord.duration));
-
-  const ease = animRecord.v0 !== undefined
-    ? cubicEaseWithInitialVelocity(p, animRecord.v0)
-    : easeInOutCubic(p);
-
-  const angle = animRecord.startAngle + (animRecord.targetAngle - animRecord.startAngle) * ease;
-
-  const dEaseDp = animRecord.v0 !== undefined
-    ? cubicEaseWithInitialVelocityDerivative(p, animRecord.v0)
-    : easeInOutCubicDerivative(p);
-
-  const totalDelta = animRecord.targetAngle - animRecord.startAngle;
-  // Velocity in degrees per millisecond * 1000 = deg/sec
-  const vel = ((totalDelta * dEaseDp) / animRecord.duration) * 1000;
-
-  const d2EaseDp2 = animRecord.v0 !== undefined
-    ? cubicEaseWithInitialVelocitySecondDerivative(p, animRecord.v0)
-    : easeInOutCubicSecondDerivative(p);
-  // Acceleration in deg/sec^2 = (totalDelta * d2EaseDp2 / duration^2) * 10^6
-  const acc = ((totalDelta * d2EaseDp2) / (animRecord.duration * animRecord.duration)) * 1000000;
-
-  return { angle, vel, acc, p };
-};
-
-// Core animation loop
-const tick = (now) => {
-  if (!animRecord) {
-    isMoving.value = false;
+    emit('frame', {
+      currentAngle: value,
+      targetAngle: target,
+      velocity: vel,
+      acceleration: acc,
+      progress: p,
+      isMoving: true,
+      v0: v0 || 0,
+      timestamp
+    });
+  },
+  onSettled: ({ value, normalizedValue }) => {
+    currentAngle.value = value;
+    targetAngle.value = value;
     velocity.value = 0;
     acceleration.value = 0;
     progress.value = 1;
-    return;
-  }
-
-  const { angle, vel, acc, p } = sampleKinematics(now);
-  currentAngle.value = angle;
-  velocity.value = vel;
-  acceleration.value = acc;
-  progress.value = p;
-
-  emit('frame', {
-    currentAngle: angle,
-    targetAngle: animRecord.targetAngle,
-    velocity: vel,
-    acceleration: acc,
-    progress: p,
-    isMoving: true,
-    v0: animRecord.v0 || 0,
-    timestamp: now
-  });
-
-  if (p < 1) {
-    rafId = requestAnimationFrame(tick);
-  } else {
-    // Settled at target
-    currentAngle.value = animRecord.targetAngle;
-    velocity.value = 0;
-    acceleration.value = 0;
-    progress.value = 1;
+    initialVelocityParam.value = 0;
     isMoving.value = false;
-    const settledAngle = animRecord.targetAngle;
-    const wasFromProp = animRecord.fromProp;
-    animRecord = null;
 
-    if (!wasFromProp) {
-      emit('update:modelValue', settledAngle);
+    if (!isFromProp) {
+      emit('update:modelValue', value);
     }
+    isFromProp = false;
+
     emit('settled', {
-      angle: settledAngle,
-      normalizedAngle: normalizeAngle(settledAngle)
+      angle: value,
+      normalizedAngle: normalizedValue
     });
 
     emit('frame', {
-      currentAngle: settledAngle,
-      targetAngle: settledAngle,
+      currentAngle: value,
+      targetAngle: value,
       velocity: 0,
       acceleration: 0,
       progress: 1,
       isMoving: false,
       v0: 0,
-      timestamp: now
+      timestamp: typeof performance !== 'undefined' && performance.now ? performance.now() : Date.now()
     });
   }
-};
-
-/**
- * Start or chain a rotation to target orientation.
- * If called mid-flight, preserves instantaneous velocity v0 for seamless C1 continuity.
- */
-const startKineticTransition = (newTarget, { isRelative = false, delta = 0, fromProp = false } = {}) => {
-  const now = performance.now();
-  let currentPos = currentAngle.value;
-  let currentVel = velocity.value; // deg/sec
-
-  if (animRecord && isMoving.value) {
-    const sampled = sampleKinematics(now);
-    currentPos = sampled.angle;
-    currentVel = sampled.vel;
-  }
-
-  let finalTarget = newTarget;
-
-  if (props.shortestPath) {
-    // Modular shortest-path optimization
-    let desiredOrientation = 0;
-    if (isRelative) {
-      // Delta is added to previous intended target
-      const prevIntended = targetAngle.value;
-      desiredOrientation = normalizeAngle(prevIntended + delta);
-    } else {
-      desiredOrientation = normalizeAngle(newTarget);
-    }
-
-    let diff = shortestAngleDiff(currentPos, desiredOrientation);
-
-    // Dynamic momentum & inertia preservation:
-    // If object is moving fast in the opposite direction of shortest diff,
-    // reversing causes sudden jarring deceleration jerk.
-    // If inertiaThreshold > 0 and extra distance (360 - 2*|diff|) < |vel| * inertiaThreshold,
-    // continue in the direction of current angular velocity along the alternate arc.
-    if (props.inertiaThreshold > 0 && Math.abs(currentVel) > 20) {
-      const isReversal = (currentVel > 0 && diff < 0) || (currentVel < 0 && diff > 0);
-      if (isReversal) {
-        const altDiff = diff > 0 ? diff - 360 : diff + 360;
-        const extraDistance = 360 - 2 * Math.abs(diff);
-        const momentumAllowance = Math.abs(currentVel) * props.inertiaThreshold;
-        if (extraDistance < momentumAllowance) {
-          diff = altDiff;
-        }
-      }
-    }
-
-    finalTarget = currentPos + diff;
-  }
-
-  targetAngle.value = finalTarget;
-  emit('change', finalTarget);
-
-  const deltaAngle = finalTarget - currentPos;
-
-  // If already at target within epsilon, snap immediately
-  if (Math.abs(deltaAngle) < 0.05) {
-    currentAngle.value = finalTarget;
-    velocity.value = 0;
-    acceleration.value = 0;
-    progress.value = 1;
-    isMoving.value = false;
-    animRecord = null;
-    if (!fromProp) {
-      emit('update:modelValue', finalTarget);
-    }
-    return;
-  }
-
-  // Base duration scaled by timingMode, step proportion, and speed multiplier
-  const effectiveSpeedMultiplier = Math.max(0.01, props.speedMultiplier);
-  const baseDuration = props.timingMode === 'fixed'
-    ? (props.duration / effectiveSpeedMultiplier)
-    : (props.duration / effectiveSpeedMultiplier) * Math.max(0.2, Math.abs(deltaAngle) / props.step);
-
-  // Calculate normalized initial velocity v0
-  // v0 = (instantaneous velocity in deg/ms * duration in ms) / total delta
-  let v0 = 0;
-  if (Math.abs(deltaAngle) > 0.01 && Math.abs(currentVel) > 0.1) {
-    const velPerMs = currentVel / 1000;
-    v0 = (velPerMs * baseDuration) / deltaAngle;
-    // Clamp to prevent extreme polynomial overshoots while preserving momentum
-    v0 = Math.max(-2.5, Math.min(2.5, v0));
-  }
-
-  initialVelocityParam.value = v0;
-  isMoving.value = true;
-
-  animRecord = {
-    startAngle: currentPos,
-    targetAngle: finalTarget,
-    startTime: now,
-    duration: baseDuration,
-    v0: v0,
-    fromProp
-  };
-
-  if (rafId) {
-    cancelAnimationFrame(rafId);
-  }
-  rafId = requestAnimationFrame(tick);
-};
+});
 
 // Public API
 const rotateBy = (deltaDegrees) => {
-  startKineticTransition(targetAngle.value + deltaDegrees, {
+  isFromProp = false;
+  transition.setTarget(targetAngle.value + deltaDegrees, {
     isRelative: true,
     delta: deltaDegrees
   });
+  targetAngle.value = transition.getTarget();
+  emit('change', targetAngle.value);
 };
 
 const setAngle = (newAngle, fromProp = false) => {
-  startKineticTransition(newAngle, { isRelative: false, fromProp });
+  isFromProp = fromProp;
+  transition.setTarget(newAngle, { isRelative: false });
+  targetAngle.value = transition.getTarget();
+  emit('change', targetAngle.value);
 };
 
 const reset = () => {
-  if (rafId) cancelAnimationFrame(rafId);
-  animRecord = null;
-  currentAngle.value = 0;
+  isFromProp = false;
+  transition.setTarget(0, { immediate: true });
   targetAngle.value = 0;
+  currentAngle.value = 0;
   velocity.value = 0;
   acceleration.value = 0;
   progress.value = 1;
@@ -365,30 +227,28 @@ const reset = () => {
 };
 
 /**
- * Update duration of an in-flight animation on the normalized time axis without spatial jumps.
- * Invariant: normalized progress p(now) remains unchanged, while velocity dp/dt scales with new duration.
+ * Update duration and kinematics parameters in-flight without spatial jumps.
  */
 const updateActiveDuration = () => {
-  if (!animRecord || !isMoving.value) return;
-
-  const now = performance.now();
-  const { p } = sampleKinematics(now);
-
-  if (p >= 1) return;
-
-  const totalDelta = animRecord.targetAngle - animRecord.startAngle;
-  const effectiveSpeedMultiplier = Math.max(0.01, props.speedMultiplier);
-  const newDuration = props.timingMode === 'fixed'
-    ? (props.duration / effectiveSpeedMultiplier)
-    : (props.duration / effectiveSpeedMultiplier) * Math.max(0.2, Math.abs(totalDelta) / props.step);
-
-  animRecord.duration = newDuration;
-  animRecord.startTime = now - p * newDuration;
+  transition.setConfig({
+    duration: props.duration,
+    speedMultiplier: props.speedMultiplier,
+    timingMode: props.timingMode,
+    step: props.step,
+    modular: props.shortestPath,
+    inertiaThreshold: props.inertiaThreshold,
+  });
 };
 
-// Watch speed, duration, and timing mode changes to adjust in-flight motion dynamically
 watch(
-  [() => props.duration, () => props.speedMultiplier, () => props.timingMode],
+  [
+    () => props.duration,
+    () => props.speedMultiplier,
+    () => props.timingMode,
+    () => props.shortestPath,
+    () => props.inertiaThreshold,
+    () => props.step
+  ],
   updateActiveDuration
 );
 
@@ -424,11 +284,7 @@ const onPointerDown = (e) => {
   const deg = getAngleFromPointer(e.clientX, e.clientY);
   if (deg === null) return;
 
-  if (rafId) {
-    cancelAnimationFrame(rafId);
-    rafId = null;
-  }
-  animRecord = null;
+  transition.stop();
   isMoving.value = false;
 
   prevPointerAngle = deg;
@@ -496,6 +352,8 @@ const onPointerUp = (e) => {
   window.removeEventListener('pointercancel', onPointerUp);
   window.removeEventListener('blur', onPointerUp);
 
+  transition.setTarget(currentAngle.value, { immediate: true });
+
   emit('drag-end', { angle: currentAngle.value });
   emit('settled', {
     angle: currentAngle.value,
@@ -514,12 +372,11 @@ watch(() => props.modelValue, (newVal) => {
 onMounted(() => {
   currentAngle.value = props.modelValue;
   targetAngle.value = props.modelValue;
+  transition.setTarget(props.modelValue, { immediate: true });
 });
 
 onUnmounted(() => {
-  if (rafId) {
-    cancelAnimationFrame(rafId);
-  }
+  transition.destroy();
   if (typeof window !== 'undefined') {
     window.removeEventListener('pointermove', onPointerMove);
     window.removeEventListener('pointerup', onPointerUp);
