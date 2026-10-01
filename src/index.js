@@ -1,9 +1,3 @@
-import { tracker } from '@gkucmierz/analytics';
-
-if (!import.meta.env.SSR) {
-  tracker.init('nano-ui', 'https://analytics.7u.pl');
-}
-
 import pkg from '../package.json';
 import { initTheme, getZeroFoucScript, getZeroFoucStyle, getZeroFoucHtml } from './theme.js';
 import Ripple from './directives/ripple.js';
