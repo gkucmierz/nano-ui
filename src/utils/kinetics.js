@@ -406,3 +406,262 @@ export const createKineticTransition = (options = {}) => {
     isMoving: () => isMoving,
   };
 };
+
+/**
+ * Generates an SVG path data string using a smooth Catmull-Rom to Cubic Bezier spline.
+ *
+ * @param {Array<{ x: number, y: number }>} points - Array of coordinate objects
+ * @param {Object} [options]
+ * @param {boolean} [options.closed=false] - Whether to close path with 'Z'
+ * @param {number|null} [options.groundY=null] - Baseline Y to enclose area (e.g. for gradient fills)
+ * @param {number} [options.tension=0.35] - Spline curve tension factor
+ * @returns {string} SVG path string
+ */
+export const buildSplinePath = (points, { closed = false, groundY = null, tension = 0.35 } = {}) => {
+  if (!points || !points.length) return '';
+  const n = points.length;
+
+  if (n === 1) {
+    const p = points[0];
+    if (groundY !== null) {
+      return `M ${p.x.toFixed(1)} ${groundY.toFixed(1)} L ${p.x.toFixed(1)} ${p.y.toFixed(1)} L ${p.x.toFixed(1)} ${groundY.toFixed(1)} Z`;
+    }
+    return `M ${p.x.toFixed(1)} ${p.y.toFixed(1)}`;
+  }
+
+  let d = `M ${points[0].x.toFixed(1)} ${points[0].y.toFixed(1)}`;
+
+  if (n === 2) {
+    d += ` L ${points[1].x.toFixed(1)} ${points[1].y.toFixed(1)}`;
+  } else {
+    for (let i = 0; i < n - 1; i++) {
+      const p0 = i > 0 ? points[i - 1] : points[i];
+      const p1 = points[i];
+      const p2 = points[i + 1];
+      const p3 = i + 2 < n ? points[i + 2] : p2;
+
+      const cp1x = p1.x + (p2.x - p0.x) * (tension / 2);
+      const cp1y = p1.y + (p2.y - p0.y) * (tension / 2);
+      const cp2x = p2.x - (p3.x - p1.x) * (tension / 2);
+      const cp2y = p2.y - (p3.y - p1.y) * (tension / 2);
+
+      d += ` C ${cp1x.toFixed(1)} ${cp1y.toFixed(1)}, ${cp2x.toFixed(1)} ${cp2y.toFixed(1)}, ${p2.x.toFixed(1)} ${p2.y.toFixed(1)}`;
+    }
+  }
+
+  if (groundY !== null) {
+    const first = points[0];
+    const last = points[n - 1];
+    d += ` L ${last.x.toFixed(1)} ${groundY.toFixed(1)} L ${first.x.toFixed(1)} ${groundY.toFixed(1)} Z`;
+  } else if (closed) {
+    d += ' Z';
+  }
+
+  return d;
+};
+
+/**
+ * Creates a pure, headless kinetic multi-point animation controller with continuous
+ * velocity chaining and curve resampling for dynamic datasets (e.g. 7d, 30d, 90d transitions).
+ *
+ * Designed to be completely timer-agnostic (no internal RAF coupling), so it can run
+ * either in the browser driven by RAF or on the server for deterministic frame rendering.
+ *
+ * @param {Object} [options]
+ * @param {number} [options.duration=350] - Base duration in ms
+ * @param {Function} [options.onUpdate] - Callback (currentPoints, { progress, isMoving })
+ * @param {Function} [options.onSettled] - Callback (currentPoints)
+ * @returns {Object} Kinetic points controller instance
+ */
+export const createKineticPoints = (options = {}) => {
+  let config = {
+    duration: 350,
+    onUpdate: null,
+    onSettled: null,
+    ...options,
+  };
+
+  let currentPoints = [];
+  let pointRecords = [];
+  let animStart = 0;
+  let animDuration = config.duration;
+  let isMoving = false;
+
+  const stop = () => {
+    isMoving = false;
+  };
+
+  const step = (timestamp) => {
+    if (!isMoving || !pointRecords.length) {
+      return currentPoints;
+    }
+
+    const now = timestamp !== undefined
+      ? timestamp
+      : (typeof performance !== 'undefined' && performance.now ? performance.now() : Date.now());
+
+    const elapsed = now - animStart;
+    const p = Math.min(1, Math.max(0, elapsed / animDuration));
+
+    const updated = new Array(pointRecords.length);
+    for (let i = 0; i < pointRecords.length; i++) {
+      const rec = pointRecords[i];
+      const easeY = rec.v0Y ? cubicHermite(p, rec.v0Y) : easeInOutCubic(p);
+      const curY = rec.startY + (rec.targetY - rec.startY) * easeY;
+
+      const dEaseY = rec.v0Y ? cubicHermiteDerivative(p, rec.v0Y) : easeInOutCubicDerivative(p);
+      const curVy = ((rec.targetY - rec.startY) * dEaseY / animDuration) * 1000;
+
+      const easeX = easeInOutCubic(p);
+      const curX = rec.startX + (rec.targetX - rec.startX) * easeX;
+
+      updated[i] = {
+        ...rec.metadata,
+        x: curX,
+        y: curY,
+        vy: curVy,
+      };
+    }
+
+    currentPoints = updated;
+
+    if (p < 1) {
+      if (config.onUpdate) {
+        config.onUpdate(currentPoints, { progress: p, isMoving: true });
+      }
+    } else {
+      // Settled at final targets
+      for (let i = 0; i < pointRecords.length; i++) {
+        const rec = pointRecords[i];
+        currentPoints[i] = {
+          ...rec.metadata,
+          x: rec.targetX,
+          y: rec.targetY,
+          vy: 0,
+        };
+      }
+      isMoving = false;
+
+      if (config.onUpdate) {
+        config.onUpdate(currentPoints, { progress: 1, isMoving: false });
+      }
+      if (config.onSettled) {
+        config.onSettled(currentPoints);
+      }
+    }
+
+    return currentPoints;
+  };
+
+  const setTargets = (newTargets, { immediate = false, timestamp = undefined } = {}) => {
+    if (!newTargets || !newTargets.length) {
+      stop();
+      currentPoints = [];
+      pointRecords = [];
+      return currentPoints;
+    }
+
+    const now = timestamp !== undefined
+      ? timestamp
+      : (typeof performance !== 'undefined' && performance.now ? performance.now() : Date.now());
+
+    if (immediate || !currentPoints.length) {
+      stop();
+      currentPoints = newTargets.map((pt) => ({
+        ...pt,
+        x: pt.x,
+        y: pt.y,
+        vy: 0,
+      }));
+      pointRecords = [];
+      isMoving = false;
+      if (config.onUpdate) {
+        config.onUpdate(currentPoints, { progress: 1, isMoving: false });
+      }
+      if (config.onSettled) {
+        config.onSettled(currentPoints);
+      }
+      return currentPoints;
+    }
+
+    const nOld = currentPoints.length;
+    const nNew = newTargets.length;
+    pointRecords = new Array(nNew);
+    animDuration = Math.max(1, config.duration);
+    animStart = now;
+
+    for (let i = 0; i < nNew; i++) {
+      const target = newTargets[i];
+      let startX, startY, startVy;
+
+      if (nNew === nOld) {
+        startX = currentPoints[i].x;
+        startY = currentPoints[i].y;
+        startVy = currentPoints[i].vy || 0;
+      } else {
+        const u = nNew > 1 ? i / (nNew - 1) : 0;
+        const idx = u * (nOld - 1);
+        const i0 = Math.floor(idx);
+        const i1 = Math.min(nOld - 1, i0 + 1);
+        const frac = idx - i0;
+
+        startX = currentPoints[i0].x + frac * (currentPoints[i1].x - currentPoints[i0].x);
+        startY = currentPoints[i0].y + frac * (currentPoints[i1].y - currentPoints[i0].y);
+        startVy = (currentPoints[i0].vy || 0) + frac * ((currentPoints[i1].vy || 0) - (currentPoints[i0].vy || 0));
+      }
+
+      const totalDeltaY = target.y - startY;
+      let v0Y = 0;
+      if (totalDeltaY !== 0 && startVy !== 0) {
+        v0Y = ((startVy / 1000) * animDuration) / totalDeltaY;
+        v0Y = Math.max(-3, Math.min(3, v0Y));
+      }
+
+      pointRecords[i] = {
+        startX,
+        startY,
+        targetX: target.x,
+        targetY: target.y,
+        v0Y,
+        metadata: { ...target },
+      };
+    }
+
+    isMoving = true;
+
+    // Emit initial frame at t = now (progress = 0)
+    const initial = new Array(nNew);
+    for (let i = 0; i < nNew; i++) {
+      initial[i] = {
+        ...pointRecords[i].metadata,
+        x: pointRecords[i].startX,
+        y: pointRecords[i].startY,
+        vy: pointRecords[i].v0Y || 0,
+      };
+    }
+    currentPoints = initial;
+
+    if (config.onUpdate) {
+      config.onUpdate(currentPoints, { progress: 0, isMoving: true });
+    }
+
+    return currentPoints;
+  };
+
+  const destroy = () => {
+    stop();
+    config.onUpdate = null;
+    config.onSettled = null;
+    currentPoints = [];
+    pointRecords = [];
+  };
+
+  return {
+    setTargets,
+    step,
+    stop,
+    destroy,
+    getCurrentPoints: () => currentPoints,
+    isMoving: () => isMoving,
+  };
+};

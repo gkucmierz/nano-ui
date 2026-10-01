@@ -21,7 +21,13 @@ import NanoCodeBlock from './components/NanoCodeBlock.vue';
 import NanoIcon from './components/NanoIcon.vue';
 import { registerIcons, getAvailableIcons, BUILTIN_ICONS } from './icons/index.js';
 import { normalizeAngle, shortestAngleDiff } from './utils/math.js';
-import { createKineticTransition, cubicHermite, sampleKinematics } from './utils/kinetics.js';
+import {
+  createKineticTransition,
+  createKineticPoints,
+  buildSplinePath,
+  cubicHermite,
+  sampleKinematics,
+} from './utils/kinetics.js';
 import { highlightCode } from './utils/syntax-highlighter.js';
 import { transitions, durations, easings, transitionVariables } from './config/transitions.js';
 import './style.css';
@@ -48,6 +54,8 @@ export {
   normalizeAngle,
   shortestAngleDiff,
   createKineticTransition,
+  createKineticPoints,
+  buildSplinePath,
   cubicHermite,
   sampleKinematics,
   highlightCode,
