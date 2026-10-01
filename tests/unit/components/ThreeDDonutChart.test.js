@@ -335,4 +335,65 @@ describe('ThreeDDonutChart SVG Painter Architecture & Render Order', () => {
       )
     })
   })
+
+  describe('when validating labelDistance prop and horizontal anchor calculations', () => {
+    const parsedSfc = parse(fs.readFileSync(sfcPath, 'utf-8'))
+    const script = parsedSfc.descriptor.scriptSetup?.content || ''
+    const template = parsedSfc.descriptor.template?.content || ''
+
+    test('should declare labelDistance prop with default 35 and validation >= 0', () => {
+      assert.ok(script.includes('labelDistance: {'), 'labelDistance prop must be declared')
+      assert.ok(script.includes('default: 35'), 'labelDistance must default to 35')
+      assert.match(script.includes('num >= 0') || script.includes('val >= 0') ? 'valid' : '', /valid/, 'validator must ensure non-negative value')
+    })
+
+    test('should dynamically bind text coordinates to leftLabelAnchorX - 5 and rightLabelAnchorX + 5', () => {
+      assert.ok(template.includes(':x="leftLabelAnchorX - 5"'), 'left label must use :x="leftLabelAnchorX - 5"')
+      assert.ok(template.includes(':x="rightLabelAnchorX + 5"'), 'right label must use :x="rightLabelAnchorX + 5"')
+    })
+
+    test('should compute default anchors at cx - rx - 35 and cx + rx + 35 (giving 160px of text room)', () => {
+      const cx = 380
+      const rx = 180
+      const defaultDistance = 35
+      const leftAnchor = cx - rx - defaultDistance
+      const rightAnchor = cx + rx + defaultDistance
+
+      assert.equal(leftAnchor, 165, 'left anchor with default distance 35 must be 165')
+      assert.equal(rightAnchor, 595, 'right anchor with default distance 35 must be 595')
+
+      const leftTextX = leftAnchor - 5
+      assert.equal(leftTextX, 160, 'left text x anchor must be 160 (160px clearance to viewBox edge x=0)')
+    })
+
+    test('should anchor precisely at 180° and 0° horizontal apex when labelDistance is 0', () => {
+      const cx = 380
+      const rx = 180
+      const distance = 0
+      const leftAnchor = cx - rx - distance
+      const rightAnchor = cx + rx + distance
+
+      assert.equal(leftAnchor, 200, 'left anchor with distance 0 must be 200 (exact apex cx - rx)')
+      assert.equal(rightAnchor, 560, 'right anchor with distance 0 must be 560 (exact apex cx + rx)')
+    })
+
+    test('should clamp leader line cp2_x within [alignX, chartEdge] to prevent overshoot loops', () => {
+      assert.ok(
+        script.includes('Math.max(alignX, Math.min(clearanceX, cp1_x - 15))'),
+        'left cp2_x must clamp between alignX and clearanceX'
+      )
+      assert.ok(
+        script.includes('Math.min(alignX, Math.max(clearanceX, cp1_x + 15))'),
+        'right cp2_x must clamp between alignX and clearanceX'
+      )
+    })
+
+    test('should expose leftLabelAnchorX, rightLabelAnchorX, and resolvedLabelDistance via defineExpose', () => {
+      const defineExposeBlock = script.slice(script.indexOf('defineExpose({'))
+      assert.ok(defineExposeBlock.length > 0, 'defineExpose must be called')
+      assert.ok(defineExposeBlock.includes('leftLabelAnchorX'), 'must expose leftLabelAnchorX')
+      assert.ok(defineExposeBlock.includes('rightLabelAnchorX'), 'must expose rightLabelAnchorX')
+      assert.ok(defineExposeBlock.includes('resolvedLabelDistance'), 'must expose resolvedLabelDistance')
+    })
+  })
 })

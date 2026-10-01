@@ -442,7 +442,7 @@
               pointer-events="none"
             />
             <text 
-              x="85" 
+              :x="leftLabelAnchorX - 5" 
               :y="label.finalY" 
               :fill="label.color" 
               :font-size="resolvedLabelFontSize" 
@@ -480,7 +480,7 @@
               pointer-events="none"
             />
             <text 
-              x="675" 
+              :x="rightLabelAnchorX + 5" 
               :y="label.finalY" 
               :fill="label.color" 
               :font-size="resolvedLabelFontSize" 
@@ -656,6 +656,14 @@ const props = defineProps({
   aspectRatio: {
     type: [String, Number],
     default: 'auto'
+  },
+  labelDistance: {
+    type: [Number, String],
+    default: 35,
+    validator: (val) => {
+      const num = Number(val)
+      return !isNaN(num) && num >= 0
+    }
   }
 })
 
@@ -1955,6 +1963,15 @@ const computedLabels = computed(() => {
 const leftLabels = computed(() => computedLabels.value.left)
 const rightLabels = computed(() => computedLabels.value.right)
 
+const resolvedLabelDistance = computed(() => {
+  if (props.labelDistance === undefined || props.labelDistance === null) return 35
+  const num = Number(props.labelDistance)
+  return isNaN(num) || num < 0 ? 35 : num
+})
+
+const leftLabelAnchorX = computed(() => animCx.value - animRx.value - resolvedLabelDistance.value)
+const rightLabelAnchorX = computed(() => animCx.value + animRx.value + resolvedLabelDistance.value)
+
 const getLeaderLinePath = (label) => {
   const p = sliceExtrusions.value[label.item.id] !== undefined
     ? sliceExtrusions.value[label.item.id]
@@ -1983,17 +2000,19 @@ const getLeaderLinePath = (label) => {
   const cx = animCx.value
   const rx = animRx.value
 
-  const clearanceX = isLeft ? cx - rx - 15 : cx + rx + 15
+  const alignX = isLeft ? leftLabelAnchorX.value : rightLabelAnchorX.value
+
+  const clearanceX = isLeft
+    ? Math.max(alignX, cx - rx - 15)
+    : Math.min(alignX, cx + rx + 15)
 
   const cp2_x = isLeft
-    ? Math.min(clearanceX, cp1_x - 30)
-    : Math.max(clearanceX, cp1_x + 30)
+    ? Math.max(alignX, Math.min(clearanceX, cp1_x - 15))
+    : Math.min(alignX, Math.max(clearanceX, cp1_x + 15))
 
   const cp2_y = isTopHalf
     ? Math.min(cp1_y, endY)
     : Math.max(cp1_y, endY)
-
-  const alignX = isLeft ? 90 : 670
 
   return `M ${startX} ${startY} C ${cp1_x} ${cp1_y}, ${cp2_x} ${cp2_y}, ${alignX} ${endY}`
 }
@@ -2334,7 +2353,10 @@ defineExpose({
       item.value = item.targetValue
     })
     animatedItems.value = animatedItems.value.filter(item => item.targetValue > 0)
-  }
+  },
+  leftLabelAnchorX,
+  rightLabelAnchorX,
+  resolvedLabelDistance
 })
 </script>
 
