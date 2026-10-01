@@ -434,6 +434,7 @@
             :style="getLabelGroupStyle(label)"
           >
             <path 
+              v-if="getLeaderLinePath(label)"
               class="leader-line"
               :d="getLeaderLinePath(label)" 
               fill="none" 
@@ -472,6 +473,7 @@
             :style="getLabelGroupStyle(label)"
           >
             <path 
+              v-if="getLeaderLinePath(label)"
               class="leader-line"
               :d="getLeaderLinePath(label)" 
               fill="none" 
@@ -1969,8 +1971,13 @@ const resolvedLabelDistance = computed(() => {
   return isNaN(num) || num < 0 ? 35 : num
 })
 
-const leftLabelAnchorX = computed(() => animCx.value - animRx.value - resolvedLabelDistance.value)
-const rightLabelAnchorX = computed(() => animCx.value + animRx.value + resolvedLabelDistance.value)
+const leftLabelAnchorX = computed(() => {
+  return animCx.value - animRx.value - HOVER_EXTRUSION_DISTANCE - resolvedLabelDistance.value
+})
+
+const rightLabelAnchorX = computed(() => {
+  return animCx.value + animRx.value + HOVER_EXTRUSION_DISTANCE + resolvedLabelDistance.value
+})
 
 const getLeaderLinePath = (label) => {
   const p = sliceExtrusions.value[label.item.id] !== undefined
@@ -1990,29 +1997,36 @@ const getLeaderLinePath = (label) => {
     startY += ty
   }
 
-  const R = 30
-  const cp1_x = startX + R * Math.cos(label.originalMidAngle || 0)
-  const cp1_y = startY + R * Math.sin(label.originalMidAngle || 0)
-
   const isLeft = label.isLeft
-  const isTopHalf = Math.sin(label.originalMidAngle || 0) < 0
-
-  const cx = animCx.value
-  const rx = animRx.value
-
   const alignX = isLeft ? leftLabelAnchorX.value : rightLabelAnchorX.value
 
-  const clearanceX = isLeft
-    ? Math.max(alignX, cx - rx - 15)
-    : Math.min(alignX, cx + rx + 15)
+  const dx = Math.abs(alignX - startX)
+  const dy = Math.abs(endY - startY)
 
-  const cp2_x = isLeft
-    ? Math.max(alignX, Math.min(clearanceX, cp1_x - 15))
-    : Math.min(alignX, Math.max(clearanceX, cp1_x + 15))
+  // Omit leader line only when the slice edge is essentially touching the label anchor (distance < 2px)
+  if (Math.hypot(dx, dy) < 2) {
+    return ''
+  }
 
-  const cp2_y = isTopHalf
-    ? Math.min(cp1_y, endY)
-    : Math.max(cp1_y, endY)
+  // Radial launch magnitude from slice surface, scaled proportionally to available distance to prevent loops
+  const maxR = Math.max(0, dx * 0.45)
+  const R = Math.min(25, maxR)
+  const midAngle = label.originalMidAngle || 0
+
+  let cp1_x = startX + R * Math.cos(midAngle)
+  const cp1_y = startY + R * Math.sin(midAngle)
+
+  // Clamp cp1_x within [alignX, startX] to guarantee strict monotonicity
+  if (isLeft) {
+    cp1_x = Math.max(alignX, Math.min(startX, cp1_x))
+  } else {
+    cp1_x = Math.min(alignX, Math.max(startX, cp1_x))
+  }
+
+  // Smooth horizontal entry into the label anchor: cp2_y matches endY for perfect horizontal tangency
+  const cp2_offset = Math.min(22, dx * 0.4)
+  const cp2_x = isLeft ? alignX + cp2_offset : alignX - cp2_offset
+  const cp2_y = endY
 
   return `M ${startX} ${startY} C ${cp1_x} ${cp1_y}, ${cp2_x} ${cp2_y}, ${alignX} ${endY}`
 }

@@ -29,6 +29,7 @@ const sliderCenterTextZ = computed({
 
 const chartAnimationDuration = ref(300); // 0, 150, 300, 500
 const labelFontSize = ref(13); // 11, 13, 15, 17
+const labelDistance = ref(35);
 const selectedAspectRatio = ref('auto');
 
 const stepRotation = (delta) => {
@@ -369,6 +370,7 @@ const networkData = [
             :isExpanded="isExpanded"
             :showLabels="showLabels"
             :labelFontSize="labelFontSize"
+            :labelDistance="labelDistance"
             :animationDuration="chartAnimationDuration"
             :is3D="is3D"
             :rotationAngle="rotationAngle"
@@ -562,6 +564,11 @@ const networkData = [
               {{ opt.label }}
             </button>
           </div>
+        </div>
+
+        <div class="slider-row" style="margin-top: 14px;" :style="!showLabels ? 'opacity: 0.35; pointer-events: none;' : ''">
+          <span class="slider-label">Label Distance: {{ labelDistance }}px</span>
+          <input type="range" v-model.number="labelDistance" min="0" max="100" step="5" :disabled="!showLabels" />
         </div>
       </div>
 
@@ -916,6 +923,7 @@ centerTextZ: Number | String (default: 'auto') - Z position of center text in de
 animationDuration: Number (default: 350) - Duration of chart transitions in ms (0 for instant)
 labelSize: String (default: 'md') - Preset size for callout labels ('sm', 'md', 'lg', 'xl')
 labelFontSize: Number | String (default: undefined) - Custom font size in px for callout labels (e.g. 13 or '13px')
+labelDistance: Number | String (default: 35) - Horizontal clearance in px from outer chart apex (0 = aligned to horizontal apex, > 0 = offset outwards)
 aspectRatio: String | Number (default: 'auto') - CSS aspect-ratio constraint for chart container (e.g. 'auto', '1/1', '16/9', '560/320')
     </NanoCodeBlock>
   </div>

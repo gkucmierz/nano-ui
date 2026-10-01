@@ -352,39 +352,56 @@ describe('ThreeDDonutChart SVG Painter Architecture & Render Order', () => {
       assert.ok(template.includes(':x="rightLabelAnchorX + 5"'), 'right label must use :x="rightLabelAnchorX + 5"')
     })
 
-    test('should compute default anchors at cx - rx - 35 and cx + rx + 35 (giving 160px of text room)', () => {
+    test('should compute default anchors accounting for extrusion and default distance 35', () => {
       const cx = 380
       const rx = 180
+      const extrusion = 10
       const defaultDistance = 35
-      const leftAnchor = cx - rx - defaultDistance
-      const rightAnchor = cx + rx + defaultDistance
+      const leftAnchor = cx - rx - extrusion - defaultDistance
+      const rightAnchor = cx + rx + extrusion + defaultDistance
 
-      assert.equal(leftAnchor, 165, 'left anchor with default distance 35 must be 165')
-      assert.equal(rightAnchor, 595, 'right anchor with default distance 35 must be 595')
+      assert.equal(leftAnchor, 155, 'left anchor with default distance 35 must be 155')
+      assert.equal(rightAnchor, 605, 'right anchor with default distance 35 must be 605')
 
       const leftTextX = leftAnchor - 5
-      assert.equal(leftTextX, 160, 'left text x anchor must be 160 (160px clearance to viewBox edge x=0)')
+      assert.equal(leftTextX, 150, 'left text x anchor must be 150 (150px clearance to viewBox edge x=0)')
     })
 
-    test('should anchor precisely at 180° and 0° horizontal apex when labelDistance is 0', () => {
+    test('should anchor precisely at maximum extrusion apex when labelDistance is 0', () => {
       const cx = 380
       const rx = 180
+      const extrusion = 10
       const distance = 0
-      const leftAnchor = cx - rx - distance
-      const rightAnchor = cx + rx + distance
+      const leftAnchor = cx - rx - extrusion - distance
+      const rightAnchor = cx + rx + extrusion + distance
 
-      assert.equal(leftAnchor, 200, 'left anchor with distance 0 must be 200 (exact apex cx - rx)')
-      assert.equal(rightAnchor, 560, 'right anchor with distance 0 must be 560 (exact apex cx + rx)')
+      assert.equal(leftAnchor, 190, 'left anchor with distance 0 must be 190 (exact apex with maximum extrusion)')
+      assert.equal(rightAnchor, 570, 'right anchor with distance 0 must be 570 (exact apex with maximum extrusion)')
     })
 
-    test('should clamp leader line cp2_x within [alignX, chartEdge] to prevent overshoot loops', () => {
+    test('should omit leader line only when distance to anchor is negligible (Math.hypot(dx, dy) < 2)', () => {
       assert.ok(
-        script.includes('Math.max(alignX, Math.min(clearanceX, cp1_x - 15))'),
-        'left cp2_x must clamp between alignX and clearanceX'
+        script.includes('Math.hypot(dx, dy) < 2'),
+        'must omit leader line when distance is subpixel / negligible'
       )
       assert.ok(
-        script.includes('Math.min(alignX, Math.max(clearanceX, cp1_x + 15))'),
-        'right cp2_x must clamp between alignX and clearanceX'
+        template.includes('v-if="getLeaderLinePath(label)"'),
+        'template must conditionally render path only when leader line path is non-empty'
+      )
+    })
+
+    test('should enforce strictly monotonic control points and horizontal tangency to prevent loops', () => {
+      assert.ok(
+        script.includes('Math.max(alignX, Math.min(startX, cp1_x))'),
+        'left cp1_x must clamp strictly within [alignX, startX]'
+      )
+      assert.ok(
+        script.includes('Math.min(alignX, Math.max(startX, cp1_x))'),
+        'right cp1_x must clamp strictly within [startX, alignX]'
+      )
+      assert.ok(
+        script.includes('cp2_y = endY'),
+        'cp2_y must match endY for horizontal tangency at label'
       )
     })
 
