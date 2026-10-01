@@ -133,6 +133,20 @@ const containerStyle = computed(() => {
   };
 });
 
+let lastEmittedAngle = null;
+
+const emitFrame = (frame) => {
+  // Merge boundary: if angle is identical to last emitted angle, do not emit duplicate sample
+  if (
+    lastEmittedAngle !== null &&
+    Math.abs(frame.currentAngle - lastEmittedAngle) < 1e-4
+  ) {
+    return;
+  }
+  lastEmittedAngle = frame.currentAngle;
+  emit('frame', frame);
+};
+
 // Pure Headless Kinetic Transition Controller
 const transition = createKineticTransition({
   initialValue: props.modelValue,
@@ -149,15 +163,15 @@ const transition = createKineticTransition({
     acceleration.value = acc;
     progress.value = p;
     initialVelocityParam.value = v0 || 0;
-    isMoving.value = true;
+    isMoving.value = p < 1;
 
-    emit('frame', {
+    emitFrame({
       currentAngle: value,
       targetAngle: target,
       velocity: vel,
       acceleration: acc,
       progress: p,
-      isMoving: true,
+      isMoving: p < 1,
       v0: v0 || 0,
       timestamp
     });
@@ -179,17 +193,6 @@ const transition = createKineticTransition({
     emit('settled', {
       angle: value,
       normalizedAngle: normalizedValue
-    });
-
-    emit('frame', {
-      currentAngle: value,
-      targetAngle: value,
-      velocity: 0,
-      acceleration: 0,
-      progress: 1,
-      isMoving: false,
-      v0: 0,
-      timestamp: typeof performance !== 'undefined' && performance.now ? performance.now() : Date.now()
     });
   }
 });
@@ -214,6 +217,7 @@ const setAngle = (newAngle, fromProp = false) => {
 
 const reset = () => {
   isFromProp = false;
+  lastEmittedAngle = null;
   transition.setTarget(0, { immediate: true });
   targetAngle.value = 0;
   currentAngle.value = 0;

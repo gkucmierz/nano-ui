@@ -360,20 +360,6 @@ export const createKineticTransition = (options = {}) => {
       rafId = null;
     }
 
-    // Emit initial frame at t = now synchronously
-    if (config.onUpdate) {
-      config.onUpdate({
-        value: startVal,
-        target: finalTarget,
-        velocity: startVel,
-        acceleration: 0,
-        progress: 0,
-        isMoving: true,
-        v0,
-        timestamp: now,
-      });
-    }
-
     if (typeof requestAnimationFrame === 'function') {
       rafId = requestAnimationFrame(tick);
     } else if (typeof setTimeout === 'function') {
@@ -419,6 +405,7 @@ export const createKineticTransition = (options = {}) => {
     getTarget: () => targetValue,
     getVelocity: () => currentVelocity,
     getAcceleration: () => currentAcceleration,
+    getV0: () => (animRecord ? (animRecord.v0 || 0) : 0),
     isMoving: () => isMoving,
   };
 };

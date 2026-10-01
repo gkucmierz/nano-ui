@@ -103,8 +103,10 @@ describe('Pure JS Kinetics & Velocity Chaining Engine', () => {
 
       // In non-modular mode, +450 degrees is targeted directly as 450 (not wrapped to 90)
       kt.setTarget(450);
+      kt.step(0);
       assert.equal(kt.getTarget(), 450);
       assert.equal(targetRecorded, 450);
+      kt.destroy();
     });
 
     test('should follow modular geodesic shortest-path when modular is true', () => {
@@ -117,8 +119,10 @@ describe('Pure JS Kinetics & Velocity Chaining Engine', () => {
 
       // From 10° to 350°: shortest geodesic difference is -20° (target = 10 - 20 = -10°)
       kt.setTarget(350);
+      kt.step(0);
       assert.equal(kt.getTarget(), -10);
       assert.equal(targetRecorded, -10);
+      kt.destroy();
     });
 
     test('should halt animation when stop is called', () => {
@@ -129,6 +133,7 @@ describe('Pure JS Kinetics & Velocity Chaining Engine', () => {
       kt.stop();
       assert.equal(kt.isMoving(), false);
       assert.equal(kt.getVelocity(), 0);
+      kt.destroy();
     });
 
     test('should chain velocity and compute non-zero v0 when interrupted mid-flight', () => {
@@ -145,13 +150,16 @@ describe('Pure JS Kinetics & Velocity Chaining Engine', () => {
 
       // Start flight towards 100
       kt.setTarget(100);
+      kt.step(50);
 
       // Interrupt mid-flight with new target 200
       kt.setTarget(200);
+      kt.step(100);
 
       assert.equal(kt.getTarget(), 200);
       assert.equal(kt.isMoving(), true);
       assert.ok(typeof latestV0 === 'number');
+      kt.destroy();
     });
 
     test('should smoothly reverse mid-flight when target is reset back to zero during extrusion', () => {
@@ -182,6 +190,7 @@ describe('Pure JS Kinetics & Velocity Chaining Engine', () => {
       // 2. Interrupt mid-flight: target reset to 0
       const interruptNow = now + 150;
       kt.setTarget(0.0, { timestamp: interruptNow });
+      kt.step(interruptNow);
 
       assert.equal(kt.getTarget(), 0.0);
       assert.equal(kt.isMoving(), true);
