@@ -452,7 +452,7 @@
               dominant-baseline="middle"
               :style="getLabelTextStyle(label)"
             >
-              {{ truncateText(label.item.name, 24) }} {{ formatValue(label.item.value) }} {{ label.item.unit || '' }} ({{ label.item.percentage }}%)
+              {{ truncateText(label.item.name || label.item.label, 24) }} {{ formatValue(label.item.value) }} {{ label.item.unit || '' }} ({{ label.item.percentage }}%)
             </text>
           </g>
 
@@ -490,7 +490,7 @@
               dominant-baseline="middle"
               :style="getLabelTextStyle(label)"
             >
-              {{ truncateText(label.item.name, 24) }} {{ formatValue(label.item.value) }} {{ label.item.unit || '' }} ({{ label.item.percentage }}%)
+              {{ truncateText(label.item.name || label.item.label, 24) }} {{ formatValue(label.item.value) }} {{ label.item.unit || '' }} ({{ label.item.percentage }}%)
             </text>
           </g>
         </g>
@@ -967,7 +967,7 @@ const displayCenterValue = computed(() => {
 const displayCenterLabel = computed(() => {
   const hovered = topSlices.value.find(s => s.item.id === effectiveActiveId.value)
   if (hovered) {
-    return truncateText(hovered.item.name, 12).toUpperCase()
+    return truncateText(hovered.item.name || hovered.item.label || '', 12).toUpperCase()
   }
   return (props.centerLabel || '').toUpperCase()
 })
