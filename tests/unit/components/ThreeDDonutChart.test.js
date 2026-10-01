@@ -298,5 +298,41 @@ describe('ThreeDDonutChart SVG Painter Architecture & Render Order', () => {
       )
     })
   })
-})
 
+  describe('when validating selection synchronization and single source of truth (SSoT)', () => {
+    test('should declare selectedItemId prop with default undefined to distinguish controlled vs uncontrolled', () => {
+      const parsedSfc = parse(fs.readFileSync(sfcPath, 'utf-8'))
+      const script = parsedSfc.descriptor.scriptSetup?.content || ''
+      assert.ok(
+        script.includes('selectedItemId: {'),
+        'selectedItemId prop must be declared'
+      )
+      assert.ok(
+        script.includes('default: undefined'),
+        'selectedItemId must default to undefined'
+      )
+    })
+
+    test('should watch props.selectedItemId and synchronize localSelectedId', () => {
+      const parsedSfc = parse(fs.readFileSync(sfcPath, 'utf-8'))
+      const script = parsedSfc.descriptor.scriptSetup?.content || ''
+      assert.ok(
+        script.includes('watch(() => props.selectedItemId'),
+        'must watch props.selectedItemId'
+      )
+      assert.ok(
+        script.includes('localSelectedId.value = newVal'),
+        'must synchronize localSelectedId with newVal'
+      )
+    })
+
+    test('should ensure selectedId getter returns props.selectedItemId whenever defined (even when null)', () => {
+      const parsedSfc = parse(fs.readFileSync(sfcPath, 'utf-8'))
+      const script = parsedSfc.descriptor.scriptSetup?.content || ''
+      assert.ok(
+        script.includes('props.selectedItemId !== undefined\n      ? props.selectedItemId\n      : localSelectedId.value'),
+        'selectedId.get must return props.selectedItemId whenever defined, including null'
+      )
+    })
+  })
+})

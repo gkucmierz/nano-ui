@@ -603,7 +603,7 @@ const props = defineProps({
   },
   selectedItemId: {
     type: [String, Number],
-    default: null
+    default: undefined
   },
   selectable: {
     type: Boolean,
@@ -691,11 +691,20 @@ const activeHoveredId = ref(null)
 const suppressedHoverId = ref(null)
 let lastClickPos = { x: 0, y: 0 }
 
-const localSelectedId = ref(null)
+const localSelectedId = ref(props.selectedItemId ?? null)
+
+watch(() => props.selectedItemId, (newVal) => {
+  if (newVal !== undefined) {
+    localSelectedId.value = newVal
+    if (newVal !== null) {
+      suppressedHoverId.value = null
+    }
+  }
+}, { immediate: true })
 
 const selectedId = computed({
   get() {
-    return props.selectedItemId !== undefined && props.selectedItemId !== null
+    return props.selectedItemId !== undefined
       ? props.selectedItemId
       : localSelectedId.value
   },
