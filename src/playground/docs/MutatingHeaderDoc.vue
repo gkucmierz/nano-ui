@@ -190,12 +190,22 @@ stuck: Boolean (v-model:stuck) - {{ t('mutatingHeader.props.stuck') }}
 }
 
 .demo-brand {
-  display: flex;
+  display: inline-flex;
   align-items: center;
   gap: 8px;
   font-weight: 800;
   font-size: 1rem;
+  line-height: 1;
   color: var(--brand-color);
+}
+
+.demo-brand .brand-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: auto;
+  height: auto;
+  line-height: 1;
 }
 
 .demo-badge {

@@ -99,7 +99,7 @@ pre {
   text-decoration: none;
 }
 
-.brand-icon {
+.header-brand .brand-icon {
   width: 40px;
   height: 40px;
   flex-shrink: 0;
@@ -565,7 +565,7 @@ pre {
     width: 58px;
   }
 
-  .brand-icon {
+  .header-brand .brand-icon {
     width: 36px;
     height: 36px;
   }
