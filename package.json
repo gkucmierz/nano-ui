@@ -1,6 +1,6 @@
 {
   "name": "@gkucmierz/nano-ui",
-  "version": "1.7.9",
+  "version": "1.8.0",
   "license": "ISC",
   "author": "Grzegorz Kućmierz",
   "description": "High-performance, minimal footprint Vue 3 UI library, interactive 3D charts, and directives.",
@@ -39,7 +39,7 @@
     "prerender": "node scripts/prerender.mjs",
     "icons": "node scripts/generate-icons.mjs",
     "test": "npm run test:unit",
-    "test:unit": "node --test tests/unit/**/*.test.js",
+    "test:unit": "node --test 'tests/unit/**/*.test.js'",
     "test:e2e": "playwright test",
     "lint": "eslint .",
     "lint:verbose": "eslint . && echo '✨ ESLint: 0 errors, all clean!'",

@@ -1,23 +1,27 @@
 <script setup>
-import { ref, watch, onMounted, onUnmounted, nextTick, computed } from 'vue';
+import { ref, watch, onMounted, onUnmounted, nextTick, computed, useSlots, getCurrentInstance } from 'vue';
 import NanoIcon from './NanoIcon.vue';
 import vRipple from '../directives/ripple.js';
 
 const isMounted = ref(false);
+const slots = useSlots();
+const instance = getCurrentInstance();
 
 onMounted(() => {
   isMounted.value = true;
 });
 
 const props = defineProps({
-  visible: { type: Boolean, default: true },
+  visible: { type: Boolean, default: undefined },
+  modelValue: { type: Boolean, default: undefined },
+  show: { type: Boolean, default: undefined },
   title: { type: String, default: '' },
   width: { type: [String, Number], default: 600 },
   height: { type: [String, Number], default: 'auto' },
 
   showHeader: { type: Boolean, default: true },
   showBody: { type: Boolean, default: true },
-  showFooter: { type: Boolean, default: true },
+  showFooter: { type: Boolean, default: undefined },
 
   showOk: { type: Boolean, default: true },
   showCancel: { type: Boolean, default: true },
@@ -26,7 +30,7 @@ const props = defineProps({
   okVariant: { type: String, default: 'primary' },
 
   closeOnBackdrop: { type: Boolean, default: true },
-  glassmorphism: { type: Boolean, default: true },
+  glassmorphism: { type: Boolean, default: false },
 
   draggable: { type: Boolean, default: false },
   resizable: { type: Boolean, default: false },
@@ -35,7 +39,20 @@ const props = defineProps({
   minHeight: { type: Number, default: 200 }
 });
 
-const emit = defineEmits(['close', 'ok', 'cancel']);
+const emit = defineEmits(['close', 'ok', 'cancel', 'update:modelValue', 'update:visible', 'update:show']);
+
+const isVisible = computed(() => {
+  if (props.modelValue !== undefined) return props.modelValue;
+  if (props.visible !== undefined) return props.visible;
+  if (props.show !== undefined) return props.show;
+  return false;
+});
+
+const computedShowFooter = computed(() => {
+  if (props.showFooter !== undefined) return props.showFooter;
+  const vnodeProps = instance?.vnode?.props || {};
+  return Boolean(slots.footer || vnodeProps.onOk);
+});
 
 const modalOverlay = ref(null);
 const modalWindow = ref(null);
@@ -199,14 +216,14 @@ const stopResize = () => {
 
 // Global ESC
 const onGlobalKeyDown = (e) => {
-  if (props.visible && e.key === 'Escape') {
+  if (isVisible.value && e.key === 'Escape') {
     e.preventDefault();
     e.stopPropagation();
     closeModal();
   }
 };
 
-watch(() => props.visible, async (newVal) => {
+watch(isVisible, async (newVal) => {
   if (newVal) {
     // Reset positions on re-open
     posX.value = null;
@@ -235,7 +252,12 @@ onUnmounted(() => {
   stopResize();
 });
 
-const closeModal = () => emit('close');
+const closeModal = () => {
+  emit('update:modelValue', false);
+  emit('update:visible', false);
+  emit('update:show', false);
+  emit('close');
+};
 const handleBackdropClick = () => { if (props.closeOnBackdrop) closeModal(); };
 const handleOk = () => emit('ok');
 const handleCancel = () => { emit('cancel'); closeModal(); };
@@ -244,8 +266,8 @@ const handleCancel = () => { emit('cancel'); closeModal(); };
 <template>
   <Teleport v-if="isMounted" to="body">
     <transition name="nano-modal-fade">
-      <div v-if="visible" class="nano-modal-overlay" :class="{ 'nano-glass': glassmorphism }"
-        @click.self="handleBackdropClick" @keydown.esc.stop="handleEsc" tabindex="-1" ref="modalOverlay">
+      <div v-if="isVisible" class="nano-modal-overlay" :class="{ 'nano-glass': glassmorphism }"
+        @click.self="handleBackdropClick" @keydown.esc.stop="closeModal" tabindex="-1" ref="modalOverlay">
         <div class="nano-modal-window" :class="{ 'is-dragging': isDragging, 'is-resizing': isResizing }"
           :style="computedWindowStyle" ref="modalWindow">
 
@@ -262,11 +284,13 @@ const handleCancel = () => { emit('cancel'); closeModal(); };
 
           <!-- BODY -->
           <div v-if="showBody" class="nano-modal-body">
-            <slot name="body"></slot>
+            <slot name="body">
+              <slot></slot>
+            </slot>
           </div>
 
           <!-- FOOTER -->
-          <div v-if="showFooter" class="nano-modal-footer">
+          <div v-if="computedShowFooter" class="nano-modal-footer">
             <slot name="footer">
               <div class="nano-modal-actions">
                 <button v-if="showCancel" class="nano-btn nano-btn-secondary" @click="handleCancel" v-ripple>
@@ -306,26 +330,28 @@ const handleCancel = () => { emit('cancel'); closeModal(); };
   display: flex;
   align-items: center;
   justify-content: center;
-  background: var(--nano-modal-backdrop);
+  background: var(--nano-modal-backdrop, rgba(15, 23, 42, 0.6));
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
   padding: 20px;
   box-sizing: border-box;
   outline: none;
 }
 
 .nano-modal-overlay.nano-glass {
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
 }
 
 .nano-modal-window {
-  background: var(--nano-modal-bg);
-  border: 1px solid var(--nano-modal-border);
-  border-radius: var(--nano-modal-radius);
-  box-shadow: var(--nano-modal-shadow);
+  background: var(--nano-modal-bg, #0d1522);
+  border: 1px solid var(--nano-modal-border, #1e2d45);
+  border-radius: var(--nano-modal-radius, 14px);
+  box-shadow: var(--nano-modal-shadow, 0 24px 60px rgba(0, 0, 0, 0.55));
   display: flex;
   flex-direction: column;
   max-height: 90vh;
-  color: var(--nano-modal-text);
+  color: var(--nano-modal-text, #f1f5f9);
   position: relative;
   overflow: hidden;
 }
@@ -345,9 +371,7 @@ const handleCancel = () => { emit('cancel'); closeModal(); };
 }
 
 .nano-glass .nano-modal-window {
-  background: var(--nano-modal-glass-bg);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
+  background: var(--nano-modal-bg);
 }
 
 .nano-modal-header {
@@ -473,27 +497,32 @@ const handleCancel = () => { emit('cancel'); closeModal(); };
 
 .nano-modal-fade-enter-active,
 .nano-modal-fade-leave-active {
-  transition: opacity var(--nano-transition-modal-backdrop);
+  transition:
+    opacity var(--nano-transition-modal-leave, 150ms ease-out),
+    backdrop-filter var(--nano-transition-modal-leave, 150ms ease-out),
+    -webkit-backdrop-filter var(--nano-transition-modal-leave, 150ms ease-out);
 }
 
 .nano-modal-fade-enter-active .nano-modal-window {
-  transition: transform var(--nano-transition-modal-enter);
+  transition: transform var(--nano-transition-modal-leave, 150ms ease-out);
 }
 
 .nano-modal-fade-leave-active .nano-modal-window {
-  transition: transform var(--nano-transition-modal-leave);
+  transition: none;
 }
 
 .nano-modal-fade-enter-from,
 .nano-modal-fade-leave-to {
   opacity: 0;
+  backdrop-filter: blur(0px);
+  -webkit-backdrop-filter: blur(0px);
 }
 
 .nano-modal-fade-enter-from .nano-modal-window {
-  transform: scale(0.9) translateY(10px);
+  transform: scale(0.96) translateY(4px);
 }
 
 .nano-modal-fade-leave-to .nano-modal-window {
-  transform: scale(0.95) translateY(-10px);
+  transform: none;
 }
 </style>

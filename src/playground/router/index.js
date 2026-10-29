@@ -14,6 +14,7 @@ import PrecisionScrubberDoc from '../docs/PrecisionScrubberDoc.vue';
 import TopologyRadarDoc from '../docs/TopologyRadarDoc.vue';
 import MutatingHeaderDoc from '../docs/MutatingHeaderDoc.vue';
 import SwitchDoc from '../docs/SwitchDoc.vue';
+import SliderDoc from '../docs/SliderDoc.vue';
 import IconDoc from '../docs/IconDoc.vue';
 import KineticDoc from '../docs/KineticDoc.vue';
 import NotFoundDoc from '../docs/NotFoundDoc.vue';
@@ -144,6 +145,17 @@ export const routes = [
       componentName: 'NanoSwitch',
       type: 'component',
       description: 'Tactile toggle switch component with spring-physics feedback and keyboard accessibility.',
+    },
+  },
+  {
+    path: '/docs/slider',
+    name: 'Slider',
+    component: SliderDoc,
+    meta: {
+      title: 'NanoSlider Component | Nano UI',
+      componentName: 'NanoSlider',
+      type: 'component',
+      description: 'Tactile gradient range slider with dual-core thumb handle, quartile ticks, pointer-capture dragging, and keyboard accessibility.',
     },
   },
   {

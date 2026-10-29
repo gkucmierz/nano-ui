@@ -205,6 +205,13 @@ onUnmounted(() => {
             </svg>
             <span class="nav-label">{{ t('nav.switch') }}</span>
           </router-link>
+          <router-link to="/docs/slider" class="nav-link" active-class="active" v-tooltip="isNarrow ? t('nav.slider') : undefined">
+            <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="2" y1="12" x2="22" y2="12"/>
+              <circle cx="15" cy="12" r="4"/>
+            </svg>
+            <span class="nav-label">{{ t('nav.slider') }}</span>
+          </router-link>
           <router-link to="/docs/modal" class="nav-link" active-class="active" v-tooltip="isNarrow ? t('nav.modal') : undefined">
             <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <rect x="3" y="3" width="18" height="18" rx="2"/>
