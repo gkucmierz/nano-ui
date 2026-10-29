@@ -11,7 +11,7 @@
       :style="{ width: progressPercent + '%' }"
     ></div>
     
-    <span class="nano-scrub-label">{{ label }}</span>
+    <span class="nano-scrub-label">{{ resolvedLabel }}</span>
   </div>
 
   <!-- HUD Overlay for high-precision scrubbing -->
@@ -70,17 +70,29 @@ const props = defineProps({
     type: Number,
     required: true
   },
+  step: {
+    type: Number,
+    default: 1
+  },
+  unit: {
+    type: String,
+    default: ''
+  },
+  fineTune: {
+    type: Boolean,
+    default: true
+  },
   label: {
     type: String,
-    default: '↔ Hold & Drag to Scrub (Pull Down to Fine-Tune) ↕'
+    default: undefined
   },
   formatValue: {
     type: Function,
-    default: (val) => String(val)
+    default: undefined
   }
 })
 
-const emit = defineEmits(['update:modelValue'])
+const emit = defineEmits(['update:modelValue', 'change'])
 
 const trackRef = ref(null)
 
@@ -96,15 +108,61 @@ const scrubCurrentY = ref(0)
 const scrubResolutionText = ref('')
 const scrubTrackRect = ref({ left: 0, width: 0 })
 
+const stepDecimals = computed(() => {
+  const stepVal = Number(props.step)
+  if (!Number.isFinite(stepVal) || stepVal <= 0) return 0
+  const str = String(stepVal)
+  if (str.includes('e-')) {
+    return parseInt(str.split('e-')[1], 10) || 0
+  }
+  const dotIdx = str.indexOf('.')
+  return dotIdx === -1 ? 0 : str.length - dotIdx - 1
+})
+
+const quantizeValue = (rawVal) => {
+  const stepVal = Number(props.step) > 0 ? Number(props.step) : 1
+  const clamped = Math.min(props.max, Math.max(props.min, rawVal))
+  const steps = Math.round((clamped - props.min) / stepVal)
+  const stepped = props.min + steps * stepVal
+  const bounded = Math.min(props.max, Math.max(props.min, stepped))
+  const decimals = stepDecimals.value
+  return decimals > 0 ? Number(bounded.toFixed(decimals)) : Math.round(bounded)
+}
+
+const resolvedLabel = computed(() => {
+  if (props.label !== undefined) return props.label
+  return props.fineTune
+    ? '↔ Hold & Drag to Scrub (Pull Down to Fine-Tune) ↕'
+    : '↔ Hold & Drag Horizontally to Scrub ↔'
+})
+
 const progressPercent = computed(() => {
   const range = props.max - props.min
   if (range <= 0) return 0
-  return ((props.modelValue - props.min) / range) * 100
+  const pct = ((props.modelValue - props.min) / range) * 100
+  return Math.min(100, Math.max(0, pct))
 })
 
+const formatNum = (num, decimals = stepDecimals.value) => {
+  const fixed = decimals > 0 ? Number(num).toFixed(decimals) : String(Math.round(num))
+  const [intPart, decPart] = fixed.split('.')
+  const groupedInt = intPart.replace(/\B(?=(\d{3})+(?!\d))/g, ' ')
+  return decPart !== undefined ? `${groupedInt}.${decPart}` : groupedInt
+}
+
 const formattedValue = computed(() => {
-  return props.formatValue(props.modelValue)
+  if (typeof props.formatValue === 'function') {
+    return props.formatValue(props.modelValue)
+  }
+  return `${formatNum(props.modelValue)}${props.unit || ''}`
 })
+
+const getCoarseResolutionLabel = () => {
+  if (!props.fineTune) {
+    return `Linear (step ±${props.step}${props.unit || ''})`
+  }
+  return 'Coarse (Full range)'
+}
 
 const startScrubbing = (e) => {
   if (e.button !== 0) return
@@ -134,7 +192,7 @@ const startScrubbing = (e) => {
   scrubStartY.value = e.clientY
   scrubCurrentX.value = clickX
   scrubCurrentY.value = e.clientY
-  scrubResolutionText.value = 'Coarse (Full range)'
+  scrubResolutionText.value = getCoarseResolutionLabel()
   
   document.addEventListener('mousemove', handleScrubMove)
   document.addEventListener('mouseup', stopScrubbing)
@@ -155,33 +213,36 @@ const handleScrubMove = (e) => {
   let yOffset = 0
   let isOutside = false
   
-  if (e.clientY < rect.top) {
-    isOutside = true
-    yOffset = rect.top - e.clientY
-  } else if (e.clientY > rect.bottom) {
-    isOutside = true
-    yOffset = e.clientY - rect.bottom
-  }
-  
-  if (!isScrubbingRelative.value && isOutside) {
-    isScrubbingRelative.value = true
-    scrubStartX.value = e.clientX
-    // Set the anchor dot visually exactly on the border of the track
-    scrubStartY.value = (e.clientY > rect.bottom) ? rect.bottom : rect.top
+  if (props.fineTune) {
+    if (e.clientY < rect.top) {
+      isOutside = true
+      yOffset = rect.top - e.clientY
+    } else if (e.clientY > rect.bottom) {
+      isOutside = true
+      yOffset = e.clientY - rect.bottom
+    }
     
-    // If the horizontal drag is small, use originalValue to avoid accidental coarse drift.
-    // Otherwise, lock to the current modelValue (the coarse value they dragged to).
-    const horizontalDrag = Math.abs(e.clientX - mousedownClientX.value)
-    if (horizontalDrag < 8) {
-      scrubStartIndex.value = originalValue.value
-    } else {
-      scrubStartIndex.value = props.modelValue
+    if (!isScrubbingRelative.value && isOutside) {
+      isScrubbingRelative.value = true
+      scrubStartX.value = e.clientX
+      // Set the anchor dot visually exactly on the border of the track
+      scrubStartY.value = (e.clientY > rect.bottom) ? rect.bottom : rect.top
+      
+      // If the horizontal drag is small, use originalValue to avoid accidental coarse drift.
+      // Otherwise, lock to the current modelValue (the coarse value they dragged to).
+      const horizontalDrag = Math.abs(e.clientX - mousedownClientX.value)
+      if (horizontalDrag < 8) {
+        scrubStartIndex.value = originalValue.value
+      } else {
+        scrubStartIndex.value = props.modelValue
+      }
     }
   }
   
-  if (isScrubbingRelative.value) {
+  if (props.fineTune && isScrubbingRelative.value) {
     // Relative fine-tuning mode: vertical drag outside track adjusts value, horizontal is locked
     const activeDeltaY = yOffset
+    const stepVal = Number(props.step) > 0 ? Number(props.step) : 1
     
     const baseStep = 0.25
     const b = 1.08
@@ -189,45 +250,43 @@ const handleScrubMove = (e) => {
     
     // Dragging UP (negative deltaY) increases the value, dragging DOWN decreases it
     const sign = (e.clientY < rect.top) ? -1 : 1
-    const valChange = Math.round(-sign * baseStep * multiplier)
+    const stepChange = Math.round(-sign * baseStep * multiplier)
     
-    let nextVal = scrubStartIndex.value + valChange
-    if (nextVal > props.max) nextVal = props.max
-    if (nextVal < props.min) nextVal = props.min
-    
+    const nextVal = quantizeValue(scrubStartIndex.value + stepChange * stepVal)
     emit('update:modelValue', nextVal)
     
-    const instStep = baseStep * (1 + Math.pow(b, activeDeltaY) * Math.log(b))
+    const instStep = baseStep * (1 + Math.pow(b, activeDeltaY) * Math.log(b)) * stepVal
     if (instStep >= 1e9) {
-      scrubResolutionText.value = `Coarse (±${formatNum(Math.round(instStep))} / px)`
+      scrubResolutionText.value = `Coarse (±${formatNum(Math.round(instStep), 0)} / px)`
     } else if (instStep >= 1e6) {
-      scrubResolutionText.value = `Medium (±${formatNum(Math.round(instStep))} / px)`
-    } else if (instStep >= 1) {
-      scrubResolutionText.value = `Fine (±${formatNum(Math.round(instStep))} / px)`
+      scrubResolutionText.value = `Medium (±${formatNum(Math.round(instStep), 0)} / px)`
+    } else if (instStep >= stepVal) {
+      scrubResolutionText.value = `Fine (±${formatNum(instStep)} / px)`
     } else {
-      scrubResolutionText.value = `Ultra-Fine (±1 index per ${Math.round(1 / instStep)}px)`
+      scrubResolutionText.value = `Ultra-Fine (±${formatNum(stepVal)} per ${Math.max(1, Math.round(stepVal / instStep))}px)`
     }
   } else {
-    // Coarse absolute mode (0 to MAX mapped to borders with 8px deadzone snapping)
+    // Coarse / direct linear absolute mode (min to max mapped to borders with 8px deadzone snapping)
     const padding = 8
-    const trackWidth = rect.width - 2 * padding
+    const trackWidth = Math.max(1, rect.width - 2 * padding)
     const ratio = Math.min(1, Math.max(0, (e.clientX - rect.left - padding) / trackWidth))
-    const nextVal = props.min + Math.round(ratio * range)
+    const nextVal = quantizeValue(props.min + ratio * range)
     emit('update:modelValue', nextVal)
-    scrubResolutionText.value = 'Coarse (Full range)'
+    scrubResolutionText.value = getCoarseResolutionLabel()
   }
 }
 
 const stopScrubbing = (e) => {
-  if (isScrubbing.value && !isScrubbingRelative.value) {
+  let finalVal = props.modelValue
+  if (isScrubbing.value && (!props.fineTune || !isScrubbingRelative.value)) {
     // Single absolute click jump on mouseup if they didn't fine-tune
     const range = props.max - props.min
     if (range > 0 && scrubTrackRect.value.width > 0) {
       const rect = scrubTrackRect.value
       const padding = 8
-      const trackWidth = rect.width - 2 * padding
+      const trackWidth = Math.max(1, rect.width - 2 * padding)
       const ratio = Math.min(1, Math.max(0, (e.clientX - rect.left - padding) / trackWidth))
-      const finalVal = props.min + Math.round(ratio * range)
+      finalVal = quantizeValue(props.min + ratio * range)
       emit('update:modelValue', finalVal)
     }
   }
@@ -235,10 +294,7 @@ const stopScrubbing = (e) => {
   isScrubbing.value = false
   document.removeEventListener('mousemove', handleScrubMove)
   document.removeEventListener('mouseup', stopScrubbing)
-}
-
-const formatNum = (num) => {
-  return String(num).replace(/\B(?=(\d{3})+(?!\d))/g, ' ')
+  emit('change', finalVal)
 }
 </script>
 
