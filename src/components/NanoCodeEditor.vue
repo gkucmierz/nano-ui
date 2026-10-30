@@ -553,7 +553,7 @@ const copyContent = async () => {
   color: #16a34a;
 }
 
-:global([data-theme="dark"]) .nce-stat-add,
+[data-theme="dark"] .nce-stat-add,
 :root:not([data-theme="light"]) .nce-stat-add {
   color: #4ade80;
 }
@@ -562,7 +562,7 @@ const copyContent = async () => {
   color: #dc2626;
 }
 
-:global([data-theme="dark"]) .nce-stat-del,
+[data-theme="dark"] .nce-stat-del,
 :root:not([data-theme="light"]) .nce-stat-del {
   color: #f87171;
 }
@@ -716,8 +716,8 @@ td.is-add {
   background: rgba(34, 197, 94, 0.14);
 }
 
-:global([data-theme="light"]) .nce-diff-row.is-add,
-:global([data-theme="light"]) td.is-add {
+[data-theme="light"] .nce-diff-row.is-add,
+[data-theme="light"] td.is-add {
   background: rgba(22, 163, 74, 0.13);
 }
 
@@ -726,9 +726,9 @@ td.is-add.nce-sign-col {
   color: #16a34a;
 }
 
-:global([data-theme="dark"]) .nce-diff-row.is-add .nce-sign-col,
+[data-theme="dark"] .nce-diff-row.is-add .nce-sign-col,
 :root:not([data-theme="light"]) .nce-diff-row.is-add .nce-sign-col,
-:global([data-theme="dark"]) td.is-add.nce-sign-col,
+[data-theme="dark"] td.is-add.nce-sign-col,
 :root:not([data-theme="light"]) td.is-add.nce-sign-col {
   color: #4ade80;
 }
@@ -738,8 +738,8 @@ td.is-del {
   background: rgba(239, 68, 68, 0.14);
 }
 
-:global([data-theme="light"]) .nce-diff-row.is-del,
-:global([data-theme="light"]) td.is-del {
+[data-theme="light"] .nce-diff-row.is-del,
+[data-theme="light"] td.is-del {
   background: rgba(220, 38, 38, 0.11);
 }
 
@@ -748,9 +748,9 @@ td.is-del.nce-sign-col {
   color: #dc2626;
 }
 
-:global([data-theme="dark"]) .nce-diff-row.is-del .nce-sign-col,
+[data-theme="dark"] .nce-diff-row.is-del .nce-sign-col,
 :root:not([data-theme="light"]) .nce-diff-row.is-del .nce-sign-col,
-:global([data-theme="dark"]) td.is-del.nce-sign-col,
+[data-theme="dark"] td.is-del.nce-sign-col,
 :root:not([data-theme="light"]) td.is-del.nce-sign-col {
   color: #f87171;
 }
@@ -763,9 +763,9 @@ td.is-del.nce-sign-col {
   font-weight: 600;
 }
 
-:global([data-theme="dark"]) .nce-diff-row.is-hunk,
+[data-theme="dark"] .nce-diff-row.is-hunk,
 :root:not([data-theme="light"]) .nce-diff-row.is-hunk,
-:global([data-theme="dark"]) .nce-hunk-cell,
+[data-theme="dark"] .nce-hunk-cell,
 :root:not([data-theme="light"]) .nce-hunk-cell {
   color: #38bdf8;
 }

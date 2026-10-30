@@ -709,7 +709,7 @@ watch(
   color: #16a34a;
 }
 
-:global([data-theme="dark"]) .nfl-status-box.is-added,
+[data-theme="dark"] .nfl-status-box.is-added,
 :root:not([data-theme="light"]) .nfl-status-box.is-added {
   color: #22c55e;
 }
@@ -718,7 +718,7 @@ watch(
   color: #b45309;
 }
 
-:global([data-theme="dark"]) .nfl-status-box.is-modified,
+[data-theme="dark"] .nfl-status-box.is-modified,
 :root:not([data-theme="light"]) .nfl-status-box.is-modified {
   color: #eab308;
 }
@@ -727,7 +727,7 @@ watch(
   color: #dc2626;
 }
 
-:global([data-theme="dark"]) .nfl-status-box.is-deleted,
+[data-theme="dark"] .nfl-status-box.is-deleted,
 :root:not([data-theme="light"]) .nfl-status-box.is-deleted {
   color: #f87171;
 }
@@ -736,7 +736,7 @@ watch(
   color: #2563eb;
 }
 
-:global([data-theme="dark"]) .nfl-status-box.is-renamed,
+[data-theme="dark"] .nfl-status-box.is-renamed,
 :root:not([data-theme="light"]) .nfl-status-box.is-renamed {
   color: #38bdf8;
 }
