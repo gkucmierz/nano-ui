@@ -34,6 +34,7 @@ const props = defineProps({
 
   draggable: { type: Boolean, default: false },
   resizable: { type: Boolean, default: false },
+  storageKey: { type: String, default: '' },
 
   minWidth: { type: Number, default: 300 },
   minHeight: { type: Number, default: 200 }
@@ -160,6 +161,7 @@ const stopDrag = () => {
   isDragging.value = false;
   window.removeEventListener('mousemove', onDrag);
   window.removeEventListener('mouseup', stopDrag);
+  persistGeometry();
 };
 
 // Resizing Logic
@@ -212,7 +214,88 @@ const stopResize = () => {
   isResizing.value = false;
   window.removeEventListener('mousemove', onResize);
   window.removeEventListener('mouseup', stopResize);
+  persistGeometry();
 };
+
+function persistGeometry() {
+  if (!props.storageKey || typeof window === 'undefined') return;
+  try {
+    const payload = {
+      x: posX.value !== null ? Math.round(posX.value) : null,
+      y: posY.value !== null ? Math.round(posY.value) : null,
+      width: curWidth.value !== null ? Math.round(curWidth.value) : null,
+      height: curHeight.value !== null ? Math.round(curHeight.value) : null
+    };
+    window.localStorage.setItem(props.storageKey, JSON.stringify(payload));
+  } catch {}
+}
+
+function restoreGeometry() {
+  if (!props.storageKey || typeof window === 'undefined') {
+    posX.value = null;
+    posY.value = null;
+    curWidth.value = null;
+    curHeight.value = null;
+    return;
+  }
+  try {
+    const raw = window.localStorage.getItem(props.storageKey);
+    if (!raw) {
+      posX.value = null;
+      posY.value = null;
+      curWidth.value = null;
+      curHeight.value = null;
+      return;
+    }
+    const parsed = JSON.parse(raw);
+    const vw = window.innerWidth || 1280;
+    const vh = window.innerHeight || 800;
+
+    let w = typeof parsed?.width === 'number' && Number.isFinite(parsed.width) ? parsed.width : null;
+    let h = typeof parsed?.height === 'number' && Number.isFinite(parsed.height) ? parsed.height : null;
+
+    if (w !== null) {
+      w = Math.max(props.minWidth, Math.min(w, Math.max(props.minWidth, vw - 16)));
+    }
+    if (h !== null) {
+      h = Math.max(props.minHeight, Math.min(h, Math.max(props.minHeight, vh - 16)));
+    }
+
+    let x = typeof parsed?.x === 'number' && Number.isFinite(parsed.x) ? parsed.x : null;
+    let y = typeof parsed?.y === 'number' && Number.isFinite(parsed.y) ? parsed.y : null;
+
+    if (x !== null && y !== null) {
+      const effectiveW = w || (typeof props.width === 'number' ? props.width : 600);
+      const effectiveH = h || (typeof props.height === 'number' ? props.height : 460);
+      x = Math.max(0, Math.min(x, Math.max(0, vw - Math.min(effectiveW, vw))));
+      y = Math.max(0, Math.min(y, Math.max(0, vh - Math.min(effectiveH, vh))));
+    }
+
+    curWidth.value = w;
+    curHeight.value = h;
+    posX.value = x;
+    posY.value = y;
+  } catch {
+    posX.value = null;
+    posY.value = null;
+    curWidth.value = null;
+    curHeight.value = null;
+  }
+}
+
+function resetGeometryOnDblClick(e) {
+  if (!props.draggable && !props.resizable) return;
+  if (e?.target?.tagName === 'BUTTON' || e?.target?.closest?.('button')) return;
+  posX.value = null;
+  posY.value = null;
+  curWidth.value = null;
+  curHeight.value = null;
+  if (props.storageKey && typeof window !== 'undefined') {
+    try {
+      window.localStorage.removeItem(props.storageKey);
+    } catch {}
+  }
+}
 
 // Global ESC
 const onGlobalKeyDown = (e) => {
@@ -225,11 +308,8 @@ const onGlobalKeyDown = (e) => {
 
 watch(isVisible, async (newVal) => {
   if (newVal) {
-    // Reset positions on re-open
-    posX.value = null;
-    posY.value = null;
-    curWidth.value = null;
-    curHeight.value = null;
+    // Restore saved geometry from localStorage (if storageKey provided) or reset to centered default
+    restoreGeometry();
 
     document.body.style.overflow = 'hidden';
     window.addEventListener('keydown', onGlobalKeyDown, { capture: true });
@@ -273,7 +353,7 @@ const handleCancel = () => { emit('cancel'); closeModal(); };
 
           <!-- HEADER -->
           <div v-if="showHeader" class="nano-modal-header" :class="{ 'is-draggable': draggable }"
-            @mousedown="startDrag">
+            @mousedown="startDrag" @dblclick="resetGeometryOnDblClick">
             <slot name="header">
               <h2 class="nano-modal-title">{{ title }}</h2>
             </slot>
