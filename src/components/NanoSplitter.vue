@@ -426,12 +426,27 @@ onUnmounted(() => {
           @click.stop="toggleLock"
         >
           <svg
-            viewBox="0 0 100 70"
-            class="nano-splitter-triangle"
+            v-if="orientation === 'vertical'"
+            viewBox="0 0 70 100"
+            class="nano-splitter-triangle is-vert-tri"
             :class="{ 'is-locked': isLocked }"
           >
             <polygon
-              points="12,10 88,10 50,60"
+              points="6,10 6,90 62,50"
+              fill="currentColor"
+              stroke="currentColor"
+              stroke-width="12"
+              stroke-linejoin="round"
+            />
+          </svg>
+          <svg
+            v-else
+            viewBox="0 0 100 70"
+            class="nano-splitter-triangle is-horiz-tri"
+            :class="{ 'is-locked': isLocked }"
+          >
+            <polygon
+              points="10,6 90,6 50,62"
               fill="currentColor"
               stroke="currentColor"
               stroke-width="12"
@@ -531,6 +546,7 @@ onUnmounted(() => {
 /* Signature LoL 1px Laser Line */
 .nano-splitter-hitbox::before {
   content: '';
+  position: absolute;
   background: transparent;
   transition: background-color 0.15s ease, box-shadow 0.15s ease;
   pointer-events: none;
@@ -538,12 +554,18 @@ onUnmounted(() => {
 
 .nano-splitter.is-horizontal .nano-splitter-hitbox::before {
   width: 1px;
-  height: 100%;
+  top: 4px;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
 }
 
 .nano-splitter.is-vertical .nano-splitter-hitbox::before {
-  width: 100%;
   height: 1px;
+  left: 4px;
+  right: 0;
+  top: 50%;
+  transform: translateY(-50%);
 }
 
 .nano-splitter-hitbox:hover::before,
@@ -562,11 +584,10 @@ onUnmounted(() => {
 .nano-splitter-lock-toggle {
   position: absolute;
   padding: 0;
+  margin: 0;
   border: none;
   background: transparent;
   display: flex;
-  align-items: flex-start;
-  justify-content: center;
   cursor: pointer;
   z-index: 20;
   outline: none;
@@ -578,21 +599,36 @@ onUnmounted(() => {
   transform: translateX(-50%);
   width: 24px;
   height: 18px;
+  align-items: flex-start;
+  justify-content: center;
 }
 
 .nano-splitter.is-vertical .nano-splitter-lock-toggle {
   left: 0;
   top: 50%;
-  transform: translateY(-50%) rotate(-90deg);
-  width: 24px;
-  height: 18px;
+  transform: translateY(-50%);
+  width: 18px;
+  height: 24px;
+  align-items: center;
+  justify-content: flex-start;
 }
 
 .nano-splitter-triangle {
-  width: 15px;
-  height: 11px;
+  display: block;
   color: rgba(148, 163, 184, 0.28);
   transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.nano-splitter-triangle.is-horiz-tri {
+  width: 15px;
+  height: 11px;
+  transform-origin: top center;
+}
+
+.nano-splitter-triangle.is-vert-tri {
+  width: 11px;
+  height: 15px;
+  transform-origin: left center;
 }
 
 /* Unlocked state: glowing cyan triangle */
@@ -601,11 +637,17 @@ onUnmounted(() => {
   filter: drop-shadow(0 0 4px rgba(0, 229, 255, 0.85));
 }
 
-/* Hover state (both locked & unlocked): stretches downward in warm amber like pulling a tab */
-.nano-splitter-lock-toggle:hover .nano-splitter-triangle {
+/* Hover state (both locked & unlocked): stretches inward in warm amber like pulling a tab */
+.nano-splitter-lock-toggle:hover .nano-splitter-triangle.is-horiz-tri {
   color: #fbbf24;
   filter: drop-shadow(0 0 4px rgba(251, 191, 36, 0.85));
   transform: scaleY(1.22);
+}
+
+.nano-splitter-lock-toggle:hover .nano-splitter-triangle.is-vert-tri {
+  color: #fbbf24;
+  filter: drop-shadow(0 0 4px rgba(251, 191, 36, 0.85));
+  transform: scaleX(1.22);
 }
 
 /* Optional 3-dot grip */

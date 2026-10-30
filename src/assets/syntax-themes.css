@@ -1,0 +1,431 @@
+/* Nano UI - Syntax Highlighting Color Profiles (SSoT)
+ * Profiles:
+ *   1. nano (default) — Nano Cyber (Electric Cyan, Purple, Emerald, Amber)
+ *   2. github         — GitHub Pro (Dual Dark/Light)
+ *   3. monokai        — Monokai Classic (Vibrant Pink, Lime, Yellow, Cyan)
+ *   4. dracula        — Dracula Vampire (Pink, Purple, Mint, Cyan, Orange)
+ *   5. one-dark       — Atom One Dark (Violet, Coral, Sky, Sage, Gold)
+ *   6. nord           — Nord Arctic (Frost Cyan, Glacier Blue, Aurora Green)
+ *   7. solarized      — Solarized Studio (Teal, Olive, Amber, Magenta)
+ *   8. cyberpunk      — Neon Cyberpunk (Laser Magenta, Acid Lime, Electric Cyan)
+ */
+
+/* Default Profile: 'nano' */
+.nano-code-editor,
+.nano-code-block,
+[data-syntax-theme="nano"] {
+  --hl-keyword: #c084fc;
+  --hl-string: #34d399;
+  --hl-number: #fbbf24;
+  --hl-boolean: #f472b6;
+  --hl-comment: #64748b;
+  --hl-tag: #38bdf8;
+  --hl-attr: #a78bfa;
+  --hl-func: #60a5fa;
+  --hl-prop: #38bdf8;
+  --hl-var: #fb7185;
+  --hl-type: #fbbf24;
+  --hl-builtin: #38bdf8;
+  --hl-punct: #94a3b8;
+  --hl-params: #e2e8f0;
+}
+
+:root[data-theme="light"] .nano-code-editor:not([data-syntax-theme]),
+:root[data-theme="light"] .nano-code-block:not([data-syntax-theme]),
+:root[data-theme="light"] [data-syntax-theme="nano"],
+[data-theme="light"] [data-syntax-theme="nano"] {
+  --hl-keyword: #7c3aed;
+  --hl-string: #059669;
+  --hl-number: #d97706;
+  --hl-boolean: #db2777;
+  --hl-comment: #64748b;
+  --hl-tag: #0284c7;
+  --hl-attr: #6d28d9;
+  --hl-func: #2563eb;
+  --hl-prop: #0369a1;
+  --hl-var: #e11d48;
+  --hl-type: #b45309;
+  --hl-builtin: #0284c7;
+  --hl-punct: #475569;
+  --hl-params: #0f172a;
+}
+
+/* Profile 2: 'github' (GitHub Dark / Light) */
+[data-syntax-theme="github"] {
+  --nano-code-bg: #0d1117;
+  --nano-code-header-bg: #161b22;
+  --hl-keyword: #ff7b72;
+  --hl-string: #a5d6ff;
+  --hl-number: #79c0ff;
+  --hl-boolean: #79c0ff;
+  --hl-comment: #8b949e;
+  --hl-tag: #7ee787;
+  --hl-attr: #79c0ff;
+  --hl-func: #d2a8ff;
+  --hl-prop: #79c0ff;
+  --hl-var: #ffa657;
+  --hl-type: #ffa657;
+  --hl-builtin: #ffa657;
+  --hl-punct: #c9d1d9;
+  --hl-params: #e6edf3;
+}
+
+:root[data-theme="light"] [data-syntax-theme="github"],
+[data-theme="light"] [data-syntax-theme="github"] {
+  --nano-code-bg: #ffffff;
+  --nano-code-header-bg: #f6f8fa;
+  --hl-keyword: #cf222e;
+  --hl-string: #0a3069;
+  --hl-number: #0550ae;
+  --hl-boolean: #0550ae;
+  --hl-comment: #57606a;
+  --hl-tag: #116329;
+  --hl-attr: #0550ae;
+  --hl-func: #8250df;
+  --hl-prop: #0550ae;
+  --hl-var: #953800;
+  --hl-type: #953800;
+  --hl-builtin: #953800;
+  --hl-punct: #24292f;
+  --hl-params: #24292f;
+}
+
+/* Profile 3: 'monokai' */
+[data-syntax-theme="monokai"] {
+  --nano-code-bg: #1e1f1c;
+  --nano-code-header-bg: #171814;
+  --hl-keyword: #f92672;
+  --hl-string: #e6db74;
+  --hl-number: #ae81ff;
+  --hl-boolean: #ae81ff;
+  --hl-comment: #75715e;
+  --hl-tag: #f92672;
+  --hl-attr: #a6e22e;
+  --hl-func: #a6e22e;
+  --hl-prop: #66d9ef;
+  --hl-var: #fd971f;
+  --hl-type: #66d9ef;
+  --hl-builtin: #66d9ef;
+  --hl-punct: #f8f8f2;
+  --hl-params: #fd971f;
+}
+
+:root[data-theme="light"] [data-syntax-theme="monokai"],
+[data-theme="light"] [data-syntax-theme="monokai"] {
+  --nano-code-bg: #fafaf8;
+  --nano-code-header-bg: #f1f1ec;
+  --hl-keyword: #d61f69;
+  --hl-string: #926c00;
+  --hl-number: #6d28d9;
+  --hl-boolean: #6d28d9;
+  --hl-comment: #787568;
+  --hl-tag: #d61f69;
+  --hl-attr: #3f7d00;
+  --hl-func: #3f7d00;
+  --hl-prop: #00758f;
+  --hl-var: #c25700;
+  --hl-type: #00758f;
+  --hl-builtin: #00758f;
+  --hl-punct: #272822;
+  --hl-params: #c25700;
+}
+
+/* Profile 4: 'dracula' */
+[data-syntax-theme="dracula"] {
+  --nano-code-bg: #191a24;
+  --nano-code-header-bg: #13141c;
+  --hl-keyword: #ff79c6;
+  --hl-string: #f1fa8c;
+  --hl-number: #bd93f9;
+  --hl-boolean: #bd93f9;
+  --hl-comment: #6272a4;
+  --hl-tag: #ff79c6;
+  --hl-attr: #50fa7b;
+  --hl-func: #50fa7b;
+  --hl-prop: #8be9fd;
+  --hl-var: #ffb86c;
+  --hl-type: #8be9fd;
+  --hl-builtin: #8be9fd;
+  --hl-punct: #f8f8f2;
+  --hl-params: #ffb86c;
+}
+
+:root[data-theme="light"] [data-syntax-theme="dracula"],
+[data-theme="light"] [data-syntax-theme="dracula"] {
+  --nano-code-bg: #fcfaff;
+  --nano-code-header-bg: #f3effb;
+  --hl-keyword: #c2185b;
+  --hl-string: #8c6d00;
+  --hl-number: #6b21a8;
+  --hl-boolean: #6b21a8;
+  --hl-comment: #64748b;
+  --hl-tag: #c2185b;
+  --hl-attr: #15803d;
+  --hl-func: #15803d;
+  --hl-prop: #0369a1;
+  --hl-var: #b45309;
+  --hl-type: #0369a1;
+  --hl-builtin: #0369a1;
+  --hl-punct: #1e1b4b;
+  --hl-params: #b45309;
+}
+
+/* Profile 5: 'one-dark' */
+[data-syntax-theme="one-dark"] {
+  --nano-code-bg: #1e222a;
+  --nano-code-header-bg: #181b22;
+  --hl-keyword: #c678dd;
+  --hl-string: #98c379;
+  --hl-number: #d19a66;
+  --hl-boolean: #d19a66;
+  --hl-comment: #5c6370;
+  --hl-tag: #e06c75;
+  --hl-attr: #d19a66;
+  --hl-func: #61afef;
+  --hl-prop: #56b6c2;
+  --hl-var: #e06c75;
+  --hl-type: #e5c07b;
+  --hl-builtin: #56b6c2;
+  --hl-punct: #abb2bf;
+  --hl-params: #abb2bf;
+}
+
+:root[data-theme="light"] [data-syntax-theme="one-dark"],
+[data-theme="light"] [data-syntax-theme="one-dark"] {
+  --nano-code-bg: #fafafa;
+  --nano-code-header-bg: #f0f0f0;
+  --hl-keyword: #a626a4;
+  --hl-string: #50a14f;
+  --hl-number: #986801;
+  --hl-boolean: #986801;
+  --hl-comment: #a0a1a7;
+  --hl-tag: #e45649;
+  --hl-attr: #986801;
+  --hl-func: #4078f2;
+  --hl-prop: #0184bc;
+  --hl-var: #e45649;
+  --hl-type: #c18401;
+  --hl-builtin: #0184bc;
+  --hl-punct: #383a42;
+  --hl-params: #383a42;
+}
+
+/* Profile 6: 'nord' */
+[data-syntax-theme="nord"] {
+  --nano-code-bg: #1d222d;
+  --nano-code-header-bg: #171b24;
+  --hl-keyword: #81a1c1;
+  --hl-string: #a3be8c;
+  --hl-number: #b48ead;
+  --hl-boolean: #81a1c1;
+  --hl-comment: #616e88;
+  --hl-tag: #81a1c1;
+  --hl-attr: #8fbcbb;
+  --hl-func: #88c0d0;
+  --hl-prop: #88c0d0;
+  --hl-var: #d8dee9;
+  --hl-type: #8fbcbb;
+  --hl-builtin: #5e81ac;
+  --hl-punct: #eceff4;
+  --hl-params: #e5e9f0;
+}
+
+:root[data-theme="light"] [data-syntax-theme="nord"],
+[data-theme="light"] [data-syntax-theme="nord"] {
+  --nano-code-bg: #f8fafc;
+  --nano-code-header-bg: #eceff4;
+  --hl-keyword: #0284c7;
+  --hl-string: #15803d;
+  --hl-number: #7e22ce;
+  --hl-boolean: #0284c7;
+  --hl-comment: #64748b;
+  --hl-tag: #0284c7;
+  --hl-attr: #0f766e;
+  --hl-func: #0369a1;
+  --hl-prop: #0369a1;
+  --hl-var: #1e293b;
+  --hl-type: #0f766e;
+  --hl-builtin: #1d4ed8;
+  --hl-punct: #334155;
+  --hl-params: #1e293b;
+}
+
+/* Profile 7: 'solarized' */
+[data-syntax-theme="solarized"] {
+  --nano-code-bg: #002b36;
+  --nano-code-header-bg: #073642;
+  --hl-keyword: #859900;
+  --hl-string: #2aa198;
+  --hl-number: #d33682;
+  --hl-boolean: #cb4b16;
+  --hl-comment: #586e75;
+  --hl-tag: #268bd2;
+  --hl-attr: #93a1a1;
+  --hl-func: #268bd2;
+  --hl-prop: #b58900;
+  --hl-var: #cb4b16;
+  --hl-type: #b58900;
+  --hl-builtin: #2aa198;
+  --hl-punct: #839496;
+  --hl-params: #93a1a1;
+}
+
+:root[data-theme="light"] [data-syntax-theme="solarized"],
+[data-theme="light"] [data-syntax-theme="solarized"] {
+  --nano-code-bg: #fdf6e3;
+  --nano-code-header-bg: #eee8d5;
+  --hl-keyword: #5f7500;
+  --hl-string: #0f766e;
+  --hl-number: #be185d;
+  --hl-boolean: #c2410c;
+  --hl-comment: #657b83;
+  --hl-tag: #0369a1;
+  --hl-attr: #475569;
+  --hl-func: #0369a1;
+  --hl-prop: #854d0e;
+  --hl-var: #c2410c;
+  --hl-type: #854d0e;
+  --hl-builtin: #0f766e;
+  --hl-punct: #334155;
+  --hl-params: #334155;
+}
+
+/* Profile 8: 'cyberpunk' */
+[data-syntax-theme="cyberpunk"] {
+  --nano-code-bg: #090614;
+  --nano-code-header-bg: #120b24;
+  --hl-keyword: #ff2a85;
+  --hl-string: #00ff9d;
+  --hl-number: #fde047;
+  --hl-boolean: #ff2a85;
+  --hl-comment: #635985;
+  --hl-tag: #00f2fe;
+  --hl-attr: #c084fc;
+  --hl-func: #00f2fe;
+  --hl-prop: #38bdf8;
+  --hl-var: #fb7185;
+  --hl-type: #fde047;
+  --hl-builtin: #00f2fe;
+  --hl-punct: #a78bfa;
+  --hl-params: #f8fafc;
+}
+
+:root[data-theme="light"] [data-syntax-theme="cyberpunk"],
+[data-theme="light"] [data-syntax-theme="cyberpunk"] {
+  --nano-code-bg: #fdf4ff;
+  --nano-code-header-bg: #fae8ff;
+  --hl-keyword: #db2777;
+  --hl-string: #047857;
+  --hl-number: #b45309;
+  --hl-boolean: #db2777;
+  --hl-comment: #7e22ce;
+  --hl-tag: #0284c7;
+  --hl-attr: #7e22ce;
+  --hl-func: #0284c7;
+  --hl-prop: #0369a1;
+  --hl-var: #be123c;
+  --hl-type: #b45309;
+  --hl-builtin: #0284c7;
+  --hl-punct: #6b21a8;
+  --hl-params: #1e1b4b;
+}
+
+/* Token Rules for .nano-syntax-code */
+.nano-syntax-code .hljs-keyword,
+.nano-syntax-code .hljs-selector-tag,
+.nano-syntax-code .hljs-subst,
+.nano-syntax-code .hljs-meta .hljs-keyword,
+.nano-syntax-code .hl-keyword {
+  color: var(--hl-keyword);
+  font-weight: 600;
+}
+
+.nano-syntax-code .hljs-string,
+.nano-syntax-code .hljs-addition,
+.nano-syntax-code .hljs-regexp,
+.nano-syntax-code .hl-string {
+  color: var(--hl-string);
+}
+
+.nano-syntax-code .hljs-number,
+.nano-syntax-code .hl-number {
+  color: var(--hl-number);
+}
+
+.nano-syntax-code .hljs-literal,
+.nano-syntax-code .hljs-boolean,
+.nano-syntax-code .hl-boolean {
+  color: var(--hl-boolean);
+  font-weight: 600;
+}
+
+.nano-syntax-code .hljs-comment,
+.nano-syntax-code .hljs-quote,
+.nano-syntax-code .hl-comment {
+  color: var(--hl-comment);
+  font-style: italic;
+}
+
+.nano-syntax-code .hljs-tag,
+.nano-syntax-code .hljs-name,
+.nano-syntax-code .hl-tag {
+  color: var(--hl-tag);
+  font-weight: 600;
+}
+
+.nano-syntax-code .hljs-attr,
+.nano-syntax-code .hljs-attribute,
+.nano-syntax-code .hl-attr {
+  color: var(--hl-attr);
+}
+
+.nano-syntax-code .hljs-title.function_,
+.nano-syntax-code .hljs-function,
+.nano-syntax-code .hljs-section,
+.nano-syntax-code .hl-function {
+  color: var(--hl-func);
+}
+
+.nano-syntax-code .hljs-property,
+.nano-syntax-code .hl-property {
+  color: var(--hl-prop);
+}
+
+.nano-syntax-code .hljs-variable,
+.nano-syntax-code .hljs-variable.language_,
+.nano-syntax-code .hljs-template-variable,
+.nano-syntax-code .hljs-deletion,
+.nano-syntax-code .hl-var {
+  color: var(--hl-var);
+}
+
+.nano-syntax-code .hljs-selector-class,
+.nano-syntax-code .hljs-selector-id,
+.nano-syntax-code .hljs-symbol,
+.nano-syntax-code .hljs-bullet,
+.nano-syntax-code .hl-selector {
+  color: var(--hl-attr);
+}
+
+.nano-syntax-code .hljs-punctuation,
+.nano-syntax-code .hl-punct {
+  color: var(--hl-punct);
+}
+
+.nano-syntax-code .hljs-built_in,
+.nano-syntax-code .hljs-meta {
+  color: var(--hl-builtin);
+  font-weight: 600;
+}
+
+.nano-syntax-code .hljs-title,
+.nano-syntax-code .hljs-title.class_,
+.nano-syntax-code .hljs-type,
+.nano-syntax-code .hljs-class .hljs-title {
+  color: var(--hl-type);
+  font-weight: 600;
+}
+
+.nano-syntax-code .hljs-params {
+  color: var(--hl-params);
+}

@@ -276,6 +276,46 @@ onUnmounted(() => {
             </svg>
             <span class="nav-label">{{ t('nav.splitter') }}</span>
           </router-link>
+          <router-link to="/docs/select" class="nav-link" active-class="active" v-tooltip="isNarrow ? t('nav.select') : undefined">
+            <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="3" y="5" width="18" height="14" rx="2"/>
+              <polyline points="9 11 12 14 15 11"/>
+            </svg>
+            <span class="nav-label">{{ t('nav.select') }}</span>
+          </router-link>
+          <router-link to="/docs/knob" class="nav-link" active-class="active" v-tooltip="isNarrow ? t('nav.knob') : undefined">
+            <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="9"/>
+              <circle cx="12" cy="12" r="3"/>
+              <line x1="12" y1="3" x2="12" y2="7"/>
+            </svg>
+            <span class="nav-label">{{ t('nav.knob') }}</span>
+          </router-link>
+          <router-link to="/docs/globe" class="nav-link" active-class="active" v-tooltip="isNarrow ? t('nav.globe') : undefined">
+            <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="10"/>
+              <line x1="2" y1="12" x2="22" y2="12"/>
+              <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>
+            </svg>
+            <span class="nav-label">{{ t('nav.globe') }}</span>
+          </router-link>
+          <router-link to="/docs/color-picker" class="nav-link" active-class="active" v-tooltip="isNarrow ? t('nav.colorPicker') : undefined">
+            <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="13.5" cy="6.5" r=".5"/>
+              <circle cx="17.5" cy="10.5" r=".5"/>
+              <circle cx="8.5" cy="7.5" r=".5"/>
+              <circle cx="6.5" cy="12.5" r=".5"/>
+              <path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.926 0 1.648-.746 1.648-1.688 0-.437-.18-.835-.437-1.125-.29-.289-.438-.652-.438-1.125a1.64 1.64 0 0 1 1.668-1.668h1.996c3.051 0 5.555-2.503 5.555-5.554C21.965 6.012 17.461 2 12 2z"/>
+            </svg>
+            <span class="nav-label">{{ t('nav.colorPicker') }}</span>
+          </router-link>
+          <router-link to="/docs/masked-input" class="nav-link" active-class="active" v-tooltip="isNarrow ? t('nav.maskedInput') : undefined">
+            <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="3" y="6" width="18" height="12" rx="2"/>
+              <path d="M7 12h2M11 12h2M15 12h2"/>
+            </svg>
+            <span class="nav-label">{{ t('nav.maskedInput') }}</span>
+          </router-link>
         </div>
       </nav>
 

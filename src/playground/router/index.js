@@ -19,6 +19,11 @@ import IconDoc from '../docs/IconDoc.vue';
 import KineticDoc from '../docs/KineticDoc.vue';
 import CodeEditorDoc from '../docs/CodeEditorDoc.vue';
 import SplitterDoc from '../docs/SplitterDoc.vue';
+import SelectDoc from '../docs/SelectDoc.vue';
+import KnobDoc from '../docs/KnobDoc.vue';
+import GlobeDoc from '../docs/GlobeDoc.vue';
+import ColorPickerDoc from '../docs/ColorPickerDoc.vue';
+import MaskedPinDoc from '../docs/MaskedPinDoc.vue';
 import NotFoundDoc from '../docs/NotFoundDoc.vue';
 
 export const routes = [
@@ -246,6 +251,61 @@ export const routes = [
       componentName: 'NanoSplitter',
       type: 'component',
       description: 'Zero-clutter LoL-Inspector-styled two-pane resizable splitter with 1px cyan laser line, triangle lock pull-tab, and nested horizontal/vertical support.',
+    },
+  },
+  {
+    path: '/docs/select',
+    name: 'Select',
+    component: SelectDoc,
+    meta: {
+      title: 'NanoSelect Component | Nano UI',
+      componentName: 'NanoSelect',
+      type: 'component',
+      description: 'Configurable single and multi-select dropdown with diacritic-insensitive live search filter, keyboard navigation, and modal-safe Escape isolation.',
+    },
+  },
+  {
+    path: '/docs/knob',
+    name: 'Knob',
+    component: KnobDoc,
+    meta: {
+      title: 'NanoKnob Component | Nano UI',
+      componentName: 'NanoKnob',
+      type: 'component',
+      description: 'Tactile circular rotary dial built on C1 Hermite kinematics with geodesic shortest-path interpolation, center reset hub, and rim ticks.',
+    },
+  },
+  {
+    path: '/docs/globe',
+    name: 'Globe',
+    component: GlobeDoc,
+    meta: {
+      title: 'NanoGlobe & HEALPix Component | Nano UI',
+      componentName: 'NanoGlobe',
+      type: 'component',
+      description: 'Interactive 3D orthographic SVG globe with country polygons, cartographic graticules, and equal-area HEALPix spherical tessellation.',
+    },
+  },
+  {
+    path: '/docs/color-picker',
+    name: 'ColorPicker',
+    component: ColorPickerDoc,
+    meta: {
+      title: 'NanoColorPickerOklch Component | Nano UI',
+      componentName: 'NanoColorPickerOklch',
+      type: 'component',
+      description: 'Perceptually uniform OKLCH color picker with interactive Hue/Chroma wheel, Lightness slider, and WCAG 2.1 AA/AAA contrast verification.',
+    },
+  },
+  {
+    path: '/docs/masked-input',
+    name: 'MaskedInput',
+    component: MaskedPinDoc,
+    meta: {
+      title: 'NuMaskedInput & NuPinInput | Nano UI',
+      componentName: 'NuMaskedInput',
+      type: 'component',
+      description: 'Declarative masked text input and 6-digit 2FA PIN verification control with live guide overlay and countdown expiration timer.',
     },
   },
   {

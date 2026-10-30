@@ -5,6 +5,8 @@ import NanoFileList from '../../components/NanoFileList.vue';
 import NanoCodeEditor from '../../components/NanoCodeEditor.vue';
 import NanoSwitch from '../../components/NanoSwitch.vue';
 import NanoSlider from '../../components/NanoSlider.vue';
+import NanoCodeBlock from '../../components/NanoCodeBlock.vue';
+import { t } from '../../locales.js';
 
 // Demo 1: Interactive Configurator
 const splitRatio = ref(0.38);
@@ -47,19 +49,13 @@ export function formatSplitRatio(ratio) {
 
 <template>
   <div class="doc-page">
-    <h2>NanoSplitter (LoL Inspector Style)</h2>
-    <p>
-      Zero-clutter two-pane resizable splitter inspired by <strong>LoL Inspector</strong>:
-      features an invisible ergonomic grab corridor centered across the gap, a crisp <code>1px</code> electric cyan laser line on hover/drag,
-      a top triangle pull-tab lock toggle (glowing cyan when unlocked, stretching in warm gold on hover), double-click to reset, and keyboard arrow navigation.
-    </p>
+    <h2>{{ t('splitter.title') }}</h2>
+    <p>{{ t('splitter.desc') }}</p>
 
     <!-- SECTION 1: Interactive Configurator -->
     <div class="demo-section">
-      <h3>1. Interactive LoL-Style Splitter Configurator</h3>
-      <p class="demo-desc">
-        Hover between the two panels to reveal the <code>#00e5ff</code> laser line. Click the top triangle pull-tab to lock/unlock dragging, or double-click the laser line to reset to default ratio.
-      </p>
+      <h3>{{ t('splitter.sec1Title') }}</h3>
+      <p class="demo-desc">{{ t('splitter.sec1Desc') }}</p>
 
       <div class="controls-bar">
         <div class="seg-orient">
@@ -69,7 +65,7 @@ export function formatSplitRatio(ratio) {
             :class="{ active: orientation === 'horizontal' }"
             @click="orientation = 'horizontal'"
           >
-            Horizontal (Left / Right)
+            {{ t('splitter.horiz') }}
           </button>
           <button
             type="button"
@@ -77,27 +73,27 @@ export function formatSplitRatio(ratio) {
             :class="{ active: orientation === 'vertical' }"
             @click="orientation = 'vertical'"
           >
-            Vertical (Top / Bottom)
+            {{ t('splitter.vert') }}
           </button>
         </div>
 
         <label class="ctrl-item">
           <NanoSwitch v-model="lockable" size="compact" />
-          <span>Show triangle lock tab</span>
+          <span>{{ t('splitter.showLock') }}</span>
         </label>
 
         <label class="ctrl-item">
           <NanoSwitch v-model="isLocked" size="compact" color="amber" />
-          <span>Locked ({{ isLocked ? 'Yes' : 'No' }})</span>
+          <span>{{ t('splitter.locked') }} ({{ isLocked ? t('splitter.yes') : t('splitter.no') }})</span>
         </label>
 
         <label class="ctrl-item">
           <NanoSwitch v-model="showGrip" size="compact" />
-          <span>Show 3-dot grip</span>
+          <span>{{ t('splitter.showGrip') }}</span>
         </label>
 
         <div class="ctrl-slider">
-          <span class="ctrl-label">Gap ({{ gapPx }}px):</span>
+          <span class="ctrl-label">{{ t('splitter.gap') }} ({{ gapPx }}px):</span>
           <NanoSlider v-model="gapPx" :min="0" :max="28" :step="2" size="sm" />
         </div>
       </div>
@@ -140,11 +136,8 @@ export function formatSplitRatio(ratio) {
 
     <!-- SECTION 2: Nested 3-Pane IDE / Git Inspector -->
     <div class="demo-section">
-      <h3>2. Nested 3-Pane IDE Layout (Horizontal + Vertical Splitters)</h3>
-      <p class="demo-desc">
-        Outer horizontal <code>&lt;NanoSplitter unit="px"&gt;</code> resizes <code>&lt;NanoFileList&gt;</code> (which dynamically recalculates middle-truncation via <code>ResizeObserver</code>),
-        while the inner vertical <code>&lt;NanoSplitter&gt;</code> splits the diff viewer and live code editor. You can also drag the bottom-right corner of the frame to test vertical flexing!
-      </p>
+      <h3>{{ t('splitter.sec2Title') }}</h3>
+      <p class="demo-desc">{{ t('splitter.sec2Desc') }}</p>
 
       <div class="ide-workbench-frame">
         <NanoSplitter

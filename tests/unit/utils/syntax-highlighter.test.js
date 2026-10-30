@@ -7,7 +7,18 @@ import {
   highlightHtml,
   highlightVue,
   highlightCode,
+  registerParser,
+  isParserRegistered,
+  SYNTAX_THEMES,
 } from '../../../src/utils/syntax-highlighter.js'
+import {
+  rustParser,
+  pythonParser,
+  sqlParser,
+  yamlParser,
+  goParser,
+  dockerfileParser,
+} from '../../../src/parsers/index.js'
 
 describe('Nano UI Syntax Highlighter (highlight.js integration)', () => {
   describe('when escaping HTML entities', () => {
@@ -131,6 +142,41 @@ describe('Nano UI Syntax Highlighter (highlight.js integration)', () => {
       assert.ok(html.includes('hljs-symbol') && html.includes('#default'), 'Slots must be highlighted as symbol')
       assert.ok(html.includes('hljs-title') && html.includes('rotateBy'), 'Methods must be highlighted as function/title')
       assert.ok(html.includes('hljs-comment') && html.includes('Emitted on drag'), 'Event description must be comment')
+    })
+  })
+
+  describe('when registering modular language parsers on demand', () => {
+    test('should register rust, python, sql, yaml, go, and dockerfile parsers and highlight tokens', () => {
+      registerParser([rustParser, pythonParser, sqlParser, yamlParser, goParser, dockerfileParser])
+
+      assert.equal(isParserRegistered('rust'), true)
+      assert.equal(isParserRegistered('python'), true)
+      assert.equal(isParserRegistered('sql'), true)
+      assert.equal(isParserRegistered('yaml'), true)
+      assert.equal(isParserRegistered('go'), true)
+      assert.equal(isParserRegistered('dockerfile'), true)
+
+      const rustHtml = highlightCode('pub fn synth(freq: f32) -> bool { true }', 'rust')
+      assert.ok(rustHtml.includes('hljs-keyword'), 'Rust keywords should be highlighted')
+
+      const pyHtml = highlightCode('def analyze(items: list[str]) -> int:\n    return len(items)', 'python')
+      assert.ok(pyHtml.includes('hljs-keyword'), 'Python keywords should be highlighted')
+
+      const sqlHtml = highlightCode('SELECT id, name FROM users WHERE active = 1;', 'sql')
+      assert.ok(sqlHtml.includes('hljs-keyword'), 'SQL keywords should be highlighted')
+    })
+
+    test('should expose 8 syntax highlighting color profiles in SYNTAX_THEMES', () => {
+      assert.equal(SYNTAX_THEMES.length, 8)
+      const ids = SYNTAX_THEMES.map((t) => t.id)
+      assert.ok(ids.includes('nano'))
+      assert.ok(ids.includes('github'))
+      assert.ok(ids.includes('monokai'))
+      assert.ok(ids.includes('dracula'))
+      assert.ok(ids.includes('one-dark'))
+      assert.ok(ids.includes('nord'))
+      assert.ok(ids.includes('solarized'))
+      assert.ok(ids.includes('cyberpunk'))
     })
   })
 })

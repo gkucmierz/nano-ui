@@ -2,7 +2,7 @@
 import { ref, computed, watch, onMounted, onUnmounted } from 'vue';
 import ThreeDDonutChart from '../../components/ThreeDDonutChart.vue';
 import NanoSwitch from '../../components/NanoSwitch.vue';
-import KineticRotator from '../../components/KineticRotator.vue';
+import NanoKnob from '../../components/NanoKnob.vue';
 import NanoIcon from '../../components/NanoIcon.vue';
 import NanoCodeBlock from '../../components/NanoCodeBlock.vue';
 import { normalizeAngle } from '../../utils/math.js';
@@ -599,28 +599,16 @@ const networkData = [
           />
 
           <div class="kinetic-control-row">
-            <div class="kinetic-dial-container">
-              <KineticRotator
-                v-model="rotationAngle"
-                :interactive="true"
-                :wrap="true"
-                :min="-360"
-                :max="360"
-                :angle-offset="90"
-                :size="56"
-                :duration="chartAnimationDuration"
-                :shortest-path="true"
-              >
-                <template #default="{ currentAngle, isDragging }">
-                  <div class="mini-dial-plate" :class="{ 'is-dragging': isDragging }">
-                    <div class="mini-dial-marker"></div>
-                    <div class="mini-dial-hub" @pointerdown.stop @click.stop="setRotation(0)">
-                      <NanoIcon name="rotate" :size="14" />
-                    </div>
-                  </div>
-                </template>
-              </KineticRotator>
-            </div>
+            <NanoKnob
+              v-model="rotationAngle"
+              :default-value="0"
+              :min="-360"
+              :max="360"
+              :size="56"
+              :duration="chartAnimationDuration"
+              :disabled="autoRotate"
+              reset-tooltip="Reset to 0°"
+            />
 
             <div class="step-buttons-grid">
               <button type="button" class="btn-step" @click="stepRotation(-90)">-90°</button>

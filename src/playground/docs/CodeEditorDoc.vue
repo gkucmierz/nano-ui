@@ -5,6 +5,19 @@ import NanoCodeEditor from '../../components/NanoCodeEditor.vue';
 import NanoSplitter from '../../components/NanoSplitter.vue';
 import NanoSwitch from '../../components/NanoSwitch.vue';
 import NanoSlider from '../../components/NanoSlider.vue';
+import NanoSelect from '../../components/NanoSelect.vue';
+import NanoCodeBlock from '../../components/NanoCodeBlock.vue';
+import { SYNTAX_THEMES, getRegisteredParsers } from '../../utils/syntax-highlighter.js';
+import {
+  ALL_PARSERS,
+  rustParser,
+  pythonParser,
+  sqlParser,
+  yamlParser,
+  goParser,
+  dockerfileParser,
+} from '../../parsers/index.js';
+import { t } from '../../locales.js';
 
 const maxPathLen = ref(34);
 const autoTruncate = ref(true);
@@ -13,6 +26,23 @@ const showStats = ref(true);
 const diffStyle = ref('unified');
 const leftPanePx = ref(320);
 const splitterLocked = ref(false);
+const activeSyntaxTheme = ref('nano');
+const liveSyntaxTheme = ref('dracula');
+
+const extraParsers = [
+  rustParser,
+  pythonParser,
+  sqlParser,
+  yamlParser,
+  goParser,
+  dockerfileParser,
+];
+
+const themeOptions = SYNTAX_THEMES.map((th) => ({
+  value: th.id,
+  label: th.label,
+  badge: th.badge,
+}));
 
 const demoCommits = [
   {
@@ -22,35 +52,22 @@ const demoCommits = [
     message: 'feat(mermaid): inject dual-theme rules from @gkucmierz/blog-engine',
     files: [
       {
-        path: '.agents/rules/90-pkg-blog-engine.md',
-        status: 'A',
-        additions: 48,
-        deletions: 0,
-        diff: `@@ -0,0 +1,14 @@
-+# Package Rules: @gkucmierz/blog-engine
-+
-+> [!IMPORTANT]
-+> Auto-injected by \`sync-agent-rules\` from \`@gkucmierz/blog-engine\`.
-+
-+## 1. Dual-Theme Mermaid Contrast Standard
-+- Never hardcode dark node fills (\`fill:#0f172a\`) inside Markdown \`\`\`mermaid blocks.
-+- Always use semantic classDefs (\`classDef primary\`, \`classDef accent\`, \`classDef warn\`)
-+  so \`useMermaid.js\` can dynamically adapt contrast in both Light and Dark themes.`,
-        code: `# Package Rules: @gkucmierz/blog-engine\n\n> [!IMPORTANT]\n> Auto-injected by \`sync-agent-rules\` from \`@gkucmierz/blog-engine\`.\n\n## 1. Dual-Theme Mermaid Contrast Standard\n- Never hardcode dark node fills (\`fill:#0f172a\`) inside Markdown \`\`\`mermaid blocks.\n- Always use semantic classDefs (\`classDef primary\`, \`classDef accent\`, \`classDef warn\`)\n  so \`useMermaid.js\` can dynamically adapt contrast in both Light and Dark themes.`,
-      },
-      {
-        path: 'AGENTS.md',
+        path: 'docs/.vitepress/theme/composables/useMermaid.js',
         status: 'M',
-        additions: 6,
-        deletions: 1,
-        diff: `@@ -12,4 +12,9 @@
- ## Blog Engine Standards
--See local rules in \`.agents/rules/\`.
-+See local rules in \`.agents/rules/\` including package-injected rules:
-+- \`.agents/rules/90-pkg-blog-engine.md\` (Mermaid dual-theme & KaTeX standards)
-+
-+Always verify light and dark mode contrast before committing diagrams.`,
-        code: `## Blog Engine Standards\nSee local rules in \`.agents/rules/\` including package-injected rules:\n- \`.agents/rules/90-pkg-blog-engine.md\` (Mermaid dual-theme & KaTeX standards)\n\nAlways verify light and dark mode contrast before committing diagrams.`,
+        additions: 22,
+        deletions: 5,
+        diff: `@@ -31,8 +31,19 @@ export function getMermaidConfig(isDark = true) {
+   return {
+     startOnLoad: false,
+-    theme: 'dark',
++    theme: isDark ? 'dark' : 'default',
+     themeVariables: isDark
+       ? { primaryColor: '#1e293b', primaryTextColor: '#f8fafc', lineColor: '#64748b' }
+-      : { primaryColor: '#1e293b', primaryTextColor: '#f8fafc', lineColor: '#64748b' }
++      : { primaryColor: '#eef2ff', primaryTextColor: '#0f172a', lineColor: '#475569' }
+   };
+ }`,
+        code: `export function getMermaidConfig(isDark = true) {\n  return {\n    startOnLoad: false,\n    theme: isDark ? 'dark' : 'default',\n    themeVariables: isDark\n      ? { primaryColor: '#1e293b', primaryTextColor: '#f8fafc', lineColor: '#64748b' }\n      : { primaryColor: '#eef2ff', primaryTextColor: '#0f172a', lineColor: '#475569' }\n  };\n}`,
       },
       {
         path: 'docs/.vitepress/theme/custom.css',
@@ -72,34 +89,17 @@ const demoCommits = [
         code: `.mermaid-wrapper {\n  background: var(--vp-c-bg-soft);\n  border: 1px solid var(--vp-c-divider);\n  border-radius: 10px;\n  padding: 18px;\n}\n\nhtml:not(.dark) .mermaid-wrapper svg text {\n  fill: #0f172a !important;\n}`,
       },
       {
-        path: 'docs/.vitepress/theme/composables/useMermaid.js',
-        status: 'M',
-        additions: 22,
-        deletions: 5,
-        diff: `@@ -31,8 +31,19 @@ export function getMermaidConfig(isDark = true) {
-   return {
-     startOnLoad: false,
--    theme: 'dark',
-+    theme: isDark ? 'dark' : 'default',
-     themeVariables: isDark
-       ? { primaryColor: '#1e293b', primaryTextColor: '#f8fafc', lineColor: '#64748b' }
--      : { primaryColor: '#1e293b', primaryTextColor: '#f8fafc', lineColor: '#64748b' }
-+      : { primaryColor: '#eef2ff', primaryTextColor: '#0f172a', lineColor: '#475569' }
-   };
- }`,
-        code: `export function getMermaidConfig(isDark = true) {\n  return {\n    startOnLoad: false,\n    theme: isDark ? 'dark' : 'default',\n    themeVariables: isDark\n      ? { primaryColor: '#1e293b', primaryTextColor: '#f8fafc', lineColor: '#64748b' }\n      : { primaryColor: '#eef2ff', primaryTextColor: '#0f172a', lineColor: '#475569' }\n  };\n}`,
-      },
-      {
-        path: 'docs/posts/hipoteza-kosmicznej-cenzury-dowody-lean-4-biblioteka-babel.md',
-        status: 'M',
-        additions: 12,
-        deletions: 12,
-        diff: `@@ -170,5 +170,5 @@
--style A fill:#0f172a,stroke:#38bdf8,color:#f8fafc
--style B fill:#0f172a,stroke:#10b981,color:#f8fafc
-+classDef primary fill:#eef2ff,stroke:#4f46e5,color:#0f172a
-+class A,B primary`,
-        code: `graph LR\n  A["Stan początkowy δx₀"] --> B["Punkt bifurkacji (λ_L > 0)"]\n  classDef primary fill:#eef2ff,stroke:#4f46e5,color:#0f172a\n  class A,B primary`,
+        path: '.agents/rules/90-pkg-blog-engine.md',
+        status: 'A',
+        additions: 48,
+        deletions: 0,
+        diff: `@@ -0,0 +1,10 @@
++# Package Rules: @gkucmierz/blog-engine
++
++## 1. Dual-Theme Mermaid Contrast Standard
++- Never hardcode dark node fills (\`fill:#0f172a\`) inside Markdown \`\`\`mermaid blocks.
++- Always use semantic classDefs (\`classDef primary\`, \`classDef accent\`, \`classDef warn\`).`,
+        code: `# Package Rules: @gkucmierz/blog-engine\n\n## 1. Dual-Theme Mermaid Contrast Standard\n- Never hardcode dark node fills (\`fill:#0f172a\`) inside Markdown \`\`\`mermaid blocks.\n- Always use semantic classDefs (\`classDef primary\`, \`classDef accent\`, \`classDef warn\`).`,
       },
     ],
   },
@@ -154,50 +154,244 @@ const handleCommitSelect = (commitObj) => {
   }
 };
 
-const liveCode = ref(`import { computeWeekendBands } from '@gkucmierz/nano-ui';
+const languageSamples = {
+  javascript: {
+    filePath: 'src/utils/inspectCommitHistory.js',
+    badge: 'Core',
+    importPath: '@gkucmierz/nano-ui/parsers/javascript',
+    code: `import { computeWeekendBands } from '@gkucmierz/nano-ui';
 
-// Live Editable NanoCodeEditor — try typing or pressing Tab!
-export function inspectCommitHistory(commits) {
-  return commits.map((c) => ({
+// Live Editable NanoCodeEditor — try typing or switching Color Profiles!
+export function inspectCommitHistory(commits, maxItems = 12) {
+  const active = true;
+  return commits.slice(0, maxItems).map((c) => ({
     sha: c.hash.slice(0, 7),
     author: c.author,
     changedFiles: c.files.length,
+    verified: active,
   }));
-}`);
+}`,
+  },
+  typescript: {
+    filePath: 'src/Healpix.ts',
+    badge: 'Core',
+    importPath: '@gkucmierz/nano-ui/parsers/typescript',
+    code: `export interface SphericalCoord {
+  readonly theta: number;
+  readonly phi: number;
+}
+
+export function ang2pixNest(nside: bigint, coord: SphericalCoord): bigint {
+  if (nside <= 0n || (nside & (nside - 1n)) !== 0n) {
+    throw new RangeError('HEALPix nside must be a power of 2');
+  }
+  const z = Math.cos(coord.theta);
+  return BigInt(Math.floor((1 - z) * Number(nside)));
+}`,
+  },
+  vue: {
+    filePath: 'src/components/VoiceConsensusCard.vue',
+    badge: 'Core',
+    importPath: '@gkucmierz/nano-ui/parsers/vue',
+    code: `<script setup>
+import { ref } from 'vue';
+import { NanoSwitch, NanoKnob } from '@gkucmierz/nano-ui';
+
+const gainAngle = ref(45);
+const consensusActive = ref(true);
+<\/script>
+
+<template>
+  <section class="voice-card">
+    <NanoSwitch v-model="consensusActive" label="2-of-3 Quorum" />
+    <NanoKnob v-model="gainAngle" :size="56" color="cyan" />
+  </section>
+</template>`,
+  },
+  rust: {
+    filePath: 'crates/voice-synth/src/consensus.rs',
+    badge: 'Modular',
+    importPath: '@gkucmierz/nano-ui/parsers/rust',
+    code: `#[derive(Debug, Clone, PartialEq)]
+pub struct TranscriptVote<'a> {
+    pub engine: &'a str,
+    pub text: String,
+    pub confidence: f32,
+}
+
+pub fn quorum_two_of_three<'a>(votes: &'a [TranscriptVote<'a>]) -> Option<&'a str> {
+    if votes.len() < 3 {
+        return None;
+    }
+    for i in 0..votes.len() {
+        let matches = votes.iter().filter(|v| v.text == votes[i].text).count();
+        if matches >= 2 {
+            return Some(votes[i].text.as_str());
+        }
+    }
+    None
+}`,
+  },
+  python: {
+    filePath: 'scripts/opsec_audit_scanner.py',
+    badge: 'Modular',
+    importPath: '@gkucmierz/nano-ui/parsers/python',
+    code: `from pathlib import Path
+import re
+
+PRIVATE_IP_RE = re.compile(r"\\b192\\.168\\.\\d{1,3}\\.\\d{1,3}\\b")
+
+def scan_repository(repo_dir: Path) -> list[str]:
+    findings: list[str] = []
+    for src_file in repo_dir.rglob("*.js"):
+        content = src_file.read_text(encoding="utf-8")
+        if PRIVATE_IP_RE.search(content):
+            findings.append(str(src_file))
+    return findings`,
+  },
+  sql: {
+    filePath: 'migrations/004_telemetry_events.sql',
+    badge: 'Modular',
+    importPath: '@gkucmierz/nano-ui/parsers/sql',
+    code: `CREATE TABLE IF NOT EXISTS telemetry_events (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  app_slug TEXT NOT NULL,
+  status_code INTEGER DEFAULT 200,
+  latency_ms REAL NOT NULL,
+  created_at TEXT DEFAULT (datetime('now'))
+) STRICT;
+
+SELECT app_slug, COUNT(*) AS req_count, ROUND(AVG(latency_ms), 2) AS p50_ms
+FROM telemetry_events
+WHERE status_code >= 400
+GROUP BY app_slug
+ORDER BY req_count DESC;`,
+  },
+  bash: {
+    filePath: 'scripts/verify-workspace.sh',
+    badge: 'Core',
+    importPath: '@gkucmierz/nano-ui/parsers/bash',
+    code: `$ npm run test:unit && npm run build
+$ git commit -S -m "feat(nano-ui): modular syntax parsers & color profiles"
+$ docker compose up -d --build`,
+  },
+  go: {
+    filePath: 'cmd/relay/main.go',
+    badge: 'Modular',
+    importPath: '@gkucmierz/nano-ui/parsers/go',
+    code: `package main
+
+import (
+  "crypto/hmac"
+  "crypto/sha256"
+  "encoding/hex"
+)
+
+func VerifyStreamSignature(payload, sig, secret string) bool {
+  mac := hmac.New(sha256.New, []byte(secret))
+  mac.Write([]byte(payload))
+  expected := hex.EncodeToString(mac.Sum(nil))
+  return hmac.Equal([]byte(expected), []byte(sig))
+}`,
+  },
+  yaml: {
+    filePath: 'docker-compose.yml',
+    badge: 'Modular',
+    importPath: '@gkucmierz/nano-ui/parsers/yaml',
+    code: `services:
+  nano-ui-docs:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "127.0.0.1:33164:80"
+    restart: unless-stopped`,
+  },
+  dockerfile: {
+    filePath: 'Dockerfile',
+    badge: 'Modular',
+    importPath: '@gkucmierz/nano-ui/parsers/dockerfile',
+    code: `FROM node:22-alpine AS builder
+WORKDIR /app
+COPY package*.json ./
+RUN npm ci
+COPY . .
+RUN npm run build:ssg`,
+  },
+};
+
+const selectedSampleLang = ref('rust');
+const liveCode = ref(languageSamples.rust.code);
+
+const languageOptions = Object.entries(languageSamples).map(([id, meta]) => ({
+  value: id,
+  label: `${id.toUpperCase()} — ${meta.filePath}`,
+  badge: meta.badge,
+  description: meta.importPath,
+}));
+
+const selectSampleLang = (langId) => {
+  selectedSampleLang.value = langId;
+  if (languageSamples[langId]) {
+    liveCode.value = languageSamples[langId].code;
+  }
+};
+
+const registeredList = computed(() => {
+  void selectedSampleLang.value;
+  return getRegisteredParsers();
+});
+
+const modularImportSnippet = `// 1. Import only the specific language parsers your project needs:
+import { NanoCodeEditor, registerParser } from '@gkucmierz/nano-ui';
+import { rustParser } from '@gkucmierz/nano-ui/parsers/rust';
+import { pythonParser } from '@gkucmierz/nano-ui/parsers/python';
+import { sqlParser } from '@gkucmierz/nano-ui/parsers/sql';
+
+// Option A: Register globally once at app startup
+registerParser([rustParser, pythonParser, sqlParser]);
+
+// Option B: Or pass :parsers and :syntax-theme directly to <NanoCodeEditor>
+// Supported syntaxTheme values:
+// 'nano' | 'github' | 'monokai' | 'dracula' | 'one-dark' | 'nord' | 'solarized' | 'cyberpunk'`;
 </script>
 
 <template>
   <div class="doc-page">
-    <h2>NanoFileList &amp; NanoCodeEditor</h2>
-    <p>
-      Two composable Git &amp; Code inspection primitives built natively into <code>@gkucmierz/nano-ui</code> with zero external runtime bloat:
-      <strong>NanoFileList</strong> (GitHub Desktop-inspired changed files navigator with middle-ellipsis path truncation and status badges)
-      and <strong>NanoCodeEditor</strong> (Unified &amp; Split diff inspector + live syntax-highlighted code editor).
-    </p>
+    <h2>{{ t('codeEditor.title') }}</h2>
+    <p>{{ t('codeEditor.desc') }}</p>
 
     <!-- SECTION 1: Split Git Commit & Diff Inspector -->
     <div class="demo-section">
-      <h3>1. Git Unpushed Commit &amp; Diff Inspector (NanoFileList + NanoCodeEditor)</h3>
-      <p class="demo-desc">
-        Click commits in the top bar or navigate changed files with <kbd class="nano-kbd">↑</kbd> / <kbd class="nano-kbd">↓</kbd>.
-        Switch between <strong>Unified</strong> and <strong>Split</strong> diff views or inspect the full file in <strong>Code</strong> mode.
-      </p>
+      <h3>{{ t('codeEditor.sec1Title') }}</h3>
+      <p class="demo-desc">{{ t('codeEditor.sec1Desc') }}</p>
 
       <div class="controls-bar">
         <label class="ctrl-item">
           <NanoSwitch v-model="searchable" size="compact" />
-          <span>Searchable file list</span>
+          <span>{{ t('codeEditor.searchableList') }}</span>
         </label>
         <label class="ctrl-item">
           <NanoSwitch v-model="showStats" size="compact" />
-          <span>Show +/- line stats</span>
+          <span>{{ t('codeEditor.showStats') }}</span>
         </label>
         <label class="ctrl-item">
           <NanoSwitch v-model="autoTruncate" size="compact" />
-          <span>Auto-truncate on resize</span>
+          <span>{{ t('codeEditor.autoTruncate') }}</span>
         </label>
+        <div class="ctrl-select-wrap">
+          <span class="ctrl-label">{{ t('codeEditor.syntaxProfile') }}</span>
+          <div style="width: 210px;">
+            <NanoSelect
+              v-model="activeSyntaxTheme"
+              :options="themeOptions"
+              size="sm"
+              :searchable="false"
+            />
+          </div>
+        </div>
         <div v-if="!autoTruncate" class="ctrl-slider">
-          <span class="ctrl-label">Path middle-truncation ({{ maxPathLen }} chars):</span>
+          <span class="ctrl-label">{{ t('codeEditor.pathTrunc') }} ({{ maxPathLen }}):</span>
           <NanoSlider v-model="maxPathLen" :min="20" :max="60" :step="1" size="sm" />
         </div>
       </div>
@@ -231,62 +425,98 @@ export function inspectCommitHistory(commits) {
             <NanoCodeEditor
               v-if="currentFile"
               v-model:diff-style="diffStyle"
+              v-model:syntax-theme="activeSyntaxTheme"
               :file-path="currentFile.path"
               :diff="currentFile.diff"
               :code="currentFile.code"
+              :show-theme-selector="true"
             />
           </template>
         </NanoSplitter>
       </div>
     </div>
 
-    <!-- SECTION 2: Live Editable Code Editor -->
+    <!-- SECTION 2: Live Editable Code Editor with Selectable Profiles & Modular Parsers -->
     <div class="demo-section">
-      <h3>2. Live Editable Code Editor (<code>editable</code> mode)</h3>
-      <p class="demo-desc">
-        Zero-dependency transparent textarea overlay synchronized with Highlight.js grammar tokens, active cursor line tracking, and 2-space <kbd class="nano-kbd">Tab</kbd> indentation.
-      </p>
+      <h3>{{ t('codeEditor.sec2Title') }}</h3>
+      <p class="demo-desc">{{ t('codeEditor.sec2Desc') }}</p>
+
+      <div class="controls-bar">
+        <div class="ctrl-select-wrap">
+          <span class="ctrl-label">{{ t('codeEditor.selectLang') }}</span>
+          <div style="width: 290px;">
+            <NanoSelect
+              :model-value="selectedSampleLang"
+              :options="languageOptions"
+              size="sm"
+              @update:model-value="selectSampleLang"
+            />
+          </div>
+        </div>
+
+        <div class="ctrl-select-wrap">
+          <span class="ctrl-label">{{ t('codeEditor.selectTheme') }}</span>
+          <div style="width: 210px;">
+            <NanoSelect
+              v-model="liveSyntaxTheme"
+              :options="themeOptions"
+              size="sm"
+              :searchable="false"
+            />
+          </div>
+        </div>
+
+        <div class="theme-pills-row">
+          <button
+            v-for="th in SYNTAX_THEMES"
+            :key="th.id"
+            type="button"
+            class="theme-pill-btn"
+            :class="{ active: liveSyntaxTheme === th.id }"
+            @click="liveSyntaxTheme = th.id"
+          >
+            {{ th.id }}
+          </button>
+        </div>
+      </div>
 
       <NanoCodeEditor
         v-model="liveCode"
-        file-path="src/utils/inspectCommitHistory.js"
-        lang="javascript"
+        v-model:syntax-theme="liveSyntaxTheme"
+        :file-path="languageSamples[selectedSampleLang]?.filePath || 'snippet.js'"
+        :lang="selectedSampleLang"
+        :parsers="extraParsers"
+        :show-theme-selector="true"
         mode="code"
         :editable="true"
-        :max-height="280"
+        :max-height="310"
       />
+
+      <div class="registered-parsers-bar">
+        <span class="reg-title">{{ t('codeEditor.registeredBadge') }} ({{ ALL_PARSERS.length }}):</span>
+        <span
+          v-for="p in ALL_PARSERS"
+          :key="p.id"
+          class="parser-chip"
+          :class="{ active: selectedSampleLang === p.id || (p.aliases && p.aliases.includes(selectedSampleLang)) }"
+          @click="languageSamples[p.id] ? selectSampleLang(p.id) : (p.id === 'xml' ? selectSampleLang('vue') : null)"
+        >
+          <code>{{ p.id }}</code>
+          <small>({{ p.aliases.slice(0, 2).join(', ') }})</small>
+        </span>
+      </div>
     </div>
 
-    <NanoCodeBlock title="API Reference & Usage" lang="vue">
-&lt;script setup&gt;
-import { ref } from 'vue';
-import { NanoFileList, NanoCodeEditor } from '@gkucmierz/nano-ui';
-
-const selectedPath = ref('.agents/rules/90-pkg-blog-engine.md');
-const files = [
-  { path: '.agents/rules/90-pkg-blog-engine.md', status: 'A', additions: 48, deletions: 0 },
-  { path: 'docs/.vitepress/theme/composables/useMermaid.js', status: 'M', additions: 22, deletions: 5 },
-];
-&lt;/script&gt;
-
-&lt;template&gt;
-  &lt;div class="inspector-layout"&gt;
-    &lt;NanoFileList
-      v-model="selectedPath"
-      :commit="{ hash: 'de9227a', author: 'Grzegorz Kucmierz' }"
-      :files="files"
-      :max-path-length="34"
-      :searchable="true"
-    /&gt;
-    &lt;NanoCodeEditor
-      :file-path="selectedPath"
-      :diff="activeDiff"
-      :code="activeCode"
-      diff-style="unified"
-    /&gt;
-  &lt;/div&gt;
-&lt;/template&gt;
-    </NanoCodeBlock>
+    <!-- SECTION 3: Separately Importable Language Parsers Reference -->
+    <div class="demo-section">
+      <h3>{{ t('codeEditor.sec3Title') }}</h3>
+      <p class="demo-desc">{{ t('codeEditor.sec3Desc') }}</p>
+      <NanoCodeBlock
+        :code="modularImportSnippet"
+        lang="javascript"
+        title="Modular Language Parser Imports"
+      />
+    </div>
   </div>
 </template>
 
@@ -295,7 +525,7 @@ const files = [
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 20px;
+  gap: 16px;
   margin-bottom: 16px;
   padding: 12px 16px;
   border-radius: 8px;
@@ -311,18 +541,97 @@ const files = [
   cursor: pointer;
 }
 
+.ctrl-select-wrap {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
 .ctrl-slider {
   display: flex;
   align-items: center;
   gap: 12px;
-  min-width: 280px;
+  min-width: 260px;
   flex: 1;
 }
 
 .ctrl-label {
-  font-size: 0.8rem;
+  font-size: 0.78rem;
+  font-weight: 600;
   color: var(--nano-text-muted, #94a3b8);
   white-space: nowrap;
+}
+
+.theme-pills-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+.theme-pill-btn {
+  padding: 4px 9px;
+  border-radius: 5px;
+  border: 1px solid var(--nano-border-card, rgba(255, 255, 255, 0.12));
+  background: var(--nano-bg-card, rgba(255, 255, 255, 0.04));
+  color: var(--nano-text-muted, #94a3b8);
+  font-family: var(--nano-font-mono, monospace);
+  font-size: 0.72rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.14s ease;
+}
+
+.theme-pill-btn:hover {
+  color: var(--nano-text-main, #f8fafc);
+  border-color: var(--nano-border-hover);
+}
+
+.theme-pill-btn.active {
+  background: var(--nano-accent-primary, #6366f1);
+  border-color: var(--nano-accent-primary, #6366f1);
+  color: #ffffff;
+}
+
+.registered-parsers-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px dashed var(--nano-border-card, rgba(255, 255, 255, 0.1));
+}
+
+.reg-title {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--nano-text-muted, #94a3b8);
+  margin-right: 4px;
+}
+
+.parser-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border-radius: 5px;
+  font-size: 0.72rem;
+  background: var(--nano-bg-muted, rgba(255, 255, 255, 0.04));
+  border: 1px solid var(--nano-border-card, rgba(255, 255, 255, 0.1));
+  color: var(--nano-text-secondary, #cbd5e1);
+  cursor: pointer;
+  transition: all 0.14s ease;
+}
+
+.parser-chip.active {
+  border-color: var(--nano-state-active, #00f2fe);
+  background: color-mix(in srgb, var(--nano-state-active, #00f2fe) 12%, transparent);
+  color: var(--nano-text-main, #f8fafc);
+}
+
+.parser-chip small {
+  color: var(--nano-text-muted, #94a3b8);
+  font-size: 0.66rem;
 }
 
 .git-inspector-splitter-box {

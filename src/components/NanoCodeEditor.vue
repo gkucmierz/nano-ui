@@ -1,6 +1,11 @@
 <script setup>
 import { ref, computed, watch } from 'vue';
-import { highlightCode, escapeHtml } from '../utils/syntax-highlighter.js';
+import {
+  highlightCode,
+  escapeHtml,
+  registerParser,
+  SYNTAX_THEMES,
+} from '../utils/syntax-highlighter.js';
 import { detectLangFromPath, parseUnifiedDiff } from '../utils/git-diff.js';
 import { tooltipDirective as vTooltip } from '../directives/tooltip.js';
 
@@ -31,11 +36,33 @@ const props = defineProps({
     default: '',
   },
   /**
-   * Explicit language override ('js', 'vue', 'md', 'json', 'css', 'bash', etc.)
+   * Explicit language override ('js', 'vue', 'md', 'json', 'css', 'bash', 'rust', 'python', etc.)
    */
   lang: {
     type: String,
     default: '',
+  },
+  /**
+   * Syntax highlighting color profile:
+   * 'nano' | 'github' | 'monokai' | 'dracula' | 'one-dark' | 'nord' | 'solarized' | 'cyberpunk'
+   */
+  syntaxTheme: {
+    type: String,
+    default: 'nano',
+  },
+  /**
+   * Show syntax color profile switcher in the editor header bar
+   */
+  showThemeSelector: {
+    type: Boolean,
+    default: false,
+  },
+  /**
+   * Optional array of modular language parser definitions to register on mount/update
+   */
+  parsers: {
+    type: Array,
+    default: () => [],
   },
   /**
    * View mode: 'auto' | 'diff' | 'code'
@@ -86,9 +113,36 @@ const emit = defineEmits([
   'update:code',
   'update:mode',
   'update:diffStyle',
+  'update:syntaxTheme',
   'change',
   'copied',
 ]);
+
+const parserVersion = ref(0);
+const internalSyntaxTheme = ref(props.syntaxTheme || 'nano');
+
+watch(
+  () => props.parsers,
+  (list) => {
+    if (Array.isArray(list) && list.length > 0) {
+      registerParser(list);
+      parserVersion.value++;
+    }
+  },
+  { immediate: true, deep: true }
+);
+
+watch(
+  () => props.syntaxTheme,
+  (val) => {
+    if (val) internalSyntaxTheme.value = val;
+  }
+);
+
+const setSyntaxTheme = (nextTheme) => {
+  internalSyntaxTheme.value = nextTheme;
+  emit('update:syntaxTheme', nextTheme);
+};
 
 const internalMode = ref(
   props.mode !== 'auto'
@@ -128,6 +182,8 @@ const currentCode = computed(() => {
 });
 
 const codeLines = computed(() => {
+  // Touch parserVersion so dynamic parser registration re-evaluates highlights
+  void parserVersion.value;
   const raw = currentCode.value.replace(/\r\n/g, '\n');
   const split = raw.split('\n');
   const lang = resolvedLang.value;
@@ -139,6 +195,7 @@ const codeLines = computed(() => {
 });
 
 const fullHighlightedHtml = computed(() => {
+  void parserVersion.value;
   const raw = currentCode.value;
   if (!raw) return ' ';
   const html = highlightCode(raw, resolvedLang.value) || escapeHtml(raw);
@@ -146,6 +203,7 @@ const fullHighlightedHtml = computed(() => {
 });
 
 const parsedDiff = computed(() => {
+  void parserVersion.value;
   if (!props.diff) return { lines: [], splitRows: [], additions: 0, deletions: 0 };
   return parseUnifiedDiff(props.diff, resolvedLang.value);
 });
@@ -234,6 +292,7 @@ const copyContent = async () => {
 <template>
   <div
     class="nano-code-editor"
+    :data-syntax-theme="internalSyntaxTheme"
     :class="{
       'is-wrapped': isWrapped,
       'is-diff-mode': internalMode === 'diff',
@@ -255,6 +314,19 @@ const copyContent = async () => {
       </div>
 
       <div class="nce-header-actions">
+        <!-- Optional Syntax Color Profile Selector -->
+        <select
+          v-if="showThemeSelector"
+          :value="internalSyntaxTheme"
+          class="nce-theme-select"
+          aria-label="Syntax highlight theme"
+          @change="setSyntaxTheme($event.target.value)"
+        >
+          <option v-for="th in SYNTAX_THEMES" :key="th.id" :value="th.id">
+            {{ th.label }}
+          </option>
+        </select>
+
         <!-- Mode Toggle (Diff vs Code) when both are provided -->
         <div v-if="hasBothDiffAndCode || editable" class="nce-seg-group">
           <button
@@ -831,12 +903,18 @@ td.is-empty {
   width: 100%;
   height: 100%;
   box-sizing: border-box;
-  font-family: var(--nano-font-mono, 'JetBrains Mono', 'Fira Code', monospace);
+  font-family: var(--nano-font-mono, ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace);
   font-size: 0.78rem;
   line-height: 1.55;
   tab-size: 2;
   white-space: pre;
   overflow: auto;
+}
+
+.nce-live-highlight code {
+  font-family: inherit;
+  font-size: inherit;
+  line-height: inherit;
 }
 
 .nano-code-editor.is-wrapped .nce-live-highlight,
@@ -866,5 +944,113 @@ td.is-empty {
 .nce-live-textarea::selection {
   background: rgba(99, 102, 241, 0.32);
   color: transparent;
+}
+
+.nce-theme-select {
+  height: 26px;
+  padding: 0 8px;
+  border-radius: 5px;
+  border: 1px solid var(--nano-border-card, rgba(255, 255, 255, 0.12));
+  background: var(--nano-bg-muted, rgba(255, 255, 255, 0.05));
+  color: var(--nano-text-main, #f8fafc);
+  font-size: 0.72rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+/* Scoped fallback token rules backed by --hl-* CSS variables */
+:deep(.hljs-keyword),
+:deep(.hljs-selector-tag),
+:deep(.hljs-subst),
+:deep(.hl-keyword) {
+  color: var(--hl-keyword, #c084fc);
+  font-weight: 600;
+}
+
+:deep(.hljs-string),
+:deep(.hljs-addition),
+:deep(.hljs-regexp),
+:deep(.hl-string) {
+  color: var(--hl-string, #34d399);
+}
+
+:deep(.hljs-number),
+:deep(.hl-number) {
+  color: var(--hl-number, #fbbf24);
+}
+
+:deep(.hljs-literal),
+:deep(.hljs-boolean),
+:deep(.hl-boolean) {
+  color: var(--hl-boolean, #f472b6);
+  font-weight: 600;
+}
+
+:deep(.hljs-comment),
+:deep(.hljs-quote),
+:deep(.hl-comment) {
+  color: var(--hl-comment, #64748b);
+  font-style: italic;
+}
+
+:deep(.hljs-tag),
+:deep(.hljs-name),
+:deep(.hl-tag) {
+  color: var(--hl-tag, #38bdf8);
+  font-weight: 600;
+}
+
+:deep(.hljs-attr),
+:deep(.hljs-attribute),
+:deep(.hl-attr) {
+  color: var(--hl-attr, #a78bfa);
+}
+
+:deep(.hljs-title.function_),
+:deep(.hljs-function),
+:deep(.hljs-section),
+:deep(.hl-function) {
+  color: var(--hl-func, #60a5fa);
+}
+
+:deep(.hljs-property),
+:deep(.hl-property) {
+  color: var(--hl-prop, #38bdf8);
+}
+
+:deep(.hljs-variable),
+:deep(.hljs-variable.language_),
+:deep(.hljs-template-variable),
+:deep(.hl-var) {
+  color: var(--hl-var, #fb7185);
+}
+
+:deep(.hljs-selector-class),
+:deep(.hljs-selector-id),
+:deep(.hljs-symbol),
+:deep(.hl-selector) {
+  color: var(--hl-attr, #e879f9);
+}
+
+:deep(.hljs-punctuation),
+:deep(.hl-punct) {
+  color: var(--hl-punct, #94a3b8);
+}
+
+:deep(.hljs-built_in),
+:deep(.hljs-meta) {
+  color: var(--hl-builtin, #60a5fa);
+  font-weight: 600;
+}
+
+:deep(.hljs-title),
+:deep(.hljs-title.class_),
+:deep(.hljs-type) {
+  color: var(--hl-type, #fbbf24);
+  font-weight: 600;
+}
+
+:deep(.hljs-params) {
+  color: var(--hl-params, #e2e8f0);
 }
 </style>

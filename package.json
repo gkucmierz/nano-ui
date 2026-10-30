@@ -14,6 +14,12 @@
     "./vite": {
       "import": "./dist/vite.js"
     },
+    "./parsers": {
+      "import": "./dist/parsers/index.js"
+    },
+    "./parsers/*": {
+      "import": "./dist/parsers/*.js"
+    },
     "./style.css": "./dist/nano-ui.css",
     "./nano-ui.css": "./dist/nano-ui.css",
     "./dist/*": "./dist/*"

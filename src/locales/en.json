@@ -28,6 +28,11 @@
     "radar": "Topology Radar",
     "codeEditor": "Git Diff & Code Editor",
     "splitter": "Nano Splitter (LoL)",
+    "select": "Nano Select (Filter)",
+    "knob": "Nano Knob (Rotary Dial)",
+    "globe": "Nano Globe & HEALPix",
+    "colorPicker": "OKLCH Color Picker",
+    "maskedInput": "Masked & PIN Input",
     "ripple": "v-ripple Directive",
     "tooltip": "v-tooltip Directive"
   },
@@ -159,5 +164,94 @@
       "updateModelValue": "Emitted on state change with new boolean or null value",
       "change": "Standard change event emitted on user toggle"
     }
+  },
+  "codeEditor": {
+    "title": "NanoFileList & NanoCodeEditor",
+    "desc": "Composable Git & Code inspection primitives with modular, separately importable language parsers and 8 selectable syntax highlighting color profiles.",
+    "sec1Title": "1. Git Unpushed Commit & Diff Inspector (NanoFileList + NanoCodeEditor)",
+    "sec1Desc": "Click commits in the top bar or navigate changed files with ↑ / ↓. Switch between Unified and Split diff views, or pick any syntax color profile.",
+    "searchableList": "Searchable file list",
+    "showStats": "Show +/- line stats",
+    "autoTruncate": "Auto-truncate on resize",
+    "pathTrunc": "Path middle-truncation",
+    "syntaxProfile": "Syntax Profile:",
+    "sec2Title": "2. Live Editable Code Editor & Modular Language Parsers",
+    "sec2Desc": "Transparent textarea overlay synchronized 1:1 with Highlight.js Core grammar tokens, active cursor line tracking, 2-space Tab indentation, and on-demand language parser modules.",
+    "selectLang": "Language Parser:",
+    "selectTheme": "Color Profile:",
+    "registeredBadge": "Registered Parsers",
+    "sec3Title": "3. Separately Importable Language Parsers (@gkucmierz/nano-ui/parsers/*)",
+    "sec3Desc": "Import only the language grammars your application needs to keep production bundles ultra-lean."
+  },
+  "splitter": {
+    "title": "NanoSplitter (LoL Inspector Style)",
+    "desc": "Zero-clutter two-pane resizable splitter inspired by LoL Inspector: features an ergonomic grab corridor, a crisp 1px electric cyan laser line on hover/drag, a flush edge triangle pull-tab lock toggle, double-click to reset, and keyboard arrow navigation.",
+    "sec1Title": "1. Interactive LoL-Style Splitter Configurator",
+    "sec1Desc": "Hover between the two panels to reveal the #00e5ff laser line. Click the edge triangle pull-tab to lock/unlock dragging, or double-click the laser line to reset to default ratio.",
+    "horiz": "Horizontal (Left / Right)",
+    "vert": "Vertical (Top / Bottom)",
+    "showLock": "Show triangle lock tab",
+    "locked": "Locked",
+    "yes": "Yes",
+    "no": "No",
+    "showGrip": "Show 3-dot grip",
+    "gap": "Gap",
+    "sec2Title": "2. Nested 3-Pane IDE Layout (Horizontal + Vertical Splitters)",
+    "sec2Desc": "Outer horizontal NanoSplitter resizes NanoFileList dynamically, while the inner vertical NanoSplitter splits the diff viewer and live code editor."
+  },
+  "knob": {
+    "title": "NanoKnob (Kinetic Rotary Dial)",
+    "desc": "Compact tactile circular rotary dial extracted from the 3D Donut Chart studio. Built on C¹ Hermite kinematics with geodesic shortest-path interpolation, center reset/readout hub, rim tick marks, and keyboard arrow control.",
+    "sec1Title": "1. Interactive NanoKnob Sandbox",
+    "sec1Desc": "Drag the dial rim, click quick-angle steps, press ArrowLeft / ArrowRight (hold Shift for 15x step), or click the center hub to reset to defaultValue.",
+    "size": "Diameter Size",
+    "color": "Accent Color",
+    "centerMode": "Center Hub Mode",
+    "showTicks": "Show 12h Rim Ticks",
+    "wrap": "360° Continuous Wrap",
+    "disabled": "Disabled",
+    "sec2Title": "2. Multi-Knob 3D Camera & Audio Studio Console",
+    "sec2Desc": "Combine multiple NanoKnob controls with different sizes, colors, and center readout modes for compact hardware-inspired toolbars."
+  },
+  "select": {
+    "title": "NanoSelect (Searchable & Filterable Select)",
+    "desc": "Configurable single and multi-select dropdown with diacritic-insensitive live search filtering, keyboard navigation (ArrowUp/ArrowDown/Enter/Escape), custom badges, icons, color dots, and modal-safe Escape isolation.",
+    "sec1Title": "1. Interactive Single & Multi-Select Configurator",
+    "sec1Desc": "Open the dropdown and type to filter options (diacritic-insensitive: typing 'zolty' matches 'Żółty'). Use ArrowUp / ArrowDown and Enter to select.",
+    "multiple": "Multi-Select (Array)",
+    "searchable": "Searchable Filter Input",
+    "clearable": "Clearable (× Button)",
+    "disabled": "Disabled",
+    "size": "Size Preset",
+    "status": "Validation Status",
+    "sec2Title": "2. Rich Option Compositions & Modal Escape Isolation",
+    "sec2Desc": "Pressing Escape while NanoSelect is open inside a NanoModal closes only the dropdown menu without accidentally dismissing the parent modal."
+  },
+  "globe": {
+    "title": "NanoGlobe (Orthographic 3D SVG Globe & HEALPix)",
+    "desc": "Interactive orthographic vector globe with lightweight country polygons (WORLD_COUNTRIES_LITE), cartographic meridian/parallel graticules, equal-area HEALPix spherical tessellation (orders 0–3), geodesic great-circle arcs, and custom color palettes.",
+    "sec1Title": "1. Interactive Cartographic & HEALPix Globe Studio",
+    "sec1Desc": "Drag the globe to rotate, click countries or HEALPix cells to toggle selection, and switch between theme presets and HEALPix tessellation orders.",
+    "preset": "Color Preset",
+    "graticule": "Cartographic Graticule",
+    "healpix": "HEALPix Equal-Area Grid",
+    "healpixLabels": "HEALPix Pixel Labels",
+    "healpixOrder": "HEALPix Order (Nside)",
+    "atmosphere": "Atmosphere Halo",
+    "autoRotate": "Auto-Rotate"
+  },
+  "colorPicker": {
+    "title": "NanoColorPickerOklch & Perceptual Contrast",
+    "desc": "Perceptually uniform OKLCH color picker with interactive Hue/Chroma wheel, Lightness slider, real-time WCAG 2.1 AA/AAA contrast ratio verification, and format conversion (OKLCH / HEX / RGB).",
+    "sec1Title": "1. Interactive OKLCH Color Picker & WCAG Contrast Inspector",
+    "sec1Desc": "Drag the marker across the Hue/Chroma disc and adjust perceptual Lightness (L). Notice how OKLCH preserves subjective brightness across all hues."
+  },
+  "maskedInput": {
+    "title": "NuMaskedInput & NuPinInput",
+    "desc": "Zero-dependency hybrid masked text input and 2FA PIN verification control with single native input accessibility, live slot guide overlay, clipboard paste sanitization, and countdown expiration timer.",
+    "sec1Title": "1. NuPinInput — 2FA / OTP Verification with Countdown Timer",
+    "sec1Desc": "Type digits or paste a 6-digit code. Automatically triggers @complete and @submit when all slots are filled.",
+    "sec2Title": "2. NuMaskedInput — Declarative Mask DSL & Custom Tokens",
+    "sec2Desc": "Supports # (digit), A (uppercase), a (lowercase), L (letter), X (alphanumeric), H (hex), and custom regex token definitions."
   }
 }

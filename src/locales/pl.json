@@ -28,6 +28,11 @@
     "radar": "Radar Topologii",
     "codeEditor": "Git Diff & Edytor Kodu",
     "splitter": "Nano Splitter (LoL)",
+    "select": "Nano Select (Z filtrem)",
+    "knob": "Nano Knob (Pokrętło)",
+    "globe": "Nano Globe & HEALPix",
+    "colorPicker": "Kolory OKLCH & Kontrast",
+    "maskedInput": "Maskowane Pola & PIN",
     "ripple": "Dyrektywa v-ripple",
     "tooltip": "Dyrektywa v-tooltip"
   },
@@ -159,5 +164,94 @@
       "updateModelValue": "Emitowane przy zmianie stanu z nową wartością boolean lub null",
       "change": "Standardowe zdarzenie change emitowane przy przełączeniu użytkownika"
     }
+  },
+  "codeEditor": {
+    "title": "NanoFileList & NanoCodeEditor",
+    "desc": "Komponowalne prymitywy inspekcji Git i kodu z modularnymi, osobno importowanymi parserami języków oraz 8 wybieralnymi profilami kolorowania składni.",
+    "sec1Title": "1. Inspektor Commitów i Diffów Git (NanoFileList + NanoCodeEditor)",
+    "sec1Desc": "Klikaj commity na górnym pasku lub nawiguj po zmienionych plikach strzałkami ↑ / ↓. Przełączaj widok Unified i Split oraz zmieniaj profil kolorowania składni.",
+    "searchableList": "Wyszukiwarka plików",
+    "showStats": "Pokazuj statystyki +/-",
+    "autoTruncate": "Auto-skracanie przy zmianie szerokości",
+    "pathTrunc": "Środkowe skracanie ścieżki",
+    "syntaxProfile": "Profil Kolorowania:",
+    "sec2Title": "2. Edytor Kodu Na Żywo (editable) i Modularne Parsery Języków",
+    "sec2Desc": "Przezroczysta warstwa textarea zsynchronizowana 1:1 z tokenami gramatyki Highlight.js Core, śledzeniem aktywnej linii kursora, wcięciami Tab (2 spacje) i ładowanymi na żądanie parserami języków.",
+    "selectLang": "Parser Języka:",
+    "selectTheme": "Profil Kolorów:",
+    "registeredBadge": "Zarejestrowane Parsery",
+    "sec3Title": "3. Osobno Importowane Parsery Języków (@gkucmierz/nano-ui/parsers/*)",
+    "sec3Desc": "Importuj wyłącznie gramatyki języków używane w danym projekcie, aby zachować minimalny rozmiar produkcyjnego bundla."
+  },
+  "splitter": {
+    "title": "NanoSplitter (Styl LoL Inspector)",
+    "desc": "Dwupanelowy splitter inspirowany LoL Inspector: niewidoczny korytarz chwytu, laserowa linia 1px (#00e5ff) przy najechaniu/przeciąganiu, dosunięty do krawędzi trójkątny zaczep blokady, reset dwuklikiem i obsługa strzałek klawiatury.",
+    "sec1Title": "1. Interaktywny Konfigurator Splittera w Stylu LoL",
+    "sec1Desc": "Najedź kursorem między panele, aby odsłonić linię laserową #00e5ff. Kliknij trójkątny zaczep przy krawędzi, aby zablokować/odblokować podział, lub kliknij dwukrotnie linię, aby zresetować proporcje.",
+    "horiz": "Pionowy podział (Lewo / Prawo)",
+    "vert": "Poziomy podział (Góra / Dół)",
+    "showLock": "Pokaż trójkąt blokady",
+    "locked": "Zablokowany",
+    "yes": "Tak",
+    "no": "Nie",
+    "showGrip": "Pokaż uchwyt 3 kropek",
+    "gap": "Odstęp (Gap)",
+    "sec2Title": "2. Zagnieżdżony Układ IDE 3-Panelowy (Poziomy + Pionowy Splitter)",
+    "sec2Desc": "Zewnętrzny splitter zmienia szerokość NanoFileList (dynamicznie przeliczając skracanie ścieżek), a wewnętrzny poziomy splitter dzieli widok diffa i edytor kodu na żywo."
+  },
+  "knob": {
+    "title": "NanoKnob (Kinematyczne Pokrętło Kątowe)",
+    "desc": "Kompaktowe, taktylne pokrętło obrotowe wyodrębnione ze studia Wykresu Donut 3D. Oparte na kinematyce Hermite'a C¹ z geodezyjnie najkrótszą ścieżką, środkowym przyciskiem resetu/odczytu, podziałką kątową i obsługą klawiatury.",
+    "sec1Title": "1. Interaktywny Sandbox NanoKnob",
+    "sec1Desc": "Przeciągaj tarczę pokrętła, klikaj szybkie skoki kątowe, używaj strzałek ← / → (z Shiftem krok 15x) lub kliknij środek, aby zresetować do wartości domyślnej.",
+    "size": "Średnica (Size)",
+    "color": "Kolor Akcentu",
+    "centerMode": "Tryb Środka",
+    "showTicks": "Podziałka 12h na obwodzie",
+    "wrap": "Ciągły obrót 360° (Wrap)",
+    "disabled": "Zablokowany (Disabled)",
+    "sec2Title": "2. Konsola Studyjna 3D & Audio (Wiele Pokręteł)",
+    "sec2Desc": "Łącz wiele komponentów NanoKnob o różnych rozmiarach, kolorach i trybach odczytu w kompaktowych paskach narzędziowych."
+  },
+  "select": {
+    "title": "NanoSelect (Konfigurowalny Select z Filtrem)",
+    "desc": "Konfigurowalny komponent wyboru pojedynczego i wielokrotnego z wbudowanym filtrowaniem niewrażliwym na polskie znaki diakrytyczne, nawigacją klawiaturą (↑/↓/Enter/Escape), odznakami, ikonami i bezpieczną izolacją klawisza Escape w modalach.",
+    "sec1Title": "1. Interaktywny Konfigurator Single & Multi-Select",
+    "sec1Desc": "Otwórz listę i zacznij pisać, aby przefiltrować opcje (wpisanie 'zolty' dopasowuje 'Żółty'). Użyj strzałek ↑ / ↓ oraz Enter, aby wybrać.",
+    "multiple": "Wielokrotny wybór (Multi-Select)",
+    "searchable": "Pole wyszukiwania (Filter)",
+    "clearable": "Przycisk czyszczenia (×)",
+    "disabled": "Zablokowany (Disabled)",
+    "size": "Rozmiar (Size)",
+    "status": "Status Walidacji",
+    "sec2Title": "2. Bogate Opcje i Izolacja Escape Wewnątrz NanoModal",
+    "sec2Desc": "Naciśnięcie klawisza Escape przy otwartej liście NanoSelect wewnątrz NanoModal zamyka wyłącznie listę rozwijaną, nie zamykając przypadkowo całego okna modalnego."
+  },
+  "globe": {
+    "title": "NanoGlobe (Ortograficzny Globus 3D SVG & HEALPix)",
+    "desc": "Interaktywny wektorowy globus ortograficzny z konturami państw (WORLD_COUNTRIES_LITE), siatką kartograficzną południków/równoleżników, równopolową teselacją sferyczną HEALPix (rzędy 0–3), łukami ortodromicznymi i pełną konfiguracją kolorów.",
+    "sec1Title": "1. Interaktywne Studio Globusa Kartograficznego & HEALPix",
+    "sec1Desc": "Przeciągaj globus, klikaj państwa lub komórki HEALPix, aby przełączać zaznaczenie, oraz zmieniaj presety kolorystyczne i rząd podziału HEALPix.",
+    "preset": "Preset Kolorów",
+    "graticule": "Siatka Kartograficzna",
+    "healpix": "Siatka Równopolowa HEALPix",
+    "healpixLabels": "Indeksy Komórek HEALPix",
+    "healpixOrder": "Rząd HEALPix (Nside)",
+    "atmosphere": "Aureola Atmosfery",
+    "autoRotate": "Auto-Rotacja"
+  },
+  "colorPicker": {
+    "title": "NanoColorPickerOklch & Kontrast Perceptualny",
+    "desc": "Perceptualnie jednorodny próbnik barw OKLCH z interaktywnym dyskiem Hue/Chroma, suwakiem jasności L, weryfikacją kontrastu WCAG 2.1 AA/AAA na żywo oraz konwersją formatów (OKLCH / HEX / RGB).",
+    "sec1Title": "1. Interaktywny Próbnik OKLCH & Inspektor Kontrastu WCAG",
+    "sec1Desc": "Przeciągaj marker po tarczy Hue/Chroma i reguluj jasność perceptualną (L). Zauważ, jak przestrzeń OKLCH zachowuje identyczną subiektywną jasność niezależnie od kąta barwy."
+  },
+  "maskedInput": {
+    "title": "NuMaskedInput & NuPinInput",
+    "desc": "Hybrydowe maskowane pole tekstowe oraz kontrolka weryfikacji PIN / 2FA oparte na pojedynczym natywnym inpucie z warstwą prowadzącą, bezpiecznym wklejaniem ze schowka i licznikiem wygaśnięcia.",
+    "sec1Title": "1. NuPinInput — Weryfikacja 2FA / OTP z Licznikiem Czasu",
+    "sec1Desc": "Wpisz cyfry lub wklej 6-cyfrowy kod ze schowka. Po wypełnieniu wszystkich pozycji komponent automatycznie wyzwala @complete oraz @submit.",
+    "sec2Title": "2. NuMaskedInput — Deklaratywne Maski DSL i Własne Tokeny",
+    "sec2Desc": "Obsługuje tokeny # (cyfra), A (wielka litera), a (mała litera), L (litera), X (alfanumeryczny), H (HEX) oraz niestandardowe wyrażenia regularne."
   }
 }

@@ -48,3 +48,14 @@
 1. **Markdown-First Docs:** All descriptive text, instructions, and "API Reference" sections within the documentation (Playground) MUST be authored and maintained as Markdown (`.md`) files and imported directly into Vue components.
 2. **Separation of Concerns:** Do NOT pollute `.vue` components with large blocks of static text or HTML. Presentation logic and interactive demos remain exclusively in `.vue` files, while extensive textual documentation and API references MUST be imported from dedicated `.md` files.
 
+---
+
+## 5. Mandatory Playground-First Development & i18n Parity
+
+1. **Zero Orphan Exports (Playground-First Policy):**
+   - Every new component, directive, parser, theme profile, or interactive utility added to `@gkucmierz/nano-ui` **MUST** immediately be accompanied by an interactive presentation view in `src/playground/docs/`, registered in `src/playground/router/index.js`, and added to the sidebar in `src/playground/App.vue`.
+   - Never ship or export a feature in `src/index.js` that is hidden from the Playground (`http://localhost:33164`).
+2. **100% Bilingual i18n Coverage (`en` & `pl`):**
+   - Every Playground page, sidebar link, interactive control, and component UI label must be localized in both `src/locales/en.json` and `src/locales/pl.json` via `t()`.
+
+

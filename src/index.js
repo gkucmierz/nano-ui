@@ -21,6 +21,8 @@ import NanoColorPickerOklch from './components/NanoColorPickerOklch.vue';
 import NuMaskedInput from './components/NuMaskedInput.vue';
 import NuPinInput from './components/NuPinInput.vue';
 import NanoGlobe from './components/NanoGlobe.vue';
+import NanoKnob from './components/NanoKnob.vue';
+import NanoSelect from './components/NanoSelect.vue';
 import { WORLD_COUNTRIES_LITE } from './data/worldCountriesLite.js';
 import { registerIcons, getAvailableIcons, BUILTIN_ICONS } from './icons/index.js';
 import { normalizeAngle, shortestAngleDiff } from './utils/math.js';
@@ -50,7 +52,36 @@ import {
   cubicHermite,
   sampleKinematics,
 } from './utils/kinetics.js';
-import { highlightCode } from './utils/syntax-highlighter.js';
+import {
+  highlightCode,
+  registerParser,
+  unregisterParser,
+  isParserRegistered,
+  getRegisteredParsers,
+  SYNTAX_THEMES,
+} from './utils/syntax-highlighter.js';
+import {
+  CORE_PARSERS,
+  EXTRA_PARSERS,
+  ALL_PARSERS,
+  PARSER_MAP,
+  javascriptParser,
+  typescriptParser,
+  vueParser,
+  htmlParser,
+  cssParser,
+  jsonParser,
+  bashParser,
+  markdownParser,
+  rustParser,
+  pythonParser,
+  sqlParser,
+  yamlParser,
+  goParser,
+  dockerfileParser,
+  diffParser,
+  apiParser,
+} from './parsers/index.js';
 import {
   detectLangFromPath,
   normalizeFileStatus,
@@ -85,6 +116,8 @@ export {
   NuMaskedInput,
   NuPinInput,
   NanoGlobe,
+  NanoKnob,
+  NanoSelect,
   WORLD_COUNTRIES_LITE,
   registerIcons,
   getAvailableIcons,
@@ -112,6 +145,31 @@ export {
   cubicHermite,
   sampleKinematics,
   highlightCode,
+  registerParser,
+  unregisterParser,
+  isParserRegistered,
+  getRegisteredParsers,
+  SYNTAX_THEMES,
+  CORE_PARSERS,
+  EXTRA_PARSERS,
+  ALL_PARSERS,
+  PARSER_MAP,
+  javascriptParser,
+  typescriptParser,
+  vueParser,
+  htmlParser,
+  cssParser,
+  jsonParser,
+  bashParser,
+  markdownParser,
+  rustParser,
+  pythonParser,
+  sqlParser,
+  yamlParser,
+  goParser,
+  dockerfileParser,
+  diffParser,
+  apiParser,
   detectLangFromPath,
   normalizeFileStatus,
   middleTruncatePath,
@@ -160,5 +218,7 @@ export default {
     app.component(`${cp}NuMaskedInput`, NuMaskedInput);
     app.component(`${cp}NuPinInput`, NuPinInput);
     app.component(`${cp}NanoGlobe`, NanoGlobe);
+    app.component(`${cp}NanoKnob`, NanoKnob);
+    app.component(`${cp}NanoSelect`, NanoSelect);
   },
 };
