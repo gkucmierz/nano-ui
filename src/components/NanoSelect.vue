@@ -581,9 +581,9 @@ onUnmounted(() => {
 }
 
 .nano-select.is-sm .nano-select-trigger {
-  min-height: 28px;
-  padding: 3px 8px;
-  font-size: 0.78rem;
+  min-height: 32px;
+  padding: 4px 10px;
+  font-size: 0.8rem;
   border-radius: var(--nano-radius-sm, 6px);
 }
 
@@ -716,7 +716,9 @@ onUnmounted(() => {
   position: absolute;
   top: calc(100% + 6px);
   left: 0;
-  right: 0;
+  min-width: 100%;
+  width: max-content;
+  max-width: min(360px, 90vw);
   z-index: 80;
   background: var(--nano-bg-sidebar, #18181b);
   border: 1px solid var(--nano-accent-primary, #6366f1);

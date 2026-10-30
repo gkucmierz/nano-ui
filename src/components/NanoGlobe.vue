@@ -1,6 +1,18 @@
 <script setup>
 import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import { WORLD_COUNTRIES_LITE } from '../data/worldCountriesLite.js'
+import {
+  DEG2RAD,
+  lonLatToCamVec3,
+  worldVec3ToCamVec3,
+  clipSphericalRingToHorizon,
+  clipSphericalPolygonToHorizon,
+  camPolygonToSvgPath,
+  camPolygonsToSvgPath,
+  camPolylineToSvgPath,
+  densifyRing,
+  isSouthPolarRing
+} from '../utils/globe-geometry.js'
 
 const props = defineProps({
   /** SVG width/height in px */
@@ -185,9 +197,6 @@ const CY = 250
 const R = 212
 const ATMO_R = 232
 
-const DEG2RAD = Math.PI / 180
-const RAD2DEG = 180 / Math.PI
-
 const cameraTrig = computed(() => {
   const lon0 = rotLon.value * DEG2RAD
   const lat0 = rotLat.value * DEG2RAD
@@ -199,160 +208,14 @@ const cameraTrig = computed(() => {
   }
 })
 
-/**
- * Projects geographic (lon, lat) in degrees to camera-space unit sphere (x, y, z),
- * where +z faces the viewer, +x is right, +y is up.
- */
-function lonLatToCamVec3(lon, lat, trig) {
-  const phi = lat * DEG2RAD
-  const dLam = lon * DEG2RAD - trig.lon0
-  const cosPhi = Math.cos(phi)
-  const sinPhi = Math.sin(phi)
-  const cosLam = Math.cos(dLam)
-  const sinLam = Math.sin(dLam)
-
-  const x = cosPhi * sinLam
-  const y = trig.cosLat0 * sinPhi - trig.sinLat0 * cosPhi * cosLam
-  const z = trig.sinLat0 * sinPhi + trig.cosLat0 * cosPhi * cosLam
-  return { x, y, z }
-}
-
-/**
- * Rotates a world unit-sphere vector (wx, wy, wz) where:
- * wx = cos(lat)*cos(lon), wy = cos(lat)*sin(lon), wz = sin(lat)
- * into camera-space (x, y, z) where +z faces the viewer.
- */
-function worldVec3ToCamVec3(wx, wy, wz, trig) {
-  const sinLon0 = Math.sin(trig.lon0)
-  const cosLon0 = Math.cos(trig.lon0)
-  // Rotate around Z by -lon0:
-  const rx = wx * cosLon0 + wy * sinLon0
-  const ry = -wx * sinLon0 + wy * cosLon0
-  const rz = wz
-
-  // Camera right (+X) is East = ry
-  const x = ry
-  // Camera up (+Y)
-  const y = trig.cosLat0 * rz - trig.sinLat0 * rx
-  // Camera forward (+Z)
-  const z = trig.sinLat0 * rz + trig.cosLat0 * rx
-  return { x, y, z }
-}
-
-/**
- * Clips a 3D spherical polygon against the orthographic horizon plane z >= 0,
- * interpolating smoothly along the circular limb (x^2 + y^2 = 1, z = 0).
- */
-function clipSphericalPolygonToHorizon(pts) {
-  if (!pts || pts.length < 3) return []
-
-  let anyVisible = false
-  let allVisible = true
-  for (let i = 0; i < pts.length; i++) {
-    if (pts[i].z >= 0) anyVisible = true
-    else allVisible = false
-  }
-  if (!anyVisible) return []
-  if (allVisible) return pts
-
-  const clipped = []
-  for (let i = 0; i < pts.length; i++) {
-    const curr = pts[i]
-    const prev = pts[i === 0 ? pts.length - 1 : i - 1]
-    const currIn = curr.z >= 0
-    const prevIn = prev.z >= 0
-
-    if (currIn !== prevIn) {
-      const denom = prev.z - curr.z
-      const t = Math.abs(denom) > 1e-12 ? prev.z / denom : 0.5
-      let ix = prev.x + t * (curr.x - prev.x)
-      let iy = prev.y + t * (curr.y - prev.y)
-      const len = Math.hypot(ix, iy)
-      if (len > 1e-9) {
-        ix /= len
-        iy /= len
-      }
-      clipped.push({
-        x: ix,
-        y: iy,
-        z: 0,
-        isExit: prevIn,
-        isEntry: currIn
-      })
-    }
-    if (currIn) {
-      clipped.push({ x: curr.x, y: curr.y, z: curr.z })
-    }
-  }
-
-  if (clipped.length < 3) return []
-
-  const finalPts = []
-  for (let i = 0; i < clipped.length; i++) {
-    const pt = clipped[i]
-    finalPts.push(pt)
-    if (pt.isExit) {
-      const nextPt = clipped[(i + 1) % clipped.length]
-      if (nextPt && nextPt.isEntry) {
-        const a1 = Math.atan2(pt.y, pt.x)
-        const a2 = Math.atan2(nextPt.y, nextPt.x)
-        let da = a2 - a1
-        while (da > Math.PI) da -= 2 * Math.PI
-        while (da < -Math.PI) da += 2 * Math.PI
-        const steps = Math.max(2, Math.ceil((Math.abs(da) * 24) / Math.PI))
-        for (let s = 1; s < steps; s++) {
-          const a = a1 + (da * s) / steps
-          finalPts.push({ x: Math.cos(a), y: Math.sin(a), z: 0 })
-        }
-      }
-    }
-  }
-  return finalPts
-}
-
-function camPolygonToSvgPath(pts) {
-  if (!pts || pts.length < 3) return ''
-  let d = ''
-  for (let i = 0; i < pts.length; i++) {
-    const sx = (CX + pts[i].x * R).toFixed(1)
-    const sy = (CY - pts[i].y * R).toFixed(1)
-    d += (i === 0 ? 'M' : 'L') + sx + ',' + sy
-  }
-  return d + 'Z'
-}
-
-/**
- * Subdivides long geographic polygon edges so large countries (Russia, Antarctica, Canada)
- * follow spherical curvature accurately along the horizon.
- */
-function densifyRing(ring, maxDegStep = 7) {
-  const out = []
-  const n = ring.length
-  for (let i = 0; i < n; i++) {
-    const [lon1, lat1] = ring[i]
-    const [lon2, lat2] = ring[(i + 1) % n]
-    out.push([lon1, lat1])
-    let dLon = lon2 - lon1
-    if (dLon > 180) dLon -= 360
-    if (dLon < -180) dLon += 360
-    const dLat = lat2 - lat1
-    const dist = Math.hypot(dLon, dLat)
-    if (dist > maxDegStep && Math.abs(dLon) < 170) {
-      const steps = Math.min(24, Math.ceil(dist / maxDegStep))
-      for (let s = 1; s < steps; s++) {
-        const t = s / steps
-        out.push([lon1 + dLon * t, lat1 + dLat * t])
-      }
-    }
-  }
-  return out
-}
-
 const preparedCountries = computed(() => {
   const raw = props.countriesData || WORLD_COUNTRIES_LITE
   return raw.map((c) => ({
     ...c,
-    denseRings: c.rings.map((r) => densifyRing(r, 7))
+    denseRings: c.rings.map((r) => ({
+      pts: densifyRing(r, 5),
+      isSouthPolar: isSouthPolarRing(r)
+    }))
   }))
 })
 
@@ -372,17 +235,19 @@ const renderedCountries = computed(() => {
 
   for (const c of preparedCountries.value) {
     let pathD = ''
-    for (const ring of c.denseRings) {
-      const camPts = ring.map(([lon, lat]) => lonLatToCamVec3(lon, lat, trig))
-      const clipped = clipSphericalPolygonToHorizon(camPts)
-      if (clipped.length >= 3) {
-        pathD += camPolygonToSvgPath(clipped)
+    for (const ringObj of c.denseRings) {
+      const camPts = ringObj.pts.map(([lon, lat]) => lonLatToCamVec3(lon, lat, trig))
+      const clippedPolygons = clipSphericalRingToHorizon(camPts, {
+        isSouthPolar: ringObj.isSouthPolar
+      })
+      if (clippedPolygons.length > 0) {
+        pathD += camPolygonsToSvgPath(clippedPolygons, CX, CY, R)
       }
     }
     if (!pathD) continue
 
     const selected = isCountrySelected(c)
-    const hovered = hoveredCountryId.value === c.id
+    const hovered = !isDragging.value && hoveredCountryId.value === c.id
     const customFill = props.countryColors?.[c.id] || props.countryColors?.[c.name]
 
     list.push({
@@ -411,28 +276,13 @@ const graticulePathD = computed(() => {
   const latStep = Math.max(5, Number(props.graticuleStep?.[1]) || 10)
   let d = ''
 
-  const appendPolyline = (pts) => {
-    let open = false
-    for (let i = 0; i < pts.length; i++) {
-      const p = pts[i]
-      if (p.z >= 0) {
-        const sx = (CX + p.x * R).toFixed(1)
-        const sy = (CY - p.y * R).toFixed(1)
-        d += (open ? 'L' : 'M') + sx + ',' + sy
-        open = true
-      } else {
-        open = false
-      }
-    }
-  }
-
   // Meridians
   for (let lon = -180; lon < 180; lon += lonStep) {
     const pts = []
     for (let lat = -85; lat <= 85; lat += 4) {
       pts.push(lonLatToCamVec3(lon, lat, trig))
     }
-    appendPolyline(pts)
+    d += camPolylineToSvgPath(pts, CX, CY, R)
   }
 
   // Parallels
@@ -441,7 +291,7 @@ const graticulePathD = computed(() => {
     for (let lon = -180; lon <= 180; lon += 4) {
       pts.push(lonLatToCamVec3(lon, lat, trig))
     }
-    appendPolyline(pts)
+    d += camPolylineToSvgPath(pts, CX, CY, R)
   }
 
   return d
@@ -530,9 +380,9 @@ const healpixCells = computed(() => {
           boundaryCam.push(worldVec3ToCamVec3(w.wx, w.wy, w.wz, trig))
         }
 
-        const clipped = clipSphericalPolygonToHorizon(boundaryCam)
-        if (clipped.length < 3) continue
-        const pathD = camPolygonToSvgPath(clipped)
+        const clippedPolys = clipSphericalRingToHorizon(boundaryCam)
+        if (!clippedPolys.length) continue
+        const pathD = camPolygonsToSvgPath(clippedPolys, CX, CY, R)
         if (!pathD) continue
 
         cells.push({
@@ -540,7 +390,7 @@ const healpixCells = computed(() => {
           face,
           d: pathD,
           selected: selectedPixSet.has(String(ipix)),
-          hovered: hoveredHealpixPix.value === ipix,
+          hovered: !isDragging.value && hoveredHealpixPix.value === ipix,
           labelVisible: props.showHealpixLabels && centerCam.z > 0.15,
           labelX: CX + centerCam.x * R,
           labelY: CY - centerCam.y * R
@@ -574,8 +424,7 @@ const renderedArcs = computed(() => {
     const omega = Math.acos(dot)
     const sinOmega = Math.sin(omega)
     const steps = 40
-    let d = ''
-    let open = false
+    const camPts = []
 
     for (let s = 0; s <= steps; s++) {
       const t = s / steps
@@ -591,16 +440,10 @@ const renderedArcs = computed(() => {
         wy = a * v1[1] + b * v2[1]
         wz = a * v1[2] + b * v2[2]
       }
-      const cam = worldVec3ToCamVec3(wx, wy, wz, trig)
-      if (cam.z >= 0) {
-        const sx = (CX + cam.x * R).toFixed(1)
-        const sy = (CY - cam.y * R).toFixed(1)
-        d += (open ? 'L' : 'M') + sx + ',' + sy
-        open = true
-      } else {
-        open = false
-      }
+      camPts.push(worldVec3ToCamVec3(wx, wy, wz, trig))
     }
+
+    const d = camPolylineToSvgPath(camPts, CX, CY, R)
 
     if (d) {
       out.push({
@@ -639,19 +482,32 @@ const renderedMarkers = computed(() => {
   return out
 })
 
-// Drag interaction state
+// Drag interaction state (coalesced via requestAnimationFrame to prevent mid-frame SVG dirty-rect artifacts)
 const isDragging = ref(false)
 let dragStartX = 0
 let dragStartY = 0
 let startLon = 0
 let startLat = 0
 let dragMovedDistance = 0
+let pendingLon = null
+let pendingLat = null
+let dragRafId = null
 let animFrameId = null
 let lastAnimTime = 0
+
+function flushPendingDrag() {
+  dragRafId = null
+  if (pendingLon === null || pendingLat === null) return
+  rotLon.value = pendingLon
+  rotLat.value = pendingLat
+  emit('update:center', [Number(pendingLon.toFixed(2)), Number(pendingLat.toFixed(2))])
+}
 
 function onPointerDown(e) {
   if (!props.interactive) return
   isDragging.value = true
+  hoveredCountryId.value = null
+  hoveredHealpixPix.value = null
   dragStartX = e.clientX
   dragStartY = e.clientY
   startLon = rotLon.value
@@ -672,14 +528,24 @@ function onPointerMove(e) {
   while (nextLon < -180) nextLon += 360
   const nextLat = Math.max(-85, Math.min(85, startLat + dy * sensitivity))
 
-  rotLon.value = nextLon
-  rotLat.value = nextLat
-  emit('update:center', [Number(nextLon.toFixed(2)), Number(nextLat.toFixed(2))])
+  pendingLon = nextLon
+  pendingLat = nextLat
+  if (!dragRafId && typeof requestAnimationFrame === 'function') {
+    dragRafId = requestAnimationFrame(flushPendingDrag)
+  } else if (typeof requestAnimationFrame !== 'function') {
+    flushPendingDrag()
+  }
 }
 
 function onPointerUp(e) {
   if (!isDragging.value) return
+  if (dragRafId) {
+    cancelAnimationFrame(dragRafId)
+    flushPendingDrag()
+  }
   isDragging.value = false
+  pendingLon = null
+  pendingLat = null
   e.currentTarget?.releasePointerCapture?.(e.pointerId)
 }
 
@@ -763,6 +629,7 @@ onMounted(() => {
 
 onUnmounted(() => {
   if (animFrameId) cancelAnimationFrame(animFrameId)
+  if (dragRafId) cancelAnimationFrame(dragRafId)
 })
 </script>
 
@@ -795,16 +662,6 @@ onUnmounted(() => {
           <stop offset="94%" stop-color="rgba(0,12,18,0.22)" />
           <stop offset="100%" stop-color="rgba(0,8,14,0.48)" />
         </radialGradient>
-
-        <!-- Selected Country Glow Filter (matches the soft coral halo on Chad/Russia) -->
-        <filter :id="`${uid}-selected-glow`" x="-25%" y="-25%" width="150%" height="150%">
-          <feDropShadow dx="0" dy="2" stdDeviation="5.5" :flood-color="palette.selectedGlow" flood-opacity="0.9" />
-        </filter>
-
-        <!-- Circular Globe Clip Path -->
-        <clipPath :id="`${uid}-sphere-clip`">
-          <circle :cx="CX" :cy="CY" :r="R" />
-        </clipPath>
       </defs>
 
       <!-- Outer Soft Atmosphere Halo Ring -->
@@ -823,16 +680,16 @@ onUnmounted(() => {
         />
       </template>
 
-      <!-- Ocean Sphere Base -->
-      <circle
-        :cx="CX"
-        :cy="CY"
-        :r="R"
-        :fill="`url(#${uid}-ocean)`"
-      />
+      <!-- Spherical Layers (mathematically horizon-clipped to r <= R without offscreen SVG SaveLayer artifacts) -->
+      <g class="nano-globe-sphere-layers">
+        <!-- Ocean Sphere Base -->
+        <circle
+          :cx="CX"
+          :cy="CY"
+          :r="R"
+          :fill="`url(#${uid}-ocean)`"
+        />
 
-      <!-- Clipped Spherical Layers -->
-      <g :clip-path="`url(#${uid}-sphere-clip)`">
         <!-- 1. Cartographic Graticule Grid (Meridians & Parallels) -->
         <path
           v-if="localShowGraticule && graticulePathD"
@@ -845,36 +702,48 @@ onUnmounted(() => {
 
         <!-- 2. Simplified SVG Country Polygons -->
         <g v-if="showCountries" class="nano-globe-countries">
-          <path
-            v-for="country in renderedCountries"
-            :key="country.id"
-            :d="country.d"
-            class="nano-globe-country"
-            :class="{
-              'is-selected': country.selected,
-              'is-hovered': country.hovered
-            }"
-            :fill="
-              country.customFill ||
-              (country.selected
-                ? palette.selectedFill
-                : country.hovered
-                  ? palette.landHoverFill
-                  : palette.landFill)
-            "
-            :stroke="country.selected ? palette.selectedStroke : palette.landStroke"
-            :stroke-width="country.selected ? 1.55 : 0.65"
-            :filter="country.selected ? `url(#${uid}-selected-glow)` : undefined"
-            stroke-linejoin="round"
-            @mouseenter="
-              hoveredCountryId = country.id;
-              emit('country-hover', { id: country.id, name: country.name })
-            "
-            @mouseleave="hoveredCountryId = null"
-            @click.stop="onCountryClick(country)"
-          >
-            <title>{{ country.name }} ({{ country.id }})</title>
-          </path>
+          <template v-for="country in renderedCountries" :key="country.id">
+            <!-- Vector Glow Underlay for Selected Countries (replaces SVG feDropShadow to prevent Blink dirty-rect ghosting) -->
+            <path
+              v-if="country.selected"
+              :d="country.d"
+              class="nano-globe-country-glow"
+              fill="none"
+              :stroke="palette.selectedGlow"
+              stroke-width="6.5"
+              stroke-linejoin="round"
+              stroke-linecap="round"
+              pointer-events="none"
+            />
+            <path
+              :d="country.d"
+              class="nano-globe-country"
+              :class="{
+                'is-selected': country.selected,
+                'is-hovered': country.hovered
+              }"
+              :fill="
+                country.customFill ||
+                (country.selected
+                  ? palette.selectedFill
+                  : country.hovered
+                    ? palette.landHoverFill
+                    : palette.landFill)
+              "
+              :stroke="country.selected ? palette.selectedStroke : palette.landStroke"
+              :stroke-width="country.selected ? 1.55 : 0.65"
+              stroke-linejoin="round"
+              @mouseenter="
+                !isDragging &&
+                  ((hoveredCountryId = country.id),
+                  emit('country-hover', { id: country.id, name: country.name }))
+              "
+              @mouseleave="!isDragging && (hoveredCountryId = null)"
+              @click.stop="onCountryClick(country)"
+            >
+              <title>{{ country.name }} ({{ country.id }})</title>
+            </path>
+          </template>
         </g>
 
         <!-- 3. HEALPix Equal-Area Spherical Grid Overlay -->
@@ -894,8 +763,8 @@ onUnmounted(() => {
             :stroke="palette.healpixStroke"
             :stroke-width="cell.selected ? 1.5 : 0.9"
             stroke-linejoin="round"
-            @mouseenter="hoveredHealpixPix = cell.ipix"
-            @mouseleave="hoveredHealpixPix = null"
+            @mouseenter="!isDragging && (hoveredHealpixPix = cell.ipix)"
+            @mouseleave="!isDragging && (hoveredHealpixPix = null)"
             @click.stop="onHealpixClick(cell)"
           >
             <title>HEALPix #{{ cell.ipix }} (face {{ cell.face }}, Nside={{ 1 << localHealpixOrder }})</title>
@@ -966,13 +835,26 @@ onUnmounted(() => {
           </g>
         </g>
 
-        <!-- 6. Spherical 3D Limb Shading Overlay -->
+        <!-- 6. Spherical 3D Limb Shading Overlay & Crisp Horizon Bezel -->
         <circle
           :cx="CX"
           :cy="CY"
           :r="R"
           :fill="`url(#${uid}-limb)`"
+          :stroke="palette.oceanDeep"
+          stroke-width="1.2"
           pointer-events="none"
+        />
+
+        <!-- Full-viewport SVG paint invalidator to prevent Blink partial dirty-rect ghost artifacts -->
+        <rect
+          x="0"
+          y="0"
+          :width="VIEW_SIZE"
+          :height="VIEW_SIZE"
+          fill="rgba(0,0,0,0)"
+          pointer-events="none"
+          :data-view="`${rotLon.toFixed(2)},${rotLat.toFixed(2)},${activePreset}`"
         />
       </g>
     </svg>
@@ -1051,12 +933,15 @@ onUnmounted(() => {
 
 .nano-globe-country {
   cursor: pointer;
-  transition: fill 120ms ease, stroke-width 120ms ease;
+}
+
+.nano-globe-svg.is-dragging .nano-globe-country,
+.nano-globe-svg.is-dragging .nano-globe-healpix-cell {
+  cursor: grabbing;
 }
 
 .nano-globe-healpix-cell {
   cursor: pointer;
-  transition: fill 120ms ease;
 }
 
 .nano-globe-healpix-label {
