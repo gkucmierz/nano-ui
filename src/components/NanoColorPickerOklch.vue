@@ -284,6 +284,7 @@ const copyValue = async () => {
       <!-- Live Contrast Preview Card -->
       <div
         class="nano-oklch-preview"
+        :class="isLightRecommended ? 'is-light-recommended' : 'is-dark-recommended'"
         :style="{ backgroundColor: hexString, color: recommendedText }"
       >
         <div class="nano-oklch-preview-header">
@@ -295,7 +296,7 @@ const copyValue = async () => {
 
         <div class="nano-oklch-samples">
           <div
-            class="nano-oklch-sample-row"
+            class="nano-oklch-sample-row is-dark-sample"
             :class="{ 'is-optimal': !isLightRecommended }"
             :style="{ color: darkText }"
           >
@@ -303,7 +304,7 @@ const copyValue = async () => {
             <span class="sample-ratio">{{ wcagDarkRatio.toFixed(1) }}:1 · {{ darkBadge }}</span>
           </div>
           <div
-            class="nano-oklch-sample-row"
+            class="nano-oklch-sample-row is-light-sample"
             :class="{ 'is-optimal': isLightRecommended }"
             :style="{ color: lightText }"
           >
@@ -478,10 +479,18 @@ const copyValue = async () => {
 }
 
 .nano-oklch-preview-title {
-  font-size: 0.75rem;
-  font-weight: 600;
-  letter-spacing: 0.03em;
+  font-size: 0.76rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
   text-transform: uppercase;
+}
+
+.nano-oklch-preview.is-light-recommended .nano-oklch-preview-title {
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.45);
+}
+
+.nano-oklch-preview.is-dark-recommended .nano-oklch-preview-title {
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.45);
 }
 
 .nano-oklch-recommended-pill {
@@ -490,35 +499,63 @@ const copyValue = async () => {
   justify-content: center;
   min-width: 48px;
   height: 20px;
-  padding: 0 0.45rem;
+  padding: 0 0.5rem;
   border-radius: 999px;
-  font-size: 0.7rem;
+  font-size: 0.72rem;
   font-weight: 700;
-  background: rgba(0, 0, 0, 0.25);
+  background: rgba(15, 23, 42, 0.58);
+  border: 1px solid rgba(255, 255, 255, 0.28);
   color: #ffffff;
   font-variant-numeric: tabular-nums;
+  letter-spacing: 0.02em;
 }
 
 .nano-oklch-samples {
   display: flex;
   flex-direction: column;
-  gap: 0.35rem;
+  gap: 0.38rem;
 }
 
 .nano-oklch-sample-row {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0.25rem 0.45rem;
+  padding: 0.28rem 0.5rem;
   border-radius: 6px;
-  font-size: 0.75rem;
-  font-weight: 600;
+  font-size: 0.78rem;
+  font-weight: 700;
   font-variant-numeric: tabular-nums;
-  border: 1px solid transparent;
+  border: 1.5px solid transparent;
+  transition: background-color 100ms ease, border-color 100ms ease;
+}
+
+.nano-oklch-sample-row.is-dark-sample {
+  background: rgba(255, 255, 255, 0.28);
+  border-color: rgba(15, 23, 42, 0.18);
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.5);
+}
+
+.nano-oklch-sample-row.is-dark-sample:not(.is-optimal) {
+  background: rgba(255, 255, 255, 0.68);
+  border-color: rgba(255, 255, 255, 0.42);
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.75);
+}
+
+.nano-oklch-sample-row.is-light-sample {
+  background: rgba(15, 23, 42, 0.28);
+  border-color: rgba(255, 255, 255, 0.22);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+}
+
+.nano-oklch-sample-row.is-light-sample:not(.is-optimal) {
+  background: rgba(15, 23, 42, 0.66);
+  border-color: rgba(15, 23, 42, 0.42);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.75);
 }
 
 .nano-oklch-sample-row.is-optimal {
   border-color: currentColor;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.18);
 }
 
 .nano-oklch-slider-block {
@@ -531,8 +568,9 @@ const copyValue = async () => {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  font-size: 0.75rem;
-  color: var(--nano-text-secondary, #cbd5e1);
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--nano-text-main, #f8fafc);
   font-variant-numeric: tabular-nums;
   min-height: 18px;
 }
@@ -579,8 +617,8 @@ const copyValue = async () => {
   border: none;
   border-radius: 6px;
   background: transparent;
-  color: var(--nano-text-muted, #94a3b8);
-  font-size: 0.72rem;
+  color: var(--nano-text-secondary, #cbd5e1);
+  font-size: 0.75rem;
   font-weight: 600;
   cursor: pointer;
   outline: none;
@@ -606,9 +644,10 @@ const copyValue = async () => {
   border-radius: var(--nano-radius-md, 8px);
   border: 1px solid var(--nano-border-card, rgba(255, 255, 255, 0.15));
   background: var(--nano-bg-code, #0f172a);
-  color: var(--nano-text-code, #cbd5e1);
+  color: var(--nano-text-main, #f8fafc);
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-  font-size: 0.78rem;
+  font-size: 0.8rem;
+  font-weight: 500;
   font-variant-numeric: tabular-nums;
   outline: none;
 }
