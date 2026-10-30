@@ -210,8 +210,9 @@ const cameraTrig = computed(() => {
 
 const preparedCountries = computed(() => {
   const raw = props.countriesData || WORLD_COUNTRIES_LITE
-  return raw.map((c) => ({
+  return raw.map((c, idx) => ({
     ...c,
+    uidKey: `${c.id}-${c.name || idx}`,
     denseRings: c.rings.map((r) => ({
       pts: densifyRing(r, 5),
       isSouthPolar: isSouthPolarRing(r)
@@ -252,6 +253,7 @@ const renderedCountries = computed(() => {
 
     list.push({
       id: c.id,
+      uidKey: c.uidKey,
       name: c.name,
       center: c.center,
       d: pathD,
@@ -702,7 +704,7 @@ onUnmounted(() => {
 
         <!-- 2. Simplified SVG Country Polygons -->
         <g v-if="showCountries" class="nano-globe-countries">
-          <template v-for="country in renderedCountries" :key="country.id">
+          <template v-for="country in renderedCountries" :key="country.uidKey">
             <!-- Vector Glow Underlay for Selected Countries (replaces SVG feDropShadow to prevent Blink dirty-rect ghosting) -->
             <path
               v-if="country.selected"

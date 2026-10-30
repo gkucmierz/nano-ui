@@ -29,8 +29,13 @@ function makeTrig(lon0Deg, lat0Deg) {
 }
 
 describe('NanoGlobe Component & WORLD_COUNTRIES_LITE Dataset', () => {
-  it('bundles 180 simplified world countries with valid [lon, lat] rings and centroids', () => {
+  it('bundles 180 simplified world countries with strictly unique IDs (no duplicate -99 keys) and valid [lon, lat] rings', () => {
     assert.ok(WORLD_COUNTRIES_LITE.length >= 170, `Expected >= 170 countries, got ${WORLD_COUNTRIES_LITE.length}`)
+    const ids = WORLD_COUNTRIES_LITE.map((c) => c.id)
+    const uniqueIds = new Set(ids)
+    assert.equal(uniqueIds.size, ids.length, 'Every country in WORLD_COUNTRIES_LITE must have a strictly unique id to prevent Vue v-for duplicate key DOM leaks')
+    assert.equal(ids.includes('-99'), false, 'WORLD_COUNTRIES_LITE must not contain Natural Earth placeholder id "-99"')
+
     const poland = WORLD_COUNTRIES_LITE.find((c) => c.id === 'POL' || c.name === 'Poland')
     const chad = WORLD_COUNTRIES_LITE.find((c) => c.id === 'TCD' || c.name === 'Chad')
     const russia = WORLD_COUNTRIES_LITE.find((c) => c.id === 'RUS' || c.name === 'Russia')
