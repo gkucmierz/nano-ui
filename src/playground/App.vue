@@ -268,6 +268,14 @@ onUnmounted(() => {
             </svg>
             <span class="nav-label">{{ t('nav.codeEditor') }}</span>
           </router-link>
+          <router-link to="/docs/splitter" class="nav-link" active-class="active" v-tooltip="isNarrow ? t('nav.splitter') : undefined">
+            <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="3" y="3" width="18" height="18" rx="2"/>
+              <line x1="12" y1="3" x2="12" y2="21"/>
+              <polygon points="10,5 14,5 12,9" fill="currentColor"/>
+            </svg>
+            <span class="nav-label">{{ t('nav.splitter') }}</span>
+          </router-link>
         </div>
       </nav>
 

@@ -2,13 +2,17 @@
 import { ref, computed } from 'vue';
 import NanoFileList from '../../components/NanoFileList.vue';
 import NanoCodeEditor from '../../components/NanoCodeEditor.vue';
+import NanoSplitter from '../../components/NanoSplitter.vue';
 import NanoSwitch from '../../components/NanoSwitch.vue';
 import NanoSlider from '../../components/NanoSlider.vue';
 
 const maxPathLen = ref(34);
+const autoTruncate = ref(true);
 const searchable = ref(true);
 const showStats = ref(true);
 const diffStyle = ref('unified');
+const leftPanePx = ref(320);
+const splitterLocked = ref(false);
 
 const demoCommits = [
   {
@@ -188,34 +192,51 @@ export function inspectCommitHistory(commits) {
           <NanoSwitch v-model="showStats" size="compact" />
           <span>Show +/- line stats</span>
         </label>
-        <div class="ctrl-slider">
+        <label class="ctrl-item">
+          <NanoSwitch v-model="autoTruncate" size="compact" />
+          <span>Auto-truncate on resize</span>
+        </label>
+        <div v-if="!autoTruncate" class="ctrl-slider">
           <span class="ctrl-label">Path middle-truncation ({{ maxPathLen }} chars):</span>
           <NanoSlider v-model="maxPathLen" :min="20" :max="60" :step="1" size="sm" />
         </div>
       </div>
 
-      <div class="git-inspector-grid">
-        <NanoFileList
-          v-model="selectedFilePath"
-          v-model:selected-commit-hash="selectedCommitHash"
-          :commits="demoCommits"
-          :commit="currentCommit"
-          :files="currentCommit.files"
-          :max-path-length="maxPathLen"
-          :searchable="searchable"
-          :show-stats="showStats"
-          :max-height="420"
-          @select-commit="handleCommitSelect"
-        />
-
-        <NanoCodeEditor
-          v-if="currentFile"
-          v-model:diff-style="diffStyle"
-          :file-path="currentFile.path"
-          :diff="currentFile.diff"
-          :code="currentFile.code"
-          :max-height="460"
-        />
+      <div class="git-inspector-splitter-box">
+        <NanoSplitter
+          v-model="leftPanePx"
+          v-model:locked="splitterLocked"
+          unit="px"
+          :default-size="320"
+          :min="220"
+          :max="540"
+          :gap="14"
+          lockable
+        >
+          <template #first>
+            <NanoFileList
+              v-model="selectedFilePath"
+              v-model:selected-commit-hash="selectedCommitHash"
+              :commits="demoCommits"
+              :commit="currentCommit"
+              :files="currentCommit.files"
+              :max-path-length="maxPathLen"
+              :auto-truncate="autoTruncate"
+              :searchable="searchable"
+              :show-stats="showStats"
+              @select-commit="handleCommitSelect"
+            />
+          </template>
+          <template #second>
+            <NanoCodeEditor
+              v-if="currentFile"
+              v-model:diff-style="diffStyle"
+              :file-path="currentFile.path"
+              :diff="currentFile.diff"
+              :code="currentFile.code"
+            />
+          </template>
+        </NanoSplitter>
       </div>
     </div>
 
@@ -304,16 +325,12 @@ const files = [
   white-space: nowrap;
 }
 
-.git-inspector-grid {
-  display: grid;
-  grid-template-columns: 310px minmax(0, 1fr);
-  gap: 14px;
-  align-items: stretch;
-}
-
-@media (max-width: 860px) {
-  .git-inspector-grid {
-    grid-template-columns: 1fr;
-  }
+.git-inspector-splitter-box {
+  height: 460px;
+  min-height: 320px;
+  max-height: 820px;
+  resize: vertical;
+  overflow: hidden;
+  padding-bottom: 4px;
 }
 </style>

@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed, watch } from 'vue';
+import { ref, computed, watch, onMounted, onUnmounted } from 'vue';
 import { middleTruncatePath, normalizeFileStatus } from '../utils/git-diff.js';
 import { tooltipDirective as vTooltip } from '../directives/tooltip.js';
 
@@ -49,11 +49,18 @@ const props = defineProps({
     default: '',
   },
   /**
-   * Max characters before middle-truncating paths
+   * Max characters before middle-truncating paths (used as fallback or when autoTruncate is false)
    */
   maxPathLength: {
     type: Number,
     default: 34,
+  },
+  /**
+   * Dynamically adapt maxPathLength to the container width via ResizeObserver
+   */
+  autoTruncate: {
+    type: Boolean,
+    default: true,
   },
   /**
    * Show filter input when file list is long
@@ -93,6 +100,38 @@ const emit = defineEmits([
   'copyHash',
 ]);
 
+const rootRef = ref(null);
+const measuredWidth = ref(0);
+let resizeObserver = null;
+
+onMounted(() => {
+  if (typeof ResizeObserver !== 'undefined' && rootRef.value) {
+    resizeObserver = new ResizeObserver((entries) => {
+      for (const entry of entries) {
+        const w = entry.contentRect?.width || rootRef.value?.clientWidth || 0;
+        if (w > 0) measuredWidth.value = w;
+      }
+    });
+    resizeObserver.observe(rootRef.value);
+  }
+});
+
+onUnmounted(() => {
+  if (resizeObserver) {
+    resizeObserver.disconnect();
+    resizeObserver = null;
+  }
+});
+
+const effectiveMaxPathLength = computed(() => {
+  if (props.autoTruncate && measuredWidth.value > 0) {
+    const reservedRight = props.showStats ? 106 : 48;
+    const availPx = Math.max(100, measuredWidth.value - reservedRight);
+    return Math.max(18, Math.floor(availPx / 7.2));
+  }
+  return props.maxPathLength;
+});
+
 const searchQuery = ref('');
 const copiedHash = ref(false);
 let copyTimer = null;
@@ -101,7 +140,7 @@ const normalizedFiles = computed(() => {
   return (props.files || []).map((item, index) => {
     const raw = typeof item === 'string' ? { path: item, status: 'M' } : item;
     const statusInfo = normalizeFileStatus(raw.status);
-    const trunc = middleTruncatePath(raw.path, props.maxPathLength);
+    const trunc = middleTruncatePath(raw.path, effectiveMaxPathLength.value);
     return {
       ...raw,
       index,
@@ -220,6 +259,7 @@ watch(
 
 <template>
   <div
+    ref="rootRef"
     class="nano-file-list"
     tabindex="0"
     role="listbox"
@@ -363,6 +403,10 @@ watch(
 .nano-file-list {
   display: flex;
   flex-direction: column;
+  flex: 1;
+  height: 100%;
+  min-height: 0;
+  box-sizing: border-box;
   background: var(--nano-bg-card, #0f172a);
   border: 1px solid var(--nano-border-card, rgba(255, 255, 255, 0.12));
   border-radius: var(--nano-radius-md, 8px);
@@ -561,6 +605,7 @@ watch(
   flex-direction: column;
   overflow-y: auto;
   flex: 1;
+  min-height: 0;
 }
 
 .nfl-empty {

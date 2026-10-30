@@ -485,6 +485,10 @@ const copyContent = async () => {
 .nano-code-editor {
   display: flex;
   flex-direction: column;
+  flex: 1;
+  height: 100%;
+  min-height: 0;
+  box-sizing: border-box;
   background: var(--nano-code-bg, var(--nano-bg-code, #0b1120));
   border: 1px solid var(--nano-border-card, rgba(255, 255, 255, 0.12));
   border-radius: var(--nano-radius-md, 8px);
@@ -639,6 +643,7 @@ const copyContent = async () => {
 .nce-diff-viewport {
   overflow: auto;
   flex: 1;
+  min-height: 0;
 }
 
 .nce-empty {

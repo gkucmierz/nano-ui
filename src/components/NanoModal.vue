@@ -382,6 +382,7 @@ const handleCancel = () => { emit('cancel'); closeModal(); };
   align-items: center;
   background: var(--nano-modal-header-bg);
   user-select: none;
+  flex-shrink: 0;
 }
 
 .nano-modal-header.is-draggable {
@@ -424,6 +425,9 @@ const handleCancel = () => { emit('cancel'); closeModal(); };
   padding: 24px;
   overflow-y: auto;
   flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
 }
 
 .nano-modal-footer {
@@ -432,6 +436,7 @@ const handleCancel = () => { emit('cancel'); closeModal(); };
   background: var(--nano-modal-footer-bg);
   display: flex;
   justify-content: flex-end;
+  flex-shrink: 0;
 }
 
 .nano-modal-actions {

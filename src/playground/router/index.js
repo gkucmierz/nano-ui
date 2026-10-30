@@ -18,6 +18,7 @@ import SliderDoc from '../docs/SliderDoc.vue';
 import IconDoc from '../docs/IconDoc.vue';
 import KineticDoc from '../docs/KineticDoc.vue';
 import CodeEditorDoc from '../docs/CodeEditorDoc.vue';
+import SplitterDoc from '../docs/SplitterDoc.vue';
 import NotFoundDoc from '../docs/NotFoundDoc.vue';
 
 export const routes = [
@@ -234,6 +235,17 @@ export const routes = [
       componentName: 'NanoCodeEditor',
       type: 'component',
       description: 'Git changed files navigator with middle-ellipsis truncation, unified/split diff inspector, and live syntax-highlighted code editor.',
+    },
+  },
+  {
+    path: '/docs/splitter',
+    name: 'Splitter',
+    component: SplitterDoc,
+    meta: {
+      title: 'NanoSplitter Component | Nano UI',
+      componentName: 'NanoSplitter',
+      type: 'component',
+      description: 'Zero-clutter LoL-Inspector-styled two-pane resizable splitter with 1px cyan laser line, triangle lock pull-tab, and nested horizontal/vertical support.',
     },
   },
   {

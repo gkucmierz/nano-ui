@@ -15,6 +15,7 @@ import KineticRotator from './components/KineticRotator.vue';
 import NanoCodeBlock from './components/NanoCodeBlock.vue';
 import NanoFileList from './components/NanoFileList.vue';
 import NanoCodeEditor from './components/NanoCodeEditor.vue';
+import NanoSplitter from './components/NanoSplitter.vue';
 import NanoIcon from './components/NanoIcon.vue';
 import NanoColorPickerOklch from './components/NanoColorPickerOklch.vue';
 import NuMaskedInput from './components/NuMaskedInput.vue';
@@ -76,6 +77,7 @@ export {
   NanoCodeBlock,
   NanoFileList,
   NanoCodeEditor,
+  NanoSplitter,
   NanoIcon,
   NanoColorPickerOklch,
   NuMaskedInput,
@@ -148,6 +150,7 @@ export default {
     app.component(`${cp}NanoCodeBlock`, NanoCodeBlock);
     app.component(`${cp}NanoFileList`, NanoFileList);
     app.component(`${cp}NanoCodeEditor`, NanoCodeEditor);
+    app.component(`${cp}NanoSplitter`, NanoSplitter);
     app.component(`${cp}NanoIcon`, NanoIcon);
     app.component(`${cp}NanoColorPickerOklch`, NanoColorPickerOklch);
     app.component(`${cp}NuMaskedInput`, NuMaskedInput);
