@@ -20,6 +20,8 @@ import NanoIcon from './components/NanoIcon.vue';
 import NanoColorPickerOklch from './components/NanoColorPickerOklch.vue';
 import NuMaskedInput from './components/NuMaskedInput.vue';
 import NuPinInput from './components/NuPinInput.vue';
+import NanoGlobe from './components/NanoGlobe.vue';
+import { WORLD_COUNTRIES_LITE } from './data/worldCountriesLite.js';
 import { registerIcons, getAvailableIcons, BUILTIN_ICONS } from './icons/index.js';
 import { normalizeAngle, shortestAngleDiff } from './utils/math.js';
 import {
@@ -82,6 +84,8 @@ export {
   NanoColorPickerOklch,
   NuMaskedInput,
   NuPinInput,
+  NanoGlobe,
+  WORLD_COUNTRIES_LITE,
   registerIcons,
   getAvailableIcons,
   BUILTIN_ICONS,
@@ -155,5 +159,6 @@ export default {
     app.component(`${cp}NanoColorPickerOklch`, NanoColorPickerOklch);
     app.component(`${cp}NuMaskedInput`, NuMaskedInput);
     app.component(`${cp}NuPinInput`, NuPinInput);
+    app.component(`${cp}NanoGlobe`, NanoGlobe);
   },
 };
