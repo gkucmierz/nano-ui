@@ -13,6 +13,8 @@ import NanoSwitch from './components/NanoSwitch.vue';
 import NanoSlider from './components/NanoSlider.vue';
 import KineticRotator from './components/KineticRotator.vue';
 import NanoCodeBlock from './components/NanoCodeBlock.vue';
+import NanoFileList from './components/NanoFileList.vue';
+import NanoCodeEditor from './components/NanoCodeEditor.vue';
 import NanoIcon from './components/NanoIcon.vue';
 import NanoColorPickerOklch from './components/NanoColorPickerOklch.vue';
 import NuMaskedInput from './components/NuMaskedInput.vue';
@@ -46,6 +48,12 @@ import {
   sampleKinematics,
 } from './utils/kinetics.js';
 import { highlightCode } from './utils/syntax-highlighter.js';
+import {
+  detectLangFromPath,
+  normalizeFileStatus,
+  middleTruncatePath,
+  parseUnifiedDiff,
+} from './utils/git-diff.js';
 import { detectRenderedGridColumns } from './utils/grid.js';
 import { transitions, durations, easings, transitionVariables } from './config/transitions.js';
 import './style.css';
@@ -66,6 +74,8 @@ export {
   NanoSlider,
   KineticRotator,
   NanoCodeBlock,
+  NanoFileList,
+  NanoCodeEditor,
   NanoIcon,
   NanoColorPickerOklch,
   NuMaskedInput,
@@ -96,6 +106,10 @@ export {
   cubicHermite,
   sampleKinematics,
   highlightCode,
+  detectLangFromPath,
+  normalizeFileStatus,
+  middleTruncatePath,
+  parseUnifiedDiff,
   detectRenderedGridColumns,
   initTheme,
   getZeroFoucScript,
@@ -132,6 +146,8 @@ export default {
     app.component(`${cp}NanoSlider`, NanoSlider);
     app.component(`${cp}KineticRotator`, KineticRotator);
     app.component(`${cp}NanoCodeBlock`, NanoCodeBlock);
+    app.component(`${cp}NanoFileList`, NanoFileList);
+    app.component(`${cp}NanoCodeEditor`, NanoCodeEditor);
     app.component(`${cp}NanoIcon`, NanoIcon);
     app.component(`${cp}NanoColorPickerOklch`, NanoColorPickerOklch);
     app.component(`${cp}NuMaskedInput`, NuMaskedInput);

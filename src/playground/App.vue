@@ -261,6 +261,13 @@ onUnmounted(() => {
             </svg>
             <span class="nav-label">{{ t('nav.mutatingHeader') }}</span>
           </router-link>
+          <router-link to="/docs/code-editor" class="nav-link" active-class="active" v-tooltip="isNarrow ? t('nav.codeEditor') : undefined">
+            <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="16 18 22 12 16 6"/>
+              <polyline points="8 6 2 12 8 18"/>
+            </svg>
+            <span class="nav-label">{{ t('nav.codeEditor') }}</span>
+          </router-link>
         </div>
       </nav>
 

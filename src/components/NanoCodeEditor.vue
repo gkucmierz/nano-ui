@@ -1,0 +1,865 @@
+<script setup>
+import { ref, computed, watch } from 'vue';
+import { highlightCode, escapeHtml } from '../utils/syntax-highlighter.js';
+import { detectLangFromPath, parseUnifiedDiff } from '../utils/git-diff.js';
+import { tooltipDirective as vTooltip } from '../directives/tooltip.js';
+
+const props = defineProps({
+  /**
+   * Code content (v-model or :code)
+   */
+  modelValue: {
+    type: String,
+    default: undefined,
+  },
+  code: {
+    type: String,
+    default: '',
+  },
+  /**
+   * Unified git diff string (when provided, enables Diff view)
+   */
+  diff: {
+    type: String,
+    default: '',
+  },
+  /**
+   * File path displayed in header and used for automatic language detection
+   */
+  filePath: {
+    type: String,
+    default: '',
+  },
+  /**
+   * Explicit language override ('js', 'vue', 'md', 'json', 'css', 'bash', etc.)
+   */
+  lang: {
+    type: String,
+    default: '',
+  },
+  /**
+   * View mode: 'auto' | 'diff' | 'code'
+   */
+  mode: {
+    type: String,
+    default: 'auto',
+  },
+  /**
+   * Diff layout: 'unified' | 'split'
+   */
+  diffStyle: {
+    type: String,
+    default: 'unified',
+  },
+  /**
+   * Enable live code editing in 'code' mode
+   */
+  editable: {
+    type: Boolean,
+    default: false,
+  },
+  /**
+   * Show line numbers gutter
+   */
+  showLineNumbers: {
+    type: Boolean,
+    default: true,
+  },
+  /**
+   * Initial line wrap state
+   */
+  defaultWrap: {
+    type: Boolean,
+    default: false,
+  },
+  /**
+   * Optional max height for scrolling
+   */
+  maxHeight: {
+    type: [Number, String],
+    default: null,
+  },
+});
+
+const emit = defineEmits([
+  'update:modelValue',
+  'update:code',
+  'update:mode',
+  'update:diffStyle',
+  'change',
+  'copied',
+]);
+
+const internalMode = ref(
+  props.mode !== 'auto'
+    ? props.mode
+    : (props.diff ? 'diff' : 'code')
+);
+const internalDiffStyle = ref(props.diffStyle || 'unified');
+const isWrapped = ref(props.defaultWrap);
+const copied = ref(false);
+const activeLine = ref(1);
+const textareaRef = ref(null);
+const highlightLayerRef = ref(null);
+const gutterRef = ref(null);
+let copyTimer = null;
+
+watch(() => props.mode, (val) => {
+  if (val && val !== 'auto') internalMode.value = val;
+});
+
+watch(() => props.diff, (val) => {
+  if (props.mode === 'auto') {
+    internalMode.value = val ? 'diff' : 'code';
+  }
+});
+
+watch(() => props.diffStyle, (val) => {
+  if (val) internalDiffStyle.value = val;
+});
+
+const resolvedLang = computed(() => {
+  return detectLangFromPath(props.filePath, props.lang);
+});
+
+const currentCode = computed(() => {
+  if (props.modelValue !== undefined) return props.modelValue;
+  return props.code || '';
+});
+
+const codeLines = computed(() => {
+  const raw = currentCode.value.replace(/\r\n/g, '\n');
+  const split = raw.split('\n');
+  const lang = resolvedLang.value;
+  return split.map((lineText, idx) => ({
+    number: idx + 1,
+    text: lineText,
+    html: highlightCode(lineText, lang) || escapeHtml(lineText) || ' ',
+  }));
+});
+
+const fullHighlightedHtml = computed(() => {
+  const raw = currentCode.value;
+  if (!raw) return ' ';
+  const html = highlightCode(raw, resolvedLang.value) || escapeHtml(raw);
+  return html.endsWith('\n') ? `${html} ` : html;
+});
+
+const parsedDiff = computed(() => {
+  if (!props.diff) return { lines: [], splitRows: [], additions: 0, deletions: 0 };
+  return parseUnifiedDiff(props.diff, resolvedLang.value);
+});
+
+const hasBothDiffAndCode = computed(() => {
+  return Boolean(props.diff && (props.code || props.modelValue !== undefined));
+});
+
+const containerMaxHeight = computed(() => {
+  if (!props.maxHeight) return undefined;
+  return typeof props.maxHeight === 'number' ? `${props.maxHeight}px` : props.maxHeight;
+});
+
+const setMode = (m) => {
+  internalMode.value = m;
+  emit('update:mode', m);
+};
+
+const setDiffStyle = (style) => {
+  internalDiffStyle.value = style;
+  emit('update:diffStyle', style);
+};
+
+const syncEditorScroll = (e) => {
+  const el = e.target;
+  if (highlightLayerRef.value) {
+    highlightLayerRef.value.scrollTop = el.scrollTop;
+    highlightLayerRef.value.scrollLeft = el.scrollLeft;
+  }
+  if (gutterRef.value) {
+    gutterRef.value.scrollTop = el.scrollTop;
+  }
+};
+
+const updateActiveCursorLine = () => {
+  const el = textareaRef.value;
+  if (!el) return;
+  const pos = el.selectionStart || 0;
+  const before = el.value.slice(0, pos);
+  activeLine.value = before.split('\n').length;
+};
+
+const handleEditorInput = (e) => {
+  const val = e.target.value;
+  emit('update:modelValue', val);
+  emit('update:code', val);
+  emit('change', val);
+  updateActiveCursorLine();
+};
+
+const handleEditorKeyDown = (e) => {
+  if (e.key === 'Tab') {
+    e.preventDefault();
+    const el = e.target;
+    const start = el.selectionStart;
+    const end = el.selectionEnd;
+    const val = el.value;
+    const nextVal = `${val.slice(0, start)}  ${val.slice(end)}`;
+    el.value = nextVal;
+    el.selectionStart = el.selectionEnd = start + 2;
+    emit('update:modelValue', nextVal);
+    emit('update:code', nextVal);
+    emit('change', nextVal);
+  }
+};
+
+const copyContent = async () => {
+  const textToCopy = internalMode.value === 'diff' && props.diff
+    ? props.diff
+    : currentCode.value;
+  if (!textToCopy) return;
+  try {
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      await navigator.clipboard.writeText(textToCopy);
+    }
+    copied.value = true;
+    emit('copied', textToCopy);
+    if (copyTimer) clearTimeout(copyTimer);
+    copyTimer = setTimeout(() => {
+      copied.value = false;
+    }, 1800);
+  } catch {}
+};
+</script>
+
+<template>
+  <div
+    class="nano-code-editor"
+    :class="{
+      'is-wrapped': isWrapped,
+      'is-diff-mode': internalMode === 'diff',
+      'is-editable': editable && internalMode === 'code',
+    }"
+  >
+    <!-- Header Bar -->
+    <header class="nce-header">
+      <div class="nce-header-left">
+        <span v-if="filePath" class="nce-filepath" :title="filePath">{{ filePath }}</span>
+        <span v-else class="nce-filepath">Code Inspector</span>
+
+        <span v-if="resolvedLang" class="nce-lang-badge">{{ resolvedLang }}</span>
+
+        <span v-if="internalMode === 'diff' && (parsedDiff.additions || parsedDiff.deletions)" class="nce-diff-stats">
+          <span class="nce-stat-add">+{{ parsedDiff.additions }}</span>
+          <span class="nce-stat-del">−{{ parsedDiff.deletions }}</span>
+        </span>
+      </div>
+
+      <div class="nce-header-actions">
+        <!-- Mode Toggle (Diff vs Code) when both are provided -->
+        <div v-if="hasBothDiffAndCode || editable" class="nce-seg-group">
+          <button
+            v-if="diff"
+            type="button"
+            class="nce-seg-btn"
+            :class="{ active: internalMode === 'diff' }"
+            @click="setMode('diff')"
+          >
+            Diff
+          </button>
+          <button
+            type="button"
+            class="nce-seg-btn"
+            :class="{ active: internalMode === 'code' }"
+            @click="setMode('code')"
+          >
+            {{ editable ? 'Edit' : 'Code' }}
+          </button>
+        </div>
+
+        <!-- Unified vs Split Diff Switcher -->
+        <div v-if="internalMode === 'diff' && diff" class="nce-seg-group">
+          <button
+            type="button"
+            class="nce-seg-btn"
+            :class="{ active: internalDiffStyle === 'unified' }"
+            v-tooltip="'Unified diff view'"
+            @click="setDiffStyle('unified')"
+          >
+            Unified
+          </button>
+          <button
+            type="button"
+            class="nce-seg-btn"
+            :class="{ active: internalDiffStyle === 'split' }"
+            v-tooltip="'Side-by-side split diff view'"
+            @click="setDiffStyle('split')"
+          >
+            Split
+          </button>
+        </div>
+
+        <!-- Wrap Toggle -->
+        <button
+          type="button"
+          class="nce-icon-btn"
+          :class="{ active: isWrapped }"
+          v-tooltip="isWrapped ? 'Unwrap lines' : 'Wrap lines'"
+          :aria-label="isWrapped ? 'Unwrap lines' : 'Wrap lines'"
+          @click="isWrapped = !isWrapped"
+        >
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="9 10 4 15 9 20" />
+            <path d="M20 4v7a4 4 0 0 1-4 4H4" />
+          </svg>
+        </button>
+
+        <!-- Copy Button -->
+        <button
+          type="button"
+          class="nce-icon-btn"
+          :class="{ copied }"
+          v-tooltip="copied ? 'Copied!' : 'Copy to clipboard'"
+          :aria-label="copied ? 'Copied' : 'Copy to clipboard'"
+          @click="copyContent"
+        >
+          <svg v-if="!copied" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
+            <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+          </svg>
+          <svg v-else viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="20 6 9 17 4 12" />
+          </svg>
+        </button>
+      </div>
+    </header>
+
+    <!-- 1. DIFF MODE: UNIFIED -->
+    <div
+      v-if="internalMode === 'diff' && internalDiffStyle === 'unified'"
+      class="nce-diff-viewport nano-scrollbar"
+      :style="{ maxHeight: containerMaxHeight }"
+    >
+      <div v-if="parsedDiff.lines.length === 0" class="nce-empty">
+        No diff changes to display.
+      </div>
+      <table v-else class="nce-diff-table">
+        <tbody>
+          <tr
+            v-for="line in parsedDiff.lines"
+            :key="line.id"
+            class="nce-diff-row"
+            :class="`is-${line.type}`"
+          >
+            <template v-if="line.type === 'hunk'">
+              <td colspan="2" class="nce-num-col nce-hunk-num">@@</td>
+              <td colspan="2" class="nce-hunk-cell">{{ line.content }}</td>
+            </template>
+            <template v-else>
+              <td v-if="showLineNumbers" class="nce-num-col">{{ line.oldNumber ?? '' }}</td>
+              <td v-if="showLineNumbers" class="nce-num-col">{{ line.newNumber ?? '' }}</td>
+              <td class="nce-sign-col">{{ line.prefix }}</td>
+              <td class="nce-code-col"><span class="nano-syntax-code" v-html="line.html"></span></td>
+            </template>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- 2. DIFF MODE: SPLIT (SIDE-BY-SIDE) -->
+    <div
+      v-else-if="internalMode === 'diff' && internalDiffStyle === 'split'"
+      class="nce-diff-viewport nano-scrollbar"
+      :style="{ maxHeight: containerMaxHeight }"
+    >
+      <div v-if="parsedDiff.splitRows.length === 0" class="nce-empty">
+        No diff changes to display.
+      </div>
+      <table v-else class="nce-diff-table is-split">
+        <tbody>
+          <tr
+            v-for="row in parsedDiff.splitRows"
+            :key="row.id"
+            class="nce-diff-row"
+            :class="{ 'is-hunk': row.type === 'hunk' }"
+          >
+            <template v-if="row.type === 'hunk'">
+              <td colspan="6" class="nce-hunk-cell">{{ row.hunkText }}</td>
+            </template>
+            <template v-else>
+              <!-- Left side (old) -->
+              <td class="nce-num-col" :class="row.left ? `is-${row.left.type}` : 'is-empty'">
+                {{ row.left?.oldNumber ?? '' }}
+              </td>
+              <td class="nce-sign-col" :class="row.left ? `is-${row.left.type}` : 'is-empty'">
+                {{ row.left ? row.left.prefix : '' }}
+              </td>
+              <td class="nce-code-col nce-split-half" :class="row.left ? `is-${row.left.type}` : 'is-empty'">
+                <span v-if="row.left" class="nano-syntax-code" v-html="row.left.html"></span>
+              </td>
+
+              <!-- Right side (new) -->
+              <td class="nce-num-col nce-split-border" :class="row.right ? `is-${row.right.type}` : 'is-empty'">
+                {{ row.right?.newNumber ?? '' }}
+              </td>
+              <td class="nce-sign-col" :class="row.right ? `is-${row.right.type}` : 'is-empty'">
+                {{ row.right ? row.right.prefix : '' }}
+              </td>
+              <td class="nce-code-col nce-split-half" :class="row.right ? `is-${row.right.type}` : 'is-empty'">
+                <span v-if="row.right" class="nano-syntax-code" v-html="row.right.html"></span>
+              </td>
+            </template>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- 3. CODE MODE: LIVE EDITABLE OVERLAY EDITOR -->
+    <div
+      v-else-if="editable"
+      class="nce-live-editor-shell"
+      :style="{ maxHeight: containerMaxHeight }"
+    >
+      <div v-if="showLineNumbers" ref="gutterRef" class="nce-live-gutter">
+        <div
+          v-for="line in codeLines"
+          :key="line.number"
+          class="nce-gutter-num"
+          :class="{ active: activeLine === line.number }"
+        >
+          {{ line.number }}
+        </div>
+      </div>
+
+      <div class="nce-live-stage">
+        <pre
+          ref="highlightLayerRef"
+          class="nce-live-highlight"
+          aria-hidden="true"
+        ><code class="nano-syntax-code" v-html="fullHighlightedHtml"></code></pre>
+
+        <textarea
+          ref="textareaRef"
+          :value="currentCode"
+          class="nce-live-textarea nano-scrollbar"
+          spellcheck="false"
+          autocapitalize="off"
+          autocomplete="off"
+          autocorrect="off"
+          @input="handleEditorInput"
+          @scroll="syncEditorScroll"
+          @click="updateActiveCursorLine"
+          @keyup="updateActiveCursorLine"
+          @keydown="handleEditorKeyDown"
+        ></textarea>
+      </div>
+    </div>
+
+    <!-- 4. CODE MODE: READ-ONLY SYNTAX VIEWER WITH LINE NUMBERS -->
+    <div
+      v-else
+      class="nce-diff-viewport nano-scrollbar"
+      :style="{ maxHeight: containerMaxHeight }"
+    >
+      <div v-if="codeLines.length === 0 || (codeLines.length === 1 && !codeLines[0].text)" class="nce-empty">
+        Empty file.
+      </div>
+      <table v-else class="nce-diff-table">
+        <tbody>
+          <tr
+            v-for="line in codeLines"
+            :key="line.number"
+            class="nce-diff-row"
+            :class="{ 'is-active-line': activeLine === line.number }"
+            @click="activeLine = line.number"
+          >
+            <td v-if="showLineNumbers" class="nce-num-col">{{ line.number }}</td>
+            <td class="nce-code-col"><span class="nano-syntax-code" v-html="line.html"></span></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</template>
+
+<style scoped>
+.nano-code-editor {
+  display: flex;
+  flex-direction: column;
+  background: var(--nano-code-bg, var(--nano-bg-code, #0b1120));
+  border: 1px solid var(--nano-border-card, rgba(255, 255, 255, 0.12));
+  border-radius: var(--nano-radius-md, 8px);
+  overflow: hidden;
+  font-family: var(--nano-font-mono, 'JetBrains Mono', 'Fira Code', monospace);
+  color: var(--nano-text-main, #f8fafc);
+}
+
+.nce-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 7px 12px;
+  background: var(--nano-code-header-bg, rgba(0, 0, 0, 0.25));
+  border-bottom: 1px solid var(--nano-border-card, rgba(255, 255, 255, 0.09));
+  font-family: var(--nano-font-sans, -apple-system, BlinkMacSystemFont, sans-serif);
+  user-select: none;
+}
+
+.nce-header-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.nce-filepath {
+  font-family: var(--nano-font-mono, 'JetBrains Mono', monospace);
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--nano-text-main, #f8fafc);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.nce-lang-badge {
+  font-family: var(--nano-font-mono, 'JetBrains Mono', monospace);
+  font-size: 0.65rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: color-mix(in srgb, var(--nano-accent-primary, #6366f1) 16%, transparent);
+  color: var(--nano-accent-primary, #818cf8);
+  border: 1px solid color-mix(in srgb, var(--nano-accent-primary, #6366f1) 30%, transparent);
+  flex-shrink: 0;
+}
+
+.nce-diff-stats {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--nano-font-mono, 'JetBrains Mono', monospace);
+  font-size: 0.73rem;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.nce-stat-add {
+  color: #16a34a;
+}
+
+:global([data-theme="dark"]) .nce-stat-add,
+:root:not([data-theme="light"]) .nce-stat-add {
+  color: #4ade80;
+}
+
+.nce-stat-del {
+  color: #dc2626;
+}
+
+:global([data-theme="dark"]) .nce-stat-del,
+:root:not([data-theme="light"]) .nce-stat-del {
+  color: #f87171;
+}
+
+.nce-header-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.nce-seg-group {
+  display: inline-flex;
+  align-items: center;
+  background: var(--nano-bg-muted, rgba(255, 255, 255, 0.05));
+  border: 1px solid var(--nano-border-card, rgba(255, 255, 255, 0.1));
+  border-radius: 6px;
+  padding: 2px;
+  gap: 2px;
+}
+
+.nce-seg-btn {
+  padding: 3px 8px;
+  border: none;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--nano-text-muted, #94a3b8);
+  font-size: 0.7rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.12s ease;
+}
+
+.nce-seg-btn:hover {
+  color: var(--nano-text-main, #f8fafc);
+}
+
+.nce-seg-btn.active {
+  background: var(--nano-accent-primary, #6366f1);
+  color: #ffffff;
+}
+
+.nce-icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  border-radius: 5px;
+  border: 1px solid var(--nano-border-card, rgba(255, 255, 255, 0.1));
+  background: var(--nano-bg-muted, rgba(255, 255, 255, 0.04));
+  color: var(--nano-text-muted, #94a3b8);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.nce-icon-btn:hover {
+  color: var(--nano-text-main, #f8fafc);
+  border-color: var(--nano-border-hover, rgba(255, 255, 255, 0.22));
+}
+
+.nce-icon-btn.active {
+  color: var(--nano-accent-primary, #818cf8);
+  border-color: var(--nano-accent-primary, #6366f1);
+}
+
+.nce-icon-btn.copied {
+  color: #10b981;
+  border-color: rgba(16, 185, 129, 0.45);
+}
+
+.nce-icon-btn svg {
+  width: 14px;
+  height: 14px;
+}
+
+.nce-diff-viewport {
+  overflow: auto;
+  flex: 1;
+}
+
+.nce-empty {
+  padding: 28px 16px;
+  text-align: center;
+  font-family: var(--nano-font-sans, sans-serif);
+  font-size: 0.8rem;
+  color: var(--nano-text-muted, #94a3b8);
+}
+
+.nce-diff-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-family: var(--nano-font-mono, 'JetBrains Mono', monospace);
+  font-size: 0.78rem;
+  line-height: 1.5;
+}
+
+.nce-diff-row {
+  border: none;
+}
+
+.nce-num-col {
+  width: 40px;
+  min-width: 40px;
+  padding: 0 8px;
+  text-align: right;
+  color: var(--nano-text-muted, #64748b);
+  opacity: 0.7;
+  user-select: none;
+  border-right: 1px solid var(--nano-border-card, rgba(255, 255, 255, 0.06));
+  font-variant-numeric: tabular-nums;
+  vertical-align: top;
+}
+
+.nce-sign-col {
+  width: 20px;
+  min-width: 20px;
+  padding: 0 4px;
+  text-align: center;
+  user-select: none;
+  font-weight: 700;
+  vertical-align: top;
+}
+
+.nce-code-col {
+  padding: 0 12px 0 6px;
+  white-space: pre;
+  vertical-align: top;
+}
+
+.nano-code-editor.is-wrapped .nce-code-col {
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.nce-split-half {
+  width: 50%;
+  max-width: 0;
+  overflow-x: auto;
+}
+
+.nce-split-border {
+  border-left: 1px solid var(--nano-border-card, rgba(255, 255, 255, 0.12));
+}
+
+/* Diff line semantic colors (Dark & Light theme aware) */
+.nce-diff-row.is-add,
+td.is-add {
+  background: rgba(34, 197, 94, 0.14);
+}
+
+:global([data-theme="light"]) .nce-diff-row.is-add,
+:global([data-theme="light"]) td.is-add {
+  background: rgba(22, 163, 74, 0.13);
+}
+
+.nce-diff-row.is-add .nce-sign-col,
+td.is-add.nce-sign-col {
+  color: #16a34a;
+}
+
+:global([data-theme="dark"]) .nce-diff-row.is-add .nce-sign-col,
+:root:not([data-theme="light"]) .nce-diff-row.is-add .nce-sign-col,
+:global([data-theme="dark"]) td.is-add.nce-sign-col,
+:root:not([data-theme="light"]) td.is-add.nce-sign-col {
+  color: #4ade80;
+}
+
+.nce-diff-row.is-del,
+td.is-del {
+  background: rgba(239, 68, 68, 0.14);
+}
+
+:global([data-theme="light"]) .nce-diff-row.is-del,
+:global([data-theme="light"]) td.is-del {
+  background: rgba(220, 38, 38, 0.11);
+}
+
+.nce-diff-row.is-del .nce-sign-col,
+td.is-del.nce-sign-col {
+  color: #dc2626;
+}
+
+:global([data-theme="dark"]) .nce-diff-row.is-del .nce-sign-col,
+:root:not([data-theme="light"]) .nce-diff-row.is-del .nce-sign-col,
+:global([data-theme="dark"]) td.is-del.nce-sign-col,
+:root:not([data-theme="light"]) td.is-del.nce-sign-col {
+  color: #f87171;
+}
+
+.nce-diff-row.is-hunk,
+.nce-hunk-cell,
+.nce-hunk-num {
+  background: color-mix(in srgb, #38bdf8 11%, transparent);
+  color: #0284c7;
+  font-weight: 600;
+}
+
+:global([data-theme="dark"]) .nce-diff-row.is-hunk,
+:root:not([data-theme="light"]) .nce-diff-row.is-hunk,
+:global([data-theme="dark"]) .nce-hunk-cell,
+:root:not([data-theme="light"]) .nce-hunk-cell {
+  color: #38bdf8;
+}
+
+.nce-hunk-cell {
+  padding: 3px 12px;
+  font-family: var(--nano-font-mono, monospace);
+  font-size: 0.74rem;
+}
+
+td.is-empty {
+  background: var(--nano-bg-muted, rgba(128, 128, 128, 0.05));
+}
+
+.nce-diff-row.is-active-line {
+  background: color-mix(in srgb, var(--nano-accent-primary, #6366f1) 12%, transparent);
+}
+
+/* Live Editable Overlay Editor */
+.nce-live-editor-shell {
+  display: flex;
+  position: relative;
+  min-height: 220px;
+  overflow: hidden;
+  flex: 1;
+}
+
+.nce-live-gutter {
+  padding: 12px 0;
+  min-width: 44px;
+  background: rgba(0, 0, 0, 0.15);
+  border-right: 1px solid var(--nano-border-card, rgba(255, 255, 255, 0.08));
+  overflow: hidden;
+  user-select: none;
+  flex-shrink: 0;
+}
+
+.nce-gutter-num {
+  padding: 0 10px 0 6px;
+  text-align: right;
+  font-size: 0.78rem;
+  line-height: 1.55;
+  color: var(--nano-text-muted, #64748b);
+  font-variant-numeric: tabular-nums;
+}
+
+.nce-gutter-num.active {
+  color: var(--nano-accent-primary, #818cf8);
+  font-weight: 700;
+}
+
+.nce-live-stage {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.nce-live-highlight,
+.nce-live-textarea {
+  margin: 0;
+  padding: 12px 14px;
+  width: 100%;
+  height: 100%;
+  box-sizing: border-box;
+  font-family: var(--nano-font-mono, 'JetBrains Mono', 'Fira Code', monospace);
+  font-size: 0.78rem;
+  line-height: 1.55;
+  tab-size: 2;
+  white-space: pre;
+  overflow: auto;
+}
+
+.nano-code-editor.is-wrapped .nce-live-highlight,
+.nano-code-editor.is-wrapped .nce-live-textarea {
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.nce-live-highlight {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.nce-live-textarea {
+  position: relative;
+  z-index: 1;
+  border: none;
+  outline: none;
+  resize: none;
+  background: transparent;
+  color: transparent;
+  caret-color: var(--nano-state-active, #00f2fe);
+}
+
+.nce-live-textarea::selection {
+  background: rgba(99, 102, 241, 0.32);
+  color: transparent;
+}
+</style>

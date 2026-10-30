@@ -17,6 +17,7 @@ import SwitchDoc from '../docs/SwitchDoc.vue';
 import SliderDoc from '../docs/SliderDoc.vue';
 import IconDoc from '../docs/IconDoc.vue';
 import KineticDoc from '../docs/KineticDoc.vue';
+import CodeEditorDoc from '../docs/CodeEditorDoc.vue';
 import NotFoundDoc from '../docs/NotFoundDoc.vue';
 
 export const routes = [
@@ -222,6 +223,17 @@ export const routes = [
       componentName: 'KineticRotator',
       type: 'component',
       description: 'Continuous velocity-preserving Hermite kinematics component with modular geodesic shortest-path interpolation.',
+    },
+  },
+  {
+    path: '/docs/code-editor',
+    name: 'CodeEditor',
+    component: CodeEditorDoc,
+    meta: {
+      title: 'NanoFileList & NanoCodeEditor | Nano UI',
+      componentName: 'NanoCodeEditor',
+      type: 'component',
+      description: 'Git changed files navigator with middle-ellipsis truncation, unified/split diff inspector, and live syntax-highlighted code editor.',
     },
   },
   {

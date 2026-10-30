@@ -26,6 +26,7 @@
     "scrubber": "Precision Scrubber",
     "donut": "Wykres Donut 3D",
     "radar": "Radar Topologii",
+    "codeEditor": "Git Diff & Edytor Kodu",
     "ripple": "Dyrektywa v-ripple",
     "tooltip": "Dyrektywa v-tooltip"
   },

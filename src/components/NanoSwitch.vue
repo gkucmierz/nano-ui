@@ -265,6 +265,14 @@ const toggle = (event) => {
   --nano-switch-color-shadow: color-mix(in srgb, #10b981 30%, transparent);
 }
 
+.color-orange,
+.color-amber {
+  --nano-switch-color: #f97316;
+  --nano-switch-color-bg: color-mix(in srgb, #f97316 20%, transparent);
+  --nano-switch-color-border: color-mix(in srgb, #f97316 60%, transparent);
+  --nano-switch-color-shadow: color-mix(in srgb, #f97316 30%, transparent);
+}
+
 .color-danger {
   --nano-switch-color: #ef4444;
   --nano-switch-color-bg: color-mix(in srgb, #ef4444 20%, transparent);
