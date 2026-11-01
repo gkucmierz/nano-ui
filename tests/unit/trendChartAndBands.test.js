@@ -119,6 +119,19 @@ describe('Generic Vertical Bands (X-Axis Domain Agnostic)', () => {
     // Weekday info helper
     const satInfo = getDateWeekdayInfo('2026-10-17', 'pl');
     assert.deepEqual(satInfo, { day: 6, isWeekend: true, shortName: 'Sb' });
+
+    // Multi-day / weekly snapshot interpolation (e.g. Wednesday to Wednesday 7-day intervals)
+    const weeklyPoints = [
+      { x: 100, date: '2026-09-16' }, // Wed
+      { x: 240, date: '2026-09-23' }, // Wed (+7 days -> Sat 09-19 & Sun 09-20 inside interval)
+      { x: 380, date: '2026-09-30' }, // Wed (+7 days -> Sat 09-26 & Sun 09-27 inside interval)
+    ];
+    const weeklyBands = computeWeekendBands(weeklyPoints, 60, 420, 'pl');
+    assert.equal(weeklyBands.length, 2);
+    assert.equal(weeklyBands[0].label, 'SB–ND');
+    assert.deepEqual(weeklyBands[0].dates, ['2026-09-19', '2026-09-20']);
+    assert.equal(weeklyBands[1].label, 'SB–ND');
+    assert.deepEqual(weeklyBands[1].dates, ['2026-09-26', '2026-09-27']);
   });
 });
 
