@@ -23,6 +23,7 @@ import NuPinInput from './components/NuPinInput.vue';
 import NanoGlobe from './components/NanoGlobe.vue';
 import NanoKnob from './components/NanoKnob.vue';
 import NanoSelect from './components/NanoSelect.vue';
+import NanoTrendChart from './components/NanoTrendChart.vue';
 import { WORLD_COUNTRIES_LITE } from './data/worldCountriesLite.js';
 import { registerIcons, getAvailableIcons, BUILTIN_ICONS } from './icons/index.js';
 import { normalizeAngle, shortestAngleDiff } from './utils/math.js';
@@ -49,9 +50,18 @@ import {
   createKineticTransition,
   createKineticPoints,
   buildSplinePath,
+  evaluateSplineY,
   cubicHermite,
   sampleKinematics,
 } from './utils/kinetics.js';
+import {
+  DEFAULT_WEEKDAY_LABELS,
+  SHORT_WEEKDAY_NAMES,
+  getDateWeekdayInfo,
+  createWeekdayBandConfig,
+  computeVerticalBands,
+  computeWeekendBands,
+} from './utils/chart-bands.js';
 import {
   highlightCode,
   registerParser,
@@ -118,6 +128,7 @@ export {
   NanoGlobe,
   NanoKnob,
   NanoSelect,
+  NanoTrendChart,
   WORLD_COUNTRIES_LITE,
   registerIcons,
   getAvailableIcons,
@@ -142,8 +153,15 @@ export {
   createKineticTransition,
   createKineticPoints,
   buildSplinePath,
+  evaluateSplineY,
   cubicHermite,
   sampleKinematics,
+  DEFAULT_WEEKDAY_LABELS,
+  SHORT_WEEKDAY_NAMES,
+  getDateWeekdayInfo,
+  createWeekdayBandConfig,
+  computeVerticalBands,
+  computeWeekendBands,
   highlightCode,
   registerParser,
   unregisterParser,
@@ -220,5 +238,6 @@ export default {
     app.component(`${cp}NanoGlobe`, NanoGlobe);
     app.component(`${cp}NanoKnob`, NanoKnob);
     app.component(`${cp}NanoSelect`, NanoSelect);
+    app.component(`${cp}NanoTrendChart`, NanoTrendChart);
   },
 };

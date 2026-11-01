@@ -464,6 +464,81 @@ export const buildSplinePath = (points, { closed = false, groundY = null, tensio
 };
 
 /**
+ * Evaluates the exact Y coordinate on the Catmull-Rom cubic Bezier spline at targetX.
+ * Uses 16-step bisection inversion of the cubic Bezier segment to guarantee the hover point
+ * rides strictly along the stroke of the curve during kinetic transitions.
+ *
+ * @param {Array<{ x: number, y: number }>} points - Array of coordinate objects
+ * @param {number} targetX - X coordinate to sample
+ * @param {number} [tension=0.35] - Spline curve tension factor matching buildSplinePath
+ * @returns {number} Exact Y coordinate on the spline
+ */
+export const evaluateSplineY = (points, targetX, tension = 0.35) => {
+  if (!points || !points.length) return 0;
+  const n = points.length;
+  if (n === 1) return points[0].y;
+  if (targetX <= points[0].x) return points[0].y;
+  if (targetX >= points[n - 1].x) return points[n - 1].y;
+
+  if (n === 2) {
+    const dx = points[1].x - points[0].x;
+    if (Math.abs(dx) < 0.0001) return points[0].y;
+    const t = (targetX - points[0].x) / dx;
+    return points[0].y + t * (points[1].y - points[0].y);
+  }
+
+  let i = 0;
+  for (let j = 0; j < n - 1; j++) {
+    if (targetX >= points[j].x && targetX <= points[j + 1].x) {
+      i = j;
+      break;
+    }
+  }
+
+  const p1 = points[i];
+  const p2 = points[i + 1];
+
+  if (Math.abs(targetX - p1.x) < 0.0001) return p1.y;
+  if (Math.abs(targetX - p2.x) < 0.0001) return p2.y;
+  if (Math.abs(p2.x - p1.x) < 0.0001) return p1.y;
+
+  const p0 = i > 0 ? points[i - 1] : p1;
+  const p3 = i + 2 < n ? points[i + 2] : p2;
+
+  const cp1x = p1.x + (p2.x - p0.x) * (tension / 2);
+  const cp1y = p1.y + (p2.y - p0.y) * (tension / 2);
+  const cp2x = p2.x - (p3.x - p1.x) * (tension / 2);
+  const cp2y = p2.y - (p3.y - p1.y) * (tension / 2);
+
+  let low = 0;
+  let high = 1;
+  let t = 0.5;
+
+  for (let iter = 0; iter < 16; iter++) {
+    t = (low + high) * 0.5;
+    const mt = 1 - t;
+    const x =
+      mt * mt * mt * p1.x +
+      3 * mt * mt * t * cp1x +
+      3 * mt * t * t * cp2x +
+      t * t * t * p2.x;
+    if (x < targetX) {
+      low = t;
+    } else {
+      high = t;
+    }
+  }
+
+  const mt = 1 - t;
+  return (
+    mt * mt * mt * p1.y +
+    3 * mt * mt * t * cp1y +
+    3 * mt * t * t * cp2y +
+    t * t * t * p2.y
+  );
+};
+
+/**
  * Creates a pure, headless kinetic multi-point animation controller with continuous
  * velocity chaining and curve resampling for dynamic datasets (e.g. 7d, 30d, 90d transitions).
  *

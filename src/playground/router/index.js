@@ -24,6 +24,8 @@ import KnobDoc from '../docs/KnobDoc.vue';
 import GlobeDoc from '../docs/GlobeDoc.vue';
 import ColorPickerDoc from '../docs/ColorPickerDoc.vue';
 import MaskedPinDoc from '../docs/MaskedPinDoc.vue';
+import TrendChartDoc from '../docs/TrendChartDoc.vue';
+import KineticAnimationsDoc from '../docs/KineticAnimationsDoc.vue';
 import NotFoundDoc from '../docs/NotFoundDoc.vue';
 
 export const routes = [
@@ -250,7 +252,7 @@ export const routes = [
       title: 'NanoSplitter Component | Nano UI',
       componentName: 'NanoSplitter',
       type: 'component',
-      description: 'Zero-clutter LoL-Inspector-styled two-pane resizable splitter with 1px cyan laser line, triangle lock pull-tab, and nested horizontal/vertical support.',
+      description: 'Zero-clutter two-pane resizable splitter with 1px cyan laser line, triangle lock pull-tab, and nested horizontal/vertical support.',
     },
   },
   {
@@ -306,6 +308,28 @@ export const routes = [
       componentName: 'NuMaskedInput',
       type: 'component',
       description: 'Declarative masked text input and 6-digit 2FA PIN verification control with live guide overlay and countdown expiration timer.',
+    },
+  },
+  {
+    path: '/docs/trend-chart',
+    name: 'TrendChart',
+    component: TrendChartDoc,
+    meta: {
+      title: 'NanoTrendChart & Vertical Bands | Nano UI',
+      componentName: 'NanoTrendChart',
+      type: 'component',
+      description: 'Generic multi-series kinetic SVG spline & area chart with configurable vertical bands (single SB/ND or merged SB–ND) and floating kinetic tooltip bubbles.',
+    },
+  },
+  {
+    path: '/docs/kinetic-animations',
+    name: 'KineticAnimations',
+    component: KineticAnimationsDoc,
+    meta: {
+      title: 'Kinetic Animations Engine (C¹ Hermite) | Nano UI',
+      componentName: 'KineticAnimations',
+      type: 'utility',
+      description: 'Headless C¹ velocity-preserving Hermite kinematics engine for scalar transitions, multi-point curve resampling, Catmull-Rom splines, and 16-step Bezier bisection.',
     },
   },
   {

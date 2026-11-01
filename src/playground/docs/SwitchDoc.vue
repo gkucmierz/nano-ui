@@ -169,7 +169,7 @@ const codeTabs = createDocTabs({
 
     <!-- Color Themes -->
     <h3 class="section-title">Color Themes</h3>
-    <p class="desc">Presets matching standard workspace design systems (Cyber Cyan, LoL Purple, Emerald, Danger Red, Hextech Gold).</p>
+    <p class="desc">Presets matching standard workspace design systems (Cyber Cyan, Electric Purple, Emerald, Danger Red, Warm Gold).</p>
 
     <div class="switch-card">
       <div class="switch-item">
@@ -177,7 +177,7 @@ const codeTabs = createDocTabs({
         <NanoSwitch v-model="cyanVal" color="cyan" label="Cyan Active Glow" />
       </div>
       <div class="switch-item">
-        <span class="item-label">Purple (LoL)</span>
+        <span class="item-label">Purple</span>
         <NanoSwitch v-model="purpleVal" color="purple" label="Purple Accent Switch" />
       </div>
       <div class="switch-item">
@@ -190,7 +190,7 @@ const codeTabs = createDocTabs({
       </div>
       <div class="switch-item">
         <span class="item-label">Gold</span>
-        <NanoSwitch v-model="goldVal" color="gold" label="Hextech Gold Switch" />
+        <NanoSwitch v-model="goldVal" color="gold" label="Warm Gold Switch" />
       </div>
     </div>
 

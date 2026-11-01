@@ -18,6 +18,8 @@
     "directives": "Directives",
     "visualization": "Visualization",
     "rotator": "Kinetic Rotator",
+    "kineticEngine": "C¹ Kinetic Engine",
+    "trendChart": "NanoTrendChart & Bands",
     "mutatingHeader": "Mutating Header",
     "switch": "Nano Switch",
     "slider": "Nano Slider",
@@ -27,7 +29,7 @@
     "donut": "3D Donut Chart",
     "radar": "Topology Radar",
     "codeEditor": "Git Diff & Code Editor",
-    "splitter": "Nano Splitter (LoL)",
+    "splitter": "Nano Splitter",
     "select": "Nano Select (Filter)",
     "knob": "Nano Knob (Rotary Dial)",
     "globe": "Nano Globe & HEALPix",
@@ -184,9 +186,9 @@
     "sec3Desc": "Import only the language grammars your application needs to keep production bundles ultra-lean."
   },
   "splitter": {
-    "title": "NanoSplitter (LoL Inspector Style)",
-    "desc": "Zero-clutter two-pane resizable splitter inspired by LoL Inspector: features an ergonomic grab corridor, a crisp 1px electric cyan laser line on hover/drag, a flush edge triangle pull-tab lock toggle, double-click to reset, and keyboard arrow navigation.",
-    "sec1Title": "1. Interactive LoL-Style Splitter Configurator",
+    "title": "NanoSplitter",
+    "desc": "Zero-clutter two-pane resizable splitter: features an ergonomic grab corridor, a crisp 1px electric cyan laser line on hover/drag, a flush edge triangle pull-tab lock toggle, double-click to reset, and keyboard arrow navigation.",
+    "sec1Title": "1. Interactive Splitter Configurator",
     "sec1Desc": "Hover between the two panels to reveal the #00e5ff laser line. Click the edge triangle pull-tab to lock/unlock dragging, or double-click the laser line to reset to default ratio.",
     "horiz": "Horizontal (Left / Right)",
     "vert": "Vertical (Top / Bottom)",
@@ -253,5 +255,35 @@
     "sec1Desc": "Type digits or paste a 6-digit code. Automatically triggers @complete and @submit when all slots are filled.",
     "sec2Title": "2. NuMaskedInput — Declarative Mask DSL & Custom Tokens",
     "sec2Desc": "Supports # (digit), A (uppercase), a (lowercase), L (letter), X (alphanumeric), H (hex), and custom regex token definitions."
+  },
+  "trendChart": {
+    "title": "NanoTrendChart & Configurable Vertical Bands",
+    "desc": "Generic multi-series SVG chart with C¹ Catmull-Rom splines, dynamic kinetic Y-axis scaling, configurable vertical highlight bands (single SAT/SUN or merged SAT–SUN, frequency zones, algorithmic steps), and floating glassmorphic tooltip bubbles.",
+    "domainLabel": "X-Axis Domain",
+    "domainTime": "Time-Series (SAT–SUN)",
+    "domainFreq": "Audio Spectrum (Hz)",
+    "domainComplexity": "O(N) Complexity (Cache)",
+    "kineticTrigger": "Kinematics",
+    "morphData": "Morph C¹ Data",
+    "curveMode": "Interpolation",
+    "showBands": "Vertical Bands",
+    "mergeAdjacent": "Merge Adjacent (e.g. SAT–SUN)",
+    "includeFriday": "Include Friday (FRI–SUN)"
+  },
+  "kineticEngine": {
+    "title": "Kinetic Animations Engine (Headless C¹ Hermite)",
+    "desc": "Timer-agnostic mathematical kinematics engine powering Nano UI animations: 1D scalar & angular C¹ Hermite transitions (createKineticTransition), multi-point curve resampling (createKineticPoints), cubic Bezier spline generator (buildSplinePath), and 16-step bisection curve inversion (evaluateSplineY).",
+    "labTitle": "1. Multi-Point C¹ Resampling & Bisection Curve-Rider Laboratory",
+    "labDesc": "Switch node counts (N = 5 ↔ 12 ↔ 24) or trigger mid-flight impulses. The engine preserves each knot's velocity vector without discontinuities, while the violet rider dot tracks the exact Bezier stroke via 16-step bisection.",
+    "resampleLabel": "Node Resampling",
+    "pointsUnit": "pts",
+    "impulseBtn": "Mid-Flight Impulse",
+    "tensionLabel": "Spline Tension",
+    "hermiteTitle": "2. C¹ Hermite Basis Curves & Exported Primitives",
+    "hermiteDesc": "Comparison of transition trajectories for initial velocity v₀ < 0 (counter-momentum absorption), v₀ = 0 (rest easing), and v₀ > 0 (forward momentum boost).",
+    "prim1Desc": "Continuous 1D scalar/angular controller with C¹ velocity preservation and mid-flight retargeting.",
+    "prim2Desc": "2D point-array controller with automatic linear resampling when sample counts change (e.g. 7d ↔ 30d ↔ 90d).",
+    "prim3Desc": "Catmull-Rom to cubic Bezier SVG path builder (open strokes, closed loops, or area fills to groundY).",
+    "prim4Desc": "16-step bisection solver inverting cubic Bezier x(t) to guarantee exact curve-riding Y coordinates."
   }
 }

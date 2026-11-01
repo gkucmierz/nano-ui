@@ -157,10 +157,30 @@
   display: inline-flex;
   align-items: stretch;
   max-width: 100%;
+  isolation: isolate;
 }
 
 .nano-btn-group > .nano-btn {
+  position: relative;
   border-radius: 0;
+  background-clip: padding-box;
+}
+
+.nano-btn-group > .nano-btn:hover:not(:disabled) {
+  z-index: 1;
+}
+
+.nano-btn-group > .nano-btn.nano-btn-active,
+.nano-btn-group > .nano-btn.is-active,
+.nano-btn-group > .nano-btn.nano-btn-solid,
+.nano-btn-group > .nano-btn.nano-btn-primary,
+.nano-btn-group > .nano-btn.nano-btn-success,
+.nano-btn-group > .nano-btn.nano-btn-danger {
+  z-index: 2;
+}
+
+.nano-btn-group > .nano-btn:focus-visible {
+  z-index: 3;
 }
 
 .nano-btn-group > .nano-btn:first-child {

@@ -271,7 +271,7 @@ const cssApiDoc = `/* Nano UI Input Primitives & Form Controls */
         </div>
       </div>
 
-      <!-- Precision Stepper & Numeric Controls (LoL Style) -->
+      <!-- Precision Stepper & Numeric Controls -->
       <div class="composition-card">
         <span class="composition-title">Precision Numeric Stepper</span>
         <div class="nano-input-group">

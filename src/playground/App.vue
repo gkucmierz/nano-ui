@@ -198,6 +198,20 @@ onUnmounted(() => {
             </svg>
             <span class="nav-label">{{ t('nav.rotator') }}</span>
           </router-link>
+          <router-link to="/docs/kinetic-animations" class="nav-link" active-class="active" v-tooltip="isNarrow ? t('nav.kineticEngine') : undefined">
+            <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M2 12c3-6 6-6 9 0s6 6 9 0"/>
+              <circle cx="11" cy="12" r="2"/>
+            </svg>
+            <span class="nav-label">{{ t('nav.kineticEngine') }}</span>
+          </router-link>
+          <router-link to="/docs/trend-chart" class="nav-link" active-class="active" v-tooltip="isNarrow ? t('nav.trendChart') : undefined">
+            <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/>
+              <polyline points="16 7 22 7 22 13"/>
+            </svg>
+            <span class="nav-label">{{ t('nav.trendChart') }}</span>
+          </router-link>
           <router-link to="/docs/switch" class="nav-link" active-class="active" v-tooltip="isNarrow ? t('nav.switch') : undefined">
             <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <rect x="1" y="5" width="22" height="14" rx="7"/>

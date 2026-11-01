@@ -62,7 +62,7 @@ const props = defineProps({
     default: 12,
   },
   /**
-   * Show the LoL-Inspector-style top triangle lock/unlock toggle tab
+   * Show the edge triangle lock/unlock toggle tab
    */
   lockable: {
     type: Boolean,
@@ -410,7 +410,7 @@ onUnmounted(() => {
       </slot>
     </div>
 
-    <!-- LoL-Inspector-styled Splitter Gutter & Laser Line -->
+    <!-- Splitter Gutter & Laser Line -->
     <div class="nano-splitter-gutter" :style="gutterStyle">
       <div
         class="nano-splitter-hitbox"
@@ -424,7 +424,7 @@ onUnmounted(() => {
         @dblclick="handleDoubleClick"
         @keydown="handleKeyDown"
       >
-        <!-- LoL Inspector Triangle Lock/Unlock Pull-Tab -->
+        <!-- Triangle Lock/Unlock Pull-Tab -->
         <button
           v-if="lockable"
           type="button"
@@ -552,7 +552,7 @@ onUnmounted(() => {
   cursor: default !important;
 }
 
-/* Signature LoL 1px Laser Line */
+/* Signature 1px Laser Line */
 .nano-splitter-hitbox::before {
   content: '';
   position: absolute;
@@ -589,7 +589,7 @@ onUnmounted(() => {
   box-shadow: none !important;
 }
 
-/* LoL Inspector Triangle Lock Pull-Tab */
+/* Triangle Lock Pull-Tab */
 .nano-splitter-lock-toggle {
   position: absolute;
   padding: 0;
