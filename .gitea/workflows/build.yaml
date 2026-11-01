@@ -1,4 +1,4 @@
-name: Deploy Playground & Publish Packages
+name: Deploy Playground & Publish Package (nano-ui)
 
 on:
   push:
@@ -6,51 +6,26 @@ on:
       - main
     tags:
       - 'v*'
+  workflow_dispatch:
 
 jobs:
   deploy-playground:
-    name: Deploy Playground (nano-ui)
-    runs-on: self-hosted-pl
-    steps:
-      - name: Check out repository code
-        uses: actions/checkout@v4
-
-      - name: Zero-downtime Docker build & deployment
-        run: |
-          docker compose build
-          docker compose up -d --remove-orphans
+    uses: gkucmierz/ci-workflows/.gitea/workflows/zero-downtime-deploy.yml@main
+    with:
+      container_name: nano-ui
+      runs_on: self-hosted-pl
+      hot_swap_static: true
+      wait_timeout_sec: 30
 
   publish:
-    name: Publish Packages (Gitea + NPM)
-    runs-on: self-hosted-pl
-    steps:
-      - name: Check out repository code
-        uses: actions/checkout@v4
-
-      - name: Install dependencies and build
-        run: |
-          npm install --legacy-peer-deps
-          npm run build
-
-      # -------------- PUBLISH DO NPMJS.ORG ----------------
-      - name: Setup Node for NPM Registry
-        uses: actions/setup-node@v3
-        with:
-          registry-url: 'https://registry.npmjs.org'
-
-      - name: Publish to Native Global Registry
-        run: npm publish --access public || echo "Version already published to NPM, skipping."
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_AUTH_TOKEN }}
-
-      # -------------- PUBLISH DO GITEA.7U.PL --------------
-      - name: Setup Node for Gitea Packages
-        uses: actions/setup-node@v3
-        with:
-          registry-url: 'https://gitea.7u.pl/api/packages/gkucmierz/npm/'
-          scope: '@gkucmierz'
-
-      - name: Publish to Internal Registry
-        run: npm publish || echo "Version already published to Gitea, skipping."
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.LOCAL_PACKAGE_REGISTRY }}
+    uses: gkucmierz/ci-workflows/.gitea/workflows/publish-package.yml@main
+    with:
+      runs_on: self-hosted-pl
+      run_tests: true
+      run_build: true
+      publish_npmjs: true
+      publish_private: true
+      oss_sanitize_check: true
+    secrets:
+      NPM_AUTH_TOKEN: ${{ secrets.NPM_AUTH_TOKEN }}
+      LOCAL_PACKAGE_REGISTRY: ${{ secrets.LOCAL_PACKAGE_REGISTRY }}

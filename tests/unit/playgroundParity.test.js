@@ -52,4 +52,26 @@ describe('Nano UI Playground & i18n Parity', () => {
       )
     }
   })
+
+  test('every defineExpose({...}) in src/components/*.vue only references declared identifiers', () => {
+    const compDir = path.join(rootDir, 'src/components')
+    for (const file of fs.readdirSync(compDir).filter((f) => f.endsWith('.vue'))) {
+      const content = fs.readFileSync(path.join(compDir, file), 'utf8')
+      const match = content.match(/defineExpose\(\{([\s\S]*?)\}\)/)
+      if (!match) continue
+      for (const line of match[1].split('\n')) {
+        const trimmed = line.trim().replace(/,$/, '')
+        if (!trimmed || trimmed.startsWith('//')) continue
+        const parts = trimmed.split(':')
+        const ident = (parts.length > 1 ? parts[1] : parts[0]).trim()
+        if (/^[a-zA-Z_$][a-zA-Z0-9_$]*$/.test(ident)) {
+          const declRegex = new RegExp(`\\b(const|let|var|function)\\s+${ident}\\b`)
+          assert.ok(
+            declRegex.test(content),
+            `Undeclared identifier "${ident}" inside defineExpose() of ${file}`
+          )
+        }
+      }
+    }
+  })
 })
