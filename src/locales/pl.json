@@ -36,6 +36,8 @@
     "map": "Nano Map & Warstwy",
     "colorPicker": "Kolory OKLCH & Kontrast",
     "maskedInput": "Maskowane Pola & PIN",
+    "channelOsd": "Ekran HUD (Channel OSD)",
+    "numberStepper": "Nano Number Stepper",
     "ripple": "Dyrektywa v-ripple",
     "tooltip": "Dyrektywa v-tooltip"
   },

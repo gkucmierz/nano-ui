@@ -36,6 +36,8 @@
     "map": "Nano Map & Tile Layers",
     "colorPicker": "OKLCH Color Picker",
     "maskedInput": "Masked & PIN Input",
+    "channelOsd": "Channel OSD (TV HUD)",
+    "numberStepper": "Nano Number Stepper",
     "ripple": "v-ripple Directive",
     "tooltip": "v-tooltip Directive"
   },

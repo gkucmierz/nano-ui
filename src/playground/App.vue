@@ -334,6 +334,20 @@ onUnmounted(() => {
             </svg>
             <span class="nav-label">{{ t('nav.maskedInput') }}</span>
           </router-link>
+          <router-link to="/docs/channel-osd" class="nav-link" active-class="active" v-tooltip="isNarrow ? t('nav.channelOsd') : undefined">
+            <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="3" y="3" width="18" height="18" rx="4"/>
+              <path d="M9 8v8M14 8h3v4h-3v4h3"/>
+            </svg>
+            <span class="nav-label">{{ t('nav.channelOsd') }}</span>
+          </router-link>
+          <router-link to="/docs/number-stepper" class="nav-link" active-class="active" v-tooltip="isNarrow ? t('nav.numberStepper') : undefined">
+            <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="2" y="5" width="20" height="14" rx="3"/>
+              <path d="M16 5v14M18 9l2-2 2 2M18 15l2 2 2-2"/>
+            </svg>
+            <span class="nav-label">{{ t('nav.numberStepper') }}</span>
+          </router-link>
         </div>
       </nav>
 

@@ -26,6 +26,8 @@ import MapDoc from '../docs/MapDoc.vue';
 import ColorPickerDoc from '../docs/ColorPickerDoc.vue';
 import MaskedPinDoc from '../docs/MaskedPinDoc.vue';
 import TrendChartDoc from '../docs/TrendChartDoc.vue';
+import ChannelOsdDoc from '../docs/ChannelOsdDoc.vue';
+import NumberStepperDoc from '../docs/NumberStepperDoc.vue';
 import KineticAnimationsDoc from '../docs/KineticAnimationsDoc.vue';
 import NotFoundDoc from '../docs/NotFoundDoc.vue';
 
@@ -320,6 +322,28 @@ export const routes = [
       componentName: 'NuMaskedInput',
       type: 'component',
       description: 'Declarative masked text input and 6-digit 2FA PIN verification control with live guide overlay and countdown expiration timer.',
+    },
+  },
+  {
+    path: '/docs/channel-osd',
+    name: 'ChannelOsd',
+    component: ChannelOsdDoc,
+    meta: {
+      title: 'NanoChannelOsd (TV HUD) | Nano UI',
+      componentName: 'NanoChannelOsd',
+      type: 'component',
+      description: 'TV-style multi-digit glassmorphic numeric HUD overlay for instant 01–99 channel/scene switching via 0–9 keys.',
+    },
+  },
+  {
+    path: '/docs/number-stepper',
+    name: 'NumberStepper',
+    component: NumberStepperDoc,
+    meta: {
+      title: 'NanoNumberStepper (Stacked & Split) | Nano UI',
+      componentName: 'NanoNumberStepper',
+      type: 'component',
+      description: 'Dual-variant numeric stepper control: right-side 50%/50% stacked Up/Down chevrons and glued Left/Right (- / +) buttons with hold-to-repeat.',
     },
   },
   {
