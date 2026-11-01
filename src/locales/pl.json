@@ -33,6 +33,7 @@
     "select": "Nano Select (Z filtrem)",
     "knob": "Nano Knob (Pokrętło)",
     "globe": "Nano Globe & HEALPix",
+    "map": "Nano Map & Warstwy",
     "colorPicker": "Kolory OKLCH & Kontrast",
     "maskedInput": "Maskowane Pola & PIN",
     "ripple": "Dyrektywa v-ripple",
@@ -285,5 +286,28 @@
     "prim2Desc": "Kontroler tablicy punktów 2D z automatycznym resamplingiem liniowym przy zmianie liczby próbek (np. 7d ↔ 30d ↔ 90d).",
     "prim3Desc": "Konwerter węzłów Catmull-Rom na gładkie ścieżki kubiczne SVG Beziera (otwarte, zamknięte lub z wypełnieniem do groundY).",
     "prim4Desc": "16-krokowa bisekcja odwracająca równanie x(t) segmentu Beziera, gwarantująca ścisłe prowadzenie punktu po śladzie krzywej."
+  },
+  "mapDoc": {
+    "title": "NanoMap & Konfigurowalne Warstwy Kartograficzne",
+    "subtitle": "Bez-zależnościowa interaktywna mapa Web Mercator z 9 warstwami kafelków (OpenStreetMap Dark/Standard, Esri Topo/Street/Satellite, Google Hybrid/Roadmap/Terrain, OpenTopoMap), konfigurowalnymi warstwami HUD (zoom + / −, dynamiczny pasek skali, obracana róża kompasu, celownik GPS), wieloma śladami tras SVG oraz kursorem telemetrii na żywo.",
+    "cardTitle": "Mapa GPS Trasy",
+    "hudConfigTitle": "Warstwy HUD & Telemetria",
+    "startSim": "Symuluj Przejazd",
+    "pauseSim": "Pauza",
+    "toggleZoom": "Zoom (+ / −)",
+    "toggleLayerPicker": "Wybór Warstw (1–9)",
+    "toggleScaleBar": "Pasek Skali (km / m)",
+    "toggleCompass": "Róża Kompasu",
+    "toggleLocate": "Celownik Lokalizacji",
+    "toggleSecondTrack": "Pokaż 2. Trasę (Pętla)",
+    "toggleSimulatedGps": "Reaktywny GPS (Prop)",
+    "toggleFollow": "Śledź Kursor GPS",
+    "activeTrackLabel": "Aktywna Trasa Przejazdu",
+    "trackPrimary": "Trasa 1 (Główna • 23.0 km)",
+    "trackLoop": "Trasa 2 (Pętla • 34.8 km)",
+    "routeProgress": "Postęp Kursora Trasy",
+    "zoomLevel": "Poziom Przybliżenia (Zoom)",
+    "bearingAngle": "Kąt Obrotu Kompasu (°)",
+    "usageTitle": "Deklaratywne Użycie i Konfiguracja Warstw"
   }
 }

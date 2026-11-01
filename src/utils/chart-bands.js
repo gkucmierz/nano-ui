@@ -303,8 +303,11 @@ export const computeVerticalBands = (points, leftBound, rightBound, options = {}
   // Determine whether to use the weekday preset or generic point matcher
   const isStringLocale = typeof options === 'string';
   const rawOpts = isStringLocale ? { lang: options, preset: 'weekend' } : (options || {});
-  const hasCustomMatch = typeof rawOpts.match === 'function' || typeof rawOpts.matcher === 'function';
+  const hasCustomMatch =
+    !rawOpts._isWeekdayConfig &&
+    (typeof rawOpts.match === 'function' || typeof rawOpts.matcher === 'function');
   const hasExplicitWeekdayOpts =
+    Boolean(rawOpts._isWeekdayConfig) ||
     isStringLocale ||
     rawOpts.preset === 'weekend' ||
     rawOpts.preset === 'weekday' ||
@@ -328,7 +331,61 @@ export const computeVerticalBands = (points, leftBound, rightBound, options = {}
   const singleLabelsMap = effectiveOpts.singleLabels || {};
   const targetDays = Array.isArray(effectiveOpts.days) ? effectiveOpts.days : null;
 
-  const evaluatedCells = cellBounds.map((cell) => {
+  // When weekday preset is active on multi-day/weekly time series (e.g. Wednesday snapshots 7 days apart),
+  // expand multi-day calendar intervals into daily steps along X so weekend bands still render accurately.
+  let activePoints = points;
+  let activeCellBounds = cellBounds;
+  if (hasExplicitWeekdayOpts && !hasCustomMatch && points.length >= 2) {
+    const expanded = [];
+    let didExpand = false;
+    for (let i = 0; i < points.length; i++) {
+      const curr = points[i];
+      expanded.push(curr);
+      if (i < points.length - 1) {
+        const next = points[i + 1];
+        const d0Str = String(curr?.date ?? curr?.key ?? '').slice(0, 10);
+        const d1Str = String(next?.date ?? next?.key ?? '').slice(0, 10);
+        if (/^\d{4}-\d{2}-\d{2}$/.test(d0Str) && /^\d{4}-\d{2}-\d{2}$/.test(d1Str)) {
+          const t0 = Date.parse(`${d0Str}T12:00:00Z`);
+          const t1 = Date.parse(`${d1Str}T12:00:00Z`);
+          const diffDays = Math.round((t1 - t0) / 86_400_000);
+          if (diffDays > 1 && diffDays <= 14) {
+            didExpand = true;
+            for (let k = 1; k < diffDays; k++) {
+              const tk = new Date(t0 + k * 86_400_000);
+              const iso = tk.toISOString().slice(0, 10);
+              const xInterp = curr.x + (k / diffDays) * (next.x - curr.x);
+              expanded.push({
+                x: xInterp,
+                key: iso,
+                date: iso,
+                label: iso,
+                _interpolated: true,
+              });
+            }
+          }
+        }
+      }
+    }
+    if (didExpand) {
+      activePoints = expanded;
+      const m = expanded.length;
+      activeCellBounds = expanded.map((pt, idx) => {
+        const rawLeft = idx === 0 ? leftBound : (expanded[idx - 1].x + pt.x) / 2;
+        const rawRight = idx === m - 1 ? rightBound : (pt.x + expanded[idx + 1].x) / 2;
+        return {
+          idx,
+          pt,
+          key: resolvePointKey(pt, idx),
+          x: pt.x,
+          leftX: Math.max(leftBound, rawLeft),
+          rightX: Math.min(rightBound, rawRight),
+        };
+      });
+    }
+  }
+
+  const evaluatedCells = activeCellBounds.map((cell) => {
     const { pt, idx } = cell;
     let isMatch = false;
     let unitLabel = '';
@@ -337,7 +394,7 @@ export const computeVerticalBands = (points, leftBound, rightBound, options = {}
     let meta = {};
 
     if (matchFn) {
-      const mRes = matchFn(pt, idx, points);
+      const mRes = matchFn(pt, idx, activePoints);
       if (typeof mRes === 'boolean') {
         isMatch = mRes;
       } else if (typeof mRes === 'string') {

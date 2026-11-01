@@ -21,10 +21,31 @@ import NanoColorPickerOklch from './components/NanoColorPickerOklch.vue';
 import NuMaskedInput from './components/NuMaskedInput.vue';
 import NuPinInput from './components/NuPinInput.vue';
 import NanoGlobe from './components/NanoGlobe.vue';
+import NanoMap from './components/NanoMap.vue';
 import NanoKnob from './components/NanoKnob.vue';
 import NanoSelect from './components/NanoSelect.vue';
 import NanoTrendChart from './components/NanoTrendChart.vue';
 import { WORLD_COUNTRIES_LITE } from './data/worldCountriesLite.js';
+import {
+  DEFAULT_MAP_LAYERS,
+  MAP_LAYERS,
+  getMapLayerById,
+  resolveTileUrl,
+  clampLatitude,
+  normalizeLongitude,
+  latLonToWorldPixel,
+  worldPixelToLatLon,
+  latLonToViewportPoint,
+  viewportPointToLatLon,
+  buildVisibleTileGrid,
+  computeMapScaleBar,
+  haversineDistanceKm,
+  computePolylineDistanceKm,
+  computeGeoBounds,
+  computeFitBoundsView,
+  evaluatePolylineCursor,
+  normalizeGeoPoint,
+} from './utils/map-engine.js';
 import { registerIcons, getAvailableIcons, BUILTIN_ICONS } from './icons/index.js';
 import { normalizeAngle, shortestAngleDiff } from './utils/math.js';
 import {
@@ -126,10 +147,29 @@ export {
   NuMaskedInput,
   NuPinInput,
   NanoGlobe,
+  NanoMap,
   NanoKnob,
   NanoSelect,
   NanoTrendChart,
   WORLD_COUNTRIES_LITE,
+  DEFAULT_MAP_LAYERS,
+  MAP_LAYERS,
+  getMapLayerById,
+  resolveTileUrl,
+  clampLatitude,
+  normalizeLongitude,
+  latLonToWorldPixel,
+  worldPixelToLatLon,
+  latLonToViewportPoint,
+  viewportPointToLatLon,
+  buildVisibleTileGrid,
+  computeMapScaleBar,
+  haversineDistanceKm,
+  computePolylineDistanceKm,
+  computeGeoBounds,
+  computeFitBoundsView,
+  evaluatePolylineCursor,
+  normalizeGeoPoint,
   registerIcons,
   getAvailableIcons,
   BUILTIN_ICONS,
@@ -236,6 +276,7 @@ export default {
     app.component(`${cp}NuMaskedInput`, NuMaskedInput);
     app.component(`${cp}NuPinInput`, NuPinInput);
     app.component(`${cp}NanoGlobe`, NanoGlobe);
+    app.component(`${cp}NanoMap`, NanoMap);
     app.component(`${cp}NanoKnob`, NanoKnob);
     app.component(`${cp}NanoSelect`, NanoSelect);
     app.component(`${cp}NanoTrendChart`, NanoTrendChart);

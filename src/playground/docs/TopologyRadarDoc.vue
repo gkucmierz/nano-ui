@@ -50,8 +50,11 @@
           <button type="button" class="btn btn-primary" v-ripple @click="feedRandom">
             Feed Random Point
           </button>
-          <button type="button" class="btn btn-secondary" v-ripple @click="toggleAutoFeed">
-            {{ autoFeedTimer ? 'Stop Auto Feed' : 'Start Auto Feed' }}
+          <button type="button" class="btn btn-secondary btn-stable-width" v-ripple @click="toggleAutoFeed">
+            <span class="btn-label-stack">
+              <span :class="{ 'is-hidden': Boolean(autoFeedTimer) }">Start Auto Feed</span>
+              <span :class="{ 'is-hidden': !autoFeedTimer }">Stop Auto Feed</span>
+            </span>
           </button>
           <button type="button" class="btn btn-danger" v-ripple @click="demoHistory = []">
             Clear History
@@ -251,6 +254,21 @@ onBeforeUnmount(() => {
   align-items: center;
   justify-content: center;
   transition: background var(--nano-transition-interactive), border-color var(--nano-transition-interactive), opacity var(--nano-transition-interactive);
+}
+
+.btn-label-stack {
+  display: inline-grid;
+  place-items: center;
+}
+
+.btn-label-stack > span {
+  grid-area: 1 / 1;
+  white-space: nowrap;
+}
+
+.btn-label-stack > span.is-hidden {
+  visibility: hidden;
+  pointer-events: none;
 }
 
 .btn-primary {

@@ -22,6 +22,7 @@ import SplitterDoc from '../docs/SplitterDoc.vue';
 import SelectDoc from '../docs/SelectDoc.vue';
 import KnobDoc from '../docs/KnobDoc.vue';
 import GlobeDoc from '../docs/GlobeDoc.vue';
+import MapDoc from '../docs/MapDoc.vue';
 import ColorPickerDoc from '../docs/ColorPickerDoc.vue';
 import MaskedPinDoc from '../docs/MaskedPinDoc.vue';
 import TrendChartDoc from '../docs/TrendChartDoc.vue';
@@ -286,6 +287,17 @@ export const routes = [
       componentName: 'NanoGlobe',
       type: 'component',
       description: 'Interactive 3D orthographic SVG globe with country polygons, cartographic graticules, and equal-area HEALPix spherical tessellation.',
+    },
+  },
+  {
+    path: '/docs/map',
+    name: 'Map',
+    component: MapDoc,
+    meta: {
+      title: 'NanoMap & Tile Layers Component | Nano UI',
+      componentName: 'NanoMap',
+      type: 'component',
+      description: 'Interactive Web Mercator slippy map with 9 keyless tile layers, configurable + / - zoom controls, metric scale bar, rotating compass rose, and GPS polyline tracking.',
     },
   },
   {

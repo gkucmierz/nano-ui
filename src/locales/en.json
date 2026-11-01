@@ -33,6 +33,7 @@
     "select": "Nano Select (Filter)",
     "knob": "Nano Knob (Rotary Dial)",
     "globe": "Nano Globe & HEALPix",
+    "map": "Nano Map & Tile Layers",
     "colorPicker": "OKLCH Color Picker",
     "maskedInput": "Masked & PIN Input",
     "ripple": "v-ripple Directive",
@@ -285,5 +286,28 @@
     "prim2Desc": "2D point-array controller with automatic linear resampling when sample counts change (e.g. 7d ↔ 30d ↔ 90d).",
     "prim3Desc": "Catmull-Rom to cubic Bezier SVG path builder (open strokes, closed loops, or area fills to groundY).",
     "prim4Desc": "16-step bisection solver inverting cubic Bezier x(t) to guarantee exact curve-riding Y coordinates."
+  },
+  "mapDoc": {
+    "title": "NanoMap & Configurable Cartographic Layers",
+    "subtitle": "Zero-dependency interactive Web Mercator slippy map with 9 keyless tile layers (OpenStreetMap Dark/Standard, Esri Topo/Street/Satellite, Google Hybrid/Roadmap/Terrain, OpenTopoMap), configurable HUD overlays (+ / − zoom, dynamic scale bar, rotating compass rose, GPS recenter crosshair), multi-track SVG polylines, and live telemetry cursor.",
+    "cardTitle": "GPS Route Map",
+    "hudConfigTitle": "HUD Layers & Telemetry",
+    "startSim": "Simulate Ride",
+    "pauseSim": "Pause",
+    "toggleZoom": "Zoom (+ / −)",
+    "toggleLayerPicker": "Layer Picker (1–9)",
+    "toggleScaleBar": "Scale Bar (km / m)",
+    "toggleCompass": "Compass Rose",
+    "toggleLocate": "Locate Crosshair",
+    "toggleSecondTrack": "Show 2nd Route (Loop)",
+    "toggleSimulatedGps": "Reactive GPS (Prop)",
+    "toggleFollow": "Follow GPS Cursor",
+    "activeTrackLabel": "Active Simulation Route",
+    "trackPrimary": "Route 1 (Primary • 23.0 km)",
+    "trackLoop": "Route 2 (Loop • 34.8 km)",
+    "routeProgress": "Route Progress Cursor",
+    "zoomLevel": "Zoom Level",
+    "bearingAngle": "Compass Bearing (°)",
+    "usageTitle": "Declarative Usage & Layer Configuration"
   }
 }

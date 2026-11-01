@@ -4,6 +4,7 @@
  * Powered by Lucide (lucide-vue-next) with support for custom ecosystem icons.
  */
 
+import { h } from 'vue';
 import {
   TriangleAlert,
   Info,
@@ -85,8 +86,48 @@ import {
   Shield,
   Key,
   History,
-  List
+  List,
+  Map,
+  MapPin,
+  Compass,
+  Navigation,
+  Crosshair,
+  Locate,
+  LocateFixed,
+  Route,
+  Ruler,
+  Mountain,
+  Zap
 } from 'lucide-vue-next';
+
+/**
+ * Custom dual-tone cartographic compass rose icon (4 cardinal dots + North/South diamond needle).
+ */
+export const CompassRoseIcon = (props = {}) => {
+  const size = props.size ?? 18;
+  return h(
+    'svg',
+    {
+      xmlns: 'http://www.w3.org/2000/svg',
+      width: size,
+      height: size,
+      viewBox: '0 0 24 24',
+      fill: 'none',
+      'aria-hidden': 'true'
+    },
+    [
+      // 4 Cardinal Dots (N, E, S, W)
+      h('circle', { cx: 12, cy: 3.5, r: 1.15, fill: '#94a3b8' }),
+      h('circle', { cx: 20.5, cy: 12, r: 1.15, fill: '#94a3b8' }),
+      h('circle', { cx: 12, cy: 20.5, r: 1.15, fill: '#94a3b8' }),
+      h('circle', { cx: 3.5, cy: 12, r: 1.15, fill: '#94a3b8' }),
+      // North Needle (Red)
+      h('polygon', { points: '12,5.6 15.1,12 8.9,12', fill: '#ef4444' }),
+      // South Needle (Slate)
+      h('polygon', { points: '12,18.4 15.1,12 8.9,12', fill: '#64748b' })
+    ]
+  );
+};
 
 export const BUILTIN_ICONS = {
   // Status & Feedback
@@ -207,7 +248,25 @@ export const BUILTIN_ICONS = {
   shield: Shield,
   key: Key,
   history: History,
-  list: List
+  list: List,
+
+  // Map, Geolocation & Telemetry
+  map: Map,
+  'map-pin': MapPin,
+  pin: MapPin,
+  compass: Compass,
+  'compass-rose': CompassRoseIcon,
+  navigation: Navigation,
+  crosshair: Crosshair,
+  target: Crosshair,
+  locate: Locate,
+  'locate-fixed': LocateFixed,
+  gps: LocateFixed,
+  route: Route,
+  ruler: Ruler,
+  mountain: Mountain,
+  elevation: Mountain,
+  zap: Zap
 };
 
 export const customIconsRegistry = {};

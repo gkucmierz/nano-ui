@@ -1153,7 +1153,13 @@ const handlePointClick = () => {
       </div>
     </div>
 
-    <slot name="footer" />
+    <slot
+      name="footer"
+      :active-index="hoveredSpineIndex"
+      :active-label="hoveredSpineIndex !== null && activeSpineEntry ? activeSpineEntry.label : null"
+      :active-key="hoveredSpineIndex !== null && activeSpineEntry ? activeSpineEntry.key : null"
+      :items="activeHoverDots"
+    />
   </div>
 </template>
 
@@ -1177,6 +1183,7 @@ const handlePointClick = () => {
   height: auto;
   display: block;
   overflow: visible;
+  stroke: none;
 }
 
 .nano-chart-grid-line {
@@ -1192,12 +1199,14 @@ const handlePointClick = () => {
 
 .nano-chart-axis-label {
   fill: var(--nano-text-muted, var(--text-muted, #64748b));
+  stroke: none;
   font-size: 11px;
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
   font-variant-numeric: tabular-nums;
 }
 
 .nano-chart-ref-label {
+  stroke: none;
   font-size: 10px;
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
   font-weight: 700;
@@ -1211,7 +1220,7 @@ const handlePointClick = () => {
   pointer-events: none;
 }
 
-:global([data-theme="light"]) .nano-chart-band-rect {
+[data-theme="light"] .nano-chart-band-rect {
   fill: rgba(217, 119, 6, 0.075);
   stroke: rgba(217, 119, 6, 0.22);
 }
@@ -1228,13 +1237,14 @@ const handlePointClick = () => {
   stroke-width: 0.75;
 }
 
-:global([data-theme="light"]) .nano-chart-band-pill {
+[data-theme="light"] .nano-chart-band-pill {
   fill: rgba(217, 119, 6, 0.13);
   stroke: rgba(217, 119, 6, 0.32);
 }
 
 .nano-chart-band-label {
   fill: #f59e0b;
+  stroke: none;
   font-size: 8.5px;
   font-weight: 800;
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
@@ -1242,8 +1252,9 @@ const handlePointClick = () => {
   pointer-events: none;
 }
 
-:global([data-theme="light"]) .nano-chart-band-label {
+[data-theme="light"] .nano-chart-band-label {
   fill: #b45309;
+  stroke: none;
 }
 
 .nano-chart-crosshair {
@@ -1301,7 +1312,7 @@ const handlePointClick = () => {
   border: 1px solid rgba(245, 158, 11, 0.35);
 }
 
-:global([data-theme="light"]) .nano-tooltip-badge.is-highlight {
+[data-theme="light"] .nano-tooltip-badge.is-highlight {
   background: rgba(217, 119, 6, 0.14);
   color: #b45309;
   border-color: rgba(217, 119, 6, 0.3);

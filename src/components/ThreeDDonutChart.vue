@@ -92,6 +92,7 @@
               v-if="isExpanded && slice.outerWallPath" 
               :d="slice.outerWallPath" 
               :fill="`url(#${getGradientId('outer-grad', slice)})`" 
+              stroke="none"
               data-wall="outer-wall"
               data-half="back"
             />
@@ -128,6 +129,7 @@
               v-if="isExpanded && shouldRenderCut(cut) && cut.path"
               :d="cut.path" 
               :fill="cut.fill" 
+              stroke="none"
               :data-wall="cut.type"
               data-half="back"
             />
@@ -152,6 +154,7 @@
               v-if="isExpanded && slice.innerWallPath" 
               :d="slice.innerWallPath" 
               :fill="`url(#${getGradientId('inner-grad', slice)})`" 
+              stroke="none"
               data-wall="inner-wall"
               data-half="back"
             />
@@ -186,6 +189,7 @@
               v-if="isExpanded && slice.innerWallPath" 
               :d="slice.innerWallPath" 
               :fill="`url(#${getGradientId('inner-grad', slice)})`" 
+              stroke="none"
               data-wall="inner-wall"
               data-half="front"
             />
@@ -222,6 +226,7 @@
               v-if="isExpanded && shouldRenderCut(cut) && cut.path"
               :d="cut.path" 
               :fill="cut.fill" 
+              stroke="none"
               :data-wall="cut.type"
               data-half="front"
             />
@@ -246,6 +251,7 @@
               v-if="isExpanded && slice.outerWallPath" 
               :d="slice.outerWallPath" 
               :fill="`url(#${getGradientId('outer-grad', slice)})`" 
+              stroke="none"
               data-wall="outer-wall"
               data-half="front"
             />
@@ -401,18 +407,21 @@
           <path 
             :d="slice.hoverPath || slice.originalTopPath" 
             fill="transparent"
+            stroke="none"
           />
           <!-- Transparent Outer Wall -->
           <path 
             v-if="slice.originalOuterWallPath" 
             :d="slice.originalOuterWallPath" 
             fill="transparent"
+            stroke="none"
           />
           <!-- Transparent Inner Wall -->
           <path 
             v-if="slice.originalInnerWallPath" 
             :d="slice.originalInnerWallPath" 
             fill="transparent"
+            stroke="none"
           />
         </g>
 
@@ -939,8 +948,9 @@ const truncateText = (str, len = 15) => {
   return str.length > len ? str.slice(0, len - 1) + '…' : str
 }
 
+const instanceUid = Math.random().toString(36).slice(2, 9)
 const getSafeId = (id) => String(id).replace(/[^a-zA-Z0-9_-]/g, '_')
-const getGradientId = (prefix, slice) => `${prefix}-${getSafeId(slice.item.id)}-${getSafeId(slice.color || '')}`
+const getGradientId = (prefix, slice) => `${prefix}-${instanceUid}-${getSafeId(slice.item.id)}-${getSafeId(slice.color || '')}`
 
 // Normalized and aggregated input data structure
 const normalizedData = computed(() => {
@@ -2396,6 +2406,12 @@ defineExpose({
   height: 100%;
   display: block;
   overflow: visible;
+  stroke: none;
+}
+
+.hover-trigger-group path {
+  fill: transparent;
+  stroke: none !important;
 }
 
 /* Beautiful Interactive 3D hover effects */

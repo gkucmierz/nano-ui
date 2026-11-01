@@ -313,6 +313,10 @@ onUnmounted(() => {
             </svg>
             <span class="nav-label">{{ t('nav.globe') }}</span>
           </router-link>
+          <router-link to="/docs/map" class="nav-link" active-class="active" v-tooltip="isNarrow ? t('nav.map') : undefined">
+            <NanoIcon name="map" class="nav-icon" :size="18" />
+            <span class="nav-label">{{ t('nav.map') }}</span>
+          </router-link>
           <router-link to="/docs/color-picker" class="nav-link" active-class="active" v-tooltip="isNarrow ? t('nav.colorPicker') : undefined">
             <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <circle cx="13.5" cy="6.5" r=".5"/>
