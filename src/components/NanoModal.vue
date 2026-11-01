@@ -63,9 +63,34 @@ const posX = ref(null);
 const posY = ref(null);
 const curWidth = ref(null);
 const curHeight = ref(null);
+const isMaximized = ref(false);
+const restoreSnapshot = ref(null);
 
 const isDragging = ref(false);
 const isResizing = ref(false);
+
+const parentComponentName =
+  instance?.parent?.type?.__name ||
+  instance?.parent?.type?.name ||
+  'app';
+
+const initialTitleSlug = String(props.title || '')
+  .split(/\s+[—–-]\s+|\s*\(/)[0]
+  .trim()
+  .toLowerCase()
+  .replace(/[^a-z0-9]+/g, '_')
+  .replace(/^_+|_+$/g, '');
+
+const effectiveStorageKey = computed(() => {
+  if (props.storageKey) return props.storageKey;
+  if (!props.draggable && !props.resizable) return '';
+  const slug = initialTitleSlug || 'modal';
+  return `nano_modal_geom_${parentComponentName}_${props.width}x${props.height}_${slug}`;
+});
+
+const preFullscreenStorageKey = computed(() =>
+  effectiveStorageKey.value ? `${effectiveStorageKey.value}__pre_fullscreen` : ''
+);
 
 let dragStartX = 0;
 let dragStartY = 0;
@@ -78,6 +103,21 @@ let initialWidth = 0;
 let initialHeight = 0;
 
 const computedWindowStyle = computed(() => {
+  if (isMaximized.value) {
+    return {
+      position: 'fixed',
+      left: '0px',
+      top: '0px',
+      width: '100vw',
+      height: '100vh',
+      maxWidth: '100vw',
+      maxHeight: '100vh',
+      borderRadius: '0px',
+      transform: 'none',
+      margin: '0'
+    };
+  }
+
   const styles = {};
 
   // Apply explicit width/height if resizing or passed as Number
@@ -110,7 +150,7 @@ const computedWindowStyle = computed(() => {
 
 // Dragging Logic
 const startDrag = (e) => {
-  if (!props.draggable) return;
+  if (!props.draggable || isMaximized.value) return;
 
   // Don't drag if clicking buttons inside header
   if (e.target.tagName === 'BUTTON' || e.target.closest('button')) return;
@@ -166,7 +206,7 @@ const stopDrag = () => {
 
 // Resizing Logic
 const startResize = (e) => {
-  if (!props.resizable) return;
+  if (!props.resizable || isMaximized.value) return;
   e.preventDefault();
   e.stopPropagation();
 
@@ -217,82 +257,148 @@ const stopResize = () => {
   persistGeometry();
 };
 
+function clampScalarBox(box) {
+  const vw = (typeof window !== 'undefined' && window.innerWidth) || 1280;
+  const vh = (typeof window !== 'undefined' && window.innerHeight) || 800;
+
+  let w = typeof box?.width === 'number' && Number.isFinite(box.width) ? box.width : null;
+  let h = typeof box?.height === 'number' && Number.isFinite(box.height) ? box.height : null;
+
+  if (w !== null) {
+    w = Math.max(props.minWidth, Math.min(w, Math.max(props.minWidth, vw - 16)));
+  }
+  if (h !== null) {
+    h = Math.max(props.minHeight, Math.min(h, Math.max(props.minHeight, vh - 16)));
+  }
+
+  let x = typeof box?.x === 'number' && Number.isFinite(box.x) ? box.x : null;
+  let y = typeof box?.y === 'number' && Number.isFinite(box.y) ? box.y : null;
+
+  if (x !== null && y !== null) {
+    const effectiveW = w || (typeof props.width === 'number' ? props.width : 600);
+    const effectiveH = h || (typeof props.height === 'number' ? props.height : 460);
+    x = Math.max(0, Math.min(x, Math.max(0, vw - Math.min(effectiveW, vw))));
+    y = Math.max(0, Math.min(y, Math.max(0, vh - Math.min(effectiveH, vh))));
+  }
+
+  return { x, y, width: w, height: h };
+}
+
 function persistGeometry() {
-  if (!props.storageKey || typeof window === 'undefined') return;
+  const key = effectiveStorageKey.value;
+  if (!key || typeof window === 'undefined') return;
   try {
     const payload = {
       x: posX.value !== null ? Math.round(posX.value) : null,
       y: posY.value !== null ? Math.round(posY.value) : null,
       width: curWidth.value !== null ? Math.round(curWidth.value) : null,
-      height: curHeight.value !== null ? Math.round(curHeight.value) : null
+      height: curHeight.value !== null ? Math.round(curHeight.value) : null,
+      isMaximized: Boolean(isMaximized.value)
     };
-    window.localStorage.setItem(props.storageKey, JSON.stringify(payload));
+    window.localStorage.setItem(key, JSON.stringify(payload));
   } catch {}
 }
 
 function restoreGeometry() {
-  if (!props.storageKey || typeof window === 'undefined') {
+  const key = effectiveStorageKey.value;
+  if (!key || typeof window === 'undefined') {
     posX.value = null;
     posY.value = null;
     curWidth.value = null;
     curHeight.value = null;
+    isMaximized.value = false;
     return;
   }
   try {
-    const raw = window.localStorage.getItem(props.storageKey);
+    const raw = window.localStorage.getItem(key);
     if (!raw) {
       posX.value = null;
       posY.value = null;
       curWidth.value = null;
       curHeight.value = null;
+      isMaximized.value = false;
       return;
     }
     const parsed = JSON.parse(raw);
-    const vw = window.innerWidth || 1280;
-    const vh = window.innerHeight || 800;
-
-    let w = typeof parsed?.width === 'number' && Number.isFinite(parsed.width) ? parsed.width : null;
-    let h = typeof parsed?.height === 'number' && Number.isFinite(parsed.height) ? parsed.height : null;
-
-    if (w !== null) {
-      w = Math.max(props.minWidth, Math.min(w, Math.max(props.minWidth, vw - 16)));
-    }
-    if (h !== null) {
-      h = Math.max(props.minHeight, Math.min(h, Math.max(props.minHeight, vh - 16)));
-    }
-
-    let x = typeof parsed?.x === 'number' && Number.isFinite(parsed.x) ? parsed.x : null;
-    let y = typeof parsed?.y === 'number' && Number.isFinite(parsed.y) ? parsed.y : null;
-
-    if (x !== null && y !== null) {
-      const effectiveW = w || (typeof props.width === 'number' ? props.width : 600);
-      const effectiveH = h || (typeof props.height === 'number' ? props.height : 460);
-      x = Math.max(0, Math.min(x, Math.max(0, vw - Math.min(effectiveW, vw))));
-      y = Math.max(0, Math.min(y, Math.max(0, vh - Math.min(effectiveH, vh))));
-    }
-
-    curWidth.value = w;
-    curHeight.value = h;
-    posX.value = x;
-    posY.value = y;
+    const clamped = clampScalarBox(parsed);
+    curWidth.value = clamped.width;
+    curHeight.value = clamped.height;
+    posX.value = clamped.x;
+    posY.value = clamped.y;
+    isMaximized.value = Boolean(parsed?.isMaximized && props.resizable);
   } catch {
     posX.value = null;
     posY.value = null;
     curWidth.value = null;
     curHeight.value = null;
+    isMaximized.value = false;
   }
 }
 
-function resetGeometryOnDblClick(e) {
+function handleHeaderDblClick(e) {
   if (!props.draggable && !props.resizable) return;
   if (e?.target?.tagName === 'BUTTON' || e?.target?.closest?.('button')) return;
+
+  // For resizable windows: toggle between Fullscreen and saved localStorage geometry
+  if (props.resizable) {
+    const preKey = preFullscreenStorageKey.value;
+
+    if (!isMaximized.value) {
+      // 1. Not fullscreen -> dump current position & size scalars to localStorage, then enter fullscreen
+      const rect = modalWindow.value?.getBoundingClientRect?.();
+      const snapshot = {
+        x: posX.value !== null ? Math.round(posX.value) : (rect ? Math.round(rect.left) : null),
+        y: posY.value !== null ? Math.round(posY.value) : (rect ? Math.round(rect.top) : null),
+        width: curWidth.value !== null ? Math.round(curWidth.value) : (rect ? Math.round(rect.width) : null),
+        height: curHeight.value !== null ? Math.round(curHeight.value) : (rect ? Math.round(rect.height) : null)
+      };
+      restoreSnapshot.value = snapshot;
+      if (preKey && typeof window !== 'undefined') {
+        try {
+          window.localStorage.setItem(preKey, JSON.stringify(snapshot));
+        } catch {}
+      }
+      isMaximized.value = true;
+      persistGeometry();
+    } else {
+      // 2. Fullscreen -> restore size & position from localStorage, then remove pre-fullscreen key
+      let saved = restoreSnapshot.value;
+      if (preKey && typeof window !== 'undefined') {
+        try {
+          const rawPre = window.localStorage.getItem(preKey);
+          if (rawPre) {
+            saved = JSON.parse(rawPre);
+          }
+          window.localStorage.removeItem(preKey);
+        } catch {}
+      }
+      isMaximized.value = false;
+      if (saved) {
+        const clamped = clampScalarBox(saved);
+        posX.value = clamped.x;
+        posY.value = clamped.y;
+        curWidth.value = clamped.width;
+        curHeight.value = clamped.height;
+      } else {
+        posX.value = null;
+        posY.value = null;
+        curWidth.value = null;
+        curHeight.value = null;
+      }
+      restoreSnapshot.value = null;
+      persistGeometry();
+    }
+    return;
+  }
+
+  // Fallback for draggable-only (non-resizable) modals: recenter window
   posX.value = null;
   posY.value = null;
   curWidth.value = null;
   curHeight.value = null;
-  if (props.storageKey && typeof window !== 'undefined') {
+  if (effectiveStorageKey.value && typeof window !== 'undefined') {
     try {
-      window.localStorage.removeItem(props.storageKey);
+      window.localStorage.removeItem(effectiveStorageKey.value);
     } catch {}
   }
 }
@@ -348,12 +454,12 @@ const handleCancel = () => { emit('cancel'); closeModal(); };
     <transition name="nano-modal-fade">
       <div v-if="isVisible" class="nano-modal-overlay" :class="{ 'nano-glass': glassmorphism }"
         @click.self="handleBackdropClick" @keydown.esc.stop="closeModal" tabindex="-1" ref="modalOverlay">
-        <div class="nano-modal-window" :class="{ 'is-dragging': isDragging, 'is-resizing': isResizing }"
+        <div class="nano-modal-window" :class="{ 'is-dragging': isDragging, 'is-resizing': isResizing, 'is-maximized': isMaximized }"
           :style="computedWindowStyle" ref="modalWindow">
 
           <!-- HEADER -->
-          <div v-if="showHeader" class="nano-modal-header" :class="{ 'is-draggable': draggable }"
-            @mousedown="startDrag" @dblclick="resetGeometryOnDblClick">
+          <div v-if="showHeader" class="nano-modal-header" :class="{ 'is-draggable': draggable && !isMaximized }"
+            @mousedown="startDrag" @dblclick="handleHeaderDblClick">
             <slot name="header">
               <h2 class="nano-modal-title">{{ title }}</h2>
             </slot>
@@ -384,7 +490,7 @@ const handleCancel = () => { emit('cancel'); closeModal(); };
           </div>
 
           <!-- RESIZER -->
-          <div v-if="resizable" class="nano-modal-resizer" @mousedown="startResize">
+          <div v-if="resizable && !isMaximized" class="nano-modal-resizer" @mousedown="startResize">
             <svg width="10" height="10" viewBox="0 0 10 10" fill="none" xmlns="http://www.w3.org/2000/svg">
               <path d="M9 1V9H1" stroke="currentColor" stroke-width="2" stroke-linecap="round"
                 stroke-linejoin="round" />
