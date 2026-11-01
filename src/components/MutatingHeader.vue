@@ -258,7 +258,14 @@ onUnmounted(() => {
   gap: 16px;
 }
 
-.header-left,
+.header-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+  flex-shrink: 1;
+}
+
 .header-right {
   display: flex;
   align-items: center;

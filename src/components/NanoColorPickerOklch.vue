@@ -125,7 +125,7 @@ const markerStyle = computed(() => {
 const lightnessGradient = computed(() => {
   const c = Number(chroma.value.toFixed(3));
   const h = Number(hue.value.toFixed(1));
-  return `linear-gradient(to right, oklch(0 ${c} ${h}), oklch(0.5 ${c} ${h}), oklch(1 ${c} ${h}))`;
+  return `linear-gradient(to right, oklch(0 ${c} ${h}) 0%, oklch(0 ${c} ${h}) 2px, oklch(0.5 ${c} ${h}) 50%, oklch(1 ${c} ${h}) calc(100% - 2px), oklch(1 ${c} ${h}) 100%)`;
 });
 
 const emitUpdate = () => {
@@ -321,7 +321,7 @@ const copyValue = async () => {
         <span class="slider-label">Perceptual Lightness (L)</span>
         <span class="slider-val">{{ Math.round(lightness * 100) }}%</span>
       </div>
-      <div class="nano-oklch-slider-track" :style="{ background: lightnessGradient }">
+      <div class="nano-oklch-slider-track" :style="{ backgroundImage: lightnessGradient }">
         <input
           type="range"
           class="nano-oklch-range"
@@ -561,32 +561,45 @@ const copyValue = async () => {
 .nano-oklch-slider-block {
   display: flex;
   flex-direction: column;
-  gap: 0.35rem;
+  gap: 0.42rem;
 }
 
 .nano-oklch-slider-meta {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  font-size: 0.78rem;
+  padding: 0 0.1rem;
+  font-size: 0.76rem;
   font-weight: 600;
-  color: var(--nano-text-main, #f8fafc);
+  letter-spacing: 0.01em;
+  color: var(--nano-text-secondary, #cbd5e1);
   font-variant-numeric: tabular-nums;
   min-height: 18px;
+}
+
+.nano-oklch-slider-meta .slider-val {
+  color: var(--nano-text-main, #f8fafc);
+  font-weight: 700;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
 }
 
 .nano-oklch-slider-track {
   position: relative;
   height: 14px;
-  border-radius: 7px;
-  border: 1px solid var(--nano-border-card, rgba(255, 255, 255, 0.15));
+  border-radius: 999px;
+  background-origin: border-box;
+  background-clip: border-box;
+  background-repeat: no-repeat;
+  box-shadow:
+    inset 0 0 0 1px var(--nano-border-card, rgba(255, 255, 255, 0.22)),
+    inset 0 1px 2px rgba(0, 0, 0, 0.35);
   display: flex;
   align-items: center;
 }
 
 .nano-oklch-range {
   width: 100%;
-  height: 100%;
+  height: 20px;
   margin: 0;
   background: transparent;
   appearance: none;
@@ -595,82 +608,132 @@ const copyValue = async () => {
   outline: none;
 }
 
+.nano-oklch-range::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #ffffff;
+  border: 2px solid #0f172a;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.55), 0 0 0 1px rgba(255, 255, 255, 0.85);
+  cursor: grab;
+  transition: transform 100ms ease, box-shadow 100ms ease;
+}
+
+.nano-oklch-range::-webkit-slider-thumb:hover {
+  transform: scale(1.1);
+}
+
+.nano-oklch-range::-moz-range-thumb {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #ffffff;
+  border: 2px solid #0f172a;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.55), 0 0 0 1px rgba(255, 255, 255, 0.85);
+  cursor: grab;
+  transition: transform 100ms ease, box-shadow 100ms ease;
+}
+
 .nano-oklch-controls {
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
+  gap: 0.55rem;
 }
 
 .nano-oklch-formats {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: 0.25rem;
-  padding: 0.2rem;
+  padding: 0.22rem;
   border-radius: var(--nano-radius-md, 8px);
-  background: var(--nano-bg-muted, rgba(255, 255, 255, 0.05));
-  border: 1px solid var(--nano-border-subtle, rgba(255, 255, 255, 0.08));
-  min-height: 32px;
+  background: var(--nano-bg-code, rgba(15, 23, 42, 0.65));
+  border: 1px solid var(--nano-border-card, rgba(255, 255, 255, 0.14));
+  min-height: 34px;
 }
 
 .nano-oklch-format-btn {
   height: 26px;
-  border: none;
+  border: 1px solid transparent;
   border-radius: 6px;
   background: transparent;
-  color: var(--nano-text-secondary, #cbd5e1);
-  font-size: 0.75rem;
-  font-weight: 600;
+  color: var(--nano-text-secondary, #94a3b8);
+  font-size: 0.73rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
   cursor: pointer;
   outline: none;
-  transition: background-color 120ms ease, color 120ms ease;
+  transition: background-color 120ms ease, color 120ms ease, border-color 120ms ease;
+}
+
+.nano-oklch-format-btn:hover:not(.is-active) {
+  color: var(--nano-text-main, #f8fafc);
+  background: rgba(255, 255, 255, 0.04);
 }
 
 .nano-oklch-format-btn.is-active {
-  background: var(--nano-nav-active-bg, rgba(99, 102, 241, 0.18));
+  background: var(--nano-nav-active-bg, rgba(99, 102, 241, 0.22));
+  border-color: rgba(99, 102, 241, 0.42);
   color: var(--nano-text-main, #f8fafc);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
 }
 
 .nano-oklch-input-row {
   display: grid;
-  grid-template-columns: 1fr 68px;
+  grid-template-columns: 1fr 74px;
   gap: 0.5rem;
-  min-height: 34px;
+  align-items: center;
+  min-height: 36px;
 }
 
 .nano-oklch-value-input {
   width: 100%;
-  height: 34px;
-  padding: 0 0.65rem;
+  height: 36px;
+  padding: 0 0.75rem;
   border-radius: var(--nano-radius-md, 8px);
-  border: 1px solid var(--nano-border-card, rgba(255, 255, 255, 0.15));
+  border: 1px solid var(--nano-border-card, rgba(255, 255, 255, 0.18));
   background: var(--nano-bg-code, #0f172a);
   color: var(--nano-text-main, #f8fafc);
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
   font-size: 0.8rem;
-  font-weight: 500;
+  font-weight: 600;
+  letter-spacing: 0.01em;
   font-variant-numeric: tabular-nums;
   outline: none;
+  transition: border-color 120ms ease, box-shadow 120ms ease;
 }
 
 .nano-oklch-value-input:focus {
   border-color: var(--nano-state-active, #00f2fe);
+  box-shadow: 0 0 0 2px rgba(0, 242, 254, 0.15);
 }
 
 .nano-oklch-copy-btn {
-  height: 34px;
-  width: 68px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 36px;
+  width: 74px;
+  padding: 0 0.65rem;
   border-radius: var(--nano-radius-md, 8px);
-  border: 1px solid var(--nano-border-card, rgba(255, 255, 255, 0.15));
-  background: var(--nano-bg-hover, rgba(255, 255, 255, 0.1));
+  border: 1px solid var(--nano-border-card, rgba(255, 255, 255, 0.2));
+  background: var(--nano-bg-hover, rgba(255, 255, 255, 0.08));
   color: var(--nano-text-main, #f8fafc);
   font-size: 0.75rem;
-  font-weight: 600;
+  font-weight: 700;
+  letter-spacing: 0.02em;
   cursor: pointer;
   outline: none;
-  transition: border-color 120ms ease, background-color 120ms ease;
+  transition: border-color 120ms ease, background-color 120ms ease, transform 80ms ease;
 }
 
 .nano-oklch-copy-btn:hover {
-  border-color: var(--nano-border-hover, rgba(255, 255, 255, 0.3));
+  background: rgba(255, 255, 255, 0.14);
+  border-color: var(--nano-border-hover, rgba(255, 255, 255, 0.36));
+}
+
+.nano-oklch-copy-btn:active {
+  transform: translateY(1px);
 }
 </style>
