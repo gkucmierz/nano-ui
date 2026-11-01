@@ -39,10 +39,10 @@ const handleKeyDown = (e) => {
   if (e.metaKey || e.ctrlKey || e.altKey) {
     return;
   }
-  if (e.key === 'l' || e.key === 'L' || e.key === 't' || e.key === 'T') {
+  if (e.key === 't' || e.key === 'T') {
     e.preventDefault();
     toggleTheme();
-  } else if (e.key === 'j' || e.key === 'J' || e.key === 'i' || e.key === 'I') {
+  } else if (e.key === 'l' || e.key === 'L') {
     e.preventDefault();
     toggleLang();
   }
