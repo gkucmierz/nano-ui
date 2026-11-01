@@ -81,6 +81,7 @@ const toggle = (event) => {
     <input
       ref="inputRef"
       type="checkbox"
+      switch
       class="nano-switch-input"
       :checked="isChecked"
       :disabled="disabled"
@@ -132,6 +133,7 @@ const toggle = (event) => {
   pointer-events: none;
   margin: 0;
   outline: 0;
+  accent-color: var(--nano-switch-color, #00f2fe);
 }
 
 /* Base Slider Track */

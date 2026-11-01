@@ -237,8 +237,8 @@ function persistState() {
     window.localStorage.setItem(
       props.storageKey,
       JSON.stringify({
-        size: internalSize.value,
-        locked: internalLocked.value,
+        size: currentSize.value,
+        locked: isLocked.value,
       })
     );
   } catch {}
@@ -250,14 +250,23 @@ function restoreState() {
     const raw = window.localStorage.getItem(props.storageKey);
     if (!raw) return;
     const parsed = JSON.parse(raw);
-    if (typeof parsed?.size === 'number' && props.modelValue === undefined) {
-      internalSize.value = clampSize(parsed.size);
+    if (typeof parsed?.size === 'number' && Number.isFinite(parsed.size)) {
+      const clamped = clampSize(parsed.size);
+      internalSize.value = clamped;
+      if (props.modelValue !== undefined && props.modelValue !== clamped) {
+        emit('update:modelValue', clamped);
+      }
     }
-    if (typeof parsed?.locked === 'boolean' && props.locked === undefined) {
+    if (typeof parsed?.locked === 'boolean') {
       internalLocked.value = parsed.locked;
+      if (props.locked !== undefined && props.locked !== parsed.locked) {
+        emit('update:locked', parsed.locked);
+      }
     }
   } catch {}
 }
+
+restoreState();
 
 function updateSize(nextVal) {
   const clamped = clampSize(nextVal);
