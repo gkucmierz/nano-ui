@@ -71,9 +71,10 @@ const prerender = async () => {
         }
       }
 
-      // Inject Canonical Link Tag for SEO SSoT
+      // Inject Canonical Link Tag & og:url for SEO SSoT
       const canonicalPath = is404 ? '/404' : url === '/docs' ? '/docs/overview' : url;
       const canonicalUrl = `https://nano-ui.7u.pl${canonicalPath === '/' ? '' : canonicalPath}`;
+      html = html.replace(/<meta\s+property="og:url"\s+content=".*?"\s*\/?>/i, `<meta property="og:url" content="${canonicalUrl}" />`);
       html = html.replace(/<\/head>/i, `  <link rel="canonical" href="${canonicalUrl}" />\n  </head>`);
 
       let outFilePath;
