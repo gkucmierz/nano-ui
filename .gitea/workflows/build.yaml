@@ -89,5 +89,5 @@ jobs:
           fi
           TMP_NPMRC=$(mktemp)
           trap 'rm -f "$TMP_NPMRC"' EXIT
-          printf "registry=https://registry.npmjs.org/\n//registry.npmjs.org/:_authToken=%s\n" "$NODE_AUTH_TOKEN" > "$TMP_NPMRC"
+          printf "@gkucmierz:registry=https://registry.npmjs.org/\nregistry=https://registry.npmjs.org/\n//registry.npmjs.org/:_authToken=%s\n" "$NODE_AUTH_TOKEN" > "$TMP_NPMRC"
           NPM_CONFIG_USERCONFIG="$TMP_NPMRC" npm publish --registry="https://registry.npmjs.org/" --access public || echo "⚠️ Public npmjs.org publish skipped."
