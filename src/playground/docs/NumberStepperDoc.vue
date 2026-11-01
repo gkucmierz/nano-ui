@@ -357,9 +357,9 @@ const isDisabled = ref(false);
       </div>
     </div>
 
-    <!-- CARD 3: Size Variants -->
+    <!-- CARD 4: Size Variants -->
     <div class="demo-section">
-      <h3>3. Size Variants (<code>sm</code> / <code>md</code> / <code>lg</code>)</h3>
+      <h3>4. Size Variants (<code>sm</code> / <code>md</code> / <code>lg</code>)</h3>
       <p class="demo-desc">
         Three height presets matching Nano UI buttons and inputs: <code>sm</code> (28px), <code>md</code> (34px), and <code>lg</code> (40px).
       </p>
@@ -469,6 +469,44 @@ const isDisabled = ref(false);
   font-size: 0.88rem;
   font-weight: 600;
   cursor: pointer;
+}
+
+.ctrl-color-group {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.65rem;
+}
+
+.ctrl-label {
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--nano-text-muted);
+}
+
+.color-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.custom-var-banner {
+  margin-top: 1.25rem;
+  padding: 1.15rem 1.35rem;
+  border-radius: 12px;
+  background: var(--nano-bg-card-elevated);
+  border: 1px dashed var(--nano-border-card);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1.25rem;
+}
+
+.custom-var-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
 }
 
 .preview-grid {
