@@ -122,6 +122,27 @@ function onKeydown(e) {
     emit('change', props.max);
   }
 }
+
+function setValue(val) {
+  if (props.disabled) return;
+  const next = quantizeValue(val);
+  emit('update:modelValue', next);
+  emit('change', next);
+}
+
+function stepBy(steps = 1) {
+  const cur = Number.isFinite(Number(props.modelValue)) ? Number(props.modelValue) : props.min;
+  const stepVal = props.step > 0 ? props.step : 1;
+  setValue(cur + steps * stepVal);
+}
+
+defineExpose({
+  setValue,
+  stepBy,
+  quantizeValue,
+  percentage,
+  isDragging,
+});
 </script>
 
 <template>

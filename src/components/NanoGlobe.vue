@@ -623,6 +623,30 @@ function stepAutoRotate(ts) {
   }
 }
 
+function rotateTo(lon, lat) {
+  const nextLon = Number(lon)
+  const nextLat = Math.max(-85, Math.min(85, Number(lat)))
+  if (!Number.isFinite(nextLon) || !Number.isFinite(nextLat)) return
+  rotLon.value = nextLon
+  rotLat.value = nextLat
+  emit('update:center', [Number(nextLon.toFixed(2)), Number(nextLat.toFixed(2))])
+}
+
+function resetView() {
+  rotateTo(props.center?.[0] ?? 19.0, props.center?.[1] ?? 50.0)
+}
+
+defineExpose({
+  rotateTo,
+  resetView,
+  toggleGraticule: toggleGraticuleBtn,
+  toggleHealpix: toggleHealpixBtn,
+  setHealpixOrder: setOrderBtn,
+  rotLon,
+  rotLat,
+  isDragging,
+})
+
 onMounted(() => {
   if (props.autoRotateSpeed) {
     animFrameId = requestAnimationFrame(stepAutoRotate)

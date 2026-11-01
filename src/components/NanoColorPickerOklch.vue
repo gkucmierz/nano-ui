@@ -256,6 +256,25 @@ const copyValue = async () => {
     emit('copy', text);
   }
 };
+const setOklch = (l, c, h) => {
+  if (props.disabled) return;
+  if (typeof l === 'number') lightness.value = clamp(l, 0, 1);
+  if (typeof c === 'number') chroma.value = clamp(c, 0, props.maxChroma);
+  if (typeof h === 'number') hue.value = normalizeAngle(h);
+  emitUpdate();
+};
+
+defineExpose({
+  copyValue,
+  setOklch,
+  lightness,
+  chroma,
+  hue,
+  hexString,
+  formattedValue,
+  wcagDarkRatio,
+  wcagLightRatio,
+});
 </script>
 
 <template>

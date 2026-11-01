@@ -4,6 +4,7 @@ import NanoGlobe from '../../components/NanoGlobe.vue';
 import NanoSwitch from '../../components/NanoSwitch.vue';
 import NanoSelect from '../../components/NanoSelect.vue';
 import NanoCodeBlock from '../../components/NanoCodeBlock.vue';
+import { createDocTabs } from '../docSnippets.js';
 import { t } from '../../locales.js';
 
 const center = ref([19.0, 52.0]);
@@ -35,26 +36,65 @@ const demoMarkers = [
   { id: 'tyo', lon: 139.69, lat: 35.68, type: 'dot', label: 'TYO' },
 ];
 
-const usageSnippet = `<script setup>
-import { ref } from 'vue';
-import { NanoGlobe } from '@gkucmierz/nano-ui';
-
-const selectedCountries = ref(['POL', 'USA']);
-const selectedPixels = ref([4]);
-<\/script>
-
-<template>
-  <NanoGlobe
-    v-model:selected-countries="selectedCountries"
-    v-model:selected-healpix-pixels="selectedPixels"
-    :size="440"
-    preset="teal-coral"
-    :show-graticule="true"
-    :show-healpix="true"
-    :healpix-order="1"
-    :show-controls="true"
-  />
-</template>`;
+const codeTabs = createDocTabs({
+  componentName: 'NanoGlobe',
+  stateRef: 'selectedCountries',
+  initialValue: "['POL', 'USA']",
+  templateAttrs: [
+    'v-model:selected-countries="selectedCountries"',
+    ':size="440"',
+    'preset="teal-coral"',
+    ':show-graticule="true"',
+    ':show-healpix="true"',
+    ':healpix-order="1"',
+    ':show-controls="true"',
+  ],
+  headlessImports: [
+    { symbols: ['generateHealpixGrid', 'projectOrthographic'], path: 'dist/utils/healpix.js' },
+  ],
+  apiSections: [
+    {
+      title: 'Props',
+      items: [
+        'size: Number (default: 440) - Canvas/SVG width and height in px',
+        'center: Array [lon, lat] (default: [15, 38]) - Initial orthographic camera center (supports v-model:center)',
+        'selectedCountries: Array<String> (default: ["POL", "USA", "JPN"]) - Selected ISO-3 country codes (v-model:selectedCountries)',
+        'selectedHealpixPixels: Array<Number> (default: []) - Highlighted HEALPix RING pixel indices (v-model:selectedHealpixPixels)',
+        'preset: String (default: "teal-coral") - Visual color preset ("teal-coral" | "nano-dark" | "nano-light" | "cyber-amber")',
+        'showGraticule: Boolean (default: true) - Render 15-degree meridian/parallel graticule (v-model:showGraticule)',
+        'showHealpix: Boolean (default: true) - Render equal-area HEALPix spherical tessellation (v-model:showHealpix)',
+        'healpixOrder: Number (default: 1) - HEALPix order k in [0..3], Npix = 12 * 4^k (v-model:healpixOrder)',
+        'showHealpixLabels: Boolean (default: false) - Show RING pixel numbers inside visible cells',
+        'showAtmosphere: Boolean (default: true) - Render outer atmospheric rim glow',
+        'showControls: Boolean (default: true) - Render floating HUD controls',
+        'autoRotateSpeed: Number (default: 0) - Auto-rotation angular velocity in deg/sec',
+        'arcs: Array<{ from: [lon,lat], to: [lon,lat], dashed?: Boolean, width?: Number }> - Great-circle arcs',
+        'markers: Array<{ id, lon, lat, type?: "dot"|"target", label?: String }> - Surface markers',
+      ],
+    },
+    {
+      title: 'Events',
+      items: [
+        '@update:center: (coords: [lon, lat]) => void - Emitted while rotating the globe',
+        '@update:selectedCountries: (codes: string[]) => void - Emitted when countries are toggled',
+        '@update:selectedHealpixPixels: (pixels: number[]) => void - Emitted when HEALPix cells are clicked',
+        '@country-click: ({ id, name }) => void - Emitted when a country polygon is clicked',
+        '@healpix-click: ({ ipix, nside, order }) => void - Emitted when a HEALPix cell is clicked',
+      ],
+    },
+    {
+      title: 'Exposed Methods & State (via template ref)',
+      items: [
+        'rotateTo(lon, lat): void - Smoothly orient globe camera to target coordinates',
+        'resetView(): void - Reset camera back to props.center',
+        'toggleGraticule(val?: boolean): void - Toggle meridian/parallel graticule',
+        'toggleHealpix(val?: boolean): void - Toggle HEALPix tessellation layer',
+        'setHealpixOrder(k: number): void - Set HEALPix order k in [0..3]',
+        'rotLon / rotLat / isDragging: Ref - Reactive camera orientation and drag state',
+      ],
+    },
+  ],
+});
 </script>
 
 <template>
@@ -147,7 +187,7 @@ const selectedPixels = ref([4]);
       </div>
     </div>
 
-    <NanoCodeBlock :code="usageSnippet" lang="vue" title="Usage & API Example" />
+    <NanoCodeBlock :tabs="codeTabs" />
   </div>
 </template>
 

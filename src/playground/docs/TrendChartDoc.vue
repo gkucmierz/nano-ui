@@ -3,6 +3,7 @@ import { ref, computed } from 'vue';
 import NanoTrendChart from '../../components/NanoTrendChart.vue';
 import NanoSwitch from '../../components/NanoSwitch.vue';
 import NanoCodeBlock from '../../components/NanoCodeBlock.vue';
+import { createDocTabs } from '../docSnippets.js';
 import { currentLang, t } from '../../locales.js';
 
 // Domain selector: proves X-axis is 100% generic (Time-Series, Audio Frequency, Algorithmic Steps)
@@ -253,6 +254,43 @@ const bandConfig = {
     curve="spline"
   />
 </template>`;
+const codeTabs = createDocTabs({
+  componentName: 'NanoTrendChart',
+  usageCode: usageSnippet,
+  headlessImports: [
+    { symbols: ['computeVerticalBands', 'computeWeekendBands', 'getDateWeekdayInfo'], path: 'dist/utils/chart-bands.js' },
+  ],
+  apiSections: [
+    {
+      title: 'Props',
+      items: [
+        'series: Array<{ id, label, color, area?: Boolean, width?: Number, dashed?: Boolean, points: Array<{ key, label, date?, value, subValue? }> }> (required)',
+        'verticalBands: Object | Array | Function (default: null) - Declarative band config ({ preset: "weekend", lang, days, mergeAdjacent }) or custom predicate',
+        'showVerticalBands: Boolean (default: true) - Toggle vertical background bands and top pills',
+        'curve: String (default: "spline") - Path interpolation ("spline" C¹ Bezier | "linear")',
+        'zeroBaseline: Boolean (default: false) - Render horizontal Y=0 reference baseline',
+        'formatValue: Function (default: null) - Custom Y-axis and tooltip value formatter (val) => string',
+        'tooltipFooter: Function (default: null) - Custom footer aggregator ({ index, entry, items }) => string',
+      ],
+    },
+    {
+      title: 'Events',
+      items: [
+        '@point-hover: (payload: { index, entry, items } | null) => void - Emitted when crosshair moves or leaves',
+        '@point-click: (payload: { index, entry, items }) => void - Emitted when a data column is clicked',
+      ],
+    },
+    {
+      title: 'Exposed Methods & State (via template ref)',
+      items: [
+        'setHoverIndex(idx: number): void - Programmatically lock crosshair to spine index',
+        'clearHover(): void - Clear active crosshair selection',
+        'getBounds(): { minVal, maxVal, ticks } - Return computed Y-axis scale bounds',
+        'hoveredSpineIndex / activeSpineEntry / activeHoverDots / computedBands: Ref/ComputedRef',
+      ],
+    },
+  ],
+});
 </script>
 
 <template>
@@ -355,7 +393,7 @@ const bandConfig = {
       </div>
     </div>
 
-    <NanoCodeBlock :code="usageSnippet" lang="vue" title="NanoTrendChart & Vertical Bands Config" />
+    <NanoCodeBlock :tabs="codeTabs" />
   </div>
 </template>
 

@@ -46,7 +46,23 @@ import {
   evaluatePolylineCursor,
   normalizeGeoPoint,
 } from './utils/map-engine.js';
-import { registerIcons, getAvailableIcons, BUILTIN_ICONS } from './icons/index.js';
+import {
+  registerIcons,
+  getAvailableIcons,
+  isIconColorable,
+  NON_COLORABLE_ICONS,
+  BUILTIN_ICONS,
+} from './icons/index.js';
+import {
+  UI_CONTEXT,
+  ALLOWED_CONTEXTS,
+  WORST_CASE_PLACEHOLDERS,
+  estimateVisualStringWidth,
+  renderWorstCaseString,
+  extractPlaceholders,
+  resolveTranslation,
+  validateLocaleSymmetry,
+} from './utils/i18n-engine.js';
 import { normalizeAngle, shortestAngleDiff } from './utils/math.js';
 import {
   getPerceivedLightness,
@@ -172,7 +188,17 @@ export {
   normalizeGeoPoint,
   registerIcons,
   getAvailableIcons,
+  isIconColorable,
+  NON_COLORABLE_ICONS,
   BUILTIN_ICONS,
+  UI_CONTEXT,
+  ALLOWED_CONTEXTS,
+  WORST_CASE_PLACEHOLDERS,
+  estimateVisualStringWidth,
+  renderWorstCaseString,
+  extractPlaceholders,
+  resolveTranslation,
+  validateLocaleSymmetry,
   normalizeAngle,
   shortestAngleDiff,
   getPerceivedLightness,

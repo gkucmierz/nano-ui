@@ -6,6 +6,7 @@ import NanoCodeEditor from '../../components/NanoCodeEditor.vue';
 import NanoSwitch from '../../components/NanoSwitch.vue';
 import NanoSlider from '../../components/NanoSlider.vue';
 import NanoCodeBlock from '../../components/NanoCodeBlock.vue';
+import { createDocTabs } from '../docSnippets.js';
 import { t } from '../../locales.js';
 
 // Demo 1: Interactive Configurator
@@ -45,6 +46,55 @@ const scratchpadCode = ref(`// Bottom pane: Live Scratchpad inside nested vertic
 export function formatSplitRatio(ratio) {
   return \`\${(ratio * 100).toFixed(1)}% / \${((1 - ratio) * 100).toFixed(1)}%\`;
 }`);
+const codeTabs = createDocTabs({
+  componentName: 'NanoSplitter',
+  stateRef: 'sidebarWidth',
+  initialValue: '320',
+  templateAttrs: [
+    'v-model="sidebarWidth"',
+    'unit="px"',
+    ':default-size="320"',
+    ':min="220"',
+    ':max="560"',
+    ':gap="12"',
+    'lockable',
+  ],
+  slotContent: '<template #first>Left Pane</template>\n    <template #second>Right Pane</template>',
+  apiSections: [
+    {
+      title: 'Props',
+      items: [
+        'modelValue: Number (v-model) - Current first pane size in unit ("ratio" | "percent" | "px")',
+        'locked: Boolean (v-model:locked) - Lock splitter against drag/keyboard resizing',
+        'orientation: String (default: "horizontal") - Split direction ("horizontal" | "vertical")',
+        'unit: String (default: "ratio") - Measurement unit ("ratio" 0..1 | "percent" 0..100 | "px")',
+        'defaultSize: Number - Size restored on double-click or reset()',
+        'min / max: Number - Lower and upper bounds for first pane',
+        'gap: Number (default: 12) - Gutter spacing in px',
+        'lockable: Boolean (default: false) - Render triangle lock tab on gutter',
+        'storageKey: String (default: "") - Optional localStorage key for persisting size & lock state',
+      ],
+    },
+    {
+      title: 'Events',
+      items: [
+        '@update:modelValue / @change: (payload) => void - Emitted when pane size changes',
+        '@update:locked: (locked: boolean) => void - Emitted when lock state toggles',
+        '@reset: (defaultSize: number) => void - Emitted on double-click reset',
+        '@dragStart / @dragEnd: (size: number) => void - Emitted when gutter drag starts or ends',
+      ],
+    },
+    {
+      title: 'Exposed Methods & State (via template ref)',
+      items: [
+        'setSize(val: number): void - Clamp and set pane size programmatically',
+        'reset(): void - Restore pane size to defaultSize',
+        'toggleLock(): void - Toggle splitter lock state',
+        'currentSize / isLocked / isDragging: ComputedRef/Ref',
+      ],
+    },
+  ],
+});
 </script>
 
 <template>
@@ -192,36 +242,7 @@ export function formatSplitRatio(ratio) {
       </div>
     </div>
 
-    <NanoCodeBlock title="Usage Example" lang="vue">
-&lt;script setup&gt;
-import { ref } from 'vue';
-import { NanoSplitter, NanoFileList, NanoCodeEditor } from '@gkucmierz/nano-ui';
-
-const sidebarWidth = ref(320);
-const isLocked = ref(false);
-&lt;/script&gt;
-
-&lt;template&gt;
-  &lt;NanoSplitter
-    v-model="sidebarWidth"
-    v-model:locked="isLocked"
-    unit="px"
-    :default-size="320"
-    :min="220"
-    :max="560"
-    :gap="12"
-    lockable
-    storage-key="my_app_inspector_split"
-  &gt;
-    &lt;template #first&gt;
-      &lt;NanoFileList :files="files" v-model="selectedPath" :show-stats="true" /&gt;
-    &lt;/template&gt;
-    &lt;template #second&gt;
-      &lt;NanoCodeEditor :file-path="selectedPath" :diff="activeDiff" /&gt;
-    &lt;/template&gt;
-  &lt;/NanoSplitter&gt;
-&lt;/template&gt;
-    </NanoCodeBlock>
+    <NanoCodeBlock :tabs="codeTabs" />
   </div>
 </template>
 

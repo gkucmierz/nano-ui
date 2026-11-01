@@ -4,6 +4,7 @@ import NuPinInput from '../../components/NuPinInput.vue';
 import NuMaskedInput from '../../components/NuMaskedInput.vue';
 import NanoSwitch from '../../components/NanoSwitch.vue';
 import NanoCodeBlock from '../../components/NanoCodeBlock.vue';
+import { createDocTabs } from '../docSnippets.js';
 import { t } from '../../locales.js';
 
 const pinValue = ref('637');
@@ -44,6 +45,44 @@ const macAddress = ref('');
     action-label="Bind MAC"
   />
 </template>`;
+const codeTabs = createDocTabs({
+  componentName: 'NuPinInput',
+  usageCode: usageSnippet,
+  headlessImports: [
+    { symbols: ['parseMaskPattern', 'applyMask', 'NuMaskedInput'], path: 'dist/utils/input-mask.js' },
+  ],
+  apiSections: [
+    {
+      title: 'NuPinInput Props',
+      items: [
+        'modelValue: String (default: "") - Raw PIN/OTP string (supports v-model)',
+        'length: Number (default: 6) - Number of individual PIN character slots',
+        'masked: Boolean (default: false) - Render dots (•) instead of plaintext digits',
+        'status: String (default: "normal") - Validation state ("normal" | "error" | "success")',
+        'expiresIn: Number (default: 0) - Countdown timer in seconds (0 = hidden)',
+        'actionLabel: String (default: "") - Optional submit button label',
+      ],
+    },
+    {
+      title: 'NuMaskedInput Props',
+      items: [
+        'modelValue: String (default: "") - Raw unmasked value (supports v-model)',
+        'mask: String (default: "#### #### #### ####") - Pattern (#=digit, A=letter, X=alphanumeric, H=hex)',
+        'status: String (default: "normal") - Validation state ("normal" | "error" | "success")',
+        'actionLabel: String (default: "") - Optional action button label',
+      ],
+    },
+    {
+      title: 'Events & Exposed Methods (via template ref)',
+      items: [
+        '@complete / @submit: ({ value, unmasked, isComplete }) => void - Emitted when all slots are filled or submitted',
+        '@expired: () => void - Emitted when NuPinInput countdown reaches 0',
+        'focus(index?: number) / clear(): void - Programmatically focus or reset the input slots',
+        'resetTimer(seconds?: number): void - Restart NuPinInput expiration timer',
+      ],
+    },
+  ],
+});
 </script>
 
 <template>
@@ -107,7 +146,7 @@ const macAddress = ref('');
       </div>
     </div>
 
-    <NanoCodeBlock :code="usageSnippet" lang="vue" title="Usage & API Example" />
+    <NanoCodeBlock :tabs="codeTabs" />
   </div>
 </template>
 

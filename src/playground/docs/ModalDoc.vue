@@ -1,10 +1,59 @@
 <script setup>
 import { ref } from 'vue';
 import NanoModal from '../../components/NanoModal.vue';
+import NanoCodeBlock from '../../components/NanoCodeBlock.vue';
+import { createDocTabs } from '../docSnippets.js';
 
 const showBasic = ref(false);
 const showAdvanced = ref(false);
 const showCustom = ref(false);
+
+const codeTabs = createDocTabs({
+  componentName: 'NanoModal',
+  stateRef: 'isModalOpen',
+  initialValue: 'false',
+  templateAttrs: [
+    'v-model="isModalOpen"',
+    'title="Draggable & Resizable Modal"',
+    ':width="600"',
+    ':draggable="true"',
+    ':resizable="true"',
+  ],
+  slotContent: '<template #body><p>Modal content</p></template>',
+  apiSections: [
+    {
+      title: 'Props',
+      items: [
+        'modelValue / visible / show: Boolean (default: false) - Modal visibility (supports v-model)',
+        'title: String (default: "") - Header title text',
+        'width: String | Number (default: 600) - Modal window width',
+        'height: String | Number (default: "auto") - Modal window height',
+        'draggable: Boolean (default: false) - Allow dragging window via header bar',
+        'resizable: Boolean (default: false) - Allow resizing window via bottom-right handle & header double-click fullscreen',
+        'storageKey: String (default: "") - Persist window position/dimensions in localStorage',
+        'showHeader / showBody / showFooter: Boolean (default: true) - Toggle modal sections',
+        'glassmorphism: Boolean (default: false) - Enable backdrop blur overlay',
+      ],
+    },
+    {
+      title: 'Events',
+      items: [
+        '@update:modelValue / @close: () => void - Emitted when modal closes (X button, ESC, backdrop)',
+        '@ok: () => void - Emitted on OK button click',
+        '@cancel: () => void - Emitted on Cancel button click (auto-closes modal)',
+      ],
+    },
+    {
+      title: 'Exposed Methods & State (via template ref)',
+      items: [
+        'open() / close(): void - Programmatically open or close modal',
+        'toggleMaximize(): void - Toggle fullscreen vs restored window geometry',
+        'resetGeometry(): void - Clear saved position/size and recenter modal',
+        'isVisible / isMaximized / isDragging / isResizing: ComputedRef/Ref',
+      ],
+    },
+  ],
+});
 </script>
 
 <template>
@@ -72,23 +121,7 @@ const showCustom = ref(false);
       </NanoModal>
     </div>
 
-    <NanoCodeBlock title="API Reference" lang="api">
-// Props
-visible: Boolean (default: false)
-title: String
-width: String | Number (default: 600)
-height: String | Number (default: 'auto')
-draggable: Boolean (default: false)
-resizable: Boolean (default: false)
-showHeader/Body/Footer: Boolean (default: true)
-showOk/Cancel: Boolean (default: true)
-glassmorphism: Boolean (default: true)
-
-// Events
-@close - Emitted when modal is closed via UI (X btn, ESC, Backdrop)
-@cancel - Emitted on Cancel button. Automatically triggers closeModal().
-@ok - Emitted on OK button. Does NOT close the modal automatically (ideal for async operations).
-    </NanoCodeBlock>
+    <NanoCodeBlock :tabs="codeTabs" />
   </div>
 </template>
 

@@ -128,6 +128,9 @@ export const CompassRoseIcon = (props = {}) => {
     ]
   );
 };
+CompassRoseIcon.colorable = false;
+
+export const NON_COLORABLE_ICONS = new Set(['compass-rose']);
 
 export const BUILTIN_ICONS = {
   // Status & Feedback
@@ -282,4 +285,19 @@ export const getAvailableIcons = () => {
     ...Object.keys(BUILTIN_ICONS),
     ...Object.keys(customIconsRegistry)
   ])).sort();
+};
+
+/**
+ * Returns true if the icon inherits `currentColor` and `strokeWidth` (monochrome stroke/fill),
+ * or false if it uses a fixed multi-color palette (e.g. `compass-rose` with red North needle).
+ *
+ * @param {string} name
+ * @returns {boolean}
+ */
+export const isIconColorable = (name) => {
+  if (!name) return true;
+  if (NON_COLORABLE_ICONS.has(name)) return false;
+  const comp = customIconsRegistry[name] || BUILTIN_ICONS[name];
+  if (comp && comp.colorable === false) return false;
+  return true;
 };

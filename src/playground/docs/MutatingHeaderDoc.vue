@@ -1,11 +1,59 @@
 <script setup>
 import { ref } from 'vue';
 import MutatingHeader from '../../components/MutatingHeader.vue';
+import NanoCodeBlock from '../../components/NanoCodeBlock.vue';
+import { createDocTabs } from '../docSnippets.js';
 import { t } from '../../locales.js';
 
 const isHeaderStuck = ref(false);
 const thresholdVal = ref(24);
 const hysteresisVal = ref(8);
+
+const codeTabs = createDocTabs({
+  componentName: 'MutatingHeader',
+  stateRef: 'isStuck',
+  initialValue: 'false',
+  templateAttrs: [
+    'v-model:stuck="isStuck"',
+    ':threshold="24"',
+    ':hysteresis="8"',
+    ':glassmorphism="true"',
+  ],
+  slotContent: '<template #left>Brand</template>\n    <template #right>Actions</template>',
+  apiSections: [
+    {
+      title: 'Props',
+      items: [
+        'threshold: Number (default: 24) - Scroll distance in px after which header docks edge-to-edge',
+        'hysteresis: Number (default: 8) - Scroll distance in px below which header undocks back into floating card',
+        'scrollContainer: String | HTMLElement (default: null -> window) - Custom scroll container selector or element',
+        'height: String (default: "60px") - Header bar height',
+        'floatingMargin: String (default: "12px 24px 0 24px") - Floating card margins at top',
+        'floatingRadius: String (default: "16px") - Border radius when floating',
+        'stuckRadius: String | Number (default: undefined) - Border radius when docked',
+        'glassmorphism: Boolean (default: true) - Enable backdrop blur',
+        'stuck: Boolean (v-model:stuck) - Reactive docked state',
+      ],
+    },
+    {
+      title: 'Events & Slots',
+      items: [
+        '@update:stuck: (stuck: boolean) => void - Emitted when docked state changes',
+        '@stuck / @unstick: () => void - Emitted on transition to docked or floating state',
+        '#left / #center / #right / #default: Scoped slots receiving { isStuck }',
+      ],
+    },
+    {
+      title: 'Exposed Methods & State (via template ref)',
+      items: [
+        'refreshScroll(): void - Re-evaluate scroll position and update stuck state',
+        'setStuck(val: boolean): void - Manually override stuck state',
+        'getScrollY(): number - Return current scroll container Y offset',
+        'isStuck: ComputedRef<boolean>',
+      ],
+    },
+  ],
+});
 </script>
 
 <template>
@@ -65,29 +113,7 @@ const hysteresisVal = ref(8);
       </div>
     </div>
 
-    <NanoCodeBlock :title="t('common.apiReference')" lang="api">
-// {{ t('common.props') }}
-threshold: Number (default: 24) - {{ t('mutatingHeader.props.threshold') }}
-hysteresis: Number (default: 8) - {{ t('mutatingHeader.props.hysteresis') }}
-scrollContainer: String | HTMLElement (default: null -> window) - {{ t('mutatingHeader.props.scrollContainer') }}
-height: String (default: '60px') - {{ t('mutatingHeader.props.height') }}
-floatingMargin: String (default: '12px 24px 0 24px') - {{ t('mutatingHeader.props.floatingMargin') }}
-floatingRadius: String (default: '16px') - {{ t('mutatingHeader.props.floatingRadius') }}
-stuckRadius: String | Number (default: undefined -> '11px 11px 0 0') - {{ t('mutatingHeader.props.stuckRadius') }}
-glassmorphism: Boolean (default: true) - {{ t('mutatingHeader.props.glassmorphism') }}
-stuck: Boolean (v-model:stuck) - {{ t('mutatingHeader.props.stuck') }}
-
-// {{ t('common.slots') }}
-#left - {{ t('mutatingHeader.slots.left') }}
-#center - {{ t('mutatingHeader.slots.center') }}
-#right - {{ t('mutatingHeader.slots.right') }}
-#default - {{ t('mutatingHeader.slots.default') }}
-
-// {{ t('common.events') }}
-@update:stuck - {{ t('mutatingHeader.events.updateStuck') }}
-@stuck - {{ t('mutatingHeader.events.stuck') }}
-@unstick - {{ t('mutatingHeader.events.unstick') }}
-    </NanoCodeBlock>
+    <NanoCodeBlock :tabs="codeTabs" />
   </div>
 </template>
 

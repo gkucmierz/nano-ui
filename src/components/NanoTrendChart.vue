@@ -891,6 +891,40 @@ const handlePointClick = () => {
     });
   }
 };
+
+const setHoverIndex = (idx) => {
+  const spine = xSpine.value;
+  if (!spine.length || typeof idx !== 'number' || idx < 0 || idx >= spine.length) return;
+  const isFirstAppear = hoveredSpineIndex.value === null && animatedTooltipOpacity.value < 0.05;
+  hoveredSpineIndex.value = idx;
+  lastValidSpineIndex.value = idx;
+  const targetX = spine[idx].x;
+  tooltipXController.setTarget(targetX, { immediate: isFirstAppear });
+  if (isFirstAppear) animatedTooltipX.value = targetX;
+  tooltipOpacityController.setTarget(1);
+  ensureAnimationLoop();
+};
+
+const clearHover = () => {
+  handlePointerLeave();
+};
+
+const getBounds = () => ({
+  minVal: animatedMin.value,
+  maxVal: animatedMax.value,
+  targetMin: targetBounds.value.minVal,
+  targetMax: targetBounds.value.maxVal,
+});
+
+defineExpose({
+  setHoverIndex,
+  clearHover,
+  getBounds,
+  hoveredSpineIndex,
+  activeSpineEntry,
+  activeHoverDots,
+  computedBands,
+});
 </script>
 
 <template>

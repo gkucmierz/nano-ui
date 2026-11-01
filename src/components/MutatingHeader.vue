@@ -170,6 +170,13 @@ onMounted(() => {
 onUnmounted(() => {
   cleanupScrollListener();
 });
+
+defineExpose({
+  refreshScroll: handleScroll,
+  setStuck: (val) => { isStuck.value = Boolean(val); },
+  isStuck,
+  getScrollY,
+});
 </script>
 
 <template>

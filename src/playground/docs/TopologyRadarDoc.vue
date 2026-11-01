@@ -63,14 +63,8 @@
       </div>
     </div>
 
-    <!-- API Reference -->
-    <NanoCodeBlock title="API Reference" lang="api">
-// Props
-size: Number (default: 200) - Chart width/height in px
-history: Array (required) - Array of history snapshot arrays [0-100]
-labels: Array (default: []) - Array of string axis names
-color: String (default: '#00e5ff') - Accent stroke and contour color
-    </NanoCodeBlock>
+    <!-- API Reference / Usage / Granular -->
+    <NanoCodeBlock :tabs="codeTabs" />
   </div>
 </template>
 
@@ -79,6 +73,46 @@ import { ref, computed, watch, onBeforeUnmount } from 'vue';
 import TopologyRadar from '../../components/TopologyRadar.vue';
 import NanoSlider from '../../components/NanoSlider.vue';
 import NanoCodeBlock from '../../components/NanoCodeBlock.vue';
+import { createDocTabs } from '../docSnippets.js';
+
+const codeTabs = createDocTabs({
+  componentName: 'TopologyRadar',
+  stateRef: 'radarHistory',
+  initialValue: '[[75, 60, 85, 50, 90]]',
+  templateAttrs: [
+    ':size="260"',
+    ':labels="[\'CPU\', \'GPU\', \'MEM\', \'NET\', \'DISK\']"',
+    ':history="radarHistory"',
+    'color="#00f2fe"',
+  ],
+  apiSections: [
+    {
+      title: 'Props',
+      items: [
+        'size: Number (default: 200) - Chart width/height in px',
+        'history: Array<Array<Number>> (required) - Historical snapshot arrays [0-100]',
+        'labels: Array<String> (default: []) - Axis label strings',
+        'color: String (default: "#00e5ff") - Accent stroke and contour color',
+      ],
+    },
+    {
+      title: 'Events',
+      items: [
+        '@axis-click: ({ index, label }) => void - Emitted when an axis label is clicked',
+        '@point-hover: ({ index, label, value } | null) => void - Emitted when hovering an active vertex',
+      ],
+    },
+    {
+      title: 'Exposed Methods & State (via template ref)',
+      items: [
+        'getPoint(value, index, total): { x, y } - Compute SVG coordinates for a polar vertex',
+        'getGridPolygon(level): string - Compute concentric grid polygon points string',
+        'getPolygonPoints(values): string - Compute data polygon points string',
+        'numAxes / radius: ComputedRef<number>',
+      ],
+    },
+  ],
+});
 
 const axesCount = ref(5);
 const demoLabels = computed(() => {

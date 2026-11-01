@@ -1,75 +1,3 @@
-<template>
-  <div class="topology-radar-container" :style="{ width: size + 'px', height: size + 'px' }">
-    <svg :viewBox="`0 0 ${size} ${size}`" :width="size" :height="size" style="overflow: visible;">
-      <!-- Grid Lines -->
-      <polygon :points="getGridPolygon(1.0)" fill="var(--nano-radar-grid-bg, rgba(15,23,42,0.8))" stroke="var(--nano-radar-grid-stroke, rgba(255,255,255,0.1))" stroke-width="1" />
-      <polygon :points="getGridPolygon(0.75)" fill="none" stroke="var(--nano-radar-grid-subtle, rgba(255,255,255,0.05))" stroke-width="1" />
-      <polygon :points="getGridPolygon(0.50)" fill="none" stroke="var(--nano-radar-grid-subtle, rgba(255,255,255,0.05))" stroke-width="1" />
-      <polygon :points="getGridPolygon(0.25)" fill="none" stroke="var(--nano-radar-grid-subtle, rgba(255,255,255,0.05))" stroke-width="1" />
-
-      <!-- Axes -->
-      <line 
-        v-for="(label, i) in labels" 
-        :key="'axis-'+i"
-        :x1="size/2" :y1="size/2"
-        :x2="getPoint(100, i).x" 
-        :y2="getPoint(100, i).y"
-        stroke="var(--nano-radar-grid-stroke, rgba(255,255,255,0.1))" 
-        stroke-width="1"
-      />
-
-      <!-- Labels -->
-      <text 
-        v-for="(label, i) in labels" 
-        :key="'label-'+i"
-        :x="getPoint(115, i).x" 
-        :y="getPoint(115, i).y"
-        fill="var(--nano-radar-text, rgba(255,255,255,0.6))"
-        font-size="10"
-        font-family="monospace"
-        font-weight="bold"
-        text-anchor="middle"
-        dominant-baseline="middle"
-      >
-        {{ label }}
-      </text>
-
-      <!-- Historical Contour Lines -->
-      <polygon 
-        v-for="(snapshot, idx) in history" 
-        :key="'hist-'+idx"
-        :points="getPolygonPoints(snapshot)" 
-        :fill="hexToRgba(color, 0.02)" 
-        :stroke="color" 
-        :stroke-width="1"
-        :opacity="0.1 + (idx / Math.max(1, history.length)) * 0.4"
-      />
-      
-      <!-- Live / Current Shape (Only if history is not empty) -->
-      <polygon 
-        v-if="history.length > 0"
-        :points="getPolygonPoints(history[history.length - 1])" 
-        :fill="hexToRgba(color, 0.15)" 
-        :stroke="color" 
-        stroke-width="2.5"
-        style="filter: drop-shadow(0 0 8px rgba(0, 229, 255, 0.5));"
-      />
-
-      <!-- Data Points (Live) -->
-      <circle
-        v-if="history.length > 0"
-        v-for="(val, i) in history[history.length - 1]"
-        :key="'pt-'+i"
-        :cx="getPoint(val, i).x"
-        :cy="getPoint(val, i).y"
-        r="3"
-        :fill="color"
-        style="filter: drop-shadow(0 0 5px rgba(0, 229, 255, 0.8));"
-      />
-    </svg>
-  </div>
-</template>
-
 <script setup>
 import { computed } from 'vue'
 
@@ -91,6 +19,8 @@ const props = defineProps({
     default: '#00e5ff'
   }
 })
+
+const emit = defineEmits(['axis-click', 'point-hover'])
 
 const numAxes = computed(() => {
   if (props.labels.length > 0) return props.labels.length
@@ -139,7 +69,90 @@ const hexToRgba = (hex, alpha) => {
   }
   return `rgba(0, 229, 255, ${alpha})`; // fallback
 }
+
+defineExpose({
+  getPoint,
+  getGridPolygon,
+  getPolygonPoints,
+  numAxes,
+  radius,
+})
 </script>
+
+<template>
+  <div class="topology-radar-container" :style="{ width: size + 'px', height: size + 'px' }">
+    <svg :viewBox="`0 0 ${size} ${size}`" :width="size" :height="size" style="overflow: visible;">
+      <!-- Grid Lines -->
+      <polygon :points="getGridPolygon(1.0)" fill="var(--nano-radar-grid-bg, rgba(15,23,42,0.8))" stroke="var(--nano-radar-grid-stroke, rgba(255,255,255,0.1))" stroke-width="1" />
+      <polygon :points="getGridPolygon(0.75)" fill="none" stroke="var(--nano-radar-grid-subtle, rgba(255,255,255,0.05))" stroke-width="1" />
+      <polygon :points="getGridPolygon(0.50)" fill="none" stroke="var(--nano-radar-grid-subtle, rgba(255,255,255,0.05))" stroke-width="1" />
+      <polygon :points="getGridPolygon(0.25)" fill="none" stroke="var(--nano-radar-grid-subtle, rgba(255,255,255,0.05))" stroke-width="1" />
+
+      <!-- Axes -->
+      <line 
+        v-for="(label, i) in labels" 
+        :key="'axis-'+i"
+        :x1="size/2" :y1="size/2"
+        :x2="getPoint(100, i).x" 
+        :y2="getPoint(100, i).y"
+        stroke="var(--nano-radar-grid-stroke, rgba(255,255,255,0.1))" 
+        stroke-width="1"
+      />
+
+      <!-- Labels -->
+      <text 
+        v-for="(label, i) in labels" 
+        :key="'label-'+i"
+        :x="getPoint(115, i).x" 
+        :y="getPoint(115, i).y"
+        fill="var(--nano-radar-text, rgba(255,255,255,0.6))"
+        font-size="10"
+        font-family="monospace"
+        font-weight="bold"
+        text-anchor="middle"
+        dominant-baseline="middle"
+        style="cursor: pointer;"
+        @click="emit('axis-click', { index: i, label })"
+      >
+        {{ label }}
+      </text>
+
+      <!-- Historical Contour Lines -->
+      <polygon 
+        v-for="(snapshot, idx) in history" 
+        :key="'hist-'+idx"
+        :points="getPolygonPoints(snapshot)" 
+        :fill="hexToRgba(color, 0.02)" 
+        :stroke="color" 
+        :stroke-width="1"
+        :opacity="0.1 + (idx / Math.max(1, history.length)) * 0.4"
+      />
+      
+      <!-- Live / Current Shape (Only if history is not empty) -->
+      <polygon 
+        v-if="history.length > 0"
+        :points="getPolygonPoints(history[history.length - 1])" 
+        :fill="hexToRgba(color, 0.15)" 
+        :stroke="color" 
+        stroke-width="2.5"
+        style="filter: drop-shadow(0 0 8px rgba(0, 229, 255, 0.5));"
+      />
+
+      <!-- Data Points (Live) -->
+      <circle
+        v-if="history.length > 0"
+        v-for="(val, i) in history[history.length - 1]"
+        :key="'pt-'+i"
+        :cx="getPoint(val, i).x"
+        :cy="getPoint(val, i).y"
+        r="3"
+        :fill="color"
+        style="filter: drop-shadow(0 0 5px rgba(0, 229, 255, 0.8));"
+        @mouseenter="emit('point-hover', { index: i, label: labels[i] || '', value: val })"
+      />
+    </svg>
+  </div>
+</template>
 
 <style scoped>
 .topology-radar-container {

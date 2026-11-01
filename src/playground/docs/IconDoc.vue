@@ -1,23 +1,30 @@
 <script setup>
 import { ref, computed } from 'vue';
-import { getAvailableIcons } from '../../icons/index.js';
+import { getAvailableIcons, isIconColorable } from '../../icons/index.js';
 import NanoCodeBlock from '../../components/NanoCodeBlock.vue';
 import NanoIcon from '../../components/NanoIcon.vue';
 import NanoSlider from '../../components/NanoSlider.vue';
+import { createDocTabs } from '../docSnippets.js';
 
 const allIcons = getAvailableIcons();
 const searchQuery = ref('');
+const colorFilter = ref('all'); // 'all' | 'colorable' | 'non-colorable'
 const iconSize = ref(20);
 const strokeWidth = ref(2);
 const activeColor = ref('currentColor');
 const copiedName = ref(null);
 
+const colorableCount = computed(() => allIcons.filter(name => isIconColorable(name)).length);
+const nonColorableCount = computed(() => allIcons.filter(name => !isIconColorable(name)).length);
+
 const filteredIcons = computed(() => {
   const q = searchQuery.value.trim().toLowerCase();
-  if (!q) {
-    return allIcons;
-  }
-  return allIcons.filter(name => name.toLowerCase().includes(q));
+  return allIcons.filter(name => {
+    if (colorFilter.value === 'colorable' && !isIconColorable(name)) return false;
+    if (colorFilter.value === 'non-colorable' && isIconColorable(name)) return false;
+    if (q && !name.toLowerCase().includes(q)) return false;
+    return true;
+  });
 });
 
 const copySnippet = (name) => {
@@ -45,7 +52,7 @@ const basicUsageCode = `<!-- 1. Built-in curated icons by name -->
 <NanoIcon name="warn" :size="18" />
 <NanoIcon name="info" :size="18" />
 <NanoIcon name="success" :size="18" />
-<NanoIcon name="close" :size="16" />
+<NanoIcon name="compass-rose" :size="20" />
 <NanoIcon name="copy" />
 
 <!-- 2. Direct Lucide component with full tree-shaking -->
@@ -67,25 +74,37 @@ import { Database, Terminal, Cpu } from 'lucide-vue-next';
 import { registerIcons } from '@gkucmierz/nano-ui';
 
 registerIcons({
-  'my-custom-badge': MyCustomIconComponent
+  'my-custom-badge': Object.assign(MyCustomIconComponent, { colorable: false })
 });
 <\/script>`;
 
-const apiDoc = `<script>
-// NanoIcon Props
-props: {
-  name: String,            // Icon identifier from built-in or custom registry (e.g. 'warn', 'close', 'search')
-  icon: [Object, Function],// Optional direct Vue component (e.g. imported Lucide component)
-  size: [Number, String],  // Icon dimensions in px (width & height). Default: 18
-  strokeWidth: [Number, String], // Vector stroke width. Default: 2
-  viewBox: String          // SVG viewBox (used when rendering default slot). Default: '0 0 24 24'
-}
-<\/script>
-
-<!-- Direct slot support -->
-<NanoIcon :size="20">
-  <!-- Any custom SVG elements (path, circle, polygon) -->
-</NanoIcon>`;
+const codeTabs = createDocTabs({
+  componentName: 'NanoIcon',
+  usageCode: basicUsageCode,
+  headlessImports: [
+    { symbols: ['BUILTIN_ICONS', 'registerIcons', 'getAvailableIcons', 'isIconColorable'], path: 'src/icons/index.js' },
+  ],
+  apiSections: [
+    {
+      title: 'Props',
+      items: [
+        'name: String - Icon identifier from built-in or custom registry (e.g. "warn", "compass-rose", "search")',
+        'icon: Object | Function - Optional direct Vue component (e.g. imported Lucide component)',
+        'size: Number | String (default: 18) - Icon dimensions in px (width & height)',
+        'strokeWidth: Number | String (default: 2) - Vector stroke width for colorable monochrome icons',
+        'viewBox: String (default: "0 0 24 24") - SVG viewBox when rendering default slot',
+      ],
+    },
+    {
+      title: 'Helpers & Registry',
+      items: [
+        'registerIcons(iconsMap: Record<string, Component>) - Register custom icons into global registry',
+        'getAvailableIcons(): string[] - Returns sorted list of all registered icon names',
+        'isIconColorable(name: string): boolean - Returns true for currentColor icons, false for fixed multi-color icons (e.g. compass-rose)',
+      ],
+    },
+  ],
+});
 </script>
 
 <template>
@@ -95,7 +114,7 @@ props: {
       <p class="desc">
         Universal, zero-dependency inline SVG icon component. Transparently powered by
         <strong>Lucide</strong> (<code>lucide-vue-next</code>) with full <code>currentColor</code> CSS inheritance,
-        zero network requests, and support for app-specific custom icons.
+        zero network requests, and support for multi-color cartographic &amp; custom ecosystem icons.
       </p>
     </div>
 
@@ -106,10 +125,37 @@ props: {
           <input
             v-model="searchQuery"
             type="text"
-            placeholder="Search icons (e.g. warn, search, close)..."
+            placeholder="Search icons (e.g. warn, compass-rose, close)..."
             class="nano-input"
           />
           <span class="icon-count">{{ filteredIcons.length }} / {{ allIcons.length }}</span>
+        </div>
+
+        <div class="filter-pills" role="group" aria-label="Filter icons by color mode">
+          <button
+            type="button"
+            class="filter-pill"
+            :class="{ 'is-active': colorFilter === 'all' }"
+            @click="colorFilter = 'all'"
+          >
+            All <span class="pill-count">{{ allIcons.length }}</span>
+          </button>
+          <button
+            type="button"
+            class="filter-pill"
+            :class="{ 'is-active': colorFilter === 'colorable' }"
+            @click="colorFilter = 'colorable'"
+          >
+            Colorable <span class="pill-count">{{ colorableCount }}</span>
+          </button>
+          <button
+            type="button"
+            class="filter-pill"
+            :class="{ 'is-active': colorFilter === 'non-colorable' }"
+            @click="colorFilter = 'non-colorable'"
+          >
+            Non-colorable <span class="pill-count">{{ nonColorableCount }}</span>
+          </button>
         </div>
 
         <div class="toolbar-controls">
@@ -147,10 +193,15 @@ props: {
           v-for="name in filteredIcons"
           :key="name"
           class="icon-tile"
-          :class="{ 'is-copied': copiedName === name }"
+          :class="{ 'is-copied': copiedName === name, 'is-non-colorable': !isIconColorable(name) }"
           :style="{ color: activeColor }"
           @click="copySnippet(name)"
         >
+          <span
+            v-if="!isIconColorable(name)"
+            class="fixed-palette-badge"
+            title="Fixed multi-color palette (ignores currentColor)"
+          />
           <div class="tile-icon-wrap">
             <NanoIcon :name="name" :size="iconSize" :stroke-width="strokeWidth" />
           </div>
@@ -159,13 +210,9 @@ props: {
       </div>
     </div>
 
-    <!-- Usage Guide -->
-    <h3 class="section-title">Usage & Architecture</h3>
-    <NanoCodeBlock :code="basicUsageCode" lang="vue" title="Example Implementations" />
-
-    <!-- Props Reference -->
-    <h3 class="section-title">API Reference</h3>
-    <NanoCodeBlock :code="apiDoc" lang="vue" title="NanoIcon API" />
+    <div class="code-panel">
+      <NanoCodeBlock :tabs="codeTabs" />
+    </div>
   </div>
 </template>
 
@@ -250,6 +297,47 @@ h2 {
   white-space: nowrap;
 }
 
+.filter-pills {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.2rem;
+  border-radius: 8px;
+  background: var(--nano-card-bg);
+  border: 1px solid var(--nano-border);
+}
+
+.filter-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.3rem 0.65rem;
+  border-radius: 6px;
+  border: none;
+  background: transparent;
+  color: var(--nano-text-muted);
+  font-size: 0.76rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background var(--nano-duration-fast), color var(--nano-duration-fast);
+  user-select: none;
+}
+
+.filter-pill:hover {
+  color: var(--nano-text-main);
+}
+
+.filter-pill.is-active {
+  background: rgba(6, 182, 212, 0.14);
+  color: var(--nano-accent, #06b6d4);
+}
+
+.pill-count {
+  font-size: 0.68rem;
+  font-family: monospace;
+  opacity: 0.78;
+}
+
 .toolbar-controls {
   display: flex;
   align-items: center;
@@ -311,6 +399,7 @@ h2 {
 }
 
 .icon-tile {
+  position: relative;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -323,6 +412,17 @@ h2 {
   cursor: pointer;
   transition: background var(--nano-duration-fast), border-color var(--nano-duration-fast);
   user-select: none;
+}
+
+.fixed-palette-badge {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #ef4444 0%, #ef4444 50%, #64748b 50%, #64748b 100%);
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.25);
 }
 
 .icon-tile:hover {

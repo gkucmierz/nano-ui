@@ -444,9 +444,37 @@ const closeModal = () => {
   emit('update:show', false);
   emit('close');
 };
+const openModal = () => {
+  emit('update:modelValue', true);
+  emit('update:visible', true);
+  emit('update:show', true);
+};
+const resetGeometry = () => {
+  posX.value = null;
+  posY.value = null;
+  curWidth.value = null;
+  curHeight.value = null;
+  isMaximized.value = false;
+  if (effectiveStorageKey.value && typeof window !== 'undefined') {
+    try {
+      window.localStorage.removeItem(effectiveStorageKey.value);
+    } catch {}
+  }
+};
 const handleBackdropClick = () => { if (props.closeOnBackdrop) closeModal(); };
 const handleOk = () => emit('ok');
 const handleCancel = () => { emit('cancel'); closeModal(); };
+
+defineExpose({
+  open: openModal,
+  close: closeModal,
+  toggleMaximize: () => handleHeaderDblClick({}),
+  resetGeometry,
+  isVisible,
+  isMaximized,
+  isDragging,
+  isResizing,
+});
 </script>
 
 <template>

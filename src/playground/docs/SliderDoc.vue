@@ -2,6 +2,54 @@
 import { ref } from 'vue';
 import NanoSlider from '../../components/NanoSlider.vue';
 import NanoSwitch from '../../components/NanoSwitch.vue';
+import NanoCodeBlock from '../../components/NanoCodeBlock.vue';
+import { createDocTabs } from '../docSnippets.js';
+
+const codeTabs = createDocTabs({
+  componentName: 'NanoSlider',
+  stateRef: 'volume',
+  initialValue: '0.95',
+  templateAttrs: [
+    'v-model="volume"',
+    ':min="0"',
+    ':max="1"',
+    ':step="0.01"',
+    ':show-ticks="true"',
+    'size="md"',
+    'aria-label="Master Volume"',
+  ],
+  apiSections: [
+    {
+      title: 'Props',
+      items: [
+        'modelValue: Number (default: 50, v-model) - Current slider value',
+        'min: Number (default: 0) - Minimum value',
+        'max: Number (default: 100) - Maximum value',
+        'step: Number (default: 1) - Quantization step (supports fractional steps like 0.01)',
+        'showTicks: Boolean (default: true) - Render quartile scale ticks (25% / 50% / 75%)',
+        'size: String (default: "md") - Geometry preset ("sm" | "md" | "lg")',
+        'disabled: Boolean (default: false) - Disable interaction',
+        'ariaLabel: String (default: "Slider") - Accessible label',
+      ],
+    },
+    {
+      title: 'Events',
+      items: [
+        '@update:modelValue: (val: number) => void - Emitted continuously while dragging',
+        '@change: (val: number) => void - Emitted on pointerup or keyboard step',
+      ],
+    },
+    {
+      title: 'Exposed Methods & State (via template ref)',
+      items: [
+        'setValue(val: number): void - Quantize and set slider value programmatically',
+        'stepBy(steps = 1): void - Step slider value by N increments',
+        'quantizeValue(raw: number): number - Clamp and quantize a raw number',
+        'percentage / isDragging: ComputedRef<number> / Ref<boolean>',
+      ],
+    },
+  ],
+});
 
 const mainValue = ref(72);
 const volumeValue = ref(0.95);
@@ -108,45 +156,7 @@ const isDisabled = ref(false);
       </div>
     </div>
 
-    <NanoCodeBlock title="API Reference & Usage" lang="vue">
-&lt;script setup&gt;
-import { ref } from 'vue';
-import { NanoSlider } from '@gkucmierz/nano-ui';
-
-const volume = ref(0.95);
-&lt;/script&gt;
-
-&lt;template&gt;
-  &lt;NanoSlider
-    v-model="volume"
-    :min="0"
-    :max="1"
-    :step="0.01"
-    :show-ticks="true"
-    size="md"
-    aria-label="Master Volume"
-  /&gt;
-&lt;/template&gt;
-
-/*
-Props:
-- modelValue: Number (default: 50, v-model)
-- min: Number (default: 0)
-- max: Number (default: 100)
-- step: Number (default: 1, supports decimals like 0.01)
-- showTicks: Boolean (default: true)
-- size: 'sm' | 'md' | 'lg' (default: 'md')
-- disabled: Boolean (default: false)
-- ariaLabel: String (default: 'Slider')
-
-CSS Custom Properties:
-- --nano-slider-primary
-- --nano-slider-secondary
-- --nano-slider-track-bg
-- --nano-slider-border
-- --nano-slider-thumb-bg
-*/
-    </NanoCodeBlock>
+    <NanoCodeBlock :tabs="codeTabs" />
   </div>
 </template>
 

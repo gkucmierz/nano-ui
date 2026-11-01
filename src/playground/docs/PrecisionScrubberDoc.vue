@@ -2,6 +2,52 @@
 import { ref, computed } from 'vue';
 import PrecisionScrubber from '../../components/PrecisionScrubber.vue';
 import NanoSwitch from '../../components/NanoSwitch.vue';
+import NanoCodeBlock from '../../components/NanoCodeBlock.vue';
+import { createDocTabs } from '../docSnippets.js';
+
+const codeTabs = createDocTabs({
+  componentName: 'PrecisionScrubber',
+  stateRef: 'sampleIndex',
+  initialValue: '500000',
+  templateAttrs: [
+    'v-model="sampleIndex"',
+    ':min="0"',
+    ':max="1000000000"',
+    ':step="1"',
+    ':fine-tune="true"',
+  ],
+  apiSections: [
+    {
+      title: 'Props',
+      items: [
+        'modelValue: Number (required, v-model) - Current numeric value',
+        'min: Number (default: 0) - Lower bound',
+        'max: Number (required) - Upper bound (supports massive ranges up to trillions)',
+        'step: Number (default: 1) - Quantization step (supports fractional steps like 0.05, 0.005)',
+        'unit: String (default: "") - Optional unit suffix displayed in the HUD (e.g. " ST", " Hz")',
+        'fineTune: Boolean (default: true) - Enable 2nd vertical Fine-Tune drag phase',
+        'label: String (default: auto) - Track instruction label',
+        'formatValue: Function (default: null) - Custom number formatter (val) => string',
+      ],
+    },
+    {
+      title: 'Events',
+      items: [
+        '@update:modelValue: (val: number) => void - Emitted continuously on drag',
+        '@change: (val: number) => void - Emitted once on mouseup when scrubbing finishes',
+      ],
+    },
+    {
+      title: 'Exposed Methods & State (via template ref)',
+      items: [
+        'setValue(val: number): void - Quantize and set value programmatically',
+        'stepBy(steps = 1): void - Increment or decrement by N steps',
+        'quantizeValue(raw: number): number - Clamp and quantize a raw number to [min, max]',
+        'isScrubbing / isScrubbingRelative / scrubResolutionText / progressPercentage: Ref/ComputedRef',
+      ],
+    },
+  ],
+});
 
 const sampleIndex = ref(500000);
 const maxVal = ref(112320215956025);
@@ -64,21 +110,7 @@ const formatCustomValue = (val) => {
       </div>
     </div>
 
-    <NanoCodeBlock title="API Reference" lang="api">
-// Props
-modelValue: Number (required, v-model)
-min: Number (default: 0)
-max: Number (required)
-step: Number (default: 1) - Quantization step (supports fractional steps like 0.05, 0.005, 0.002)
-unit: String (default: '') - Optional unit suffix displayed in the HUD (e.g. ' ST', 'x', ' Hz')
-fineTune: Boolean (default: true) - Set to false to disable the 2nd vertical Fine-Tune drag phase
-label: String (default: auto-adapts based on fineTune)
-formatValue: Function (default: formats with step decimals + unit)
-
-// Events
-@update:modelValue - Emitted continuously on drag to update the model value
-@change - Emitted once on mouseup when scrubbing finishes
-    </NanoCodeBlock>
+    <NanoCodeBlock :tabs="codeTabs" />
   </div>
 </template>
 

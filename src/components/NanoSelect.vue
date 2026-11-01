@@ -331,6 +331,18 @@ onUnmounted(() => {
     document.removeEventListener('mousedown', onDocumentMouseDown);
   }
 });
+
+defineExpose({
+  open: openDropdown,
+  close: closeDropdown,
+  toggle: toggleDropdown,
+  clear: clearSelection,
+  selectOption,
+  isOpen,
+  filterText,
+  filteredOptions,
+  selectedOptionsList,
+});
 </script>
 
 <template>

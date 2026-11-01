@@ -389,6 +389,22 @@ onUnmounted(() => {
     resizeObserver = null;
   }
 });
+
+function resetToDefault() {
+  const resetVal = clampSize(fallbackDefault.value);
+  updateSize(resetVal);
+  persistState();
+  emit('reset', resetVal);
+}
+
+defineExpose({
+  setSize: updateSize,
+  reset: resetToDefault,
+  toggleLock,
+  currentSize,
+  isLocked,
+  isDragging,
+});
 </script>
 
 <template>

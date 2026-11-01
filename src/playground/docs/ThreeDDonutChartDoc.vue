@@ -5,8 +5,67 @@ import NanoSwitch from '../../components/NanoSwitch.vue';
 import NanoKnob from '../../components/NanoKnob.vue';
 import NanoIcon from '../../components/NanoIcon.vue';
 import NanoCodeBlock from '../../components/NanoCodeBlock.vue';
+import { createDocTabs } from '../docSnippets.js';
 import { normalizeAngle } from '../../utils/math.js';
 import { getOptimalRotationAngle } from '../../utils/chart-walls.js';
+
+const codeTabs = createDocTabs({
+  componentName: 'ThreeDDonutChart',
+  stateRef: 'selectedSliceId',
+  initialValue: 'null',
+  templateAttrs: [
+    ':data="slices"',
+    ':is-expanded="true"',
+    ':is-3d="true"',
+    ':show-labels="true"',
+    ':selectable="true"',
+    'v-model:selected-item-id="selectedSliceId"',
+  ],
+  headlessImports: [
+    { symbols: ['generate3DWalls', 'getOptimalRotationAngle', 'resolveLabelCollisions'], path: 'dist/utils/chart-walls.js' },
+  ],
+  apiSections: [
+    {
+      title: 'Props',
+      items: [
+        'data: Array (required) - Array of { id, name, value, percentage, color, unit }',
+        'isExpanded: Boolean (default: false) - Expanded container layout vs compact (120x120px viewBox)',
+        'showLabels: Boolean (default: true) - Renders side labels & callout lines (when isExpanded is true)',
+        'is3D: Boolean (default: true) - Enables 3D perspective (depth & tilt)',
+        'centerValue: String | Number (default: "") - Value shown in center hole (defaults to sum)',
+        'centerLabel: String (default: "") - Label shown below center value',
+        'centerValueFormatter: Function (default: null) - Custom formatter: (value, item) => string',
+        'rotationAngle: Number (default: -90) - Starting rotation of the donut chart',
+        'autoRotate: Boolean (default: false) - Balances labels evenly across left & right columns',
+        'slopeRatio: Number (default: 0.5) - Vertical tilt of the chart (0.0 to 1.0)',
+        'aggregateOthers: Boolean (default: false) - Aggregates small values below threshold',
+        'othersThreshold: Number (default: 0.01) - Fraction below which values are merged',
+        'selectable: Boolean (default: false) - Enables locking of items on click/tap',
+        'selectedItemId: String | Number (default: null) - Currently selected item ID (supports v-model:selectedItemId)',
+        'thickness: Number (default: 0.5) - Thickness from 0.0 (thin ring) to 1.0 (full pie chart)',
+        'depth: Number (default: 32) - 3D wall height/depth in px',
+        'animationDuration: Number (default: 350) - Duration of chart transitions in ms',
+      ],
+    },
+    {
+      title: 'Events',
+      items: [
+        '@update:selectedItemId: (id: string | number | null) => void - Emitted when slice selection changes',
+        '@select: (item: object | null) => void - Emitted when a slice is clicked/locked',
+        '@hover: (item: object | null) => void - Emitted when pointer hovers over a slice or label',
+      ],
+    },
+    {
+      title: 'Exposed Methods & State (via template ref)',
+      items: [
+        'selectItem(item): void - Programmatically select/toggle a slice',
+        'clearSelection(): void - Clear locked slice selection',
+        'setHoveredItem(item): void - Programmatically highlight a slice',
+        'clearHover(): void - Clear hover highlight',
+      ],
+    },
+  ],
+});
 
 const isExpanded = ref(true);
 const is3D = ref(true);
@@ -885,35 +944,7 @@ const networkData = [
       </div>
     </div>
 
-    <NanoCodeBlock title="API Reference" lang="api">
-// Props
-data: Array (required) - Array of { id, name, value, percentage, color, unit }
-isExpanded: Boolean (default: false) - Expanded container layout (large viewBox) vs compact (120x120px viewBox)
-showLabels: Boolean (default: true) - Renders side labels &amp; callout lines (when isExpanded is true)
-is3D: Boolean (default: true) - Enables 3D perspective (depth &amp; tilt)
-centerValue: String | Number (default: '') - Value shown in center hole (defaults to sum)
-centerLabel: String (default: '') - Label shown below center value
-centerValueFormatter: Function (default: null) - Custom formatter function: (value, item) =&gt; string
-rotationAngle: Number (default: -90) - Starting rotation of the donut chart
-autoRotate: Boolean (default: false) - Balances labels evenly across left &amp; right columns
-slopeRatio: Number (default: 0.5) - Vertical tilt of the chart (0.0 to 1.0)
-aggregateOthers: Boolean (default: false) - Aggregates small values below threshold
-othersThreshold: Number (default: 0.01) - Fraction below which values are merged (e.g. 0.05 for 5%)
-othersLabel: String (default: 'Other') - Merged slice label name
-othersColor: String (default: '#64748b') - Color code of the merged slice
-valueDecimals: Number (default: undefined) - Decimal places to round slice values on labels (e.g. 2)
-selectable: Boolean (default: false) - Enables locking of items on click/tap
-selectedItemId: String | Number (default: null) - Currently selected/locked item ID (supports v-model:selectedItemId)
-thickness: Number (default: 0.5) - Thickness from 0.0 (thin ring) to 1.0 (full pie chart)
-depth: Number (default: 32) - 3D wall height/depth in px (clamped >= 0)
-showCenterText: Boolean (default: true) - Show/hide center value and label texts
-centerTextZ: Number | String (default: 'auto') - Z position of center text in depth ('auto' = dynamically adapts from 0.5 at slope 0 to 0.0 at slope 1, 0.0 = top plane, 0.5 = volumetric center, 1.0 = bottom plane)
-animationDuration: Number (default: 350) - Duration of chart transitions in ms (0 for instant)
-labelSize: String (default: 'md') - Preset size for callout labels ('sm', 'md', 'lg', 'xl')
-labelFontSize: Number | String (default: undefined) - Custom font size in px for callout labels (e.g. 13 or '13px')
-labelDistance: Number | String (default: 35) - Horizontal clearance in px from outer chart apex (0 = aligned to horizontal apex, > 0 = offset outwards)
-aspectRatio: String | Number (default: 'auto') - CSS aspect-ratio constraint for chart container (e.g. 'auto', '1/1', '16/9', '560/320')
-    </NanoCodeBlock>
+    <NanoCodeBlock :tabs="codeTabs" />
   </div>
 </template>
 

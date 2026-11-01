@@ -287,6 +287,18 @@ const copyContent = async () => {
     }, 1800);
   } catch {}
 };
+const focus = () => {
+  textareaRef.value?.focus?.();
+};
+
+defineExpose({
+  focus,
+  copyContent,
+  setMode,
+  setDiffStyle,
+  activeLine,
+  parsedDiff,
+});
 </script>
 
 <template>

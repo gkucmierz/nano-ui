@@ -209,6 +209,18 @@ const handleKeyDown = (e) => {
     handleReset();
   }
 };
+
+function stepBy(steps = 1) {
+  const delta = (props.step || 1) * steps;
+  updateAngle(props.modelValue + delta);
+}
+
+defineExpose({
+  reset: handleReset,
+  setValue: updateAngle,
+  stepBy,
+  displayValueText,
+});
 </script>
 
 <template>

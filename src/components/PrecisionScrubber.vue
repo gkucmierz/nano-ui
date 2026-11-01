@@ -296,6 +296,28 @@ const stopScrubbing = (e) => {
   document.removeEventListener('mouseup', stopScrubbing)
   emit('change', finalVal)
 }
+
+function setValue(val) {
+  const next = quantizeValue(val)
+  emit('update:modelValue', next)
+  emit('change', next)
+}
+
+function stepBy(steps = 1) {
+  const stepVal = Number(props.step) > 0 ? Number(props.step) : 1
+  setValue(Number(props.modelValue || 0) + steps * stepVal)
+}
+
+defineExpose({
+  setValue,
+  stepBy,
+  quantizeValue,
+  isScrubbing,
+  isScrubbingRelative,
+  scrubResolutionText,
+  progressPercent,
+  progressPercentage: progressPercent,
+})
 </script>
 
 <style scoped>

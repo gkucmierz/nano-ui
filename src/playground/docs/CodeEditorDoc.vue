@@ -7,6 +7,7 @@ import NanoSwitch from '../../components/NanoSwitch.vue';
 import NanoSlider from '../../components/NanoSlider.vue';
 import NanoSelect from '../../components/NanoSelect.vue';
 import NanoCodeBlock from '../../components/NanoCodeBlock.vue';
+import { createDocTabs } from '../docSnippets.js';
 import { SYNTAX_THEMES, getRegisteredParsers } from '../../utils/syntax-highlighter.js';
 import {
   ALL_PARSERS,
@@ -354,6 +355,54 @@ registerParser([rustParser, pythonParser, sqlParser]);
 // Option B: Or pass :parsers and :syntax-theme directly to <NanoCodeEditor>
 // Supported syntaxTheme values:
 // 'nano' | 'github' | 'monokai' | 'dracula' | 'one-dark' | 'nord' | 'solarized' | 'cyberpunk'`;
+const codeTabs = createDocTabs({
+  componentName: 'NanoCodeEditor',
+  stateRef: 'sourceCode',
+  initialValue: "'const sum = (a, b) => a + b;'",
+  templateAttrs: [
+    'v-model="sourceCode"',
+    'file-path="src/math.js"',
+    'syntax-theme="nano"',
+    'mode="code"',
+    ':editable="true"',
+  ],
+  granularCode: modularImportSnippet,
+  apiSections: [
+    {
+      title: 'Props',
+      items: [
+        'modelValue / code: String (default: "") - Source code string (supports v-model)',
+        'diff: String (default: "") - Unified git diff patch string',
+        'filePath: String (default: "") - File path shown in header bar & used for auto language detection',
+        'lang: String (default: "") - Explicit language ID override ("js", "rust", "python", "sql", "vue", etc.)',
+        'syntaxTheme: String (default: "nano") - Color profile ("nano" | "github" | "monokai" | "dracula" | "one-dark" | "nord" | "solarized" | "cyberpunk")',
+        'mode: String (default: "auto") - Display mode ("auto" | "diff" | "code")',
+        'diffStyle: String (default: "unified") - Diff layout ("unified" | "split") (supports v-model:diffStyle)',
+        'editable: Boolean (default: false) - Enable live textarea editing with syntax overlay',
+        'parsers: Array (default: []) - Additional language parser objects to register',
+      ],
+    },
+    {
+      title: 'Events',
+      items: [
+        '@update:modelValue: (code: string) => void - Emitted when code is edited',
+        '@update:diffStyle: (style: "unified"|"split") => void - Emitted when diff layout switches',
+        '@update:syntaxTheme: (theme: string) => void - Emitted when color profile changes',
+        '@copy: (text: string) => void - Emitted when buffer is copied to clipboard',
+      ],
+    },
+    {
+      title: 'Exposed Methods & State (via template ref)',
+      items: [
+        'focus(): void - Focus the editable code textarea',
+        'copyContent(): Promise<void> - Copy current code or diff to clipboard',
+        'setMode(mode: "diff"|"code"): void - Switch active viewer mode',
+        'setDiffStyle(style: "unified"|"split"): void - Switch unified/split diff view',
+        'activeLine / parsedDiff: Ref/ComputedRef',
+      ],
+    },
+  ],
+});
 </script>
 
 <template>
@@ -511,11 +560,7 @@ registerParser([rustParser, pythonParser, sqlParser]);
     <div class="demo-section">
       <h3>{{ t('codeEditor.sec3Title') }}</h3>
       <p class="demo-desc">{{ t('codeEditor.sec3Desc') }}</p>
-      <NanoCodeBlock
-        :code="modularImportSnippet"
-        lang="javascript"
-        title="Modular Language Parser Imports"
-      />
+      <NanoCodeBlock :tabs="codeTabs" />
     </div>
   </div>
 </template>

@@ -3,6 +3,7 @@ import { ref } from 'vue';
 import NanoKnob from '../../components/NanoKnob.vue';
 import NanoSwitch from '../../components/NanoSwitch.vue';
 import NanoCodeBlock from '../../components/NanoCodeBlock.vue';
+import { createDocTabs } from '../docSnippets.js';
 import { t } from '../../locales.js';
 
 const angle = ref(45);
@@ -43,6 +44,45 @@ const rotationAngle = ref(45);
     reset-tooltip="Reset to 0°"
   />
 </template>`;
+const codeTabs = createDocTabs({
+  componentName: 'NanoKnob',
+  usageCode: usageSnippet,
+  apiSections: [
+    {
+      title: 'Props',
+      items: [
+        'modelValue: Number (default: 0, v-model) - Current rotary angle or parameter value',
+        'defaultValue: Number (default: 0) - Target value restored on reset or double-click',
+        'min / max: Number (default: -360 / 360) - Minimum and maximum bounds',
+        'step: Number (default: 1) - Quantization step',
+        'wrap: Boolean (default: true) - Continuous 360° wrapping vs clamped range',
+        'size: Number (default: 46) - Diameter in px',
+        'color: String (default: "primary") - Accent preset ("primary" | "cyan" | "purple" | "emerald" | "amber" | "rose" or CSS color)',
+        'centerMode: String (default: "reset") - Center hub mode ("reset" | "value" | "none")',
+        'unit: String (default: "°") - Unit suffix for value readout',
+        'showTicks: Boolean (default: false) - Render 12-hour cardinal rim ticks',
+        'disabled: Boolean (default: false) - Disable interaction',
+      ],
+    },
+    {
+      title: 'Events',
+      items: [
+        '@update:modelValue / @change: (val: number) => void - Emitted when knob value changes',
+        '@reset: (defaultVal: number) => void - Emitted when reset hub or double-click is triggered',
+        '@dragStart / @dragEnd: (event) => void - Emitted when rotary drag starts or ends',
+      ],
+    },
+    {
+      title: 'Exposed Methods & State (via template ref)',
+      items: [
+        'reset(): void - Reset knob to defaultValue',
+        'setValue(val: number): void - Clamp/quantize and set knob value',
+        'stepBy(steps = 1): void - Step knob value by N increments',
+        'displayValueText: ComputedRef<string> - Formatted readout string with unit',
+      ],
+    },
+  ],
+});
 </script>
 
 <template>
@@ -173,7 +213,7 @@ const rotationAngle = ref(45);
       </div>
     </div>
 
-    <NanoCodeBlock :code="usageSnippet" lang="vue" title="Usage & API Example" />
+    <NanoCodeBlock :tabs="codeTabs" />
   </div>
 </template>
 

@@ -4,6 +4,7 @@ import NanoSelect from '../../components/NanoSelect.vue';
 import NanoSwitch from '../../components/NanoSwitch.vue';
 import NanoModal from '../../components/NanoModal.vue';
 import NanoCodeBlock from '../../components/NanoCodeBlock.vue';
+import { createDocTabs } from '../docSnippets.js';
 import { t } from '../../locales.js';
 
 const selectedSingle = ref('rust');
@@ -98,6 +99,43 @@ const options = [
     size="md"
   />
 </template>`;
+const codeTabs = createDocTabs({
+  componentName: 'NanoSelect',
+  usageCode: usageSnippet,
+  apiSections: [
+    {
+      title: 'Props',
+      items: [
+        'modelValue: String | Number | Array (default: null, v-model) - Selected option value(s)',
+        'options: Array<Object | String | Number> (default: []) - Options ({ value, label, labelPl?, labelEn?, badge?, color?, description?, disabled? })',
+        'multiple: Boolean (default: false) - Enable multi-select with removable chips',
+        'searchable: Boolean (default: true) - Enable live diacritic-insensitive search input',
+        'clearable: Boolean (default: false) - Show clear selection button',
+        'size: String (default: "md") - Control height preset ("sm" | "md" | "lg")',
+        'status: String (default: "normal") - Validation state ("normal" | "error" | "success")',
+        'disabled: Boolean (default: false) - Disable dropdown interaction',
+      ],
+    },
+    {
+      title: 'Events',
+      items: [
+        '@update:modelValue / @change: (val) => void - Emitted when selection changes',
+        '@open / @close: () => void - Emitted when dropdown opens or closes',
+        '@clear: () => void - Emitted when selection is cleared',
+        '@search: (query: string) => void - Emitted when search filter text changes',
+      ],
+    },
+    {
+      title: 'Exposed Methods & State (via template ref)',
+      items: [
+        'open() / close() / toggle(): void - Programmatically control dropdown visibility',
+        'clear(): void - Clear current selection',
+        'selectOption(opt): void - Programmatically select/toggle an option',
+        'isOpen / filterText / filteredOptions / selectedOptionsList: Ref/ComputedRef',
+      ],
+    },
+  ],
+});
 </script>
 
 <template>
@@ -223,7 +261,7 @@ const options = [
       </NanoModal>
     </div>
 
-    <NanoCodeBlock :code="usageSnippet" lang="vue" title="Usage & API Example" />
+    <NanoCodeBlock :tabs="codeTabs" />
   </div>
 </template>
 
