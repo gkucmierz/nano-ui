@@ -26,7 +26,7 @@
               <span>Axes Count</span>
               <span class="control-value">{{ axesCount }}</span>
             </label>
-            <input type="range" v-model.number="axesCount" min="3" max="15" step="1" />
+            <NanoSlider v-model="axesCount" :min="3" :max="15" :step="1" size="sm" aria-label="Axes Count" />
           </div>
 
           <div class="control-item">
@@ -34,7 +34,7 @@
               <span>History Length</span>
               <span class="control-value">{{ historyLimit }}</span>
             </label>
-            <input type="range" v-model.number="historyLimit" min="1" max="30" />
+            <NanoSlider v-model="historyLimit" :min="1" :max="30" :step="1" size="sm" aria-label="History Length" />
           </div>
 
           <div class="control-item">
@@ -42,7 +42,7 @@
               <span>Auto Feed</span>
               <span class="control-value">{{ feedRate }}ms</span>
             </label>
-            <input type="range" v-model.number="feedRate" min="100" max="2000" step="100" />
+            <NanoSlider v-model="feedRate" :min="100" :max="2000" :step="100" size="sm" aria-label="Auto Feed" />
           </div>
         </div>
 
@@ -74,6 +74,8 @@ color: String (default: '#00e5ff') - Accent stroke and contour color
 <script setup>
 import { ref, computed, watch, onBeforeUnmount } from 'vue';
 import TopologyRadar from '../../components/TopologyRadar.vue';
+import NanoSlider from '../../components/NanoSlider.vue';
+import NanoCodeBlock from '../../components/NanoCodeBlock.vue';
 
 const axesCount = ref(5);
 const demoLabels = computed(() => {
@@ -123,6 +125,13 @@ const toggleAutoFeed = () => {
     autoFeedTimer.value = setInterval(feedRandom, feedRate.value);
   }
 };
+
+watch(feedRate, (newRate) => {
+  if (autoFeedTimer.value) {
+    clearInterval(autoFeedTimer.value);
+    autoFeedTimer.value = setInterval(feedRandom, newRate);
+  }
+});
 
 onBeforeUnmount(() => {
   if (autoFeedTimer.value) clearInterval(autoFeedTimer.value);

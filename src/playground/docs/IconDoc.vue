@@ -3,6 +3,7 @@ import { ref, computed } from 'vue';
 import { getAvailableIcons } from '../../icons/index.js';
 import NanoCodeBlock from '../../components/NanoCodeBlock.vue';
 import NanoIcon from '../../components/NanoIcon.vue';
+import NanoSlider from '../../components/NanoSlider.vue';
 
 const allIcons = getAvailableIcons();
 const searchQuery = ref('');
@@ -114,12 +115,16 @@ props: {
         <div class="toolbar-controls">
           <div class="control-item">
             <label>Size: {{ iconSize }}px</label>
-            <input v-model.number="iconSize" type="range" min="14" max="36" step="2" class="range-slider" />
+            <div class="slider-box">
+              <NanoSlider v-model="iconSize" :min="14" :max="36" :step="2" size="sm" :show-ticks="false" aria-label="Icon Size" />
+            </div>
           </div>
 
           <div class="control-item">
             <label>Stroke: {{ strokeWidth }}px</label>
-            <input v-model.number="strokeWidth" type="range" min="1" max="3" step="0.5" class="range-slider" />
+            <div class="slider-box">
+              <NanoSlider v-model="strokeWidth" :min="1" :max="3" :step="0.5" size="sm" :show-ticks="false" aria-label="Stroke Width" />
+            </div>
           </div>
 
           <div class="color-swatches">
@@ -266,10 +271,8 @@ h2 {
   letter-spacing: 0.05em;
 }
 
-.range-slider {
-  width: 100px;
-  accent-color: var(--nano-accent);
-  cursor: pointer;
+.slider-box {
+  width: 120px;
 }
 
 .color-swatches {

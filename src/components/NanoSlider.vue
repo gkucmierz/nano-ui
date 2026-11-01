@@ -168,27 +168,27 @@ function onKeydown(e) {
 .nano-slider {
   --_slider-primary: var(
     --nano-slider-primary,
-    var(--dport-accent, var(--slop-primary, var(--nano-state-active, #4cc2e6)))
+    var(--dport-accent, var(--nano-state-active, #4cc2e6))
   );
   --_slider-secondary: var(
     --nano-slider-secondary,
-    var(--dport-secondary, var(--slop-secondary, var(--nano-accent-primary, #2dd4bf)))
+    var(--dport-secondary, var(--nano-accent-primary, #2dd4bf))
   );
   --_slider-track-bg: var(
     --nano-slider-track-bg,
-    var(--bg-elevated, var(--slop-bg-pane, var(--nano-bg-card-elevated, rgba(15, 23, 42, 0.72))))
+    var(--bg-elevated, var(--nano-bg-card-elevated, rgba(15, 23, 42, 0.72)))
   );
   --_slider-border: var(
     --nano-slider-border,
-    var(--border-subtle, var(--slop-border, var(--nano-border-card, rgba(148, 163, 184, 0.3))))
+    var(--border-subtle, var(--nano-border-card, rgba(148, 163, 184, 0.3)))
   );
   --_slider-thumb-bg: var(
     --nano-slider-thumb-bg,
-    var(--bg-card, var(--slop-bg-card, var(--nano-bg-card, #0b1322)))
+    var(--bg-card, var(--nano-bg-card, #0b1322))
   );
   --_slider-glow: var(
     --nano-slider-glow,
-    var(--slop-primary-soft, rgba(76, 194, 230, 0.22))
+    rgba(76, 194, 230, 0.22)
   );
 
   position: relative;
