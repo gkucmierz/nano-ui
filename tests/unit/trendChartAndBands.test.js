@@ -132,6 +132,26 @@ describe('Generic Vertical Bands (X-Axis Domain Agnostic)', () => {
     assert.deepEqual(weeklyBands[0].dates, ['2026-09-19', '2026-09-20']);
     assert.equal(weeklyBands[1].label, 'SB–ND');
     assert.deepEqual(weeklyBands[1].dates, ['2026-09-26', '2026-09-27']);
+    assert.ok(Math.abs(weeklyBands[0].width - weeklyBands[1].width) < 0.05);
+
+    // Mixed weekly + daily sampling on linear calendar X-axis must keep all full SB–ND bands identical in width
+    const mixedDates = ['2026-09-30', '2026-10-07', '2026-10-14', '2026-10-15', '2026-10-16', '2026-10-19', '2026-10-31', '2026-11-01', '2026-11-02'];
+    const t0 = Date.parse(`${mixedDates[0]}T12:00:00Z`);
+    const tN = Date.parse(`${mixedDates[mixedDates.length - 1]}T12:00:00Z`);
+    const mixedPoints = mixedDates.map((d) => ({
+      date: d,
+      key: d,
+      x: 64 + ((Date.parse(`${d}T12:00:00Z`) - t0) / (tN - t0)) * 872,
+    }));
+    const mixedBands = computeWeekendBands(mixedPoints, 64, 936, 'pl');
+    const fullWeekends = mixedBands.filter((b) => b.label === 'SB–ND');
+    assert.equal(fullWeekends.length, 5);
+    for (let i = 1; i < fullWeekends.length; i++) {
+      assert.ok(
+        Math.abs(fullWeekends[i].width - fullWeekends[0].width) < 0.05,
+        `Weekend ${i} width (${fullWeekends[i].width}) must match weekend 0 width (${fullWeekends[0].width})`
+      );
+    }
   });
 });
 
