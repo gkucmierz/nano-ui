@@ -316,8 +316,8 @@ const projectedMarkers = computed(() => {
       return {
         ...m,
         id: m.id ?? `marker-${idx}`,
-        x: p.x,
-        y: p.y,
+        x: Number(p.x.toFixed(2)),
+        y: Number(p.y.toFixed(2)),
         color: m.color || '#e6bd4c',
         borderColor: m.borderColor || '#0b0f19',
         radius: Number(m.radius) || 4.5,
@@ -340,8 +340,8 @@ const projectedGpsPoint = computed(() => {
   });
   return {
     ...pt,
-    x: p.x,
-    y: p.y,
+    x: Number(p.x.toFixed(2)),
+    y: Number(p.y.toFixed(2)),
     color: pt.color || '#38bdf8',
     radius: Number(pt.radius) || 7.5
   };

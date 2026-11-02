@@ -202,6 +202,13 @@ const props = defineProps({
     type: String,
     default: 'Interactive trend chart',
   },
+  /**
+   * X-axis scale mode: 'auto' (linear calendar time when all keys are ISO dates YYYY-MM-DD, ordinal index otherwise) or 'index'.
+   */
+  xScale: {
+    type: String,
+    default: 'auto',
+  },
 });
 
 const emit = defineEmits(['hover', 'leave', 'point-click']);
@@ -268,10 +275,31 @@ const xSpine = computed(() => {
     });
   }
   const entries = Array.from(map.values());
-  // If all keys look like ISO dates YYYY-MM-DD, sort chronologically; otherwise preserve insertion order
-  if (entries.length > 1 && entries.every((e) => /^\d{4}-\d{2}-\d{2}/.test(e.key))) {
+  const isIsoDateSpine =
+    props.xScale !== 'index' &&
+    entries.length > 1 &&
+    entries.every((e) => /^\d{4}-\d{2}-\d{2}/.test(String(e.date ?? e.key)));
+
+  // If all keys look like ISO dates YYYY-MM-DD, sort chronologically and map X linearly by calendar time
+  if (isIsoDateSpine) {
+    entries.sort((a, b) => String(a.date ?? a.key).localeCompare(String(b.date ?? b.key)));
+    const timestamps = entries.map((e) =>
+      Date.parse(`${String(e.date ?? e.key).slice(0, 10)}T12:00:00Z`)
+    );
+    const minTs = timestamps[0];
+    const maxTs = timestamps[timestamps.length - 1];
+    const spanTs = maxTs - minTs;
+    if (Number.isFinite(spanTs) && spanTs > 0) {
+      return entries.map((entry, idx) => ({
+        ...entry,
+        index: idx,
+        x: props.padLeft + ((timestamps[idx] - minTs) / spanTs) * plotW.value,
+      }));
+    }
+  } else if (entries.length > 1 && entries.every((e) => /^\d{4}-\d{2}-\d{2}/.test(e.key))) {
     entries.sort((a, b) => a.key.localeCompare(b.key));
   }
+
   const n = entries.length;
   return entries.map((entry, idx) => {
     const x = n === 1
@@ -663,8 +691,6 @@ const xTickLabels = computed(() => {
   const spine = xSpine.value;
   if (!spine.length) return [];
   const maxTicks = Math.max(2, props.maxXTicks);
-  const step = Math.max(1, Math.ceil((spine.length - 1) / (maxTicks - 1)));
-  const ticks = [];
 
   const formatTick = (entry) => {
     if (props.formatXLabel) {
@@ -676,29 +702,50 @@ const xTickLabels = computed(() => {
     return entry.label;
   };
 
-  for (let i = 0; i < spine.length; i += step) {
-    ticks.push({
-      key: spine[i].key,
-      x: spine[i].x,
-      label: formatTick(spine[i]),
-    });
+  if (spine.length <= maxTicks) {
+    return spine.map((entry) => ({
+      key: entry.key,
+      x: entry.x,
+      label: formatTick(entry),
+    }));
   }
-  const last = spine[spine.length - 1];
-  if (ticks.length && ticks[ticks.length - 1].key !== last.key) {
-    const minPxGap = 46;
-    if (last.x - ticks[ticks.length - 1].x < minPxGap && ticks.length > 1) {
-      ticks[ticks.length - 1] = {
-        key: last.key,
-        x: last.x,
-        label: formatTick(last),
-      };
-    } else {
-      ticks.push({
-        key: last.key,
-        x: last.x,
-        label: formatTick(last),
-      });
+
+  // Select ticks evenly across physical SVG X coordinates so mixed-density time series never crowd ticks
+  const ticks = [];
+  const usedKeys = new Set();
+  const minPxGap = 46;
+  const xStart = spine[0].x;
+  const xEnd = spine[spine.length - 1].x;
+  const xSpan = Math.max(1, xEnd - xStart);
+
+  for (let k = 0; k < maxTicks; k++) {
+    const targetX = xStart + (k / (maxTicks - 1)) * xSpan;
+    let best = spine[0];
+    let bestDist = Infinity;
+    for (const entry of spine) {
+      const d = Math.abs(entry.x - targetX);
+      if (d < bestDist) {
+        bestDist = d;
+        best = entry;
+      }
     }
+    if (usedKeys.has(best.key)) continue;
+    if (ticks.length > 0 && best.x - ticks[ticks.length - 1].x < minPxGap) {
+      if (k === maxTicks - 1 && ticks.length > 1) {
+        ticks[ticks.length - 1] = {
+          key: best.key,
+          x: best.x,
+          label: formatTick(best),
+        };
+      }
+      continue;
+    }
+    usedKeys.add(best.key);
+    ticks.push({
+      key: best.key,
+      x: best.x,
+      label: formatTick(best),
+    });
   }
   return ticks;
 });

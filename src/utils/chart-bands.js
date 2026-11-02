@@ -349,7 +349,7 @@ export const computeVerticalBands = (points, leftBound, rightBound, options = {}
           const t0 = Date.parse(`${d0Str}T12:00:00Z`);
           const t1 = Date.parse(`${d1Str}T12:00:00Z`);
           const diffDays = Math.round((t1 - t0) / 86_400_000);
-          if (diffDays > 1 && diffDays <= 14) {
+          if (diffDays > 1 && diffDays <= 180) {
             didExpand = true;
             for (let k = 1; k < diffDays; k++) {
               const tk = new Date(t0 + k * 86_400_000);
