@@ -9,17 +9,8 @@ on:
   workflow_dispatch:
 
 jobs:
-  deploy-playground:
-    uses: gkucmierz/ci-workflows/.gitea/workflows/zero-downtime-deploy.yml@main
-    with:
-      container_name: nano-ui
-      runs_on: self-hosted-pl
-      hot_swap_static: true
-      wait_timeout_sec: 30
-
   publish:
     name: Test, Sanitize & Dual-Publish Package (Gitea + NPM)
-    needs: deploy-playground
     runs-on: self-hosted-pl
     steps:
       - name: Check out repository code
@@ -91,3 +82,12 @@ jobs:
           trap 'rm -f "$TMP_NPMRC"' EXIT
           printf "@gkucmierz:registry=https://registry.npmjs.org/\nregistry=https://registry.npmjs.org/\n//registry.npmjs.org/:_authToken=%s\n" "$NODE_AUTH_TOKEN" > "$TMP_NPMRC"
           NPM_CONFIG_USERCONFIG="$TMP_NPMRC" npm publish --registry="https://registry.npmjs.org/" --access public || echo "⚠️ Public npmjs.org publish skipped."
+
+  deploy-playground:
+    needs: publish
+    uses: gkucmierz/ci-workflows/.gitea/workflows/zero-downtime-deploy.yml@main
+    with:
+      container_name: nano-ui
+      runs_on: self-hosted-pl
+      hot_swap_static: true
+      wait_timeout_sec: 30
