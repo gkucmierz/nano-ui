@@ -41,6 +41,7 @@ export const findSafeSelectMount = (rootEl, desiredHeight = 280) => {
   let viewportEl = null;
   let highestClippingEl = null;
   let escapedScrollers = 0;
+  let insideKeepInScroller = false;
   let curr = rootEl.parentNode;
 
   while (curr && curr !== document.body && curr !== document.documentElement && curr.nodeType === 1) {
@@ -76,15 +77,15 @@ export const findSafeSelectMount = (rootEl, desiredHeight = 280) => {
         const isHardClip = HARD_CLIP_RE.test(ovY) || HARD_CLIP_RE.test(ovX);
         const keepInScroller = curr.hasAttribute && curr.hasAttribute('data-nano-keep-in-scroller');
 
-        if (!keepInScroller || wouldInflateScrollbar) {
-          if (
-            wouldInflateScrollbar ||
-            (isHardClip && (roomBelowVisible < desiredHeight + 12 || roomAboveVisible < desiredHeight + 12)) ||
-            (roomBelowVisible < desiredHeight + 12 && !keepInScroller)
-          ) {
-            highestClippingEl = curr;
-            escapedScrollers++;
-          }
+        if (keepInScroller && !wouldInflateScrollbar) {
+          insideKeepInScroller = true;
+        } else if (
+          wouldInflateScrollbar ||
+          (isHardClip && (roomBelowVisible < desiredHeight + 12 || roomAboveVisible < desiredHeight + 12)) ||
+          (roomBelowVisible < desiredHeight + 12 && !keepInScroller)
+        ) {
+          highestClippingEl = curr;
+          escapedScrollers++;
         }
       }
     }
@@ -94,7 +95,7 @@ export const findSafeSelectMount = (rootEl, desiredHeight = 280) => {
 
   if (viewportEl) {
     return {
-      mountEl: escapedScrollers > 0 ? viewportEl : null,
+      mountEl: insideKeepInScroller && escapedScrollers === 0 ? null : viewportEl,
       viewportEl,
       escapedScrollers,
     };
@@ -121,7 +122,8 @@ export const findSafeSelectMount = (rootEl, desiredHeight = 280) => {
  * - `'top'`: Flipped above the trigger when near the bottom edge of a modal/screen.
  * - `'bottom-clamped'`: Opens below the trigger with height clamped to the visible bottom screen edge.
  * - `'overlap'`: Opens simultaneously above AND below the trigger ("na górze i na dole jednocześnie"),
- *   clamped to the visible screen height with internal scrolling when neither side alone has enough height.
+ *   utilizing the maximum available screen height (`screenHeight = viewportH - 2 * edgeMargin`) with
+ *   strictly symmetrical top and bottom margins (`topMargin === bottomMargin === edgeMargin`).
  */
 export const computeSelectDropdownLayout = ({
   triggerRect,
@@ -133,23 +135,40 @@ export const computeSelectDropdownLayout = ({
   optionsCount = 5,
   maxDropdownHeight = 260,
   actualDropdownHeight = null,
+  actualChromeHeight = null,
+  optionsScrollHeight = null,
   gap = 6,
   edgeMargin = 8,
 } = {}) => {
+  const margin = Math.max(0, Number(edgeMargin ?? 8));
+  const rawScreenTop = screenRect?.top ?? 0;
+  const rawScreenBottom = screenRect?.bottom ?? 768;
+  const rawScreenLeft = screenRect?.left ?? 0;
+  const rawScreenRight = screenRect?.right ?? 1024;
+
   const safeScreen = {
-    top: (screenRect?.top ?? 0) + edgeMargin,
-    bottom: (screenRect?.bottom ?? 768) - edgeMargin,
-    left: (screenRect?.left ?? 0) + edgeMargin,
-    right: (screenRect?.right ?? 1024) - edgeMargin,
+    top: rawScreenTop + margin,
+    bottom: rawScreenBottom - margin,
+    left: rawScreenLeft + margin,
+    right: rawScreenRight - margin,
   };
-  const screenHeight = Math.max(110, safeScreen.bottom - safeScreen.top);
+  const screenHeight = Math.max(96, safeScreen.bottom - safeScreen.top);
   const screenWidth = Math.max(180, safeScreen.right - safeScreen.left);
 
-  const searchBarHeight = searchable ? 41 : 0;
+  // Exact chrome height: search bar (~33px) + top/bottom 1px borders (2px) = 35px
+  const chromeHeight =
+    typeof actualChromeHeight === 'number' && actualChromeHeight > 0
+      ? actualChromeHeight
+      : searchable
+        ? 35
+        : 2;
   const chromePadding = 12;
-  const estimatedOptionsHeight = Math.max(46, optionsCount * 42 + chromePadding);
+  const estimatedOptionsHeight =
+    typeof optionsScrollHeight === 'number' && optionsScrollHeight > 0
+      ? optionsScrollHeight
+      : Math.max(46, optionsCount * 48 + chromePadding);
   const idealOptionsHeight = Math.min(maxDropdownHeight, estimatedOptionsHeight);
-  const idealTotalHeight = searchBarHeight + idealOptionsHeight;
+  const idealTotalHeight = chromeHeight + idealOptionsHeight;
 
   const spaceBelow = safeScreen.bottom - (triggerRect.bottom + gap);
   const spaceAbove = (triggerRect.top - gap) - safeScreen.top;
@@ -173,31 +192,32 @@ export const computeSelectDropdownLayout = ({
     // 2. Flip above the trigger (e.g. select near bottom of modal or screen)
     placement = 'top';
     const availableAbove = Math.max(88, Math.min(screenHeight, spaceAbove));
-    optionsMaxHeight = Math.max(60, Math.min(maxDropdownHeight, availableAbove - searchBarHeight));
+    optionsMaxHeight = Math.max(60, Math.min(maxDropdownHeight, availableAbove - chromeHeight));
     const renderedOptionsH = Math.min(estimatedOptionsHeight, optionsMaxHeight);
     const totalH = actualDropdownHeight
-      ? Math.min(actualDropdownHeight, searchBarHeight + optionsMaxHeight)
-      : searchBarHeight + renderedOptionsH;
+      ? Math.min(actualDropdownHeight, chromeHeight + optionsMaxHeight)
+      : chromeHeight + renderedOptionsH;
     screenTop = Math.max(safeScreen.top, triggerRect.top - gap - totalH);
   } else if (spaceBelow >= minSingleSideHeight && spaceBelow >= spaceAbove) {
     // 3. Open below, but clamp height to the visible screen bottom
     placement = 'bottom-clamped';
     const availableBelow = Math.max(88, Math.min(screenHeight, spaceBelow));
-    optionsMaxHeight = Math.max(60, Math.min(maxDropdownHeight, availableBelow - searchBarHeight));
+    optionsMaxHeight = Math.max(60, Math.min(maxDropdownHeight, availableBelow - chromeHeight));
     screenTop = triggerRect.bottom + gap;
   } else {
     // 4. Tight vertical viewport: open simultaneously above AND below the trigger ('overlap'),
-    //    clamped strictly to the visible screen bounds!
+    //    utilizing the full available screenHeight (from safeScreen.top to safeScreen.bottom)
+    //    with strictly symmetrical top and bottom margins (margin === topMargin === bottomMargin)!
     placement = 'overlap';
-    const maxTotalH = Math.min(idealTotalHeight, screenHeight);
-    optionsMaxHeight = Math.max(60, Math.min(maxDropdownHeight, maxTotalH - searchBarHeight));
+    const maxScreenOptionsH = Math.max(60, screenHeight - chromeHeight);
+    const targetOptionsH = Math.max(maxDropdownHeight, estimatedOptionsHeight);
+    optionsMaxHeight = Math.min(maxScreenOptionsH, targetOptionsH);
+
     const renderedOptionsH = Math.min(estimatedOptionsHeight, optionsMaxHeight);
-    const totalH = actualDropdownHeight
-      ? Math.min(actualDropdownHeight, screenHeight)
-      : Math.min(searchBarHeight + renderedOptionsH, screenHeight);
-    const triggerCenterY = (triggerRect.top + triggerRect.bottom) * 0.5;
-    const rawTop = triggerCenterY - totalH * 0.5;
-    screenTop = Math.max(safeScreen.top, Math.min(rawTop, safeScreen.bottom - totalH));
+    const totalH = Math.min(screenHeight, chromeHeight + renderedOptionsH);
+
+    // Symmetrical vertical centering inside safeScreen so topMargin === bottomMargin!
+    screenTop = safeScreen.top + Math.max(0, (screenHeight - totalH) * 0.5);
   }
 
   const desiredWidth = Math.min(Math.max(triggerRect.width, 220), screenWidth);
@@ -214,6 +234,13 @@ export const computeSelectDropdownLayout = ({
     ? Math.round(screenLeft - mountRect.left + mountScrollLeft)
     : Math.round(screenLeft - triggerRect.left);
 
+  const renderedTotalH = Math.min(
+    screenHeight,
+    chromeHeight + Math.min(estimatedOptionsHeight, optionsMaxHeight)
+  );
+  const topMarginPx = Math.round(screenTop - rawScreenTop);
+  const bottomMarginPx = Math.round(rawScreenBottom - (screenTop + renderedTotalH));
+
   return {
     placement,
     optionsMaxHeight: Math.round(optionsMaxHeight),
@@ -224,5 +251,8 @@ export const computeSelectDropdownLayout = ({
     spaceBelow: Math.round(spaceBelow),
     spaceAbove: Math.round(spaceAbove),
     screenHeight: Math.round(screenHeight),
+    edgeMargin: Math.round(margin),
+    topMarginPx,
+    bottomMarginPx,
   };
 };

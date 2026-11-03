@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed, watch, useSlots } from 'vue';
+import { ref, computed, watch, useSlots, onUnmounted } from 'vue';
 import { highlightCode } from '../utils/syntax-highlighter.js';
 
 const slots = useSlots();
@@ -180,6 +180,13 @@ const copyCode = async () => {
 const containerMaxHeight = computed(() => {
   if (!props.maxHeight) return undefined;
   return typeof props.maxHeight === 'number' ? `${props.maxHeight}px` : props.maxHeight;
+});
+
+onUnmounted(() => {
+  if (copyTimeout) {
+    clearTimeout(copyTimeout);
+    copyTimeout = null;
+  }
 });
 </script>
 

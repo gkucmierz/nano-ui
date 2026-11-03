@@ -1,17 +1,20 @@
 <script setup>
-import { ref } from 'vue';
+import { ref, onUnmounted } from 'vue';
 
 const codeDefault = '<button v-ripple>...</button>';
 const codeCustom = `<button v-ripple="'rgba(0, 255, 100, 0.4)'">...</button>`;
 const codeGlass = '<div v-ripple class="glass-card">...</div>';
 
 const copiedId = ref(null);
+let copyRippleTimer = null;
 
 const copyCode = async (text, id) => {
   try {
     await navigator.clipboard.writeText(text);
     copiedId.value = id;
-    setTimeout(() => {
+    if (copyRippleTimer) clearTimeout(copyRippleTimer);
+    copyRippleTimer = setTimeout(() => {
+      copyRippleTimer = null;
       if (copiedId.value === id) {
         copiedId.value = null;
       }
@@ -20,6 +23,13 @@ const copyCode = async (text, id) => {
     console.error('Failed to copy', err);
   }
 };
+
+onUnmounted(() => {
+  if (copyRippleTimer) {
+    clearTimeout(copyRippleTimer);
+    copyRippleTimer = null;
+  }
+});
 </script>
 
 <template>

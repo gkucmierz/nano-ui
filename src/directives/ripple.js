@@ -20,8 +20,18 @@ const handleRippleClick = (e, el, binding) => {
     circle.style.backgroundColor = binding.value;
   }
 
-  // Native browser event: cleans up automatically when CSS animation ends (100% SSoT in CSS)
-  circle.addEventListener('animationend', () => circle.remove(), { once: true });
+  const cleanupCircle = () => {
+    if (circle._rippleTimer) {
+      clearTimeout(circle._rippleTimer);
+      delete circle._rippleTimer;
+    }
+    circle.remove();
+  };
+
+  // Native browser event: cleans up automatically when CSS animation ends,
+  // paired with a safety fallback timer if element unmounts or is hidden mid-animation.
+  circle.addEventListener('animationend', cleanupCircle, { once: true });
+  circle._rippleTimer = setTimeout(cleanupCircle, 700);
 
   el.appendChild(circle);
 };
@@ -43,6 +53,13 @@ const Ripple = {
       delete el._rippleHandler;
       delete el._rippleBinding;
     }
+    el.querySelectorAll('.ripple').forEach((node) => {
+      if (node._rippleTimer) {
+        clearTimeout(node._rippleTimer);
+        delete node._rippleTimer;
+      }
+      node.remove();
+    });
   },
 };
 

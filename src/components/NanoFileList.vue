@@ -121,6 +121,10 @@ onUnmounted(() => {
     resizeObserver.disconnect();
     resizeObserver = null;
   }
+  if (copyTimer) {
+    clearTimeout(copyTimer);
+    copyTimer = null;
+  }
 });
 
 const effectiveMaxPathLength = computed(() => {

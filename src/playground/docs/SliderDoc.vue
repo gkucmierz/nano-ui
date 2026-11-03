@@ -22,7 +22,9 @@ const codeTabs = createDocTabs({
     {
       title: 'Props',
       items: [
-        'modelValue: Number (default: 50, v-model) - Current slider value',
+        'modelValue: Number | [Number, Number] (default: 50, v-model) - Current single value or [low, high] range tuple',
+        'range: Boolean (default: false) - Enable dual-thumb range selection mode (also auto-enabled when modelValue is an Array)',
+        'allowCross: Boolean (default: true) - Allow range thumbs to cross each other freely while emitting sorted [min, max]',
         'min: Number (default: 0) - Minimum value',
         'max: Number (default: 100) - Maximum value',
         'step: Number (default: 1) - Quantization step (supports fractional steps like 0.01)',
@@ -35,17 +37,17 @@ const codeTabs = createDocTabs({
     {
       title: 'Events',
       items: [
-        '@update:modelValue: (val: number) => void - Emitted continuously while dragging',
-        '@change: (val: number) => void - Emitted on pointerup or keyboard step',
+        '@update:modelValue: (val: number | [number, number]) => void - Emitted continuously while dragging',
+        '@change: (val: number | [number, number]) => void - Emitted on pointerup or keyboard step',
       ],
     },
     {
       title: 'Exposed Methods & State (via template ref)',
       items: [
-        'setValue(val: number): void - Quantize and set slider value programmatically',
-        'stepBy(steps = 1): void - Step slider value by N increments',
+        'setValue(val: number | [number, number]): void - Quantize and set slider value or [low, high] tuple programmatically',
+        'stepBy(steps = 1, thumbIdx = 0): void - Step slider value or specific range thumb by N increments',
         'quantizeValue(raw: number): number - Clamp and quantize a raw number',
-        'percentage / isDragging: ComputedRef<number> / Ref<boolean>',
+        'percentage / minPercentage / maxPercentage / isRange / isDragging',
       ],
     },
   ],
@@ -53,6 +55,9 @@ const codeTabs = createDocTabs({
 
 const mainValue = ref(72);
 const volumeValue = ref(0.95);
+const durationRange = ref([80, 420]);
+const freqBandRange = ref([250, 3200]);
+const allowCross = ref(true);
 const smValue = ref(35);
 const mdValue = ref(65);
 const lgValue = ref(85);
@@ -122,7 +127,64 @@ const isDisabled = ref(false);
       </div>
     </div>
 
-    <!-- CARD 2: Size Variants -->
+    <!-- CARD 2: Dual-Thumb Range Mode (:range="true") -->
+    <div class="demo-section">
+      <h3>Dual-Thumb Range Mode (<code>:range="true"</code>)</h3>
+      <p class="demo-desc">
+        Built directly into <code>&lt;NanoSlider&gt;</code> — pass <code>:range="true"</code> (or bind an Array tuple
+        <code>v-model="[minVal, maxVal]"</code>) to activate dual-thumb interval selection. With
+        <code>:allow-cross="true"</code> (default), both handles can cross each other freely in the UI while the range bar
+        and emitted <code>v-model</code> tuple are always automatically sorted as <code>[Math.min(a, b), Math.max(a, b)]</code>.
+        Even when <code>:allow-cross="false"</code>, stacked thumbs resolve their direction on first movement so neither thumb is ever trapped.
+      </p>
+
+      <div class="controls-bar">
+        <label class="ctrl-item">
+          <NanoSwitch v-model="allowCross" />
+          <span>Allow free thumb crossing (<code>:allow-cross="{{ allowCross }}"</code>, auto-sorted <code>[min, max]</code>)</span>
+        </label>
+      </div>
+
+      <div class="preview-grid">
+        <div class="preview-card">
+          <div class="preview-head">
+            <span class="preview-label">Sound Duration Filter (0 – 600 ms, step: 10)</span>
+            <span class="value-badge mono">{{ durationRange[0] }}–{{ durationRange[1] }} ms</span>
+          </div>
+          <NanoSlider
+            v-model="durationRange"
+            :range="true"
+            :allow-cross="allowCross"
+            :min="0"
+            :max="600"
+            :step="10"
+            :show-ticks="showTicks"
+            :disabled="isDisabled"
+            aria-label="Sound duration range in ms"
+          />
+        </div>
+
+        <div class="preview-card">
+          <div class="preview-head">
+            <span class="preview-label">Bandpass Cutoff Window (50 – 5000 Hz, step: 50)</span>
+            <span class="value-badge mono">{{ freqBandRange[0] }} – {{ freqBandRange[1] }} Hz</span>
+          </div>
+          <NanoSlider
+            v-model="freqBandRange"
+            :range="true"
+            :allow-cross="allowCross"
+            :min="50"
+            :max="5000"
+            :step="50"
+            :show-ticks="showTicks"
+            :disabled="isDisabled"
+            aria-label="Bandpass frequency window in Hz"
+          />
+        </div>
+      </div>
+    </div>
+
+    <!-- CARD 3: Size Variants -->
     <div class="demo-section">
       <h3>Size Variants (sm / md / lg)</h3>
       <p class="demo-desc">

@@ -8,7 +8,7 @@ export const tooltipState = reactive({
 })
 
 export function showTooltip(el, options) {
-  if (!options) return;
+  if (!options || !el || el.isConnected === false) return;
 
   const text = typeof options === 'object' ? options.text : options;
   const customClass = typeof options === 'object' ? (options.class || '') : '';
@@ -39,4 +39,5 @@ if (typeof window !== 'undefined') {
 
 export function hideTooltip() {
   tooltipState.isVisible = false;
+  tooltipState.targetRect = null;
 }

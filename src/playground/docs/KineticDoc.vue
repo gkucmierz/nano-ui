@@ -40,7 +40,19 @@ const liveElapsedSec = ref(0);
 
 // Rolling buffer for waveform graph
 const MAX_SAMPLES = 200;
-const historySamples = ref([]);
+const createInitialSamples = (now = performance.now()) =>
+  Array.from({ length: MAX_SAMPLES }, (_, i) => ({
+    time: now - (MAX_SAMPLES - 1 - i) * 50,
+    angle: 0,
+    target: 0,
+    rawAngle: 0,
+    rawTarget: 0,
+    vel: 0,
+    acc: 0,
+    isMoving: false,
+  }));
+
+const historySamples = ref(createInitialSamples());
 
 // Speed base presets (duration in ms for 90deg, from 4x to 1/4x)
 const speedPresets = [
@@ -218,38 +230,48 @@ const triggerRotate = (delta, label) => {
   }
 };
 
+const spamTimerIds = [];
+
+const clearSpamTimers = () => {
+  while (spamTimerIds.length > 0) {
+    clearTimeout(spamTimerIds.pop());
+  }
+};
+
 const triggerSpam = () => {
   registerClickEvent('Spam 4x');
   if (!rotatorRef.value) return;
 
+  clearSpamTimers();
   // Simulate multiple rapid clicks
   rotatorRef.value.rotateBy(90);
-  setTimeout(() => {
+  spamTimerIds.push(setTimeout(() => {
     if (rotatorRef.value) rotatorRef.value.rotateBy(90);
-  }, 120);
-  setTimeout(() => {
+  }, 120));
+  spamTimerIds.push(setTimeout(() => {
     if (rotatorRef.value) rotatorRef.value.rotateBy(90);
-  }, 240);
-  setTimeout(() => {
+  }, 240));
+  spamTimerIds.push(setTimeout(() => {
     if (rotatorRef.value) rotatorRef.value.rotateBy(90);
-  }, 360);
+  }, 360));
 };
 
 const triggerReset = () => {
+  clearSpamTimers();
   registerClickEvent('Reset');
   if (rotatorRef.value) {
     rotatorRef.value.reset();
   }
-  historySamples.value = [];
+  historySamples.value = createInitialSamples();
   clickEvents.value = [];
   motionStartTime.value = null;
   liveElapsedSec.value = 0;
 };
 
-// SVG Telemetry Graph rendering math
-const svgWidth = 720;
+// SVG Telemetry Graph rendering math (full 900px card width, zero horizontal letterboxing)
+const svgWidth = 900;
 const svgHeight = 240;
-const padding = { top: 24, right: 65, bottom: 32, left: 65 };
+const padding = { top: 22, right: 58, bottom: 24, left: 48 };
 const plotWidth = svgWidth - padding.left - padding.right;
 const plotHeight = svgHeight - padding.top - padding.bottom;
 
@@ -440,6 +462,7 @@ onMounted(() => {
 
 onUnmounted(() => {
   if (passiveTickerId) clearInterval(passiveTickerId);
+  clearSpamTimers();
 });
 </script>
 
@@ -1533,7 +1556,8 @@ onUnmounted(() => {
 
 .telemetry-svg {
   width: 100%;
-  height: 240px;
+  height: auto;
+  aspect-ratio: 900 / 240;
   display: block;
 }
 

@@ -76,6 +76,16 @@ const props = defineProps({
     validator: (v) => ['normal', 'error', 'success'].includes(v),
   },
   /**
+   * Ecosystem color theme preset:
+   * 'indigo' (default) | 'emerald' (Governance/Health) | 'cyan' (Telemetry/Dashboard) |
+   * 'amber' (Finance/Gold) | 'rose' (Crimson/Alert) | 'violet' | 'slate'
+   */
+  color: {
+    type: String,
+    default: 'indigo',
+    validator: (v) => ['indigo', 'emerald', 'cyan', 'amber', 'rose', 'violet', 'slate'].includes(v),
+  },
+  /**
    * Placeholder when nothing is selected
    */
   placeholder: {
@@ -124,6 +134,14 @@ const props = defineProps({
     type: Boolean,
     default: true,
   },
+  /**
+   * Configurable margin (px) between the open dropdown and the top/bottom/side edges
+   * of the visible screen (aligns with Nano UI 8px quantum scale: 8, 16, 24, 32)
+   */
+  viewportMargin: {
+    type: Number,
+    default: 8,
+  },
 });
 
 const emit = defineEmits(['update:modelValue', 'change', 'open', 'close', 'search', 'clear']);
@@ -133,6 +151,7 @@ const filterText = ref('');
 const focusedIndex = ref(0);
 const rootRef = ref(null);
 const dropdownRef = ref(null);
+const optionsListRef = ref(null);
 const searchInputRef = ref(null);
 const mountTarget = ref(null);
 const dropdownLayout = ref({
@@ -145,6 +164,9 @@ const dropdownLayout = ref({
   spaceBelow: 300,
   spaceAbove: 300,
   screenHeight: 768,
+  edgeMargin: 8,
+  topMarginPx: 8,
+  bottomMarginPx: 8,
   escapedScrollers: 0,
 });
 
@@ -284,6 +306,20 @@ function updateDropdownPosition(measureActual = false) {
       ? dropdownRef.value.offsetHeight
       : null;
 
+  const actualChromeHeight =
+    measureActual &&
+    dropdownRef.value &&
+    optionsListRef.value &&
+    dropdownRef.value.offsetHeight > 0 &&
+    optionsListRef.value.offsetHeight >= 0
+      ? Math.max(2, dropdownRef.value.offsetHeight - optionsListRef.value.offsetHeight)
+      : null;
+
+  const optionsScrollHeight =
+    measureActual && optionsListRef.value && optionsListRef.value.scrollHeight > 0
+      ? optionsListRef.value.scrollHeight
+      : null;
+
   const layout = computeSelectDropdownLayout({
     triggerRect,
     screenRect,
@@ -294,6 +330,9 @@ function updateDropdownPosition(measureActual = false) {
     optionsCount: Math.max(1, filteredOptions.value.length),
     maxDropdownHeight: props.maxDropdownHeight,
     actualDropdownHeight,
+    actualChromeHeight,
+    optionsScrollHeight,
+    edgeMargin: props.viewportMargin,
   });
 
   dropdownLayout.value = {
@@ -455,7 +494,12 @@ function onSearchInput() {
 }
 
 watch(
-  [() => props.options.length, () => props.maxDropdownHeight, () => props.smartPositioning],
+  [
+    () => props.options.length,
+    () => props.maxDropdownHeight,
+    () => props.smartPositioning,
+    () => props.viewportMargin,
+  ],
   () => {
     if (isOpen.value) {
       nextTick(() => updateDropdownPosition(true));
@@ -508,6 +552,7 @@ defineExpose({
     :class="[
       `is-${size}`,
       `is-${status}`,
+      `is-color-${color}`,
       {
         'is-open': isOpen,
         'is-disabled': disabled,
@@ -607,10 +652,12 @@ defineExpose({
           ref="dropdownRef"
           class="nano-select-dropdown"
           :class="[
+            `is-color-${color}`,
             `is-placement-${dropdownLayout.placement}`,
             { 'is-teleported': Boolean(mountTarget) },
           ]"
           :data-placement="dropdownLayout.placement"
+          :data-color="color"
           :style="dropdownInlineStyle"
           role="listbox"
           :aria-multiselectable="multiple"
@@ -654,6 +701,7 @@ defineExpose({
 
           <!-- Options List -->
           <div
+            ref="optionsListRef"
             class="nano-select-options nano-scrollbar"
             :style="{ maxHeight: `${dropdownLayout.optionsMaxHeight || maxDropdownHeight}px` }"
           >
@@ -742,6 +790,43 @@ defineExpose({
   user-select: none;
   -webkit-user-select: none;
   font-family: var(--nano-font-sans, -apple-system, BlinkMacSystemFont, sans-serif);
+}
+
+/* Color Theme Presets (applied on both trigger wrapper & teleported dropdown) */
+.nano-select.is-color-emerald,
+.nano-select-dropdown.is-color-emerald {
+  --nano-accent-primary: #10b981;
+  --nano-bg-sidebar: #0a141d;
+}
+
+.nano-select.is-color-cyan,
+.nano-select-dropdown.is-color-cyan {
+  --nano-accent-primary: #06b6d4;
+  --nano-bg-sidebar: #091520;
+}
+
+.nano-select.is-color-amber,
+.nano-select-dropdown.is-color-amber {
+  --nano-accent-primary: #f59e0b;
+  --nano-bg-sidebar: #18130a;
+}
+
+.nano-select.is-color-rose,
+.nano-select-dropdown.is-color-rose {
+  --nano-accent-primary: #f43f5e;
+  --nano-bg-sidebar: #1a0d12;
+}
+
+.nano-select.is-color-violet,
+.nano-select-dropdown.is-color-violet {
+  --nano-accent-primary: #a855f7;
+  --nano-bg-sidebar: #150d21;
+}
+
+.nano-select.is-color-slate,
+.nano-select-dropdown.is-color-slate {
+  --nano-accent-primary: #94a3b8;
+  --nano-bg-sidebar: #111827;
 }
 
 .nano-select-trigger {

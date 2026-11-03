@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed } from 'vue';
+import { ref, computed, onUnmounted } from 'vue';
 import NanoCodeBlock from '../../components/NanoCodeBlock.vue';
 import NanoSwitch from '../../components/NanoSwitch.vue';
 import { t } from '../../locales.js';
@@ -58,17 +58,27 @@ const generatedCode = computed(() => {
 const searchQuery = ref('');
 const apiKey = ref('nano_live_99f2c842b10a4e7');
 const copyFeedback = ref(false);
+let copyInputTimer = null;
 const stepperValue = ref(5190);
 
 const handleCopyKey = async () => {
   try {
     await navigator.clipboard.writeText(apiKey.value);
     copyFeedback.value = true;
-    setTimeout(() => {
+    if (copyInputTimer) clearTimeout(copyInputTimer);
+    copyInputTimer = setTimeout(() => {
+      copyInputTimer = null;
       copyFeedback.value = false;
     }, 1500);
   } catch {}
 };
+
+onUnmounted(() => {
+  if (copyInputTimer) {
+    clearTimeout(copyInputTimer);
+    copyInputTimer = null;
+  }
+});
 
 const cssApiDoc = `/* Nano UI Input Primitives & Form Controls */
 .nano-input              /* Base text input: background, border, focus-glow, typography */

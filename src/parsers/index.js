@@ -13,6 +13,7 @@ import { goParser } from './go.js';
 import { dockerfileParser } from './dockerfile.js';
 import { diffParser } from './diff.js';
 import { apiParser } from './api.js';
+import { nanosoundParser, NANOSOUND_COMPLETIONS } from './nanosound.js';
 
 export const CORE_PARSERS = [
   javascriptParser,
@@ -24,6 +25,7 @@ export const CORE_PARSERS = [
   markdownParser,
   diffParser,
   apiParser,
+  nanosoundParser,
 ];
 
 export const EXTRA_PARSERS = [
@@ -66,6 +68,9 @@ export const PARSER_MAP = {
   docker: dockerfileParser,
   diff: diffParser,
   api: apiParser,
+  nanosound: nanosoundParser,
+  nsd: nanosoundParser,
+  sound: nanosoundParser,
 };
 
 export {
@@ -85,4 +90,6 @@ export {
   dockerfileParser,
   diffParser,
   apiParser,
+  nanosoundParser,
+  NANOSOUND_COMPLETIONS,
 };

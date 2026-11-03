@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed, watch } from 'vue';
+import { ref, computed, watch, onUnmounted } from 'vue';
 import {
   parseColor,
   formatHex,
@@ -49,6 +49,7 @@ const lightness = ref(0.65);
 const chroma = ref(0.18);
 const hue = ref(250);
 const copied = ref(false);
+let copyTimer = null;
 const discRef = ref(null);
 const isDraggingDisc = ref(false);
 
@@ -249,13 +250,22 @@ const copyValue = async () => {
     }
     copied.value = true;
     emit('copy', text);
-    setTimeout(() => {
+    if (copyTimer) clearTimeout(copyTimer);
+    copyTimer = setTimeout(() => {
       copied.value = false;
+      copyTimer = null;
     }, 1400);
   } catch {
     emit('copy', text);
   }
 };
+
+onUnmounted(() => {
+  if (copyTimer) {
+    clearTimeout(copyTimer);
+    copyTimer = null;
+  }
+});
 const setOklch = (l, c, h) => {
   if (props.disabled) return;
   if (typeof l === 'number') lightness.value = clamp(l, 0, 1);

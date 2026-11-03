@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed, watch } from 'vue';
+import { ref, computed, watch, onUnmounted } from 'vue';
 import {
   highlightCode,
   escapeHtml,
@@ -7,7 +7,9 @@ import {
   SYNTAX_THEMES,
 } from '../utils/syntax-highlighter.js';
 import { detectLangFromPath, parseUnifiedDiff } from '../utils/git-diff.js';
+import { NANOSOUND_COMPLETIONS } from '../parsers/index.js';
 import { tooltipDirective as vTooltip } from '../directives/tooltip.js';
+import NanoSelect from './NanoSelect.vue';
 
 const props = defineProps({
   /**
@@ -65,6 +67,15 @@ const props = defineProps({
     default: () => [],
   },
   /**
+   * Optional array of IntelliSense autocomplete items:
+   * [{ label, insertText, detail, kind }]
+   * Defaults automatically to NANOSOUND_COMPLETIONS when lang === 'nanosound'.
+   */
+  completions: {
+    type: Array,
+    default: null,
+  },
+  /**
    * View mode: 'auto' | 'diff' | 'code'
    */
   mode: {
@@ -106,6 +117,13 @@ const props = defineProps({
     type: [Number, String],
     default: null,
   },
+  /**
+   * Show file download button in header (downloads filePath or 'snippet.txt')
+   */
+  downloadable: {
+    type: Boolean,
+    default: false,
+  },
 });
 
 const emit = defineEmits([
@@ -116,6 +134,8 @@ const emit = defineEmits([
   'update:syntaxTheme',
   'change',
   'copied',
+  'downloaded',
+  'run',
 ]);
 
 const parserVersion = ref(0);
@@ -143,6 +163,11 @@ const setSyntaxTheme = (nextTheme) => {
   internalSyntaxTheme.value = nextTheme;
   emit('update:syntaxTheme', nextTheme);
 };
+
+const syntaxThemeOptions = SYNTAX_THEMES.map((th) => ({
+  value: th.id,
+  label: th.label,
+}));
 
 const internalMode = ref(
   props.mode !== 'auto'
@@ -246,15 +271,114 @@ const updateActiveCursorLine = () => {
   activeLine.value = before.split('\n').length;
 };
 
+const showCompletions = ref(false);
+const completionPrefix = ref('');
+const selectedCompletionIdx = ref(0);
+
+const effectiveCompletions = computed(() => {
+  if (Array.isArray(props.completions)) return props.completions;
+  if (resolvedLang.value === 'nanosound' || resolvedLang.value === 'nsd' || resolvedLang.value === 'sound') {
+    return NANOSOUND_COMPLETIONS;
+  }
+  return [];
+});
+
+const filteredCompletions = computed(() => {
+  const list = effectiveCompletions.value;
+  const pref = completionPrefix.value.toLowerCase();
+  if (!pref || list.length === 0) return [];
+  return list
+    .filter((item) => {
+      const lbl = String(item.label || '').toLowerCase();
+      return lbl.startsWith(pref) && lbl !== pref;
+    })
+    .slice(0, 8);
+});
+
+const updateCompletionState = () => {
+  const el = textareaRef.value;
+  if (!el || effectiveCompletions.value.length === 0) {
+    showCompletions.value = false;
+    return;
+  }
+  const pos = el.selectionStart || 0;
+  const before = el.value.slice(0, pos);
+  const match = before.match(/[a-zA-Z_][a-zA-Z0-9_]*$/);
+  if (match && match[0].length >= 1) {
+    completionPrefix.value = match[0];
+    selectedCompletionIdx.value = 0;
+    showCompletions.value = filteredCompletions.value.length > 0;
+  } else {
+    completionPrefix.value = '';
+    showCompletions.value = false;
+  }
+};
+
+const applyCompletion = (item) => {
+  const el = textareaRef.value;
+  if (!el || !item) return;
+  const pos = el.selectionStart || 0;
+  const val = el.value;
+  const prefLen = completionPrefix.value.length;
+  const replaceStart = Math.max(0, pos - prefLen);
+  const insertStr = item.insertText || item.label || '';
+  const nextVal = `${val.slice(0, replaceStart)}${insertStr}${val.slice(pos)}`;
+  el.value = nextVal;
+  const nextCursor = replaceStart + insertStr.length;
+  el.selectionStart = el.selectionEnd = nextCursor;
+  showCompletions.value = false;
+  completionPrefix.value = '';
+  emit('update:modelValue', nextVal);
+  emit('update:code', nextVal);
+  emit('change', nextVal);
+  updateActiveCursorLine();
+  el.focus();
+};
+
 const handleEditorInput = (e) => {
   const val = e.target.value;
   emit('update:modelValue', val);
   emit('update:code', val);
   emit('change', val);
   updateActiveCursorLine();
+  updateCompletionState();
 };
 
 const handleEditorKeyDown = (e) => {
+  if ((e.metaKey || e.ctrlKey) && (e.key === 'Enter' || e.code === 'Enter' || e.code === 'NumpadEnter')) {
+    e.preventDefault();
+    showCompletions.value = false;
+    emit('run', currentCode.value);
+    return;
+  }
+
+  if (showCompletions.value && filteredCompletions.value.length > 0) {
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      selectedCompletionIdx.value =
+        (selectedCompletionIdx.value + 1) % filteredCompletions.value.length;
+      return;
+    }
+    if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      selectedCompletionIdx.value =
+        (selectedCompletionIdx.value - 1 + filteredCompletions.value.length) %
+        filteredCompletions.value.length;
+      return;
+    }
+    if (e.key === 'Tab' || e.key === 'Enter') {
+      e.preventDefault();
+      applyCompletion(filteredCompletions.value[selectedCompletionIdx.value]);
+      return;
+    }
+    if (e.key === 'Escape') {
+      e.preventDefault();
+      e.stopPropagation();
+      showCompletions.value = false;
+      return;
+    }
+  }
+
   if (e.key === 'Tab') {
     e.preventDefault();
     const el = e.target;
@@ -287,13 +411,37 @@ const copyContent = async () => {
     }, 1800);
   } catch {}
 };
+const downloadContent = () => {
+  const text = internalMode.value === 'diff' && props.diff
+    ? props.diff
+    : currentCode.value;
+  if (!text || typeof document === 'undefined') return;
+  const filename = (props.filePath || 'snippet.nsd').split('/').pop() || 'snippet.nsd';
+  const blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+  emit('downloaded', { filename, content: text });
+};
+
 const focus = () => {
   textareaRef.value?.focus?.();
 };
 
+onUnmounted(() => {
+  if (copyTimer) {
+    clearTimeout(copyTimer);
+    copyTimer = null;
+  }
+});
+
 defineExpose({
   focus,
   copyContent,
+  downloadContent,
   setMode,
   setDiffStyle,
   activeLine,
@@ -327,22 +475,19 @@ defineExpose({
 
       <div class="nce-header-actions">
         <!-- Optional Syntax Color Profile Selector -->
-        <select
-          v-if="showThemeSelector"
-          :value="internalSyntaxTheme"
-          class="nce-theme-select"
-          aria-label="Syntax highlight theme"
-          @change="setSyntaxTheme($event.target.value)"
-        >
-          <option v-for="th in SYNTAX_THEMES" :key="th.id" :value="th.id">
-            {{ th.label }}
-          </option>
-        </select>
+        <div v-if="showThemeSelector" class="nce-theme-select-wrap">
+          <NanoSelect
+            :model-value="internalSyntaxTheme"
+            :options="syntaxThemeOptions"
+            size="sm"
+            placeholder="Syntax Theme"
+            @update:model-value="setSyntaxTheme"
+          />
+        </div>
 
-        <!-- Mode Toggle (Diff vs Code) when both are provided -->
-        <div v-if="hasBothDiffAndCode || editable" class="nce-seg-group">
+        <!-- Mode Toggle (Diff vs Code) ONLY when both diff and code are provided -->
+        <div v-if="hasBothDiffAndCode" class="nce-seg-group">
           <button
-            v-if="diff"
             type="button"
             class="nce-seg-btn"
             :class="{ active: internalMode === 'diff' }"
@@ -394,6 +539,22 @@ defineExpose({
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <polyline points="9 10 4 15 9 20" />
             <path d="M20 4v7a4 4 0 0 1-4 4H4" />
+          </svg>
+        </button>
+
+        <!-- Optional Download File Button (e.g. .nsd) -->
+        <button
+          v-if="downloadable"
+          type="button"
+          class="nce-icon-btn"
+          v-tooltip="`Download ${filePath || 'file'}`"
+          :aria-label="`Download ${filePath || 'file'}`"
+          @click="downloadContent"
+        >
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+            <polyline points="7 10 12 15 17 10" />
+            <line x1="12" y1="15" x2="12" y2="3" />
           </svg>
         </button>
 
@@ -535,6 +696,30 @@ defineExpose({
           @keyup="updateActiveCursorLine"
           @keydown="handleEditorKeyDown"
         ></textarea>
+
+        <!-- Built-in IntelliSense / Autocomplete Popup -->
+        <div
+          v-if="showCompletions && filteredCompletions.length > 0"
+          class="nce-completions-popup"
+          role="listbox"
+        >
+          <div class="nce-completions-header">
+            <span>IntelliSense ({{ resolvedLang || 'code' }})</span>
+            <span class="nce-completions-hint">↑↓ · Tab/Enter</span>
+          </div>
+          <button
+            v-for="(item, idx) in filteredCompletions"
+            :key="item.label"
+            type="button"
+            class="nce-completion-item"
+            :class="{ active: idx === selectedCompletionIdx }"
+            @mousedown.prevent="applyCompletion(item)"
+          >
+            <span class="nce-comp-kind" :data-kind="item.kind || 'fn'">{{ item.kind || 'fn' }}</span>
+            <code class="nce-comp-label">{{ item.label }}</code>
+            <span v-if="item.detail" class="nce-comp-detail">{{ item.detail }}</span>
+          </button>
+        </div>
       </div>
     </div>
 
@@ -958,16 +1143,96 @@ td.is-empty {
   color: transparent;
 }
 
-.nce-theme-select {
-  height: 26px;
-  padding: 0 8px;
-  border-radius: 5px;
-  border: 1px solid var(--nano-border-card, rgba(255, 255, 255, 0.12));
-  background: var(--nano-bg-muted, rgba(255, 255, 255, 0.05));
-  color: var(--nano-text-main, #f8fafc);
-  font-size: 0.72rem;
+.nce-completions-popup {
+  position: absolute;
+  left: 14px;
+  right: 14px;
+  bottom: 10px;
+  max-width: 520px;
+  z-index: 10;
+  border-radius: 8px;
+  background: rgba(15, 23, 42, 0.96);
+  border: 1px solid rgba(56, 189, 248, 0.35);
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.45);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.nce-completions-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 4px 10px;
+  font-size: 0.65rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #38bdf8;
+  background: rgba(2, 6, 23, 0.65);
+  border-bottom: 1px solid rgba(148, 163, 184, 0.16);
+}
+
+.nce-completions-hint {
+  color: #94a3b8;
   font-weight: 600;
+}
+
+.nce-completion-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 5px 10px;
+  border: none;
+  background: transparent;
+  color: #f1f5f9;
+  font-family: inherit;
+  font-size: 0.74rem;
+  text-align: left;
   cursor: pointer;
+}
+
+.nce-completion-item.active,
+.nce-completion-item:hover {
+  background: rgba(56, 189, 248, 0.18);
+}
+
+.nce-comp-kind {
+  font-size: 0.62rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  padding: 1px 5px;
+  border-radius: 4px;
+  background: rgba(56, 189, 248, 0.16);
+  color: #38bdf8;
+  min-width: 38px;
+  text-align: center;
+}
+
+.nce-comp-label {
+  font-weight: 700;
+  color: #34d399;
+}
+
+.nce-comp-detail {
+  color: #94a3b8;
+  font-size: 0.69rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.nce-theme-select-wrap {
+  min-width: 175px;
+}
+
+.nce-theme-select-wrap :deep(.nano-select-trigger) {
+  min-height: 26px;
+  height: 26px;
+  padding: 0 10px;
+  font-size: 0.72rem;
+  border-radius: 6px;
 }
 
 /* Scoped fallback token rules backed by --hl-* CSS variables */

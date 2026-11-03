@@ -198,6 +198,7 @@ const onDrag = (e) => {
 };
 
 const stopDrag = () => {
+  if (!isDragging.value) return;
   isDragging.value = false;
   window.removeEventListener('mousemove', onDrag);
   window.removeEventListener('mouseup', stopDrag);
@@ -251,6 +252,7 @@ const onResize = (e) => {
 };
 
 const stopResize = () => {
+  if (!isResizing.value) return;
   isResizing.value = false;
   window.removeEventListener('mousemove', onResize);
   window.removeEventListener('mouseup', stopResize);

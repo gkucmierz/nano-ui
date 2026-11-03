@@ -49,12 +49,20 @@ export default {
 </script>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue';
+import { ref, computed, onMounted, onUnmounted } from 'vue';
 
 const isMounted = ref(false);
 
 onMounted(() => {
   isMounted.value = true;
+});
+
+onUnmounted(() => {
+  isScrubbing.value = false;
+  if (typeof document !== 'undefined') {
+    document.removeEventListener('mousemove', handleScrubMove);
+    document.removeEventListener('mouseup', stopScrubbing);
+  }
 });
 
 const props = defineProps({

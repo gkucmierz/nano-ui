@@ -1,10 +1,20 @@
 import pkg from '../package.json';
 import { initTheme, getZeroFoucScript, getZeroFoucStyle, getZeroFoucHtml } from './theme.js';
+import { useTheme } from './composables/useTheme.js';
 import Ripple from './directives/ripple.js';
 import { tooltipDirective } from './directives/tooltip.js';
 import { showTooltip, hideTooltip, tooltipState } from './composables/useTooltip.js';
+import {
+  useDialog,
+  showAlert,
+  showConfirm,
+  handleOk,
+  handleCancel,
+  dialogState,
+} from './composables/useDialog.js';
 import GlobalTooltip from './components/GlobalTooltip.vue';
 import NanoModal from './components/NanoModal.vue';
+import NanoDialog from './components/NanoDialog.vue';
 import ThreeDDonutChart from './components/ThreeDDonutChart.vue';
 import PrecisionScrubber from './components/PrecisionScrubber.vue';
 import MutatingHeader from './components/MutatingHeader.vue';
@@ -27,6 +37,7 @@ import NanoSelect from './components/NanoSelect.vue';
 import NanoTrendChart from './components/NanoTrendChart.vue';
 import NanoChannelOsd from './components/NanoChannelOsd.vue';
 import NanoNumberStepper from './components/NanoNumberStepper.vue';
+import NanoTabs from './components/NanoTabs.vue';
 import { WORLD_COUNTRIES_LITE } from './data/worldCountriesLite.js';
 import {
   DEFAULT_MAP_LAYERS,
@@ -130,6 +141,8 @@ import {
   dockerfileParser,
   diffParser,
   apiParser,
+  nanosoundParser,
+  NANOSOUND_COMPLETIONS,
 } from './parsers/index.js';
 import {
   detectLangFromPath,
@@ -149,11 +162,19 @@ import './style.css';
 export {
   Ripple,
   tooltipDirective,
+  tooltipDirective as vTooltip,
   showTooltip,
   hideTooltip,
   tooltipState,
+  useDialog,
+  showAlert,
+  showConfirm,
+  handleOk,
+  handleCancel,
+  dialogState,
   GlobalTooltip,
   NanoModal,
+  NanoDialog,
   ThreeDDonutChart,
   PrecisionScrubber,
   TopologyRadar,
@@ -178,6 +199,7 @@ export {
   NanoChannelOsd as ChannelOsd,
   NanoNumberStepper,
   NanoNumberStepper as NanoStepper,
+  NanoTabs,
   WORLD_COUNTRIES_LITE,
   DEFAULT_MAP_LAYERS,
   MAP_LAYERS,
@@ -265,6 +287,8 @@ export {
   dockerfileParser,
   diffParser,
   apiParser,
+  nanosoundParser,
+  NANOSOUND_COMPLETIONS,
   detectLangFromPath,
   normalizeFileStatus,
   middleTruncatePath,
@@ -274,6 +298,7 @@ export {
   computeSelectDropdownLayout,
   getPositionedReferenceEl,
   initTheme,
+  useTheme,
   getZeroFoucScript,
   getZeroFoucStyle,
   getZeroFoucHtml,
@@ -300,6 +325,7 @@ export default {
 
     app.component(`${cp}GlobalTooltip`, GlobalTooltip);
     app.component(`${cp}NanoModal`, NanoModal);
+    app.component(`${cp}NanoDialog`, NanoDialog);
     app.component(`${cp}ThreeDDonutChart`, ThreeDDonutChart);
     app.component(`${cp}PrecisionScrubber`, PrecisionScrubber);
     app.component(`${cp}TopologyRadar`, TopologyRadar);
@@ -324,5 +350,6 @@ export default {
     app.component(`${cp}ChannelOsd`, NanoChannelOsd);
     app.component(`${cp}NanoNumberStepper`, NanoNumberStepper);
     app.component(`${cp}NanoStepper`, NanoNumberStepper);
+    app.component(`${cp}NanoTabs`, NanoTabs);
   },
 };

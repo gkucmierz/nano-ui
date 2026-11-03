@@ -34,6 +34,8 @@ const EXT_LANG_MAP = {
   xml: 'xml',
   svg: 'xml',
   dockerfile: 'dockerfile',
+  nsd: 'nanosound',
+  nanosound: 'nanosound',
 };
 
 /**

@@ -17,6 +17,8 @@ import {
   yamlParser,
   goParser,
   dockerfileParser,
+  nanosoundParser,
+  NANOSOUND_COMPLETIONS,
 } from '../../parsers/index.js';
 import { t } from '../../locales.js';
 
@@ -37,6 +39,7 @@ const extraParsers = [
   yamlParser,
   goParser,
   dockerfileParser,
+  nanosoundParser,
 ];
 
 const themeOptions = SYNTAX_THEMES.map((th) => ({
@@ -319,6 +322,16 @@ RUN npm ci
 COPY . .
 RUN npm run build:ssg`,
   },
+  nanosound: {
+    filePath: 'sounds/retro-laser-pew.nsd',
+    badge: 'Core',
+    importPath: '@gkucmierz/nano-ui/parsers/nanosound',
+    code: `# NanoSound Algebraic DSL (.nsd) — Procedural Laser & Harmonic Chime
+seq(
+  0ms: saw(glide(1900Hz, 110Hz, exp, 120ms)) * lpf(2800Hz, q:1.8) * expDecay(45ms),
+  65ms: 0.75 * sin(880Hz, fm:2.0*0.35) * cheby(3200Hz, ripple:1.5) * adsr(2ms, 28ms, 0.5, 90ms)
+)`,
+  },
 };
 
 const selectedSampleLang = ref('rust');
@@ -535,6 +548,7 @@ const codeTabs = createDocTabs({
         :file-path="languageSamples[selectedSampleLang]?.filePath || 'snippet.js'"
         :lang="selectedSampleLang"
         :parsers="extraParsers"
+        :completions="selectedSampleLang === 'nanosound' ? NANOSOUND_COMPLETIONS : []"
         :show-theme-selector="true"
         mode="code"
         :editable="true"

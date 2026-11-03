@@ -7,6 +7,7 @@
   "nav": {
     "gettingStarted": "Getting Started",
     "overview": "Overview & Setup",
+    "typography": "Typography & 8px Grid",
     "primitives": "Primitives",
     "buttons": "Buttons & Groups",
     "inputs": "Inputs & Groups",
@@ -14,6 +15,9 @@
     "badges": "Badges & Indicators",
     "tables": "Data Tables",
     "alerts": "Alerts & Banners",
+    "formControls": "Forms & Controls",
+    "layoutNavigation": "Layout & Navigation",
+    "advanced3dViz": "Advanced, 3D & Visualization",
     "components": "Components",
     "directives": "Directives",
     "visualization": "Visualization",
@@ -38,6 +42,7 @@
     "maskedInput": "Masked & PIN Input",
     "channelOsd": "Channel OSD (TV HUD)",
     "numberStepper": "Nano Number Stepper",
+    "tabs": "Nano Tabs (Docked & Segmented)",
     "ripple": "v-ripple Directive",
     "tooltip": "v-tooltip Directive"
   },
@@ -317,5 +322,23 @@
     "zoomLevel": "Zoom Level",
     "bearingAngle": "Compass Bearing (°)",
     "usageTitle": "Declarative Usage & Layer Configuration"
+  },
+  "tabsDoc": {
+    "title": "NanoTabs — Docked & Segmented Tabs",
+    "desc": "Universal docked and segmented tab navigation component with full WAI-ARIA keyboard accessibility (← / → / Home / End), item counts, vector icons, 3 distinct geometry sizes (sm / md / lg), and Zero-CLS stationary state transitions.",
+    "sizeLabel": "Interactive Size Preset:",
+    "sec1Title": "1. Docked Sidebar / Panel Tabs (variant=\"docked\")",
+    "sec1Desc": "Standardized docked tabs for sidebars, drawers, and code/document inspectors (used in md-viewer and KBE). Active tab is highlighted with a 2px bottom accent bar.",
+    "sec2Title": "2. Segmented Pill Switcher & Size Scale (variant=\"segmented\")",
+    "sec2Desc": "Compact pill switcher for category filters, view modes, and deterministic coloring knobs (used in mem-index and nano-sound). Compare all 3 sizes below or toggle the interactive size control.",
+    "tocLabel": "Contents",
+    "filesLabel": "Files",
+    "allLabel": "All Items",
+    "defaultColor": "Default",
+    "moodColor": "Mood (1:1)",
+    "nsdColor": "Sound .NSD",
+    "sizeSm": "Small (size=\"sm\" · 22px)",
+    "sizeMd": "Medium (size=\"md\" · 32px)",
+    "sizeLg": "Large (size=\"lg\" · 42px)"
   }
 }

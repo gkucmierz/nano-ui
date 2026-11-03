@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed } from 'vue';
+import { ref, computed, onUnmounted } from 'vue';
 import { getAvailableIcons, isIconColorable } from '../../icons/index.js';
 import NanoCodeBlock from '../../components/NanoCodeBlock.vue';
 import NanoIcon from '../../components/NanoIcon.vue';
@@ -13,6 +13,7 @@ const iconSize = ref(20);
 const strokeWidth = ref(2);
 const activeColor = ref('currentColor');
 const copiedName = ref(null);
+let copyIconTimer = null;
 
 const colorableCount = computed(() => allIcons.filter(name => isIconColorable(name)).length);
 const nonColorableCount = computed(() => allIcons.filter(name => !isIconColorable(name)).length);
@@ -31,13 +32,22 @@ const copySnippet = (name) => {
   const code = `<NanoIcon name="${name}" />`;
   navigator.clipboard.writeText(code).then(() => {
     copiedName.value = name;
-    setTimeout(() => {
+    if (copyIconTimer) clearTimeout(copyIconTimer);
+    copyIconTimer = setTimeout(() => {
+      copyIconTimer = null;
       if (copiedName.value === name) {
         copiedName.value = null;
       }
     }, 1500);
   });
 };
+
+onUnmounted(() => {
+  if (copyIconTimer) {
+    clearTimeout(copyIconTimer);
+    copyIconTimer = null;
+  }
+});
 
 const colors = [
   { label: 'CurrentColor', value: 'currentColor' },

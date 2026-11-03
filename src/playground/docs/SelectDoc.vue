@@ -24,8 +24,9 @@ const useSmartPositioning = ref(true);
 const simUiLang = ref('en');
 const simCommitStyle = ref('conventional');
 const simBottomEdgeValue = ref('eu-central-1');
-const simOverlapValue = ref('sqlite');
-const simTightViewportHeight = ref(220);
+const simOverlapValue = ref('rust');
+const simTightViewportHeight = ref(240);
+const simViewportMargin = ref(16);
 const simScrollFlowValue = ref('vue');
 const simStackedOverlayInViewport = ref(false);
 
@@ -572,7 +573,7 @@ const codeTabs = createDocTabs({
           </div>
 
           <div class="sim-slider-bar">
-            <span>{{ currentLang === 'pl' ? 'Wysokość symulowanego ekranu:' : 'Simulated Screen Height:' }}</span>
+            <span>{{ currentLang === 'pl' ? 'Wysokość ekranu:' : 'Screen Height:' }}</span>
             <input
               v-model.number="simTightViewportHeight"
               type="range"
@@ -582,7 +583,19 @@ const codeTabs = createDocTabs({
               @input="overlapSelectRef?.updateDropdownPosition?.(true)"
             />
             <code>{{ simTightViewportHeight }}px</code>
-            <code>maxH: {{ overlapSelectRef?.dropdownLayout?.optionsMaxHeight ?? 140 }}px</code>
+            <span style="margin-left: 6px; color: var(--nano-text-muted);">Margin:</span>
+            <div class="nano-btn-group">
+              <button
+                v-for="m in [8, 16, 24, 32]"
+                :key="m"
+                type="button"
+                class="nano-btn nano-btn-secondary nano-btn-sm"
+                :class="{ 'nano-btn-active': simViewportMargin === m }"
+                @click="simViewportMargin = m"
+              >
+                {{ m }}px
+              </button>
+            </div>
           </div>
 
           <div class="browser-frame">
@@ -594,7 +607,8 @@ const codeTabs = createDocTabs({
               </div>
               <div class="browser-url">Tight Screen ({{ simTightViewportHeight }}px)</div>
               <div class="browser-telemetry">
-                <code>placement: {{ overlapSelectRef?.dropdownLayout?.placement || 'overlap' }}</code>
+                <code>{{ overlapSelectRef?.dropdownLayout?.placement || 'overlap' }}</code>
+                <code>top: {{ overlapSelectRef?.dropdownLayout?.topMarginPx ?? simViewportMargin }}px === bottom: {{ overlapSelectRef?.dropdownLayout?.bottomMarginPx ?? simViewportMargin }}px</code>
               </div>
             </div>
 
@@ -606,14 +620,15 @@ const codeTabs = createDocTabs({
               <div style="width: 100%; max-width: 350px;">
                 <label class="sim-field-label">
                   {{ currentLang === 'pl'
-                    ? 'Kliknij — otworzy się na górze i na dole jednocześnie:'
-                    : 'Click — opens simultaneously above & below trigger:' }}
+                    ? 'Kliknij — wykorzysta maks. wysokość ekranu z równym marginesem góra=dół:'
+                    : 'Click — uses max screen height with equal top=bottom margin:' }}
                 </label>
                 <NanoSelect
                   ref="overlapSelectRef"
                   v-model="simOverlapValue"
                   :options="techOptions"
                   :searchable="true"
+                  :viewport-margin="simViewportMargin"
                 />
               </div>
             </div>

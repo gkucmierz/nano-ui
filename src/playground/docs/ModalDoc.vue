@@ -1,9 +1,12 @@
 <script setup>
 import { ref } from 'vue';
 import NanoModal from '../../components/NanoModal.vue';
+import NanoDialog from '../../components/NanoDialog.vue';
+import { useDialog } from '../../composables/useDialog.js';
 import NanoCodeBlock from '../../components/NanoCodeBlock.vue';
 import { createDocTabs } from '../docSnippets.js';
 
+const { showAlert, showConfirm } = useDialog();
 const showBasic = ref(false);
 const showAdvanced = ref(false);
 const showCustom = ref(false);
@@ -119,6 +122,19 @@ const codeTabs = createDocTabs({
           </div>
         </template>
       </NanoModal>
+    </div>
+
+    <div class="demo-section">
+      <h3>Promise-Based Alert &amp; Confirm (NanoDialog + useDialog)</h3>
+      <div style="display: flex; gap: 0.75rem; flex-wrap: wrap;">
+        <button class="demo-btn" @click="showAlert('Operation completed cleanly.', 'System Notice')">
+          Trigger Alert
+        </button>
+        <button class="demo-btn" @click="showConfirm('Proceed with configuration reset?', 'Confirm Action')">
+          Trigger Confirm
+        </button>
+      </div>
+      <NanoDialog />
     </div>
 
     <NanoCodeBlock :tabs="codeTabs" />

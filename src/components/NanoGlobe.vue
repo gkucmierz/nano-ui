@@ -53,6 +53,8 @@ const props = defineProps({
   arcs: { type: Array, default: () => [] },
   /** Spherical markers: [{ id?, lon, lat, type?: 'target' | 'dot', color?, size?, label? }] */
   markers: { type: Array, default: () => [] },
+  /** Custom spherical overlay polygons (e.g. timezones, solar terminator, regions): [{ id, name?, rings?: [[[lon, lat], ...]], d?, fill?, hoverFill?, stroke?, strokeWidth?, dashed?, interactive? }] */
+  polygons: { type: Array, default: () => [] },
   /** Optional custom countries array (defaults to WORLD_COUNTRIES_LITE) */
   countriesData: { type: Array, default: null }
 })
@@ -66,6 +68,8 @@ const emit = defineEmits([
   'update:healpixOrder',
   'country-click',
   'country-hover',
+  'polygon-click',
+  'polygon-hover',
   'pixel-click'
 ])
 
@@ -188,6 +192,7 @@ watch(() => props.showHealpix, (v) => { localShowHealpix.value = v })
 watch(() => props.healpixOrder, (v) => { localHealpixOrder.value = v })
 
 const hoveredCountryId = ref(null)
+const hoveredPolygonId = ref(null)
 const hoveredHealpixPix = ref(null)
 
 // Geometry constants inside a fixed 500x500 SVG coordinate space
@@ -484,6 +489,77 @@ const renderedMarkers = computed(() => {
   return out
 })
 
+function projectLonLat(lon, lat) {
+  const cam = lonLatToCamVec3(Number(lon) || 0, Number(lat) || 0, cameraTrig.value)
+  return {
+    x: CX + cam.x * R,
+    y: CY - cam.y * R,
+    z: cam.z,
+    visible: cam.z >= 0
+  }
+}
+
+function clipRingToSvgPath(ring, stepDeg = 4) {
+  if (!Array.isArray(ring) || ring.length < 3) return ''
+  const dense = densifyRing(ring, stepDeg)
+  const camPts = dense.map(([lon, lat]) => lonLatToCamVec3(lon, lat, cameraTrig.value))
+  const clipped = clipSphericalRingToHorizon(camPts, {
+    isSouthPolar: isSouthPolarRing(ring)
+  })
+  return clipped.length > 0 ? camPolygonsToSvgPath(clipped, CX, CY, R) : ''
+}
+
+const renderedCustomPolygons = computed(() => {
+  if (!props.polygons || !props.polygons.length) return []
+  const trig = cameraTrig.value
+  const out = []
+
+  for (let i = 0; i < props.polygons.length; i++) {
+    const poly = props.polygons[i]
+    const id = poly.id ?? `poly-${i}`
+    let pathD = typeof poly.d === 'string' ? poly.d : ''
+
+    if (!pathD && Array.isArray(poly.rings)) {
+      for (const ring of poly.rings) {
+        if (!Array.isArray(ring) || ring.length < 3) continue
+        const dense = densifyRing(ring, poly.stepDeg || 4)
+        const camPts = dense.map(([lon, lat]) => lonLatToCamVec3(lon, lat, trig))
+        const clipped = clipSphericalRingToHorizon(camPts, {
+          isSouthPolar: Boolean(poly.isSouthPolar ?? isSouthPolarRing(ring))
+        })
+        if (clipped.length > 0) {
+          pathD += camPolygonsToSvgPath(clipped, CX, CY, R)
+        }
+      }
+    }
+
+    if (!pathD) continue
+    const hovered = hoveredPolygonId.value === id
+    out.push({
+      id,
+      name: poly.name || String(id),
+      d: pathD,
+      fill: hovered && poly.hoverFill ? poly.hoverFill : (poly.fill || 'rgba(56, 189, 248, 0.22)'),
+      stroke: poly.stroke || 'rgba(56, 189, 248, 0.72)',
+      strokeWidth: poly.strokeWidth ?? 1.1,
+      dashed: Boolean(poly.dashed),
+      interactive: poly.interactive !== false,
+      hovered,
+      raw: poly
+    })
+  }
+  return out
+})
+
+function onPolygonClick(poly) {
+  if (dragMovedDistance > 5 || !poly.interactive) return
+  emit('polygon-click', {
+    id: poly.id,
+    name: poly.name,
+    polygon: poly.raw
+  })
+}
+
 // Drag interaction state (coalesced via requestAnimationFrame to prevent mid-frame SVG dirty-rect artifacts)
 const isDragging = ref(false)
 let dragStartX = 0
@@ -496,6 +572,7 @@ let pendingLat = null
 let dragRafId = null
 let animFrameId = null
 let lastAnimTime = 0
+let isUnmounted = false
 
 function flushPendingDrag() {
   dragRafId = null
@@ -609,19 +686,32 @@ function setOrderBtn(o) {
 }
 
 function stepAutoRotate(ts) {
+  animFrameId = null
+  if (isUnmounted || !props.autoRotateSpeed) return
   if (!lastAnimTime) lastAnimTime = ts
   const dt = (ts - lastAnimTime) / 1000
   lastAnimTime = ts
-  if (props.autoRotateSpeed && !isDragging.value) {
+  if (!isDragging.value) {
     let nextLon = rotLon.value + props.autoRotateSpeed * dt
     while (nextLon > 180) nextLon -= 360
     while (nextLon < -180) nextLon += 360
     rotLon.value = nextLon
   }
-  if (props.autoRotateSpeed) {
+  animFrameId = requestAnimationFrame(stepAutoRotate)
+}
+
+function startOrStopAutoRotate() {
+  if (animFrameId) {
+    cancelAnimationFrame(animFrameId)
+    animFrameId = null
+  }
+  lastAnimTime = 0
+  if (!isUnmounted && props.autoRotateSpeed && typeof requestAnimationFrame === 'function') {
     animFrameId = requestAnimationFrame(stepAutoRotate)
   }
 }
+
+watch(() => props.autoRotateSpeed, startOrStopAutoRotate)
 
 function rotateTo(lon, lat) {
   const nextLon = Number(lon)
@@ -642,20 +732,28 @@ defineExpose({
   toggleGraticule: toggleGraticuleBtn,
   toggleHealpix: toggleHealpixBtn,
   setHealpixOrder: setOrderBtn,
+  projectLonLat,
+  clipRingToSvgPath,
   rotLon,
   rotLat,
   isDragging,
 })
 
 onMounted(() => {
-  if (props.autoRotateSpeed) {
-    animFrameId = requestAnimationFrame(stepAutoRotate)
-  }
+  isUnmounted = false
+  startOrStopAutoRotate()
 })
 
 onUnmounted(() => {
-  if (animFrameId) cancelAnimationFrame(animFrameId)
-  if (dragRafId) cancelAnimationFrame(dragRafId)
+  isUnmounted = true
+  if (animFrameId) {
+    cancelAnimationFrame(animFrameId)
+    animFrameId = null
+  }
+  if (dragRafId) {
+    cancelAnimationFrame(dragRafId)
+    dragRafId = null
+  }
 })
 </script>
 
@@ -807,6 +905,45 @@ onUnmounted(() => {
             {{ cell.ipix }}
           </text>
         </g>
+
+        <!-- 3b. Custom Spherical Overlay Polygons (e.g. Timezones, Solar Terminator, Custom Regions) -->
+        <g v-if="renderedCustomPolygons.length" class="nano-globe-custom-polygons">
+          <path
+            v-for="poly in renderedCustomPolygons"
+            :key="poly.id"
+            :d="poly.d"
+            class="nano-globe-custom-polygon"
+            :class="{ 'is-hovered': poly.hovered, 'is-interactive': poly.interactive }"
+            :fill="poly.fill"
+            :stroke="poly.stroke"
+            :stroke-width="poly.strokeWidth"
+            :stroke-dasharray="poly.dashed ? '4 4' : undefined"
+            stroke-linejoin="round"
+            :pointer-events="poly.interactive ? 'auto' : 'none'"
+            @mouseenter="
+              !isDragging &&
+                poly.interactive &&
+                ((hoveredPolygonId = poly.id),
+                emit('polygon-hover', { id: poly.id, name: poly.name, polygon: poly.raw }))
+            "
+            @mouseleave="!isDragging && (hoveredPolygonId = null)"
+            @click.stop="onPolygonClick(poly)"
+          >
+            <title v-if="poly.name">{{ poly.name }}</title>
+          </path>
+        </g>
+
+        <!-- 3c. Scoped SVG Overlay Slot for Arbitrary Custom SVG Elements on the Sphere -->
+        <slot
+          name="svg-overlay"
+          :project="projectLonLat"
+          :clip-ring="clipRingToSvgPath"
+          :cx="CX"
+          :cy="CY"
+          :r="R"
+          :rot-lon="rotLon"
+          :rot-lat="rotLat"
+        />
 
         <!-- 4. Great-Circle Geodesic Arcs (e.g. dashed route lines) -->
         <g v-if="renderedArcs.length" class="nano-globe-arcs" pointer-events="none">

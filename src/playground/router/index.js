@@ -1,5 +1,6 @@
 import { createRouter, createWebHistory, createMemoryHistory } from 'vue-router';
 import OverviewDoc from '../docs/OverviewDoc.vue';
+import TypographyDoc from '../docs/TypographyDoc.vue';
 import ButtonDoc from '../docs/ButtonDoc.vue';
 import InputDoc from '../docs/InputDoc.vue';
 import CardDoc from '../docs/CardDoc.vue';
@@ -28,6 +29,7 @@ import MaskedPinDoc from '../docs/MaskedPinDoc.vue';
 import TrendChartDoc from '../docs/TrendChartDoc.vue';
 import ChannelOsdDoc from '../docs/ChannelOsdDoc.vue';
 import NumberStepperDoc from '../docs/NumberStepperDoc.vue';
+import TabsDoc from '../docs/TabsDoc.vue';
 import KineticAnimationsDoc from '../docs/KineticAnimationsDoc.vue';
 import NotFoundDoc from '../docs/NotFoundDoc.vue';
 
@@ -47,6 +49,17 @@ export const routes = [
     meta: {
       title: 'Overview & Setup | Nano UI',
       description: 'High-performance, minimal footprint Vue 3 UI library, interactive 3D charts, and kinematic directives with built-in Zero-FOUC design tokens.',
+    },
+  },
+  {
+    path: '/docs/typography',
+    name: 'Typography',
+    component: TypographyDoc,
+    meta: {
+      title: 'Typography & 8px Spatial Grid | Nano UI',
+      componentName: 'Typography',
+      type: 'primitive',
+      description: 'Typography scale (--nano-font-size-*, unitless line-heights) and 8pt spatial scale (--nano-unit: 8px, 16px, 24px, 32px, 48px) design tokens.',
     },
   },
   {
@@ -344,6 +357,17 @@ export const routes = [
       componentName: 'NanoNumberStepper',
       type: 'component',
       description: 'Dual-variant numeric stepper control: right-side 50%/50% stacked Up/Down chevrons and glued Left/Right (- / +) buttons with hold-to-repeat.',
+    },
+  },
+  {
+    path: '/docs/tabs',
+    name: 'Tabs',
+    component: TabsDoc,
+    meta: {
+      title: 'NanoTabs (Docked & Segmented) | Nano UI',
+      componentName: 'NanoTabs',
+      type: 'component',
+      description: 'Universal docked and segmented tab navigation component with keyboard arrow navigation, item counts, and icons.',
     },
   },
   {

@@ -1,5 +1,5 @@
 <script setup>
-import { ref } from 'vue';
+import { ref, onUnmounted } from 'vue';
 import NanoSwitch from '../../components/NanoSwitch.vue';
 import { createDocTabs } from '../docSnippets.js';
 
@@ -32,12 +32,15 @@ const codeBasic = '<NanoSwitch v-model="basicVal" label="Enable Telemetry & Anal
 const codeIndeterminate = '<NanoSwitch v-model="status" :indeterminate="status === null" />';
 
 const copiedId = ref(null);
+let copySwitchTimer = null;
 
 const copyCode = async (text, id) => {
   try {
     await navigator.clipboard.writeText(text);
     copiedId.value = id;
-    setTimeout(() => {
+    if (copySwitchTimer) clearTimeout(copySwitchTimer);
+    copySwitchTimer = setTimeout(() => {
+      copySwitchTimer = null;
       if (copiedId.value === id) {
         copiedId.value = null;
       }
@@ -46,6 +49,13 @@ const copyCode = async (text, id) => {
     console.error('Failed to copy', err);
   }
 };
+
+onUnmounted(() => {
+  if (copySwitchTimer) {
+    clearTimeout(copySwitchTimer);
+    copySwitchTimer = null;
+  }
+});
 
 const apiDoc = `// Props
 modelValue: Boolean | null (default: false, supports v-model)

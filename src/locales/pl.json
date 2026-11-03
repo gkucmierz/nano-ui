@@ -7,6 +7,7 @@
   "nav": {
     "gettingStarted": "Wprowadzenie",
     "overview": "Start & Konfiguracja",
+    "typography": "Typografia & Siatka 8px",
     "primitives": "Prymitywy UI",
     "buttons": "Przyciski & Grupy",
     "inputs": "Pola tekstowe & Grupy",
@@ -14,6 +15,9 @@
     "badges": "Odznaki & Wskaźniki",
     "tables": "Tabele danych",
     "alerts": "Alerty & Banery",
+    "formControls": "Formularze i Kontrolki",
+    "layoutNavigation": "Układ i Nawigacja",
+    "advanced3dViz": "Zaawansowane, 3D i Wizualizacja",
     "components": "Komponenty",
     "directives": "Dyrektywy",
     "visualization": "Wizualizacja",
@@ -38,6 +42,7 @@
     "maskedInput": "Maskowane Pola & PIN",
     "channelOsd": "Ekran HUD (Channel OSD)",
     "numberStepper": "Nano Number Stepper",
+    "tabs": "Nano Tabs (Dokowane & Segmenty)",
     "ripple": "Dyrektywa v-ripple",
     "tooltip": "Dyrektywa v-tooltip"
   },
@@ -317,5 +322,23 @@
     "zoomLevel": "Poziom Przybliżenia (Zoom)",
     "bearingAngle": "Kąt Obrotu Kompasu (°)",
     "usageTitle": "Deklaratywne Użycie i Konfiguracja Warstw"
+  },
+  "tabsDoc": {
+    "title": "NanoTabs — Zadokowane i Segmentowe Zakładki",
+    "desc": "Uniwersalny komponent nawigacji zakładkowej (zadokowanej oraz pigułkowej) z pełną dostępnością klawiaturową WAI-ARIA (← / → / Home / End), licznikami elementów, ikonami wektorowymi, 3 rozmiarami geometrycznymi (sm / md / lg) oraz przejściami Zero-CLS.",
+    "sizeLabel": "Interaktywny Rozmiar (size):",
+    "sec1Title": "1. Zadokowane Zakładki Panelu / Sidebara (variant=\"docked\")",
+    "sec1Desc": "Standardowe zadokowane zakładki dla pasków bocznych, szuflad i inspektorów dokumentów (używane m.in. w md-viewer oraz KBE). Aktywna zakładka jest wyróżniona 2-pikselowym dolnym paskiem akcentu.",
+    "sec2Title": "2. Przełącznik Segmentowy (Pigułki) i Skala Rozmiarów (variant=\"segmented\")",
+    "sec2Desc": "Zwarty przełącznik segmentowy dla filtrów kategorii, trybów widoku oraz przełączników kolorowania dport (używany w mem-index oraz nano-sound). Porównaj 3 rozmiary poniżej lub przełącz aktywny rozmiar.",
+    "tocLabel": "Spis treści",
+    "filesLabel": "Pliki",
+    "allLabel": "Wszystkie",
+    "defaultColor": "Domyślne",
+    "moodColor": "Nastrój (1:1)",
+    "nsdColor": "Dźwięk .NSD",
+    "sizeSm": "Mały (size=\"sm\" · 22px)",
+    "sizeMd": "Średni (size=\"md\" · 32px)",
+    "sizeLg": "Duży (size=\"lg\" · 42px)"
   }
 }
