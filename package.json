@@ -61,8 +61,10 @@
     "eslint": "^10.1.0",
     "highlight.js": "^11.11.1",
     "lucide-vue-next": "^0.469.0",
+    "minisearch": "^7.1.2",
     "vite": "^8.0.12",
     "vue": "^3.4.0",
+    "vue-minisearch": "^1.0.0",
     "vue-router": "^5.0.6"
   },
   "repository": {

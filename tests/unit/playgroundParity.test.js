@@ -3,6 +3,7 @@ import assert from 'node:assert/strict'
 import fs from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { usePlaygroundSearch, PLAYGROUND_NAV_ITEMS } from '../../src/playground/usePlaygroundSearch.js'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const rootDir = path.resolve(__dirname, '../..')
@@ -73,5 +74,31 @@ describe('Nano UI Playground & i18n Parity', () => {
         }
       }
     }
+  })
+
+  test('usePlaygroundSearch (vue-minisearch) indexes all subpages and filters by component, content, and diacritic-insensitive queries', () => {
+    const { searchQuery, matchedItems, matchedIdSet, totalCount, clearSearch } = usePlaygroundSearch()
+    assert.equal(totalCount, PLAYGROUND_NAV_ITEMS.length)
+    assert.equal(matchedItems.value.length, PLAYGROUND_NAV_ITEMS.length)
+
+    // Diacritic-insensitive Polish search: 'pokretlo' -> /docs/knob
+    searchQuery.value = 'pokretlo'
+    assert.ok(matchedIdSet.value.has('/docs/knob'), 'Searching "pokretlo" should match /docs/knob')
+
+    // Deep content / mathematical keyword search: 'HEALPix' -> /docs/globe
+    searchQuery.value = 'HEALPix'
+    assert.ok(matchedIdSet.value.has('/docs/globe'), 'Searching "HEALPix" should match /docs/globe')
+
+    // Band / trend chart keyword search: 'SB-ND' -> /docs/trend-chart
+    searchQuery.value = 'SB-ND'
+    assert.ok(matchedIdSet.value.has('/docs/trend-chart'), 'Searching "SB-ND" should match /docs/trend-chart')
+
+    // Component tag search: 'NuPinInput' -> /docs/masked-input
+    searchQuery.value = 'NuPinInput'
+    assert.ok(matchedIdSet.value.has('/docs/masked-input'), 'Searching "NuPinInput" should match /docs/masked-input')
+
+    clearSearch()
+    assert.equal(searchQuery.value, '')
+    assert.equal(matchedItems.value.length, PLAYGROUND_NAV_ITEMS.length)
   })
 })
