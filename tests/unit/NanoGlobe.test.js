@@ -168,4 +168,12 @@ describe('NanoGlobe Component & WORLD_COUNTRIES_LITE Dataset', () => {
     const d = camPolylineToSvgPath(pts, 250, 250, 212)
     assert.ok(d.startsWith('M38.0,250.0L250.0,250.0L462.0,250.0'), `Unexpected polyline path: ${d}`)
   })
+
+  it('supports injecting custom spherical overlay polygons (:polygons) and #svg-overlay slot for timezones and terminators', () => {
+    const src = readFileSync(resolve(ROOT, 'src/components/NanoGlobe.vue'), 'utf8')
+    assert.ok(src.includes('polygons: { type: Array'), 'NanoGlobe must accept :polygons prop')
+    assert.ok(src.includes('renderedCustomPolygons'), 'NanoGlobe must compute horizon-clipped custom polygons')
+    assert.ok(src.includes('name="svg-overlay"'), 'NanoGlobe must expose #svg-overlay scoped slot with projection helpers')
+    assert.ok(src.includes('clipRingToSvgPath'), 'NanoGlobe must expose clipRingToSvgPath helper')
+  })
 })

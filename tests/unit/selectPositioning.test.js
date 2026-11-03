@@ -33,7 +33,7 @@ describe('NanoSelect Smart Positioning (Options 2 + 3)', () => {
     assert.ok(layout.top < 0, 'Dropdown top should be negative (above trigger) when not teleported');
   });
 
-  test('computeSelectDropdownLayout selects "overlap" (top + bottom simultaneously) and clamps height in a tight vertical screen', () => {
+  test('computeSelectDropdownLayout selects "overlap" (top + bottom simultaneously) with symmetrical top/bottom margins and clamps height to screen', () => {
     const layout = computeSelectDropdownLayout({
       triggerRect: { top: 90, bottom: 126, left: 30, width: 260, height: 36 },
       screenRect: { top: 0, bottom: 220, left: 0, right: 640 },
@@ -41,12 +41,16 @@ describe('NanoSelect Smart Positioning (Options 2 + 3)', () => {
       searchable: true,
       optionsCount: 8,
       maxDropdownHeight: 260,
+      edgeMargin: 16,
     });
 
     assert.equal(layout.placement, 'overlap');
-    // Visible safe screen height is 220 - 16 = 204px; optionsMaxHeight must be clamped below screen height
-    assert.ok(layout.optionsMaxHeight <= 165, `Expected clamped optionsMaxHeight <= 165, got ${layout.optionsMaxHeight}`);
-    assert.ok(layout.top >= 8, `Expected dropdown top >= 8px screen margin, got ${layout.top}`);
+    // Visible safe screen height is 220 - 32 = 188px; optionsMaxHeight + chromeHeight equals 188px
+    assert.ok(layout.optionsMaxHeight <= 156, `Expected clamped optionsMaxHeight <= 156, got ${layout.optionsMaxHeight}`);
+    assert.equal(layout.top, 16, `Expected dropdown top === 16px screen margin, got ${layout.top}`);
+    assert.equal(layout.topMarginPx, 16);
+    assert.equal(layout.bottomMarginPx, 16);
+    assert.equal(layout.topMarginPx, layout.bottomMarginPx, 'Top margin must strictly equal bottom margin in overlap mode');
     assert.ok(layout.top < 90, 'In overlap mode, dropdown starts above the trigger and extends below it simultaneously');
   });
 
