@@ -58,7 +58,11 @@
     "turn": "obroty",
     "notFoundTitle": "404 - Nie znaleziono strony",
     "notFoundDesc": "Podana ścieżka dokumentacji nie istnieje lub komponent został przeniesiony.",
-    "backToHome": "Wróć do początku"
+    "backToHome": "Wróć do początku",
+    "searchPlaceholder": "Filtruj komponenty i treść...",
+    "searchClear": "Wyczyść filtr (ESC)",
+    "searchNoResults": "Brak wyników dla",
+    "searchReset": "Pokaż wszystkie komponenty"
   },
   "kinetic": {
     "title": "Komponent KineticRotator",

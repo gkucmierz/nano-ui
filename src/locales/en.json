@@ -58,7 +58,11 @@
     "turn": "turn",
     "notFoundTitle": "404 - Page Not Found",
     "notFoundDesc": "The requested documentation path does not exist or the component has moved.",
-    "backToHome": "Back to Home"
+    "backToHome": "Back to Home",
+    "searchPlaceholder": "Filter components & docs...",
+    "searchClear": "Clear filter (ESC)",
+    "searchNoResults": "No matches for",
+    "searchReset": "Show all components"
   },
   "kinetic": {
     "title": "KineticRotator Component",
