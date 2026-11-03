@@ -12,6 +12,7 @@ import {
 import {
   evaluateSplineY,
   buildSplinePath,
+  createKineticPoints,
 } from '../../src/utils/kinetics.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -173,6 +174,66 @@ describe('evaluateSplineY & Kinetic Spline Path Fidelity', () => {
 
     const midY = evaluateSplineY(pts, 150, 0.35);
     assert.ok(midY < 200 && midY > 110);
+  });
+
+  test('prevents backwards S-loop overshoot on non-uniform X intervals and resamples 30D <-> 90D along physical X', () => {
+    // Mixed weekly (dx=214) -> daily (dx=30) knots like 2026-10-07 -> 2026-10-14 -> 2026-10-15
+    const mixedPts = [
+      { x: 64, y: 120 },
+      { x: 278, y: 89.2 },
+      { x: 492, y: 33.8 }, // Peak at 10-14 before transition to daily 30px steps
+      { x: 522, y: 128.5 },
+      { x: 552, y: 130.8 },
+      { x: 642, y: 121.6 },
+    ];
+
+    const pathD = buildSplinePath(mixedPts, { tension: 0.35 });
+    const segments = pathD.split(' C ').slice(1);
+    assert.equal(segments.length, mixedPts.length - 1);
+
+    for (let i = 0; i < segments.length; i++) {
+      const nums = segments[i]
+        .replace(/Z$/, '')
+        .trim()
+        .split(/[\s,]+/)
+        .map(Number);
+      const [cp1x, , cp2x, , p2x] = nums;
+      const p1x = mixedPts[i].x;
+      assert.ok(
+        cp1x >= p1x - 0.1 && cp1x <= p2x + 0.1,
+        `Segment ${i} cp1x (${cp1x}) must stay within [${p1x}, ${p2x}]`
+      );
+      assert.ok(
+        cp2x >= p1x - 0.1 && cp2x <= p2x + 0.1,
+        `Segment ${i} cp2x (${cp2x}) must stay within [${p1x}, ${p2x}]`
+      );
+    }
+
+    // Resampling from 4-point curve to 8-point non-uniform X curve must start on the old spline at target.x
+    const targetPts = [
+      { x: 64, y: 180 },
+      { x: 194, y: 140 },
+      { x: 324, y: 110 },
+      { x: 453, y: 95 },
+      { x: 583, y: 40 },
+      { x: 601, y: 135 },
+      { x: 620, y: 138 },
+      { x: 642, y: 150 },
+    ];
+
+    const kp = createKineticPoints({ duration: 350, tension: 0.35 });
+    kp.setTargets(mixedPts, { immediate: true });
+    const frame0 = kp.setTargets(targetPts, { timestamp: 1000 });
+
+    for (let i = 0; i < targetPts.length; i++) {
+      const expectedY = evaluateSplineY(mixedPts, targetPts[i].x, 0.35);
+      assert.equal(frame0[i].x, targetPts[i].x, `Point ${i} X must stay anchored at target.x`);
+      assert.ok(
+        Math.abs(frame0[i].y - expectedY) < 1e-3,
+        `Point ${i} Y at t=0 (${frame0[i].y}) must lie on the old spline (${expectedY})`
+      );
+    }
+    kp.destroy();
   });
 });
 

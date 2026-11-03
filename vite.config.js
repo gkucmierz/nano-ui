@@ -43,7 +43,7 @@ export default defineConfig(({ mode }) => {
       strictPort: true,
     },
     preview: {
-      port: 33165,
+      port: 33164,
       strictPort: true,
     },
     build: isApp
