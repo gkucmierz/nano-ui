@@ -68,6 +68,13 @@ const props = defineProps({
     type: [Number, String],
     default: null,
   },
+  /**
+   * Syntax highlighting color profile ('nano' | 'github' | 'monokai' | 'dracula' | 'one-dark' | 'nord' | 'solarized' | 'cyberpunk')
+   */
+  syntaxTheme: {
+    type: String,
+    default: 'nano',
+  },
 });
 
 const emit = defineEmits(['update:wrap', 'update:modelValue', 'changeTab', 'copied']);
@@ -191,7 +198,11 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <div class="nano-code-block" :class="{ 'is-wrapped': isWrapped, 'has-tabs': hasTabs }">
+  <div
+    class="nano-code-block"
+    :data-syntax-theme="syntaxTheme"
+    :class="{ 'is-wrapped': isWrapped, 'has-tabs': hasTabs }"
+  >
     <div v-if="title || lang || hasTabs || $slots.header || allowWrap || allowCopy" class="code-block-header">
       <div class="code-block-title-group">
         <slot name="header">
@@ -511,126 +522,104 @@ onUnmounted(() => {
   overflow-wrap: break-word !important;
 }
 
-/* Built-in Syntax Highlighting Tokens (highlight.js) */
+/* Built-in Syntax Highlighting Tokens backed by --hl-* CSS variables (Light mode defaults: #059669 strings, #d97706 numbers) */
 :deep(.hljs-keyword),
 :deep(.hljs-selector-tag),
 :deep(.hljs-subst),
 :deep(.hl-keyword) {
-  color: #c084fc;
+  color: var(--hl-keyword, #c084fc);
   font-weight: 600;
 }
 
 :deep(.hljs-string),
 :deep(.hljs-addition),
 :deep(.hl-string) {
-  color: var(--nano-code-hl-string, #34d399);
+  color: var(--hl-string, var(--nano-code-hl-string, #34d399));
 }
 
 :deep(.hljs-number),
 :deep(.hl-number) {
-  color: var(--nano-code-hl-number, #fbbf24);
+  color: var(--hl-number, var(--nano-code-hl-number, #fbbf24));
 }
 
 :deep(.hljs-literal),
 :deep(.hljs-boolean),
 :deep(.hl-boolean) {
-  color: #f472b6;
+  color: var(--hl-boolean, #f472b6);
   font-weight: 600;
 }
 
 :deep(.hljs-comment),
 :deep(.hljs-quote),
 :deep(.hl-comment) {
-  color: #64748b;
+  color: var(--hl-comment, #64748b);
   font-style: italic;
 }
 
 :deep(.hljs-tag),
 :deep(.hljs-name),
 :deep(.hl-tag) {
-  color: #38bdf8;
+  color: var(--hl-tag, #38bdf8);
   font-weight: 600;
 }
 
 :deep(.hljs-attr),
 :deep(.hljs-attribute),
 :deep(.hl-attr) {
-  color: #a78bfa;
+  color: var(--hl-attr, #a78bfa);
 }
 
 :deep(.hljs-title.function_),
 :deep(.hljs-function),
 :deep(.hl-function) {
-  color: #60a5fa;
+  color: var(--hl-func, #60a5fa);
 }
 
 :deep(.hljs-property),
 :deep(.hl-property) {
-  color: #38bdf8;
+  color: var(--hl-prop, #38bdf8);
 }
 
 :deep(.hljs-variable),
 :deep(.hljs-variable.language_),
 :deep(.hl-var) {
-  color: #f43f5e;
+  color: var(--hl-var, #f43f5e);
 }
 
 :deep(.hljs-selector-class),
 :deep(.hljs-selector-id),
-:deep(.hljs-symbol),
 :deep(.hl-selector) {
-  color: #e879f9;
+  color: var(--hl-attr, #e879f9);
+}
+
+:deep(.hljs-symbol) {
+  color: var(--hl-symbol, var(--hl-attr, #e879f9));
+  font-weight: 600;
+}
+
+:deep(.hljs-operator) {
+  color: var(--hl-operator, var(--hl-keyword, #818cf8));
+  font-weight: 600;
 }
 
 :deep(.hljs-punctuation),
 :deep(.hl-punct) {
-  color: #94a3b8;
+  color: var(--hl-punct, #94a3b8);
 }
 
 :deep(.hljs-built_in) {
-  color: #60a5fa;
+  color: var(--hl-builtin, #60a5fa);
   font-weight: 600;
 }
 
 :deep(.hljs-title),
 :deep(.hljs-title.class_),
 :deep(.hljs-type) {
-  color: #fbbf24;
+  color: var(--hl-type, #fbbf24);
   font-weight: 600;
 }
 
 :deep(.hljs-params) {
-  color: #e2e8f0;
-}
-
-/* Light theme high-contrast adjustments: darkened green and yellow/amber */
-:root[data-theme="light"] :deep(.hljs-string),
-html[data-theme="light"] :deep(.hljs-string),
-[data-theme="light"] :deep(.hljs-string),
-:root[data-theme="light"] :deep(.hl-string),
-[data-theme="light"] :deep(.hl-string) {
-  color: #059669;
-}
-
-:root[data-theme="light"] :deep(.hljs-number),
-html[data-theme="light"] :deep(.hljs-number),
-[data-theme="light"] :deep(.hljs-number),
-:root[data-theme="light"] :deep(.hl-number),
-[data-theme="light"] :deep(.hl-number) {
-  color: #d97706;
-}
-
-:root[data-theme="light"] :deep(.hljs-built_in),
-html[data-theme="light"] :deep(.hljs-built_in),
-[data-theme="light"] :deep(.hljs-built_in) {
-  color: #2563eb;
-}
-
-:root[data-theme="light"] :deep(.hljs-title),
-:root[data-theme="light"] :deep(.hljs-title.class_),
-:root[data-theme="light"] :deep(.hljs-type),
-html[data-theme="light"] :deep(.hljs-title.class_),
-[data-theme="light"] :deep(.hljs-title.class_) {
-  color: #b45309;
+  color: var(--hl-params, #e2e8f0);
 }
 </style>

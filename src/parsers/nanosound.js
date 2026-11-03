@@ -12,7 +12,7 @@ const nanosoundGrammar = (hljsInstance) => {
       },
       {
         className: 'attr',
-        match: /\b(?:detune|duty|q|ripple|fb|feedback|order|mix|gain|pan|seed)(?=\s*:)/,
+        match: /\b(?:detune|duty|q|ripple|fb|feedback|order|mix|gain|pan|seed|fm)(?=\s*:)/,
       },
       {
         className: 'number',

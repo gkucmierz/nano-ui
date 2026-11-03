@@ -1065,7 +1065,7 @@ td.is-empty {
 .nce-live-gutter {
   padding: 12px 0;
   min-width: 44px;
-  background: rgba(0, 0, 0, 0.15);
+  background: var(--nano-code-header-bg, rgba(0, 0, 0, 0.15));
   border-right: 1px solid var(--nano-border-card, rgba(255, 255, 255, 0.08));
   overflow: hidden;
   user-select: none;
@@ -1304,9 +1304,18 @@ td.is-empty {
 
 :deep(.hljs-selector-class),
 :deep(.hljs-selector-id),
-:deep(.hljs-symbol),
 :deep(.hl-selector) {
   color: var(--hl-attr, #e879f9);
+}
+
+:deep(.hljs-symbol) {
+  color: var(--hl-symbol, var(--hl-attr, #e879f9));
+  font-weight: 600;
+}
+
+:deep(.hljs-operator) {
+  color: var(--hl-operator, var(--hl-keyword, #818cf8));
+  font-weight: 600;
 }
 
 :deep(.hljs-punctuation),
