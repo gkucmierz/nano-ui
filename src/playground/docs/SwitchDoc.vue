@@ -1,6 +1,7 @@
 <script setup>
 import { ref, onUnmounted } from 'vue';
 import NanoSwitch from '../../components/NanoSwitch.vue';
+import NanoCheckbox from '../../components/NanoCheckbox.vue';
 import { createDocTabs } from '../docSnippets.js';
 
 const basicVal = ref(true);
@@ -216,6 +217,14 @@ const codeTabs = createDocTabs({
       <div class="switch-item">
         <span class="item-label">Disabled (Inactive)</span>
         <NanoSwitch v-model="disabledOff" :disabled="true" label="Locked Inactive Switch" />
+      </div>
+      <div class="switch-item">
+        <span class="item-label">NanoCheckbox (sm / md / lg)</span>
+        <div class="controls-row">
+          <NanoCheckbox v-model="basicVal" size="sm" label="Small" />
+          <NanoCheckbox v-model="basicVal" size="md" label="Medium" />
+          <NanoCheckbox v-model="basicVal" size="lg" label="Large" />
+        </div>
       </div>
     </div>
 

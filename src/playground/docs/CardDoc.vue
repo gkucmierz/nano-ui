@@ -2,7 +2,14 @@
 import { ref, computed } from 'vue';
 import NanoCodeBlock from '../../components/NanoCodeBlock.vue';
 import NanoSwitch from '../../components/NanoSwitch.vue';
+import NanoSortableList from '../../components/NanoSortableList.vue';
 import { t } from '../../locales.js';
+
+const sortableCards = ref([
+  { id: 'card-1', title: '1. Oscillator Stage', badge: 'OSC' },
+  { id: 'card-2', title: '2. Envelope Generator', badge: 'ENV' },
+  { id: 'card-3', title: '3. SVF Resonant Filter', badge: 'DSP' },
+]);
 
 // Interactive Sandbox State
 const selectedCardVariant = ref('default');
@@ -254,6 +261,21 @@ const cssApiDoc = `/* Nano UI Card & Panel Primitives */
     </div>
 
     <!-- CSS Reference -->
+    <h3 class="section-title">Sortable Draggable Cards (NanoSortableList)</h3>
+    <p class="desc">
+      Grab any card anywhere on its surface to reorder with a dashed target placeholder and floating translucent ghost preview.
+    </p>
+    <NanoSortableList v-model="sortableCards" item-key="id">
+      <template #default="{ item }">
+        <div class="nano-card">
+          <div class="nano-card-header">
+            <h4 class="nano-card-title">{{ item.title }}</h4>
+            <span class="nano-badge nano-badge-info">{{ item.badge }}</span>
+          </div>
+        </div>
+      </template>
+    </NanoSortableList>
+
     <h3 class="section-title">CSS Class Reference</h3>
     <NanoCodeBlock :code="cssApiDoc" lang="css" title="primitives.css Reference" />
   </div>

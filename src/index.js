@@ -38,6 +38,14 @@ import NanoTrendChart from './components/NanoTrendChart.vue';
 import NanoChannelOsd from './components/NanoChannelOsd.vue';
 import NanoNumberStepper from './components/NanoNumberStepper.vue';
 import NanoTabs from './components/NanoTabs.vue';
+import NanoCheckbox from './components/NanoCheckbox.vue';
+import NanoSortableList from './components/NanoSortableList.vue';
+import {
+  DEFAULT_INTERACTIVE_IGNORE_SELECTOR,
+  reorderArray,
+  resolveSortableSlot,
+  resolvePlaceholderBeforeIndex,
+} from './utils/sortable.js';
 import { WORLD_COUNTRIES_LITE } from './data/worldCountriesLite.js';
 import {
   DEFAULT_MAP_LAYERS,
@@ -200,6 +208,12 @@ export {
   NanoNumberStepper,
   NanoNumberStepper as NanoStepper,
   NanoTabs,
+  NanoCheckbox,
+  NanoSortableList,
+  DEFAULT_INTERACTIVE_IGNORE_SELECTOR,
+  reorderArray,
+  resolveSortableSlot,
+  resolvePlaceholderBeforeIndex,
   WORLD_COUNTRIES_LITE,
   DEFAULT_MAP_LAYERS,
   MAP_LAYERS,
@@ -351,5 +365,7 @@ export default {
     app.component(`${cp}NanoNumberStepper`, NanoNumberStepper);
     app.component(`${cp}NanoStepper`, NanoNumberStepper);
     app.component(`${cp}NanoTabs`, NanoTabs);
+    app.component(`${cp}NanoCheckbox`, NanoCheckbox);
+    app.component(`${cp}NanoSortableList`, NanoSortableList);
   },
 };
