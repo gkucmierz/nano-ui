@@ -420,6 +420,36 @@ export const createKineticTransition = (options = {}) => {
  * @param {number} [options.tension=0.35] - Spline curve tension factor
  * @returns {string} SVG path string
  */
+const computeSplineControlPoints = (p0, p1, p2, p3, tension = 0.35) => {
+  const halfTension = tension / 2;
+  let tx1 = (p2.x - p0.x) * halfTension;
+  let ty1 = (p2.y - p0.y) * halfTension;
+  let tx2 = (p3.x - p1.x) * halfTension;
+  let ty2 = (p3.y - p1.y) * halfTension;
+
+  const segDx = p2.x - p1.x;
+  if (segDx > 0) {
+    const maxHandleX = segDx * tension;
+    if (tx1 > maxHandleX && tx1 > 0) {
+      const s1 = maxHandleX / tx1;
+      tx1 *= s1;
+      ty1 *= s1;
+    }
+    if (tx2 > maxHandleX && tx2 > 0) {
+      const s2 = maxHandleX / tx2;
+      tx2 *= s2;
+      ty2 *= s2;
+    }
+  }
+
+  return {
+    cp1x: p1.x + tx1,
+    cp1y: p1.y + ty1,
+    cp2x: p2.x - tx2,
+    cp2y: p2.y - ty2,
+  };
+};
+
 export const buildSplinePath = (points, { closed = false, groundY = null, tension = 0.35 } = {}) => {
   if (!points || !points.length) return '';
   const n = points.length;
@@ -443,10 +473,7 @@ export const buildSplinePath = (points, { closed = false, groundY = null, tensio
       const p2 = points[i + 1];
       const p3 = i + 2 < n ? points[i + 2] : p2;
 
-      const cp1x = p1.x + (p2.x - p0.x) * (tension / 2);
-      const cp1y = p1.y + (p2.y - p0.y) * (tension / 2);
-      const cp2x = p2.x - (p3.x - p1.x) * (tension / 2);
-      const cp2y = p2.y - (p3.y - p1.y) * (tension / 2);
+      const { cp1x, cp1y, cp2x, cp2y } = computeSplineControlPoints(p0, p1, p2, p3, tension);
 
       d += ` C ${cp1x.toFixed(1)} ${cp1y.toFixed(1)}, ${cp2x.toFixed(1)} ${cp2y.toFixed(1)}, ${p2.x.toFixed(1)} ${p2.y.toFixed(1)}`;
     }
@@ -505,10 +532,7 @@ export const evaluateSplineY = (points, targetX, tension = 0.35) => {
   const p0 = i > 0 ? points[i - 1] : p1;
   const p3 = i + 2 < n ? points[i + 2] : p2;
 
-  const cp1x = p1.x + (p2.x - p0.x) * (tension / 2);
-  const cp1y = p1.y + (p2.y - p0.y) * (tension / 2);
-  const cp2x = p2.x - (p3.x - p1.x) * (tension / 2);
-  const cp2y = p2.y - (p3.y - p1.y) * (tension / 2);
+  const { cp1x, cp1y, cp2x, cp2y } = computeSplineControlPoints(p0, p1, p2, p3, tension);
 
   let low = 0;
   let high = 1;
@@ -538,6 +562,24 @@ export const evaluateSplineY = (points, targetX, tension = 0.35) => {
   );
 };
 
+const sampleVelocityAtX = (points, targetX) => {
+  if (!points || !points.length) return 0;
+  const n = points.length;
+  if (n === 1 || targetX <= points[0].x) return points[0].vy || 0;
+  if (targetX >= points[n - 1].x) return points[n - 1].vy || 0;
+  for (let j = 0; j < n - 1; j++) {
+    const p1 = points[j];
+    const p2 = points[j + 1];
+    if (targetX >= p1.x && targetX <= p2.x) {
+      const dx = p2.x - p1.x;
+      if (Math.abs(dx) < 0.0001) return p1.vy || 0;
+      const frac = (targetX - p1.x) / dx;
+      return (p1.vy || 0) + frac * ((p2.vy || 0) - (p1.vy || 0));
+    }
+  }
+  return points[n - 1].vy || 0;
+};
+
 /**
  * Creates a pure, headless kinetic multi-point animation controller with continuous
  * velocity chaining and curve resampling for dynamic datasets (e.g. 7d, 30d, 90d transitions).
@@ -547,6 +589,7 @@ export const evaluateSplineY = (points, targetX, tension = 0.35) => {
  *
  * @param {Object} [options]
  * @param {number} [options.duration=350] - Base duration in ms
+ * @param {number} [options.tension=0.35] - Spline tension used when resampling across X
  * @param {Function} [options.onUpdate] - Callback (currentPoints, { progress, isMoving })
  * @param {Function} [options.onSettled] - Callback (currentPoints)
  * @returns {Object} Kinetic points controller instance
@@ -554,6 +597,7 @@ export const evaluateSplineY = (points, targetX, tension = 0.35) => {
 export const createKineticPoints = (options = {}) => {
   let config = {
     duration: 350,
+    tension: 0.35,
     onUpdate: null,
     onSettled: null,
     ...options,
@@ -668,24 +712,40 @@ export const createKineticPoints = (options = {}) => {
     animDuration = Math.max(1, config.duration);
     animStart = now;
 
+    let sameXLayout = nNew === nOld;
+    if (sameXLayout) {
+      for (let i = 0; i < nNew; i++) {
+        if (Math.abs(currentPoints[i].x - newTargets[i].x) > 0.5) {
+          sameXLayout = false;
+          break;
+        }
+      }
+    }
+
+    const xMinOld = currentPoints[0].x;
+    const xMaxOld = currentPoints[nOld - 1].x;
+    const xSpanOld = xMaxOld - xMinOld;
+    const xMinNew = newTargets[0].x;
+    const xMaxNew = newTargets[nNew - 1].x;
+    const xSpanNew = xMaxNew - xMinNew;
+
     for (let i = 0; i < nNew; i++) {
       const target = newTargets[i];
       let startX, startY, startVy;
 
-      if (nNew === nOld) {
-        startX = currentPoints[i].x;
+      if (sameXLayout) {
+        startX = target.x;
         startY = currentPoints[i].y;
         startVy = currentPoints[i].vy || 0;
       } else {
-        const u = nNew > 1 ? i / (nNew - 1) : 0;
-        const idx = u * (nOld - 1);
-        const i0 = Math.floor(idx);
-        const i1 = Math.min(nOld - 1, i0 + 1);
-        const frac = idx - i0;
+        const sampleX =
+          xSpanOld > 0.0001 && xSpanNew > 0.0001
+            ? xMinOld + ((target.x - xMinNew) / xSpanNew) * xSpanOld
+            : target.x;
 
-        startX = currentPoints[i0].x + frac * (currentPoints[i1].x - currentPoints[i0].x);
-        startY = currentPoints[i0].y + frac * (currentPoints[i1].y - currentPoints[i0].y);
-        startVy = (currentPoints[i0].vy || 0) + frac * ((currentPoints[i1].vy || 0) - (currentPoints[i0].vy || 0));
+        startX = target.x;
+        startY = evaluateSplineY(currentPoints, sampleX, config.tension);
+        startVy = sampleVelocityAtX(currentPoints, sampleX);
       }
 
       const totalDeltaY = target.y - startY;
@@ -698,6 +758,7 @@ export const createKineticPoints = (options = {}) => {
       pointRecords[i] = {
         startX,
         startY,
+        startVy,
         targetX: target.x,
         targetY: target.y,
         v0Y,
@@ -714,7 +775,7 @@ export const createKineticPoints = (options = {}) => {
         ...pointRecords[i].metadata,
         x: pointRecords[i].startX,
         y: pointRecords[i].startY,
-        vy: pointRecords[i].v0Y || 0,
+        vy: pointRecords[i].startVy || 0,
       };
     }
     currentPoints = initial;

@@ -452,15 +452,7 @@ const tooltipOpacityController = createKineticTransition({
   },
 });
 
-const isAnyControllerMoving = () => {
-  if (
-    minController.isMoving() ||
-    maxController.isMoving() ||
-    tooltipXController.isMoving() ||
-    tooltipOpacityController.isMoving()
-  ) {
-    return true;
-  }
+const isAnySeriesControllerMoving = () => {
   for (const ctrl of seriesControllers.values()) {
     if (ctrl.isMoving()) return true;
   }
@@ -468,21 +460,28 @@ const isAnyControllerMoving = () => {
 };
 
 const tickKinematics = (timestamp) => {
-  minController.step(timestamp);
-  maxController.step(timestamp);
-  tooltipXController.step(timestamp);
-  tooltipOpacityController.step(timestamp);
+  const hasNativeRaf = typeof window !== 'undefined' && Boolean(window.requestAnimationFrame);
+  if (!hasNativeRaf) {
+    minController.step(timestamp);
+    maxController.step(timestamp);
+    tooltipXController.step(timestamp);
+    tooltipOpacityController.step(timestamp);
+  }
 
+  let seriesUpdated = false;
   const nextMap = { ...animatedSeriesMap.value };
   for (const [id, ctrl] of seriesControllers.entries()) {
     if (ctrl.isMoving()) {
       nextMap[id] = [...ctrl.step(timestamp)];
+      seriesUpdated = true;
     }
   }
-  animatedSeriesMap.value = nextMap;
+  if (seriesUpdated) {
+    animatedSeriesMap.value = nextMap;
+  }
 
-  if (isAnyControllerMoving()) {
-    if (typeof window !== 'undefined' && window.requestAnimationFrame) {
+  if (isAnySeriesControllerMoving()) {
+    if (hasNativeRaf) {
       rafId = window.requestAnimationFrame(tickKinematics);
     }
   } else {
@@ -492,6 +491,7 @@ const tickKinematics = (timestamp) => {
 
 const ensureAnimationLoop = () => {
   if (rafId !== null) return;
+  if (!isAnySeriesControllerMoving()) return;
   if (typeof window !== 'undefined' && window.requestAnimationFrame) {
     rafId = window.requestAnimationFrame(tickKinematics);
   } else {
@@ -525,12 +525,7 @@ const syncKineticTargets = ({ forceImmediate = false } = {}) => {
     if (!ctrl) {
       ctrl = createKineticPoints({
         duration: props.kineticDuration,
-        onUpdate: (pts) => {
-          animatedSeriesMap.value = {
-            ...animatedSeriesMap.value,
-            [s.id]: [...pts],
-          };
-        },
+        tension: props.tension,
       });
       seriesControllers.set(s.id, ctrl);
     }
@@ -783,6 +778,7 @@ const activeSpineIndex = computed(() =>
 );
 
 const activeSpineEntry = computed(() => {
+  if (hoveredSpineIndex.value === null && animatedTooltipOpacity.value <= 0.005) return null;
   const idx = activeSpineIndex.value;
   if (idx === null || idx < 0 || idx >= xSpine.value.length) return null;
   return xSpine.value[idx];
@@ -865,18 +861,58 @@ const resolvedTooltipFooter = computed(() => {
   return props.tooltipFooter || '';
 });
 
+const tooltipRef = ref(null);
 const tooltipXPercent = computed(() => (animatedTooltipX.value / props.width) * 100);
+
+const tooltipAnchorY = computed(() => {
+  const dots = activeHoverDots.value;
+  if (!dots || !dots.length) return props.padTop + plotH.value * 0.5;
+  let minY = dots[0].y;
+  for (let i = 1; i < dots.length; i++) {
+    if (dots[i].y < minY) minY = dots[i].y;
+  }
+  return minY;
+});
 
 const tooltipStyle = computed(() => {
   const xPct = tooltipXPercent.value;
-  let translateX = '-50%';
-  if (xPct < 18) translateX = '-10%';
-  else if (xPct > 82) translateX = '-90%';
+  const yPct = (tooltipAnchorY.value / props.height) * 100;
+
+  const svgW = svgRef.value?.clientWidth || props.width;
+  const tipW =
+    tooltipRef.value?.offsetWidth ||
+    (activeHoverDots.value.length > 1 ? 168 : 124);
+
+  const minLeftPct = (props.padLeft / props.width) * 100;
+  const maxRightPct = ((props.width - props.padRight) / props.width) * 100;
+  const halfTipPct = Math.min(28, ((tipW * 0.5) / Math.max(1, svgW)) * 100);
+
+  // Smooth C1-continuous edge deceleration:
+  // Centered (-50%) in the interior, gliding smoothly near the left/right plot boundaries
+  // with zero step jumps and zero overflow outside the chart grid.
+  const leftZoneEnd = minLeftPct + halfTipPct * 2;
+  const rightZoneStart = maxRightPct - halfTipPct * 2;
+
+  let effectiveXPct = xPct;
+  if (halfTipPct > 0.1 && leftZoneEnd < rightZoneStart) {
+    if (xPct < leftZoneEnd) {
+      const t = Math.max(0, Math.min(1, (leftZoneEnd - xPct) / (halfTipPct * 2)));
+      effectiveXPct = leftZoneEnd - halfTipPct * (2 * t - t * t);
+    } else if (xPct > rightZoneStart) {
+      const t = Math.max(0, Math.min(1, (xPct - rightZoneStart) / (halfTipPct * 2)));
+      effectiveXPct = rightZoneStart + halfTipPct * (2 * t - t * t);
+    }
+  } else {
+    effectiveXPct = Math.max(
+      minLeftPct + halfTipPct,
+      Math.min(maxRightPct - halfTipPct, xPct)
+    );
+  }
 
   return {
-    left: `${xPct}%`,
-    top: '8px',
-    transform: `translate(${translateX}, 0)`,
+    left: `${effectiveXPct}%`,
+    top: `${yPct}%`,
+    transform: 'translate(-50%, calc(-100% - 12px))',
     opacity: animatedTooltipOpacity.value,
     pointerEvents: 'none',
   };
@@ -1172,6 +1208,7 @@ defineExpose({
       <!-- 7. Floating Glassmorphic Kinetic Tooltip Bubble ("Chmurka") -->
       <div
         v-if="activeSpineEntry && activeHoverDots.length && animatedTooltipOpacity > 0.01"
+        ref="tooltipRef"
         class="nano-chart-tooltip"
         :class="{ 'is-multi': activeHoverDots.length > 1 }"
         :style="tooltipStyle"
@@ -1186,14 +1223,21 @@ defineExpose({
           :footer="resolvedTooltipFooter"
         >
           <div class="nano-tooltip-header">
-            <span class="nano-tooltip-title">{{ activeSpineEntry.label }}</span>
-            <span
-              v-if="activeBadge && activeBadge.text"
-              class="nano-tooltip-badge"
-              :class="{ 'is-highlight': activeBadge.highlight }"
+            <slot
+              name="tooltip-header"
+              :label="activeSpineEntry.label"
+              :badge="activeBadge"
+              :entry="activeSpineEntry"
             >
-              {{ activeBadge.text }}
-            </span>
+              <span class="nano-tooltip-title">{{ activeSpineEntry.label }}</span>
+              <span
+                v-if="activeBadge && activeBadge.text"
+                class="nano-tooltip-badge"
+                :class="{ 'is-highlight': activeBadge.highlight }"
+              >
+                {{ activeBadge.text }}
+              </span>
+            </slot>
           </div>
 
           <!-- Single-series compact layout -->
@@ -1295,47 +1339,32 @@ defineExpose({
 
 /* Vertical Highlight Bands */
 .nano-chart-band-rect {
-  fill: rgba(245, 158, 11, 0.085);
-  stroke: rgba(245, 158, 11, 0.24);
-  stroke-width: 0.75;
-  pointer-events: none;
-}
-
-[data-theme="light"] .nano-chart-band-rect {
-  fill: rgba(217, 119, 6, 0.075);
-  stroke: rgba(217, 119, 6, 0.22);
-}
-
-.nano-chart-band-divider {
-  stroke: rgba(245, 158, 11, 0.26);
+  fill: var(--nano-chart-band-fill, rgba(245, 158, 11, 0.085));
+  stroke: var(--nano-chart-band-stroke, rgba(245, 158, 11, 0.24));
   stroke-width: 0.85;
   pointer-events: none;
 }
 
-.nano-chart-band-pill {
-  fill: rgba(245, 158, 11, 0.16);
-  stroke: rgba(245, 158, 11, 0.35);
-  stroke-width: 0.75;
+.nano-chart-band-divider {
+  stroke: var(--nano-chart-band-divider, rgba(245, 158, 11, 0.28));
+  stroke-width: 0.9;
+  pointer-events: none;
 }
 
-[data-theme="light"] .nano-chart-band-pill {
-  fill: rgba(217, 119, 6, 0.13);
-  stroke: rgba(217, 119, 6, 0.32);
+.nano-chart-band-pill {
+  fill: var(--nano-chart-band-pill-fill, rgba(245, 158, 11, 0.16));
+  stroke: var(--nano-chart-band-pill-stroke, rgba(245, 158, 11, 0.35));
+  stroke-width: 0.85;
 }
 
 .nano-chart-band-label {
-  fill: #f59e0b;
+  fill: var(--nano-chart-band-label, #f59e0b);
   stroke: none;
   font-size: 8.5px;
   font-weight: 800;
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
   letter-spacing: 0.03em;
   pointer-events: none;
-}
-
-[data-theme="light"] .nano-chart-band-label {
-  fill: #b45309;
-  stroke: none;
 }
 
 .nano-chart-crosshair {

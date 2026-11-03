@@ -144,6 +144,14 @@
   --nano-code-header-border: rgba(255, 255, 255, var(--nano-alpha-subtle));
   --nano-code-hl-string: #34d399;
   --nano-code-hl-number: #fbbf24;
+
+  /* NanoTrendChart Band Tokens - Dark Theme */
+  --nano-chart-band-fill: rgba(245, 158, 11, 0.085);
+  --nano-chart-band-stroke: rgba(245, 158, 11, 0.24);
+  --nano-chart-band-divider: rgba(245, 158, 11, 0.28);
+  --nano-chart-band-pill-fill: rgba(245, 158, 11, 0.16);
+  --nano-chart-band-pill-stroke: rgba(245, 158, 11, 0.35);
+  --nano-chart-band-label: #f59e0b;
 }
 
 :root[data-theme="light"],
@@ -277,4 +285,12 @@ html[data-theme="light"] {
   --nano-code-header-border: #e2e8f0;
   --nano-code-hl-string: #059669;
   --nano-code-hl-number: #d97706;
+
+  /* NanoTrendChart Band Tokens - Light Theme */
+  --nano-chart-band-fill: rgba(217, 119, 6, 0.14);
+  --nano-chart-band-stroke: rgba(180, 83, 9, 0.42);
+  --nano-chart-band-divider: rgba(180, 83, 9, 0.48);
+  --nano-chart-band-pill-fill: rgba(245, 158, 11, 0.24);
+  --nano-chart-band-pill-stroke: rgba(180, 83, 9, 0.56);
+  --nano-chart-band-label: #92400e;
 }
