@@ -234,7 +234,9 @@
     "size": "Size Preset",
     "status": "Validation Status",
     "sec2Title": "2. Rich Option Compositions & Modal Escape Isolation",
-    "sec2Desc": "Pressing Escape while NanoSelect is open inside a NanoModal closes only the dropdown menu without accidentally dismissing the parent modal."
+    "sec2Desc": "Pressing Escape while NanoSelect is open inside a NanoModal closes only the dropdown menu without accidentally dismissing the parent modal.",
+    "sec3Title": "3. Browser Screen Simulator: parentNode Loop & Adaptive Screen Clamping (Options 2 + 3)",
+    "sec3Desc": "Four simulated browser viewports ([data-nano-viewport]) demonstrating overflow-container escape via parentNode traversal (Option 2) and 4-mode adaptive placement (bottom / top / simultaneous top+bottom overlap clamped to visible screen height — Option 3)."
   },
   "globe": {
     "title": "NanoGlobe (Orthographic 3D SVG Globe & HEALPix)",

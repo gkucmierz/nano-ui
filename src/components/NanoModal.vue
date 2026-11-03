@@ -406,6 +406,16 @@ function handleHeaderDblClick(e) {
 // Global ESC
 const onGlobalKeyDown = (e) => {
   if (isVisible.value && e.key === 'Escape') {
+    if (typeof document !== 'undefined' && modalOverlay.value) {
+      const overlays = document.querySelectorAll('.nano-modal-overlay');
+      const topOverlay = overlays.length > 0 ? overlays[overlays.length - 1] : null;
+      if (topOverlay && topOverlay !== modalOverlay.value) {
+        return;
+      }
+      if (modalOverlay.value.querySelector('.nano-select-dropdown')) {
+        return;
+      }
+    }
     e.preventDefault();
     e.stopPropagation();
     closeModal();

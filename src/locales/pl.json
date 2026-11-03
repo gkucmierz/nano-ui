@@ -234,7 +234,9 @@
     "size": "Rozmiar (Size)",
     "status": "Status Walidacji",
     "sec2Title": "2. Bogate Opcje i Izolacja Escape Wewnątrz NanoModal",
-    "sec2Desc": "Naciśnięcie klawisza Escape przy otwartej liście NanoSelect wewnątrz NanoModal zamyka wyłącznie listę rozwijaną, nie zamykając przypadkowo całego okna modalnego."
+    "sec2Desc": "Naciśnięcie klawisza Escape przy otwartej liście NanoSelect wewnątrz NanoModal zamyka wyłącznie listę rozwijaną, nie zamykając przypadkowo całego okna modalnego.",
+    "sec3Title": "3. Symulator Ekranu Przeglądarki: Pętla parentNode & Adaptacyjny Screen Clamp (Opcje 2 + 3)",
+    "sec3Desc": "Cztery sztucznie symulowane ekrany przeglądarki ([data-nano-viewport]) demonstrujące ucieczkę z kontenerów overflow poprzez pętlę parentNode (Opcja 2) oraz adaptacyjne pozycjonowanie (dół / góra / góra+dół jednocześnie z przycięciem max-height do widocznego ekranu — Opcja 3)."
   },
   "globe": {
     "title": "NanoGlobe (Ortograficzny Globus 3D SVG & HEALPix)",

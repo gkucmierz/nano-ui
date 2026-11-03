@@ -138,6 +138,11 @@ import {
   parseUnifiedDiff,
 } from './utils/git-diff.js';
 import { detectRenderedGridColumns } from './utils/grid.js';
+import {
+  findSafeSelectMount,
+  computeSelectDropdownLayout,
+  getPositionedReferenceEl,
+} from './utils/selectPositioning.js';
 import { transitions, durations, easings, transitionVariables } from './config/transitions.js';
 import './style.css';
 
@@ -265,6 +270,9 @@ export {
   middleTruncatePath,
   parseUnifiedDiff,
   detectRenderedGridColumns,
+  findSafeSelectMount,
+  computeSelectDropdownLayout,
+  getPositionedReferenceEl,
   initTheme,
   getZeroFoucScript,
   getZeroFoucStyle,

@@ -1,7 +1,12 @@
 <script setup>
-import { ref, computed, nextTick, onMounted, onUnmounted } from 'vue';
+import { ref, computed, watch, nextTick, onMounted, onUnmounted } from 'vue';
 import NanoIcon from './NanoIcon.vue';
 import { currentLang } from '../locales.js';
+import {
+  findSafeSelectMount,
+  computeSelectDropdownLayout,
+  getPositionedReferenceEl,
+} from '../utils/selectPositioning.js';
 
 const normalizeSearchText = (str) => {
   if (!str) return '';
@@ -112,6 +117,13 @@ const props = defineProps({
     type: Number,
     default: 260,
   },
+  /**
+   * Enable Smart DOM Ancestor Traversal (Option 2) & Adaptive 4-Mode Screen Clamping (Option 3)
+   */
+  smartPositioning: {
+    type: Boolean,
+    default: true,
+  },
 });
 
 const emit = defineEmits(['update:modelValue', 'change', 'open', 'close', 'search', 'clear']);
@@ -120,7 +132,21 @@ const isOpen = ref(false);
 const filterText = ref('');
 const focusedIndex = ref(0);
 const rootRef = ref(null);
+const dropdownRef = ref(null);
 const searchInputRef = ref(null);
+const mountTarget = ref(null);
+const dropdownLayout = ref({
+  placement: 'bottom',
+  optionsMaxHeight: 260,
+  top: null,
+  left: 0,
+  minWidth: null,
+  maxWidth: 360,
+  spaceBelow: 300,
+  spaceAbove: 300,
+  screenHeight: 768,
+  escapedScrollers: 0,
+});
 
 const activeLang = computed(() => props.lang || currentLang.value || 'en');
 
@@ -200,6 +226,114 @@ const filteredOptions = computed(() => {
   });
 });
 
+function updateDropdownPosition(measureActual = false) {
+  if (!isOpen.value || !rootRef.value || typeof window === 'undefined') return;
+
+  if (!props.smartPositioning) {
+    mountTarget.value = null;
+    dropdownLayout.value = {
+      placement: 'bottom',
+      optionsMaxHeight: props.maxDropdownHeight,
+      top: null,
+      left: 0,
+      minWidth: null,
+      maxWidth: 360,
+      spaceBelow: 0,
+      spaceAbove: 0,
+      screenHeight: window.innerHeight || 768,
+      escapedScrollers: 0,
+    };
+    return;
+  }
+
+  const desiredHeight =
+    (props.searchable ? 41 : 0) +
+    Math.min(props.maxDropdownHeight, Math.max(46, filteredOptions.value.length * 42 + 12));
+
+  const { mountEl, viewportEl, escapedScrollers } = findSafeSelectMount(rootRef.value, desiredHeight);
+  mountTarget.value = mountEl || null;
+
+  const triggerRect = rootRef.value.getBoundingClientRect();
+  const screenRect = viewportEl
+    ? viewportEl.getBoundingClientRect()
+    : {
+        top: 0,
+        left: 0,
+        right: window.innerWidth || 1024,
+        bottom: window.innerHeight || 768,
+      };
+
+  let mountRect = null;
+  let mountScrollLeft = 0;
+  let mountScrollTop = 0;
+
+  if (mountEl) {
+    const refEl = getPositionedReferenceEl(mountEl) || mountEl;
+    const rawRefRect = refEl.getBoundingClientRect();
+    mountRect = {
+      top: rawRefRect.top + (refEl.clientTop || 0),
+      left: rawRefRect.left + (refEl.clientLeft || 0),
+    };
+    const isDocRoot = typeof document !== 'undefined' && refEl === document.documentElement;
+    mountScrollLeft = isDocRoot ? 0 : (refEl.scrollLeft || 0);
+    mountScrollTop = isDocRoot ? 0 : (refEl.scrollTop || 0);
+  }
+
+  const actualDropdownHeight =
+    measureActual && dropdownRef.value && dropdownRef.value.offsetHeight > 0
+      ? dropdownRef.value.offsetHeight
+      : null;
+
+  const layout = computeSelectDropdownLayout({
+    triggerRect,
+    screenRect,
+    mountRect,
+    mountScrollLeft,
+    mountScrollTop,
+    searchable: props.searchable,
+    optionsCount: Math.max(1, filteredOptions.value.length),
+    maxDropdownHeight: props.maxDropdownHeight,
+    actualDropdownHeight,
+  });
+
+  dropdownLayout.value = {
+    ...layout,
+    escapedScrollers,
+  };
+}
+
+const dropdownInlineStyle = computed(() => {
+  if (!props.smartPositioning || dropdownLayout.value.top === null) {
+    return {};
+  }
+  return {
+    top: `${dropdownLayout.value.top}px`,
+    left: `${dropdownLayout.value.left}px`,
+    minWidth: dropdownLayout.value.minWidth ? `${dropdownLayout.value.minWidth}px` : undefined,
+    maxWidth: dropdownLayout.value.maxWidth ? `${dropdownLayout.value.maxWidth}px` : undefined,
+  };
+});
+
+function onWindowScrollOrResize(e) {
+  if (!isOpen.value) return;
+  if (e && e.type === 'scroll' && dropdownRef.value && dropdownRef.value.contains(e.target)) {
+    return;
+  }
+  updateDropdownPosition(true);
+}
+
+function attachViewportListeners() {
+  if (typeof window === 'undefined') return;
+  window.addEventListener('scroll', onWindowScrollOrResize, { capture: true, passive: true });
+  window.addEventListener('resize', onWindowScrollOrResize, { passive: true });
+}
+
+function detachViewportListeners() {
+  if (typeof window === 'undefined') return;
+  window.removeEventListener('scroll', onWindowScrollOrResize, { capture: true });
+  window.removeEventListener('resize', onWindowScrollOrResize);
+}
+
 function openDropdown() {
   if (props.disabled) return;
   isOpen.value = true;
@@ -207,8 +341,11 @@ function openDropdown() {
   const firstSelectedIdx = filteredOptions.value.findIndex((o) => isOptionSelected(o.value) && !o.disabled);
   const firstEnabledIdx = filteredOptions.value.findIndex((o) => !o.disabled);
   focusedIndex.value = firstSelectedIdx >= 0 ? firstSelectedIdx : Math.max(0, firstEnabledIdx);
+  updateDropdownPosition(false);
+  attachViewportListeners();
   emit('open');
   nextTick(() => {
+    updateDropdownPosition(true);
     if (props.searchable && searchInputRef.value) {
       searchInputRef.value.focus();
     }
@@ -219,6 +356,7 @@ function closeDropdown() {
   if (!isOpen.value) return;
   isOpen.value = false;
   filterText.value = '';
+  detachViewportListeners();
   emit('close');
 }
 
@@ -311,11 +449,25 @@ function onSearchInput() {
   const firstEnabled = filteredOptions.value.findIndex((o) => !o.disabled);
   focusedIndex.value = Math.max(0, firstEnabled);
   emit('search', filterText.value);
+  nextTick(() => {
+    updateDropdownPosition(true);
+  });
 }
+
+watch(
+  [() => props.options.length, () => props.maxDropdownHeight, () => props.smartPositioning],
+  () => {
+    if (isOpen.value) {
+      nextTick(() => updateDropdownPosition(true));
+    }
+  }
+);
 
 function onDocumentMouseDown(e) {
   if (!isOpen.value || !rootRef.value) return;
-  if (!rootRef.value.contains(e.target)) {
+  const insideTrigger = rootRef.value.contains(e.target);
+  const insideDropdown = dropdownRef.value && dropdownRef.value.contains(e.target);
+  if (!insideTrigger && !insideDropdown) {
     closeDropdown();
   }
 }
@@ -327,6 +479,7 @@ onMounted(() => {
 });
 
 onUnmounted(() => {
+  detachViewportListeners();
   if (typeof document !== 'undefined') {
     document.removeEventListener('mousedown', onDocumentMouseDown);
   }
@@ -338,10 +491,13 @@ defineExpose({
   toggle: toggleDropdown,
   clear: clearSelection,
   selectOption,
+  updateDropdownPosition,
   isOpen,
   filterText,
   filteredOptions,
   selectedOptionsList,
+  dropdownLayout,
+  mountTarget,
 });
 </script>
 
@@ -443,124 +599,139 @@ defineExpose({
       </div>
     </div>
 
-    <!-- Dropdown Popover -->
-    <transition name="nano-select-pop">
-      <div v-if="isOpen" class="nano-select-dropdown" role="listbox" :aria-multiselectable="multiple">
-        <!-- Search Input Bar -->
-        <div v-if="searchable" class="nano-select-search-bar">
-          <svg
-            class="nano-select-search-icon"
-            width="14"
-            height="14"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="2.2"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-          >
-            <circle cx="11" cy="11" r="8" />
-            <line x1="21" y1="21" x2="16.65" y2="16.65" />
-          </svg>
-          <input
-            ref="searchInputRef"
-            v-model="filterText"
-            type="text"
-            class="nano-select-search-input"
-            :placeholder="resolvedSearchPlaceholder"
-            @input="onSearchInput"
-            @click.stop
-          />
-          <button
-            v-if="filterText"
-            type="button"
-            class="nano-select-search-clear"
-            aria-label="Clear filter"
-            @click.stop="filterText = ''; onSearchInput()"
-          >
-            ×
-          </button>
-        </div>
-
-        <!-- Options List -->
+    <!-- Dropdown Popover (Smart Ancestor Mount + 4-Mode Viewport Clamp) -->
+    <Teleport :to="mountTarget || 'body'" :disabled="!mountTarget">
+      <transition name="nano-select-pop">
         <div
-          class="nano-select-options nano-scrollbar"
-          :style="{ maxHeight: `${maxDropdownHeight}px` }"
+          v-if="isOpen"
+          ref="dropdownRef"
+          class="nano-select-dropdown"
+          :class="[
+            `is-placement-${dropdownLayout.placement}`,
+            { 'is-teleported': Boolean(mountTarget) },
+          ]"
+          :data-placement="dropdownLayout.placement"
+          :style="dropdownInlineStyle"
+          role="listbox"
+          :aria-multiselectable="multiple"
+          @keydown="onKeydown"
         >
-          <button
-            v-for="(opt, idx) in filteredOptions"
-            :key="opt.value"
-            type="button"
-            role="option"
-            class="nano-select-option"
-            :class="{
-              'is-selected': isOptionSelected(opt.value),
-              'is-focused': idx === focusedIndex,
-              'is-disabled': opt.disabled,
-            }"
-            :disabled="opt.disabled"
-            :aria-selected="isOptionSelected(opt.value)"
-            @mouseenter="!opt.disabled && (focusedIndex = idx)"
-            @click.stop="selectOption(opt)"
-          >
-            <slot
-              name="option"
-              :option="opt"
-              :selected="isOptionSelected(opt.value)"
-              :focused="idx === focusedIndex"
+          <!-- Search Input Bar -->
+          <div v-if="searchable" class="nano-select-search-bar">
+            <svg
+              class="nano-select-search-icon"
+              width="14"
+              height="14"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2.2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
             >
-              <span
-                class="nano-select-check"
-                :class="{ active: isOptionSelected(opt.value) }"
+              <circle cx="11" cy="11" r="8" />
+              <line x1="21" y1="21" x2="16.65" y2="16.65" />
+            </svg>
+            <input
+              ref="searchInputRef"
+              v-model="filterText"
+              type="text"
+              class="nano-select-search-input"
+              :placeholder="resolvedSearchPlaceholder"
+              @input="onSearchInput"
+              @click.stop
+            />
+            <button
+              v-if="filterText"
+              type="button"
+              class="nano-select-search-clear"
+              aria-label="Clear filter"
+              @click.stop="filterText = ''; onSearchInput()"
+            >
+              ×
+            </button>
+          </div>
+
+          <!-- Options List -->
+          <div
+            class="nano-select-options nano-scrollbar"
+            :style="{ maxHeight: `${dropdownLayout.optionsMaxHeight || maxDropdownHeight}px` }"
+          >
+            <button
+              v-for="(opt, idx) in filteredOptions"
+              :key="opt.value"
+              type="button"
+              role="option"
+              class="nano-select-option"
+              :class="{
+                'is-selected': isOptionSelected(opt.value),
+                'is-focused': idx === focusedIndex,
+                'is-disabled': opt.disabled,
+              }"
+              :disabled="opt.disabled"
+              :aria-selected="isOptionSelected(opt.value)"
+              @mouseenter="!opt.disabled && (focusedIndex = idx)"
+              @click.stop="selectOption(opt)"
+            >
+              <slot
+                name="option"
+                :option="opt"
+                :selected="isOptionSelected(opt.value)"
+                :focused="idx === focusedIndex"
               >
-                <svg
-                  v-if="isOptionSelected(opt.value)"
-                  width="12"
-                  height="12"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  stroke-width="3"
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
+                <span
+                  class="nano-select-check"
+                  :class="{ active: isOptionSelected(opt.value) }"
                 >
-                  <polyline points="20 6 9 17 4 12" />
-                </svg>
-              </span>
-
-              <span
-                v-if="opt.color"
-                class="nano-select-dot"
-                :style="{ background: opt.color }"
-              />
-
-              <NanoIcon
-                v-if="opt.icon"
-                :name="opt.icon"
-                :size="15"
-                class="nano-select-opt-icon"
-              />
-
-              <div class="nano-select-opt-body">
-                <div class="nano-select-opt-row">
-                  <span class="nano-select-opt-label">{{ opt.resolvedLabel }}</span>
-                  <span v-if="opt.badge" class="nano-select-badge">{{ opt.badge }}</span>
-                </div>
-                <span v-if="opt.description" class="nano-select-opt-desc">
-                  {{ opt.description }}
+                  <svg
+                    v-if="isOptionSelected(opt.value)"
+                    width="12"
+                    height="12"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="3"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  >
+                    <polyline points="20 6 9 17 4 12" />
+                  </svg>
                 </span>
-              </div>
-            </slot>
-          </button>
 
-          <div v-if="filteredOptions.length === 0" class="nano-select-empty">
-            <slot name="empty" :query="filterText">
-              {{ resolvedEmptyText }}
-            </slot>
+                <span
+                  v-if="opt.color"
+                  class="nano-select-dot"
+                  :style="{ background: opt.color }"
+                />
+
+                <NanoIcon
+                  v-if="opt.icon"
+                  :name="opt.icon"
+                  :size="15"
+                  class="nano-select-opt-icon"
+                />
+
+                <div class="nano-select-opt-body">
+                  <div class="nano-select-opt-row">
+                    <span class="nano-select-opt-label">{{ opt.resolvedLabel }}</span>
+                    <span v-if="opt.badge" class="nano-select-badge">{{ opt.badge }}</span>
+                  </div>
+                  <span v-if="opt.description" class="nano-select-opt-desc">
+                    {{ opt.description }}
+                  </span>
+                </div>
+              </slot>
+            </button>
+
+            <div v-if="filteredOptions.length === 0" class="nano-select-empty">
+              <slot name="empty" :query="filterText">
+                {{ resolvedEmptyText }}
+              </slot>
+            </div>
           </div>
         </div>
-      </div>
-    </transition>
+      </transition>
+    </Teleport>
   </div>
 </template>
 
@@ -735,8 +906,20 @@ defineExpose({
   background: var(--nano-bg-sidebar, #18181b);
   border: 1px solid var(--nano-accent-primary, #6366f1);
   border-radius: var(--nano-radius-md, 10px);
-  box-shadow: 0 14px 34px rgba(0, 0, 0, 0.36);
+  box-shadow: 0 14px 34px rgba(0, 0, 0, 0.42);
   overflow: hidden;
+  box-sizing: border-box;
+  user-select: none;
+  -webkit-user-select: none;
+  font-family: var(--nano-font-sans, -apple-system, BlinkMacSystemFont, sans-serif);
+}
+
+.nano-select-dropdown.is-teleported {
+  z-index: 160;
+}
+
+.nano-select-dropdown.is-placement-overlap {
+  box-shadow: 0 18px 44px rgba(0, 0, 0, 0.56), 0 0 0 1px color-mix(in srgb, var(--nano-accent-primary, #6366f1) 45%, transparent);
 }
 
 .nano-select-search-bar {
