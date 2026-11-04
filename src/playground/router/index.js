@@ -29,6 +29,7 @@ import MaskedPinDoc from '../docs/MaskedPinDoc.vue';
 import TrendChartDoc from '../docs/TrendChartDoc.vue';
 import ChannelOsdDoc from '../docs/ChannelOsdDoc.vue';
 import NumberStepperDoc from '../docs/NumberStepperDoc.vue';
+import DatePickerDoc from '../docs/DatePickerDoc.vue';
 import TabsDoc from '../docs/TabsDoc.vue';
 import SortableDoc from '../docs/SortableDoc.vue';
 import KineticAnimationsDoc from '../docs/KineticAnimationsDoc.vue';
@@ -358,6 +359,17 @@ export const routes = [
       componentName: 'NanoNumberStepper',
       type: 'component',
       description: 'Dual-variant numeric stepper control: right-side 50%/50% stacked Up/Down chevrons and glued Left/Right (- / +) buttons with hold-to-repeat.',
+    },
+  },
+  {
+    path: '/docs/date-picker',
+    name: 'DatePicker',
+    component: DatePickerDoc,
+    meta: {
+      title: 'NanoDatePicker (ISO 8601 Calendar) | Nano UI',
+      componentName: 'NanoDatePicker',
+      type: 'component',
+      description: 'ISO 8601 (YYYY-MM-DD) calendar popover picker with Monday-first 42-cell grid, quick presets, and NanoSecretPipe Zero-Cache Uint8Array tunnel.',
     },
   },
   {

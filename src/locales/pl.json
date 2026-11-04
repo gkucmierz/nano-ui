@@ -43,6 +43,7 @@
     "maskedInput": "Maskowane Pola & PIN",
     "channelOsd": "Ekran HUD (Channel OSD)",
     "numberStepper": "Nano Number Stepper",
+    "datePicker": "Kalendarz (NanoDatePicker)",
     "tabs": "Nano Tabs (Dokowane & Segmenty)",
     "ripple": "Dyrektywa v-ripple",
     "tooltip": "Dyrektywa v-tooltip"

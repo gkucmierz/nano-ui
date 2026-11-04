@@ -137,6 +137,16 @@ export const PLAYGROUND_NAV_ITEMS = [
     keywords: 'stepper number licznik plus minus increment decrement stacked split input',
   },
   {
+    id: '/docs/date-picker',
+    to: '/docs/date-picker',
+    sectionKey: 'nav.formControls',
+    navKey: 'nav.datePicker',
+    docFile: 'DatePickerDoc.vue',
+    localeKeys: [],
+    componentTag: 'NanoDatePicker',
+    keywords: 'calendar kalendarz date picker data iso 8601 yyyy-mm-dd NanoCalendar NanoSecretPipe password tunnel',
+  },
+  {
     id: '/docs/masked-input',
     to: '/docs/masked-input',
     sectionKey: 'nav.formControls',

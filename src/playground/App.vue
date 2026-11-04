@@ -373,6 +373,18 @@ onUnmounted(() => {
               <span v-if="searchQuery.trim()" class="nav-match-tag">{{ getComponentTag('/docs/number-stepper') }}</span>
             </span>
           </router-link>
+          <router-link v-show="isRouteVisible('/docs/date-picker')" to="/docs/date-picker" class="nav-link" :class="{ 'kbd-selected': isKeyboardSelected('/docs/date-picker') }" active-class="active" v-tooltip="isNarrow ? t('nav.datePicker') : undefined">
+            <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
+              <line x1="16" y1="2" x2="16" y2="6"/>
+              <line x1="8" y1="2" x2="8" y2="6"/>
+              <line x1="3" y1="10" x2="21" y2="10"/>
+            </svg>
+            <span class="nav-label-group">
+              <span class="nav-label">{{ t('nav.datePicker') }}</span>
+              <span v-if="searchQuery.trim()" class="nav-match-tag">{{ getComponentTag('/docs/date-picker') }}</span>
+            </span>
+          </router-link>
           <router-link v-show="isRouteVisible('/docs/masked-input')" to="/docs/masked-input" class="nav-link" :class="{ 'kbd-selected': isKeyboardSelected('/docs/masked-input') }" active-class="active" v-tooltip="isNarrow ? t('nav.maskedInput') : undefined">
             <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <rect x="3" y="6" width="18" height="12" rx="2"/>
