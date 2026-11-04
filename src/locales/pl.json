@@ -25,7 +25,8 @@
     "kineticEngine": "Silnik Kinematyki C¹",
     "trendChart": "NanoTrendChart & Pasma",
     "mutatingHeader": "Mutating Header",
-    "switch": "Nano Switch",
+    "switch": "Nano Switch & Checkbox",
+    "sortable": "Nano Sortable (Drag & Drop)",
     "slider": "Nano Slider",
     "modal": "Nano Modal",
     "icons": "Ikony (NanoIcon)",
@@ -253,8 +254,13 @@
     "healpix": "Siatka Równopolowa HEALPix",
     "healpixLabels": "Indeksy Komórek HEALPix",
     "healpixOrder": "Rząd HEALPix (Nside)",
+    "healpixHighlight": "Oznacz Komórkę HEALPix",
+    "healpixCellIndex": "Indeks Komórki HEALPix",
     "atmosphere": "Aureola Atmosfery",
-    "autoRotate": "Auto-Rotacja"
+    "atmosphereRing": "Pierścień",
+    "atmosphereGradient": "Gradient (100% → 0%)",
+    "autoRotate": "Auto-Rotacja",
+    "autoRotateTurns": "Prędkość (turns/s)"
   },
   "colorPicker": {
     "title": "NanoColorPickerOklch & Kontrast Perceptualny",

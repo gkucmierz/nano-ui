@@ -486,15 +486,15 @@ const networkData = [
       <!-- Column 2: 3D & Visual Settings -->
       <div class="demo-section control-card">
         <h4>2. 3D & Visual Settings</h4>
-        <div class="switch-row" style="margin-top: 0.5rem;">
+        <label class="switch-row" style="margin-top: 0.5rem;">
           <span class="switch-label">Show Labels & Leader Lines</span>
           <NanoSwitch v-model="showLabels" size="compact" />
-        </div>
+        </label>
 
-        <div class="switch-row" style="margin-top: 10px;">
+        <label class="switch-row" style="margin-top: 10px;">
           <span class="switch-label">Show Center Value Text</span>
           <NanoSwitch v-model="showCenterText" size="compact" />
-        </div>
+        </label>
 
         <div class="slider-row" :style="!showCenterText || !is3D ? 'opacity: 0.35; pointer-events: none;' : ''">
           <span class="slider-label">Center Text Z (Depth): {{ centerTextZ === 'auto' ? `Auto (${autoZValue.toFixed(2)})` : (centerTextZ === 0 ? 'Top (0.0)' : centerTextZ === 0.5 ? 'Center (0.5)' : centerTextZ === 1 ? 'Bottom (1.0)' : Number(centerTextZ).toFixed(2)) }}</span>
@@ -539,15 +539,15 @@ const networkData = [
           </div>
         </div>
 
-        <div class="switch-row" style="margin-top: 10px;">
+        <label class="switch-row" style="margin-top: 10px;">
           <span class="switch-label">3D Render Mode</span>
           <NanoSwitch v-model="is3D" size="compact" />
-        </div>
+        </label>
 
-        <div class="switch-row" style="margin-top: 10px;">
+        <label class="switch-row" style="margin-top: 10px;">
           <span class="switch-label">Selectable (Click to lock)</span>
           <NanoSwitch v-model="selectable" size="compact" />
-        </div>
+        </label>
 
         <div class="slider-row" style="margin-top: 10px;">
           <span class="slider-label">Aspect Ratio: {{ selectedAspectRatio }}</span>
@@ -635,10 +635,10 @@ const networkData = [
       <div class="demo-section control-card">
         <h4>3. Rotation & Kinetic MSP</h4>
         
-        <div class="switch-row" style="margin-top: 0.5rem; margin-bottom: 8px;">
+        <label class="switch-row" style="margin-top: 0.5rem; margin-bottom: 8px;">
           <span class="switch-label">Auto-Rotate (Column Balance)</span>
           <NanoSwitch v-model="autoRotate" size="compact" />
-        </div>
+        </label>
 
         <div 
           class="rotator-control-card" 
@@ -680,10 +680,10 @@ const networkData = [
         </div>
 
         <h4 style="margin-top: 1.25rem;">4. Value Aggregation</h4>
-        <div class="switch-row" style="margin-top: 0.5rem;">
+        <label class="switch-row" style="margin-top: 0.5rem;">
           <span class="switch-label">Aggregate into "Other"</span>
           <NanoSwitch v-model="aggregateOthers" size="compact" />
-        </div>
+        </label>
 
         <div class="slider-row" :style="!aggregateOthers ? 'opacity: 0.4; pointer-events: none;' : ''">
           <span class="slider-label">Others Threshold: {{ (othersThreshold * 100).toFixed(1) }}%</span>
@@ -773,10 +773,10 @@ const networkData = [
 
             <div class="showcase-controls-panel">
               <h4>Isolated Options</h4>
-              <div class="switch-row" style="margin-top: 10px;">
+              <label class="switch-row" style="margin-top: 10px;">
                 <span class="switch-label">autoRotate</span>
                 <NanoSwitch v-model="autoRotateDemo" size="compact" />
-              </div>
+              </label>
 
               <div class="slider-row" :style="autoRotateDemo ? 'opacity: 0.35; pointer-events: none;' : ''">
                 <span class="slider-label">Manual Rotation: {{ Math.round(autoRotateDemoAngle) }}°</span>
@@ -833,15 +833,15 @@ const networkData = [
 
             <div class="showcase-controls-panel">
               <h4>Isolated Options</h4>
-              <div class="switch-row" style="margin-top: 10px;">
+              <label class="switch-row" style="margin-top: 10px;">
                 <span class="switch-label">aggregateOthers</span>
                 <NanoSwitch v-model="thresholdDemoAggregate" size="compact" />
-              </div>
+              </label>
 
-              <div class="switch-row" style="margin-top: 10px;">
+              <label class="switch-row" style="margin-top: 10px;">
                 <span class="switch-label">autoRotate</span>
                 <NanoSwitch v-model="thresholdDemoAutoRotate" size="compact" />
-              </div>
+              </label>
 
               <div class="slider-row" :style="!thresholdDemoAggregate ? 'opacity: 0.35; pointer-events: none;' : ''">
                 <span class="slider-label">othersThreshold: {{ (thresholdDemoThreshold * 100).toFixed(1) }}%</span>
@@ -1442,6 +1442,8 @@ h4 { margin: 0 0 0.5rem 0; color: var(--nano-text-secondary); font-size: 0.9rem;
   justify-content: space-between;
   gap: 12px;
   margin-top: 10px;
+  cursor: pointer;
+  user-select: none;
 }
 
 .switch-label {

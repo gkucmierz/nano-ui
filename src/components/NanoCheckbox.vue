@@ -1,9 +1,10 @@
 <script setup>
 import { computed } from 'vue';
+import { resolveNanoColor } from '../utils/colors.js';
 
 const props = defineProps({
   modelValue: {
-    type: Boolean,
+    type: [Boolean, null],
     default: false,
   },
   indeterminate: {
@@ -20,7 +21,7 @@ const props = defineProps({
   },
   color: {
     type: String,
-    default: '#0284c7',
+    default: 'primary', // SSoT preset ('primary' | 'cyan' | 'purple' | 'emerald' | 'danger' | 'gold' | ...) or custom CSS color
   },
   label: {
     type: String,
@@ -28,15 +29,47 @@ const props = defineProps({
   },
 });
 
-const emit = defineEmits(['update:modelValue', 'change']);
+const emit = defineEmits(['update:modelValue', 'update:indeterminate', 'change']);
 
-const isChecked = computed(() => Boolean(props.modelValue));
+const CHECKBOX_FILL_PRESETS = Object.freeze({
+  primary: '#0284c7',
+  cyan: '#0284c7',
+  active: '#0284c7',
+  info: '#0284c7',
+  indigo: '#4f46e5',
+  purple: '#7c3aed',
+  emerald: '#059669',
+  success: '#16a34a',
+  danger: '#dc2626',
+  rose: '#e11d48',
+  gold: '#d97706',
+  amber: '#d97706',
+  orange: '#ea580c',
+  warn: '#ca8a04',
+});
 
-const toggle = () => {
+const resolvedColor = computed(() => {
+  const key = typeof props.color === 'string' ? props.color.trim() : '';
+  if (key && CHECKBOX_FILL_PRESETS[key]) {
+    return CHECKBOX_FILL_PRESETS[key];
+  }
+  return resolveNanoColor(props.color, 'primary');
+});
+
+const isIndeterminate = computed(() => props.indeterminate || props.modelValue === null);
+const isChecked = computed(() => !isIndeterminate.value && Boolean(props.modelValue));
+
+const toggle = (event) => {
   if (props.disabled) return;
-  const next = !props.modelValue;
-  emit('update:modelValue', next);
-  emit('change', next);
+  if (isIndeterminate.value) {
+    emit('update:indeterminate', false);
+    emit('update:modelValue', true);
+    emit('change', true, event);
+  } else {
+    const next = !isChecked.value;
+    emit('update:modelValue', next);
+    emit('change', next, event);
+  }
 };
 </script>
 
@@ -47,22 +80,22 @@ const toggle = () => {
       `nano-checkbox--${size}`,
       {
         'is-checked': isChecked,
-        'is-indeterminate': indeterminate,
+        'is-indeterminate': isIndeterminate,
         'is-disabled': disabled,
       },
     ]"
-    :style="{ '--nano-checkbox-color': color }"
+    :style="{ '--nano-checkbox-color': resolvedColor }"
     data-no-drag
     @mousedown.stop
+    @click.stop.prevent="toggle"
   >
     <button
       type="button"
       role="checkbox"
       class="nano-checkbox-box"
-      :aria-checked="indeterminate ? 'mixed' : isChecked ? 'true' : 'false'"
+      :aria-checked="isIndeterminate ? 'mixed' : isChecked ? 'true' : 'false'"
       :aria-label="label || undefined"
       :disabled="disabled"
-      @click.stop="toggle"
       @keydown.space.prevent="toggle"
       @keydown.enter.prevent="toggle"
     >
@@ -70,10 +103,10 @@ const toggle = () => {
         class="nano-checkbox-svg"
         viewBox="0 0 12 12"
         fill="none"
-         aria-hidden="true"
+        aria-hidden="true"
       >
         <line
-          v-if="indeterminate"
+          v-if="isIndeterminate"
           x1="2.5"
           y1="6"
           x2="9.5"
@@ -92,7 +125,7 @@ const toggle = () => {
         />
       </svg>
     </button>
-    <span v-if="label || $slots.default" class="nano-checkbox-label" @click.stop="toggle">
+    <span v-if="label || $slots.default" class="nano-checkbox-label">
       <slot>{{ label }}</slot>
     </span>
   </label>
@@ -106,9 +139,14 @@ const toggle = () => {
   cursor: pointer;
   user-select: none;
   -webkit-user-select: none;
-  color: var(--text-color, #e2e8f0);
+  color: var(--nano-text-main, var(--text-color, #e2e8f0));
   font-size: 12px;
   line-height: 1;
+}
+
+[data-theme="light"] .nano-checkbox,
+.light .nano-checkbox {
+  color: var(--nano-text-main, #0f172a);
 }
 
 .nano-checkbox.is-disabled {
@@ -139,6 +177,7 @@ const toggle = () => {
     box-shadow 0.14s ease;
 }
 
+[data-theme="light"] .nano-checkbox-box,
 .light .nano-checkbox-box {
   background: #ffffff;
   border-color: #94a3b8;

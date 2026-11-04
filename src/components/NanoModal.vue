@@ -429,19 +429,27 @@ watch(isVisible, async (newVal) => {
     // Restore saved geometry from localStorage (if storageKey provided) or reset to centered default
     restoreGeometry();
 
-    document.body.style.overflow = 'hidden';
-    window.addEventListener('keydown', onGlobalKeyDown, { capture: true });
+    if (typeof document !== 'undefined') {
+      document.body.style.overflow = 'hidden';
+    }
+    if (typeof window !== 'undefined') {
+      window.addEventListener('keydown', onGlobalKeyDown, { capture: true });
+    }
     await nextTick();
     if (modalOverlay.value) {
       modalOverlay.value.focus();
     }
   } else {
-    document.body.style.overflow = '';
-    window.removeEventListener('keydown', onGlobalKeyDown, { capture: true });
+    if (typeof document !== 'undefined') {
+      document.body.style.overflow = '';
+    }
+    if (typeof window !== 'undefined') {
+      window.removeEventListener('keydown', onGlobalKeyDown, { capture: true });
+    }
     stopDrag();
     stopResize();
   }
-});
+}, { immediate: true });
 
 onUnmounted(() => {
   document.body.style.overflow = '';

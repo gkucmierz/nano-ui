@@ -240,20 +240,20 @@ const cssApiDoc = `/* Nano UI Data Table Primitives */
           </div>
         </div>
 
-        <div class="control-group toggle-row">
-          <label class="control-label">Striped Rows</label>
+        <label class="control-group toggle-row">
+          <span class="control-label">Striped Rows</span>
           <NanoSwitch v-model="isStriped" />
-        </div>
+        </label>
 
-        <div class="control-group toggle-row">
-          <label class="control-label">Clickable Rows</label>
+        <label class="control-group toggle-row">
+          <span class="control-label">Clickable Rows</span>
           <NanoSwitch v-model="isInteractive" />
-        </div>
+        </label>
 
-        <div class="control-group toggle-row">
-          <label class="control-label">Empty State Demo</label>
+        <label class="control-group toggle-row">
+          <span class="control-label">Empty State Demo</span>
           <NanoSwitch v-model="isEmpty" />
-        </div>
+        </label>
       </div>
     </div>
 
@@ -429,6 +429,8 @@ h2 {
   align-items: center;
   justify-content: space-between;
   padding-top: 0.25rem;
+  cursor: pointer;
+  user-select: none;
 }
 
 .control-label {

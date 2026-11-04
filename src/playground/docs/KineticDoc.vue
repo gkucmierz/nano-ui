@@ -689,7 +689,7 @@ onUnmounted(() => {
         </div>
 
         <!-- Shortest-Path Modular Switch -->
-        <div class="control-group switch-group">
+        <label class="control-group switch-group" style="cursor: pointer; user-select: none;">
           <div class="switch-meta">
             <span class="switch-title">Modular Shortest-Path</span>
             <span class="switch-desc">
@@ -697,7 +697,7 @@ onUnmounted(() => {
             </span>
           </div>
           <NanoSwitch v-model="isShortestPath" size="compact" color="cyan" />
-        </div>
+        </label>
 
         <!-- Inertia Reversal Threshold -->
         <div class="control-group" v-if="isShortestPath">

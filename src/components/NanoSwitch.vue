@@ -1,5 +1,6 @@
 <script setup>
 import { ref, computed, watch } from 'vue';
+import { resolveNanoColor } from '../utils/colors.js';
 
 const props = defineProps({
   modelValue: {
@@ -16,8 +17,8 @@ const props = defineProps({
   },
   size: {
     type: String,
-    default: 'default', // 'default' (44x24) | 'compact' (38x20) | 'mini' (30x16)
-    validator: (v) => ['default', 'compact', 'mini'].includes(v)
+    default: 'default', // 'default'/'md'/'lg' (44x24) | 'compact'/'sm' (38x20) | 'mini'/'xs' (30x16)
+    validator: (v) => ['default', 'compact', 'mini', 'lg', 'md', 'sm', 'xs'].includes(v)
   },
   color: {
     type: String,
@@ -43,6 +44,16 @@ const inputRef = ref(null);
 
 const isIndeterminate = computed(() => props.indeterminate || props.modelValue === null);
 const isChecked = computed(() => !isIndeterminate.value && Boolean(props.modelValue));
+const normalizedSize = computed(() => {
+  if (props.size === 'sm' || props.size === 'compact') return 'compact';
+  if (props.size === 'xs' || props.size === 'mini') return 'mini';
+  return 'default';
+});
+const resolvedSwitchColor = computed(() => {
+  const c = (props.color || 'primary').trim();
+  if (c === 'primary' || c === 'cyan') return undefined;
+  return resolveNanoColor(c, 'cyan');
+});
 
 watch(isIndeterminate, (val) => {
   if (inputRef.value) {
@@ -68,7 +79,7 @@ const toggle = (event) => {
   <label
     class="nano-switch"
     :class="[
-      `size-${size}`,
+      `size-${normalizedSize}`,
       `color-${color}`,
       {
         'is-checked': isChecked,
@@ -76,6 +87,7 @@ const toggle = (event) => {
         'is-disabled': disabled
       }
     ]"
+    :style="resolvedSwitchColor ? { '--nano-switch-accent': resolvedSwitchColor } : undefined"
     :for="id || undefined"
   >
     <input
@@ -244,49 +256,20 @@ const toggle = (event) => {
   transform: translateX(4px);
 }
 
-/* --- Color Variants --- */
+/* --- Color Variants (SSoT via --nano-switch-accent / resolveNanoColor) --- */
+.nano-switch {
+  --nano-switch-color: var(--nano-switch-accent, var(--nano-switch-active-knob, #00f2fe));
+  --nano-switch-color-bg: color-mix(in srgb, var(--nano-switch-color) 20%, transparent);
+  --nano-switch-color-border: color-mix(in srgb, var(--nano-switch-color) 60%, transparent);
+  --nano-switch-color-shadow: color-mix(in srgb, var(--nano-switch-color) 30%, transparent);
+}
+
 .color-primary,
 .color-cyan {
   --nano-switch-color: var(--nano-switch-active-knob, #00f2fe);
   --nano-switch-color-bg: var(--nano-switch-active-bg, rgba(0, 242, 254, 0.2));
   --nano-switch-color-border: var(--nano-switch-active-border, rgba(0, 242, 254, 0.6));
   --nano-switch-color-shadow: var(--nano-switch-active-shadow, rgba(0, 242, 254, 0.3));
-}
-
-.color-purple {
-  --nano-switch-color: #a855f7;
-  --nano-switch-color-bg: color-mix(in srgb, #a855f7 20%, transparent);
-  --nano-switch-color-border: color-mix(in srgb, #a855f7 60%, transparent);
-  --nano-switch-color-shadow: color-mix(in srgb, #a855f7 30%, transparent);
-}
-
-.color-emerald {
-  --nano-switch-color: #10b981;
-  --nano-switch-color-bg: color-mix(in srgb, #10b981 20%, transparent);
-  --nano-switch-color-border: color-mix(in srgb, #10b981 60%, transparent);
-  --nano-switch-color-shadow: color-mix(in srgb, #10b981 30%, transparent);
-}
-
-.color-orange,
-.color-amber {
-  --nano-switch-color: #f97316;
-  --nano-switch-color-bg: color-mix(in srgb, #f97316 20%, transparent);
-  --nano-switch-color-border: color-mix(in srgb, #f97316 60%, transparent);
-  --nano-switch-color-shadow: color-mix(in srgb, #f97316 30%, transparent);
-}
-
-.color-danger {
-  --nano-switch-color: #ef4444;
-  --nano-switch-color-bg: color-mix(in srgb, #ef4444 20%, transparent);
-  --nano-switch-color-border: color-mix(in srgb, #ef4444 60%, transparent);
-  --nano-switch-color-shadow: color-mix(in srgb, #ef4444 30%, transparent);
-}
-
-.color-gold {
-  --nano-switch-color: #c89b3c;
-  --nano-switch-color-bg: color-mix(in srgb, #c89b3c 20%, transparent);
-  --nano-switch-color-border: color-mix(in srgb, #c89b3c 60%, transparent);
-  --nano-switch-color-shadow: color-mix(in srgb, #c89b3c 30%, transparent);
 }
 
 /* --- Checked Active Styles --- */

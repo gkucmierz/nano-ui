@@ -1,10 +1,84 @@
-import { normalizeAngle } from './math.js';
+import { clamp, normalizeAngle } from './math.js';
 
 const toStringTag = (val) => Object.prototype.toString.call(val);
 const isString = (val) => toStringTag(val) === '[object String]';
 const isObject = (val) => val !== null && toStringTag(val) === '[object Object]';
 
-const clamp = (val, min, max) => Math.min(max, Math.max(min, val));
+/**
+ * Unified SSoT lookup table mapping Nano UI semantic color preset names
+ * to theme-aware CSS custom properties defined in `assets/colors.css`.
+ */
+export const NANO_COLOR_PRESETS = Object.freeze({
+  primary: 'var(--nano-preset-primary, #0284c7)',
+  indigo: 'var(--nano-preset-indigo, #6366f1)',
+  cyan: 'var(--nano-preset-cyan, #00f2fe)',
+  active: 'var(--nano-preset-active, #00f2fe)',
+  info: 'var(--nano-preset-info, #38bdf8)',
+  purple: 'var(--nano-preset-purple, #a855f7)',
+  emerald: 'var(--nano-preset-emerald, #10b981)',
+  success: 'var(--nano-preset-success, #16a34a)',
+  danger: 'var(--nano-preset-danger, #ef4444)',
+  rose: 'var(--nano-preset-rose, #f43f5e)',
+  gold: 'var(--nano-preset-gold, #d97706)',
+  amber: 'var(--nano-preset-amber, #f59e0b)',
+  orange: 'var(--nano-preset-orange, #f97316)',
+  warn: 'var(--nano-preset-warn, #facc15)',
+});
+
+/**
+ * Curated list of distinct Nano UI accent preset names for deterministic cycling (`port % NANO_ACCENT_PRESETS.length`).
+ */
+export const NANO_ACCENT_PRESETS = Object.freeze([
+  'cyan',
+  'emerald',
+  'purple',
+  'gold',
+  'indigo',
+  'rose',
+  'orange',
+  'primary',
+  'amber',
+  'danger',
+]);
+
+/**
+ * Deterministically maps an integer port (e.g. from `@gkucmierz/dport`) to a Nano UI color preset name
+ * via `Math.abs(port) % palette.length`, keeping UI controls strictly within the Nano UI palette.
+ *
+ * @param {number} port - Integer port number (or hash integer)
+ * @param {ReadonlyArray<string>} [palette=NANO_ACCENT_PRESETS] - Allowed Nano UI preset names
+ * @returns {string} Nano UI preset name
+ */
+export const pickNanoPresetByPort = (port, palette = NANO_ACCENT_PRESETS) => {
+  const list = Array.isArray(palette) && palette.length > 0 ? palette : NANO_ACCENT_PRESETS;
+  const n = Math.trunc(Number(port));
+  if (!Number.isFinite(n)) return list[0];
+  const idx = ((Math.abs(n) % list.length) + list.length) % list.length;
+  return list[idx];
+};
+
+/**
+ * Checks whether a given color value is a named Nano UI color preset.
+ *
+ * @param {string} color
+ * @returns {boolean}
+ */
+export const isNanoColorPreset = (color) =>
+  isString(color) && Object.prototype.hasOwnProperty.call(NANO_COLOR_PRESETS, color.trim());
+
+/**
+ * Resolves a named Nano UI color preset (e.g. 'primary', 'cyan', 'purple', 'emerald', 'danger', 'gold')
+ * to its theme-aware CSS variable, or passes through any custom CSS color string (hex, rgb, oklch, var).
+ *
+ * @param {string} color - Preset name or custom CSS color
+ * @param {string} [fallback='primary'] - Fallback preset or CSS color when `color` is empty
+ * @returns {string}
+ */
+export const resolveNanoColor = (color, fallback = 'primary') => {
+  const key = isString(color) ? color.trim() : '';
+  if (!key) return NANO_COLOR_PRESETS[fallback] || fallback;
+  return NANO_COLOR_PRESETS[key] || key;
+};
 
 /**
  * Converts a single sRGB channel in [0, 1] to linear-light sRGB.

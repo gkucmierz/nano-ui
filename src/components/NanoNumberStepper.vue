@@ -114,6 +114,7 @@
 
 <script setup>
 import { ref, computed, onBeforeUnmount } from 'vue'
+import { clamp, countStepDecimals } from '../utils/math.js'
 
 const props = defineProps({
   modelValue: {
@@ -212,19 +213,12 @@ const isFocused = ref(false)
 let holdTimeout = null
 let holdInterval = null
 
-const stepDecimals = computed(() => {
-  const s = Number(props.step)
-  if (!Number.isFinite(s) || s <= 0) return 0
-  const str = String(s)
-  if (str.includes('e-')) return parseInt(str.split('e-')[1], 10) || 0
-  const dot = str.indexOf('.')
-  return dot === -1 ? 0 : str.length - dot - 1
-})
+const stepDecimals = computed(() => countStepDecimals(props.step))
 
 const clampAndRound = (raw) => {
   const num = Number(raw)
   if (!Number.isFinite(num)) return props.modelValue
-  const clamped = Math.min(props.max, Math.max(props.min, num))
+  const clamped = clamp(num, props.min, props.max)
   const dec = stepDecimals.value
   return dec > 0 ? Number(clamped.toFixed(dec)) : Math.round(clamped)
 }

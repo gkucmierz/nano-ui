@@ -80,6 +80,22 @@
   --nano-metric-emerald: #34d399;
   --nano-metric-rose: #f43f5e;
 
+  /* Unified Component Color Presets (SSoT) - Dark Theme */
+  --nano-preset-primary: #0284c7;
+  --nano-preset-indigo: var(--nano-accent-primary, #6366f1);
+  --nano-preset-cyan: var(--nano-state-active, #00f2fe);
+  --nano-preset-active: var(--nano-state-active, #00f2fe);
+  --nano-preset-info: var(--nano-status-info, #38bdf8);
+  --nano-preset-purple: #a855f7;
+  --nano-preset-emerald: #10b981;
+  --nano-preset-success: var(--nano-status-success, #4ade80);
+  --nano-preset-danger: #ef4444;
+  --nano-preset-rose: #f43f5e;
+  --nano-preset-gold: #c89b3c;
+  --nano-preset-amber: #f59e0b;
+  --nano-preset-orange: #f97316;
+  --nano-preset-warn: var(--nano-status-warn, #facc15);
+
   /* Selection Tokens - Dark Theme */
   --nano-selection-bg: color-mix(in srgb, var(--nano-accent-primary) 35%, transparent);
   --nano-selection-text: #ffffff;
@@ -152,10 +168,24 @@
   --nano-chart-band-pill-fill: rgba(245, 158, 11, 0.16);
   --nano-chart-band-pill-stroke: rgba(245, 158, 11, 0.35);
   --nano-chart-band-label: #f59e0b;
+
+  /* NanoTabs Tokens - Dark Theme */
+  --nano-tabs-docked-bg: rgba(15, 23, 42, 0.72);
+  --nano-tabs-docked-border: rgba(148, 163, 184, 0.16);
+  --nano-tabs-docked-hover-bg: rgba(148, 163, 184, 0.06);
+  --nano-tabs-docked-active-bg: rgba(99, 102, 241, 0.08);
+  --nano-tabs-segmented-bg: rgba(30, 41, 59, 0.72);
+  --nano-tabs-segmented-border: rgba(148, 163, 184, 0.22);
+  --nano-tabs-segmented-hover-bg: rgba(148, 163, 184, 0.08);
+  --nano-tabs-segmented-active-shadow: 0 1px 3px rgba(0, 0, 0, 0.22);
+  --nano-tab-badge-bg: rgba(56, 189, 248, 0.18);
+  --nano-tab-badge-color: #38bdf8;
+  --nano-tab-badge-border: rgba(56, 189, 248, 0.28);
 }
 
 :root[data-theme="light"],
-html[data-theme="light"] {
+html[data-theme="light"],
+.light {
   /* --- Light Theme (High Contrast, Deep Slate Text) --- */
   --nano-bg-app: #f8fafc;
   --nano-bg-sidebar: #ffffff;
@@ -220,6 +250,22 @@ html[data-theme="light"] {
   --nano-metric-amber: #d97706;
   --nano-metric-emerald: #059669;
   --nano-metric-rose: #e11d48;
+
+  /* Unified Component Color Presets (SSoT) - Light Theme */
+  --nano-preset-primary: #0284c7;
+  --nano-preset-indigo: var(--nano-accent-primary, #4f46e5);
+  --nano-preset-cyan: #06b6d4;
+  --nano-preset-active: var(--nano-state-active, #0284c7);
+  --nano-preset-info: var(--nano-status-info, #0284c7);
+  --nano-preset-purple: #9333ea;
+  --nano-preset-emerald: #059669;
+  --nano-preset-success: var(--nano-status-success, #16a34a);
+  --nano-preset-danger: #dc2626;
+  --nano-preset-rose: #e11d48;
+  --nano-preset-gold: #d97706;
+  --nano-preset-amber: #d97706;
+  --nano-preset-orange: #ea580c;
+  --nano-preset-warn: var(--nano-status-warn, #ca8a04);
 
   /* Selection Tokens - Light Theme */
   --nano-selection-bg: color-mix(in srgb, var(--nano-accent-primary) 20%, transparent);
@@ -293,4 +339,17 @@ html[data-theme="light"] {
   --nano-chart-band-pill-fill: rgba(245, 158, 11, 0.24);
   --nano-chart-band-pill-stroke: rgba(180, 83, 9, 0.56);
   --nano-chart-band-label: #92400e;
+
+  /* NanoTabs Tokens - Light Theme */
+  --nano-tabs-docked-bg: #f8fafc;
+  --nano-tabs-docked-border: #e2e8f0;
+  --nano-tabs-docked-hover-bg: rgba(15, 23, 42, 0.04);
+  --nano-tabs-docked-active-bg: rgba(79, 70, 229, 0.06);
+  --nano-tabs-segmented-bg: #f1f5f9;
+  --nano-tabs-segmented-border: #cbd5e1;
+  --nano-tabs-segmented-hover-bg: rgba(15, 23, 42, 0.05);
+  --nano-tabs-segmented-active-shadow: 0 1px 2px rgba(15, 23, 42, 0.12);
+  --nano-tab-badge-bg: rgba(2, 132, 199, 0.14);
+  --nano-tab-badge-color: #0369a1;
+  --nano-tab-badge-border: rgba(2, 132, 199, 0.32);
 }

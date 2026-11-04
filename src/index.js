@@ -43,6 +43,13 @@ import NanoSortableList from './components/NanoSortableList.vue';
 import {
   DEFAULT_INTERACTIVE_IGNORE_SELECTOR,
   reorderArray,
+  mutualRange,
+  sumRange,
+  diffRange,
+  xorRange,
+  measureRange,
+  computeSharedArea2D,
+  resolveSortableSlotByArea,
   resolveSortableSlot,
   resolvePlaceholderBeforeIndex,
 } from './utils/sortable.js';
@@ -84,8 +91,19 @@ import {
   resolveTranslation,
   validateLocaleSymmetry,
 } from './utils/i18n-engine.js';
-import { normalizeAngle, shortestAngleDiff } from './utils/math.js';
 import {
+  clamp,
+  countStepDecimals,
+  quantizeStepValue,
+  normalizeAngle,
+  shortestAngleDiff,
+} from './utils/math.js';
+import {
+  NANO_COLOR_PRESETS,
+  NANO_ACCENT_PRESETS,
+  pickNanoPresetByPort,
+  isNanoColorPreset,
+  resolveNanoColor,
   getPerceivedLightness,
   getContrastTextColor,
   pickBestContrastColor,
@@ -164,6 +182,13 @@ import {
   computeSelectDropdownLayout,
   getPositionedReferenceEl,
 } from './utils/selectPositioning.js';
+import {
+  computeSolarCosZenith,
+  computeSolarIrradiance,
+  computeSolarTwilightOpacity,
+  buildSphericalCapSvgPath,
+  buildSolarTerminatorSvgPrimitives,
+} from './utils/globe-geometry.js';
 import { transitions, durations, easings, transitionVariables } from './config/transitions.js';
 import './style.css';
 
@@ -212,6 +237,13 @@ export {
   NanoSortableList,
   DEFAULT_INTERACTIVE_IGNORE_SELECTOR,
   reorderArray,
+  mutualRange,
+  sumRange,
+  diffRange,
+  xorRange,
+  measureRange,
+  computeSharedArea2D,
+  resolveSortableSlotByArea,
   resolveSortableSlot,
   resolvePlaceholderBeforeIndex,
   WORLD_COUNTRIES_LITE,
@@ -246,8 +278,16 @@ export {
   extractPlaceholders,
   resolveTranslation,
   validateLocaleSymmetry,
+  clamp,
+  countStepDecimals,
+  quantizeStepValue,
   normalizeAngle,
   shortestAngleDiff,
+  NANO_COLOR_PRESETS,
+  NANO_ACCENT_PRESETS,
+  pickNanoPresetByPort,
+  isNanoColorPreset,
+  resolveNanoColor,
   getPerceivedLightness,
   getContrastTextColor,
   pickBestContrastColor,
@@ -311,6 +351,11 @@ export {
   findSafeSelectMount,
   computeSelectDropdownLayout,
   getPositionedReferenceEl,
+  computeSolarCosZenith,
+  computeSolarIrradiance,
+  computeSolarTwilightOpacity,
+  buildSphericalCapSvgPath,
+  buildSolarTerminatorSvgPrimitives,
   initTheme,
   useTheme,
   getZeroFoucScript,

@@ -595,10 +595,18 @@ const tokensCode = `/* src/assets/sizes.css — Nano UI Spatial & Typography Tok
   color: #818cf8;
 }
 
+[data-theme="light"] .token-code {
+  color: #4f46e5;
+}
+
 .token-alias {
   font-family: var(--font-mono, monospace);
   font-size: 0.68rem;
   color: var(--nano-text-secondary, #94a3b8);
+}
+
+[data-theme="light"] .token-alias {
+  color: #475569;
 }
 
 .spacing-px-badge {
@@ -607,6 +615,10 @@ const tokensCode = `/* src/assets/sizes.css — Nano UI Spatial & Typography Tok
   font-weight: 800;
   color: #38bdf8;
   text-align: right;
+}
+
+[data-theme="light"] .spacing-px-badge {
+  color: #0284c7;
 }
 
 .spacing-bar-track {
@@ -618,6 +630,11 @@ const tokensCode = `/* src/assets/sizes.css — Nano UI Spatial & Typography Tok
   align-items: center;
   padding: 2px;
   overflow: hidden;
+}
+
+[data-theme="light"] .spacing-bar-track {
+  background: #e2e8f0;
+  border-color: #cbd5e1;
 }
 
 .spacing-bar-fill {
@@ -659,6 +676,11 @@ const tokensCode = `/* src/assets/sizes.css — Nano UI Spatial & Typography Tok
   gap: var(--nano-space-md, 16px);
 }
 
+[data-theme="light"] .spatial-sandbox {
+  background: #f8fafc;
+  border-color: rgba(79, 70, 229, 0.35);
+}
+
 .sandbox-controls {
   display: flex;
   flex-wrap: wrap;
@@ -678,6 +700,10 @@ const tokensCode = `/* src/assets/sizes.css — Nano UI Spatial & Typography Tok
   color: var(--nano-text-secondary, #94a3b8);
 }
 
+[data-theme="light"] .ctrl-label {
+  color: #334155;
+}
+
 .unit-btn {
   padding: 4px 10px;
   border-radius: var(--nano-radius-sm, 4px);
@@ -686,13 +712,25 @@ const tokensCode = `/* src/assets/sizes.css — Nano UI Spatial & Typography Tok
   font-weight: 700;
   background: rgba(99, 102, 241, 0.1);
   border: 1px solid rgba(99, 102, 241, 0.28);
-  color: var(--nano-text-primary, #f8fafc);
+  color: var(--nano-text-main, #f8fafc);
   cursor: pointer;
+}
+
+[data-theme="light"] .unit-btn {
+  background: #ffffff;
+  border-color: #cbd5e1;
+  color: #1e293b;
 }
 
 .unit-btn.active {
   background: #6366f1;
   border-color: #818cf8;
+  color: #ffffff;
+}
+
+[data-theme="light"] .unit-btn.active {
+  background: #4f46e5;
+  border-color: #4338ca;
   color: #ffffff;
 }
 
@@ -704,13 +742,24 @@ const tokensCode = `/* src/assets/sizes.css — Nano UI Spatial & Typography Tok
   transition: padding 0.2s ease, gap 0.2s ease, border-radius 0.2s ease;
 }
 
+[data-theme="light"] .sandbox-preview-surface {
+  background: rgba(79, 70, 229, 0.06);
+  border-color: rgba(79, 70, 229, 0.28);
+}
+
 .sandbox-preview-tile {
   padding: 12px 14px;
-  background: var(--nano-bg-surface, #0f172a);
-  border: 1px solid rgba(148, 163, 184, 0.2);
+  background: rgba(15, 23, 42, 0.82);
+  border: 1px solid rgba(148, 163, 184, 0.24);
   display: flex;
   flex-direction: column;
   gap: 4px;
+}
+
+[data-theme="light"] .sandbox-preview-tile {
+  background: #ffffff;
+  border-color: #cbd5e1;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.05);
 }
 
 .tile-index {
@@ -720,10 +769,18 @@ const tokensCode = `/* src/assets/sizes.css — Nano UI Spatial & Typography Tok
   color: #38bdf8;
 }
 
+[data-theme="light"] .tile-index {
+  color: #0284c7;
+}
+
 .tile-meta {
   font-family: var(--font-mono, monospace);
   font-size: 0.7rem;
-  color: var(--nano-text-secondary, #94a3b8);
+  color: #cbd5e1;
+}
+
+[data-theme="light"] .tile-meta {
+  color: #475569;
 }
 
 .type-specimen-list {

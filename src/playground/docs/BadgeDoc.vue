@@ -152,15 +152,15 @@ const cssApiDoc = `/* Nano UI Badge & Status Indicator Primitives */
           </div>
         </div>
 
-        <div class="control-group toggle-row">
-          <label class="control-label">Status Dot</label>
+        <label class="control-group toggle-row">
+          <span class="control-label">Status Dot</span>
           <NanoSwitch v-model="hasDot" />
-        </div>
+        </label>
 
-        <div v-if="hasDot" class="control-group toggle-row">
-          <label class="control-label">Pulsing Animation</label>
+        <label v-if="hasDot" class="control-group toggle-row">
+          <span class="control-label">Pulsing Animation</span>
           <NanoSwitch v-model="isPulsing" />
-        </div>
+        </label>
       </div>
     </div>
 
@@ -332,6 +332,8 @@ const cssApiDoc = `/* Nano UI Badge & Status Indicator Primitives */
   align-items: center;
   justify-content: space-between;
   padding-top: 0.25rem;
+  cursor: pointer;
+  user-select: none;
 }
 
 .control-label {

@@ -6,6 +6,7 @@ import {
   resolveSortableSlot,
   resolvePlaceholderBeforeIndex,
 } from '../utils/sortable.js';
+import { resolveNanoColor } from '../utils/colors.js';
 
 const props = defineProps({
   modelValue: {
@@ -41,7 +42,7 @@ const props = defineProps({
     default: DEFAULT_INTERACTIVE_IGNORE_SELECTOR,
   },
   placeholderColor: {
-    type: String,
+    type: [String, Function],
     default: '#0ea5e9',
   },
   placeholderRadius: {
@@ -71,8 +72,38 @@ const targetSlot = ref(null);
 const dragOffset = ref({ x: 0, y: 0 });
 const dragGhostPos = ref({ x: 0, y: 0 });
 const draggedElementRect = ref({ width: 'auto', height: '84px' });
+const activeCardAccentColor = ref('');
 
 let pendingDrag = null;
+
+const detectDraggedCardAccent = (item, index, itemEl) => {
+  if (typeof props.placeholderColor === 'function') {
+    const custom = props.placeholderColor(item, index);
+    if (custom) return custom;
+  }
+  if (item && typeof item === 'object') {
+    if (typeof item.accent === 'string' && item.accent.trim()) {
+      return resolveNanoColor(item.accent.trim(), '');
+    }
+    if (typeof item.borderColor === 'string' && item.borderColor.trim()) {
+      return resolveNanoColor(item.borderColor.trim(), '');
+    }
+    if (typeof item.color === 'string' && item.color.trim()) {
+      return resolveNanoColor(item.color.trim(), '');
+    }
+  }
+  if (itemEl && typeof window !== 'undefined' && typeof window.getComputedStyle === 'function') {
+    const cardChild = itemEl.firstElementChild || itemEl;
+    const inlineAccent = cardChild.style?.getPropertyValue?.('--grp-accent')?.trim();
+    if (inlineAccent) return inlineAccent;
+    const cs = window.getComputedStyle(cardChild);
+    const borderCol = cs?.borderTopColor || '';
+    if (borderCol && borderCol !== 'rgba(0, 0, 0, 0)' && borderCol !== 'transparent') {
+      return borderCol;
+    }
+  }
+  return typeof props.placeholderColor === 'string' ? props.placeholderColor : '#0ea5e9';
+};
 
 const getItemKey = (item, index) => {
   if (typeof props.itemKey === 'function') {
@@ -86,9 +117,12 @@ const getItemKey = (item, index) => {
 
 const containerStyle = computed(() => {
   const gapVal = typeof props.gap === 'number' ? `${props.gap}px` : String(props.gap);
+  const resolvedColor =
+    activeCardAccentColor.value ||
+    (typeof props.placeholderColor === 'string' ? props.placeholderColor : '#0ea5e9');
   return {
     '--nano-sortable-gap': gapVal,
-    '--nano-sortable-color': props.placeholderColor,
+    '--nano-sortable-color': resolvedColor,
     '--nano-sortable-radius': props.placeholderRadius,
   };
 });
@@ -161,6 +195,8 @@ const extractClientCoords = (e) => {
 };
 
 const activateDragSession = (session, clientX, clientY) => {
+  const item = props.modelValue[session.index];
+  activeCardAccentColor.value = detectDraggedCardAccent(item, session.index, session.itemEl);
   draggedIndex.value = session.index;
   targetSlot.value = session.index;
   draggedElementRect.value = {
@@ -181,7 +217,7 @@ const activateDragSession = (session, clientX, clientY) => {
   }
   emit('drag-start', {
     index: session.index,
-    item: props.modelValue[session.index],
+    item,
   });
 };
 
@@ -192,11 +228,34 @@ const updateTargetSlotFromCursor = (clientX, clientY) => {
     container.querySelectorAll(':scope > .nano-sortable-item:not(.hide-during-drag)')
   );
   const visibleRects = visibleEls.map((el) => el.getBoundingClientRect());
+  const slotEls = Array.from(
+    container.querySelectorAll(
+      ':scope > .nano-sortable-item:not(.hide-during-drag), :scope > .nano-sortable-placeholder'
+    )
+  );
+  const slotRects = slotEls.map((el) => el.getBoundingClientRect());
+  const ghostWidth = parseFloat(draggedElementRect.value.width) || 0;
+  const ghostHeight = parseFloat(draggedElementRect.value.height) || 0;
+  const draggedRect =
+    ghostWidth > 0 && ghostHeight > 0
+      ? {
+          left: dragGhostPos.value.x,
+          top: dragGhostPos.value.y,
+          width: ghostWidth,
+          height: ghostHeight,
+        }
+      : null;
+
   targetSlot.value = resolveSortableSlot(
     visibleRects,
     clientX,
     clientY,
-    props.direction
+    props.direction,
+    {
+      slotRects,
+      draggedRect,
+      currentSlot: targetSlot.value,
+    }
   );
 };
 
@@ -268,6 +327,7 @@ const onGlobalPointerUp = () => {
   isDragging.value = false;
   draggedIndex.value = null;
   targetSlot.value = null;
+  activeCardAccentColor.value = '';
   cleanupGlobalListeners();
 };
 
@@ -292,6 +352,7 @@ const onItemMouseDown = (e, index) => {
 
   const session = {
     index,
+    itemEl,
     startX: clientX,
     startY: clientY,
     rect,
@@ -367,13 +428,23 @@ defineExpose({
         @touchstart="onItemMouseDown($event, index)"
       >
         <slot
+          name="item"
           :item="item"
           :index="index"
           :is-dragging="isDragging && draggedIndex === index"
           :is-ghost="false"
           :move-up="() => moveItemByDelta(index, -1)"
           :move-down="() => moveItemByDelta(index, 1)"
-        />
+        >
+          <slot
+            :item="item"
+            :index="index"
+            :is-dragging="isDragging && draggedIndex === index"
+            :is-ghost="false"
+            :move-up="() => moveItemByDelta(index, -1)"
+            :move-down="() => moveItemByDelta(index, 1)"
+          />
+        </slot>
       </div>
     </template>
 
@@ -400,13 +471,23 @@ defineExpose({
         :index="draggedIndex"
       >
         <slot
+          name="item"
           :item="draggedItem"
           :index="draggedIndex"
           :is-dragging="true"
           :is-ghost="true"
           :move-up="() => {}"
           :move-down="() => {}"
-        />
+        >
+          <slot
+            :item="draggedItem"
+            :index="draggedIndex"
+            :is-dragging="true"
+            :is-ghost="true"
+            :move-up="() => {}"
+            :move-down="() => {}"
+          />
+        </slot>
       </slot>
     </div>
   </Teleport>
@@ -462,10 +543,10 @@ defineExpose({
 .nano-sortable-placeholder {
   border: 2px dashed var(--nano-sortable-color, #0ea5e9);
   border-radius: var(--nano-sortable-radius, 10px);
-  background-color: rgba(14, 165, 233, 0.08);
+  background-color: color-mix(in srgb, var(--nano-sortable-color, #0ea5e9) 10%, transparent);
   box-sizing: border-box;
   pointer-events: none;
-  transition: height 0.1s ease, width 0.1s ease;
+  transition: height 0.1s ease, width 0.1s ease, border-color 0.12s ease, background-color 0.12s ease;
 }
 
 .nano-sortable-ghost {

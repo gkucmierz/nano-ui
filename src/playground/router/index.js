@@ -30,6 +30,7 @@ import TrendChartDoc from '../docs/TrendChartDoc.vue';
 import ChannelOsdDoc from '../docs/ChannelOsdDoc.vue';
 import NumberStepperDoc from '../docs/NumberStepperDoc.vue';
 import TabsDoc from '../docs/TabsDoc.vue';
+import SortableDoc from '../docs/SortableDoc.vue';
 import KineticAnimationsDoc from '../docs/KineticAnimationsDoc.vue';
 import NotFoundDoc from '../docs/NotFoundDoc.vue';
 
@@ -368,6 +369,17 @@ export const routes = [
       componentName: 'NanoTabs',
       type: 'component',
       description: 'Universal docked and segmented tab navigation component with keyboard arrow navigation, item counts, and icons.',
+    },
+  },
+  {
+    path: '/docs/sortable',
+    name: 'Sortable',
+    component: SortableDoc,
+    meta: {
+      title: 'NanoSortableList (Drag & Drop) | Nano UI',
+      componentName: 'NanoSortableList',
+      type: 'component',
+      description: 'Universal whole-card and grid drag-and-drop reordering container with floating ghost cards and dashed drop placeholders.',
     },
   },
   {

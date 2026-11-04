@@ -25,7 +25,8 @@
     "kineticEngine": "C¹ Kinetic Engine",
     "trendChart": "NanoTrendChart & Bands",
     "mutatingHeader": "Mutating Header",
-    "switch": "Nano Switch",
+    "switch": "Nano Switch & Checkbox",
+    "sortable": "Nano Sortable (Drag & Drop)",
     "slider": "Nano Slider",
     "modal": "Nano Modal",
     "icons": "Icons (NanoIcon)",
@@ -253,8 +254,13 @@
     "healpix": "HEALPix Equal-Area Grid",
     "healpixLabels": "HEALPix Pixel Labels",
     "healpixOrder": "HEALPix Order (Nside)",
+    "healpixHighlight": "Highlight HEALPix Cell",
+    "healpixCellIndex": "HEALPix Cell Index",
     "atmosphere": "Atmosphere Halo",
-    "autoRotate": "Auto-Rotate"
+    "atmosphereRing": "Solid Ring",
+    "atmosphereGradient": "Gradient (100% → 0%)",
+    "autoRotate": "Auto-Rotate",
+    "autoRotateTurns": "Speed (turns/s)"
   },
   "colorPicker": {
     "title": "NanoColorPickerOklch & Perceptual Contrast",

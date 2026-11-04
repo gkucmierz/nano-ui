@@ -50,6 +50,7 @@ export default {
 
 <script setup>
 import { ref, computed, onMounted, onUnmounted } from 'vue';
+import { clamp, countStepDecimals, quantizeStepValue } from '../utils/math.js';
 
 const isMounted = ref(false);
 
@@ -116,26 +117,15 @@ const scrubCurrentY = ref(0)
 const scrubResolutionText = ref('')
 const scrubTrackRect = ref({ left: 0, width: 0 })
 
-const stepDecimals = computed(() => {
-  const stepVal = Number(props.step)
-  if (!Number.isFinite(stepVal) || stepVal <= 0) return 0
-  const str = String(stepVal)
-  if (str.includes('e-')) {
-    return parseInt(str.split('e-')[1], 10) || 0
-  }
-  const dotIdx = str.indexOf('.')
-  return dotIdx === -1 ? 0 : str.length - dotIdx - 1
-})
+const stepDecimals = computed(() => countStepDecimals(props.step))
 
-const quantizeValue = (rawVal) => {
-  const stepVal = Number(props.step) > 0 ? Number(props.step) : 1
-  const clamped = Math.min(props.max, Math.max(props.min, rawVal))
-  const steps = Math.round((clamped - props.min) / stepVal)
-  const stepped = props.min + steps * stepVal
-  const bounded = Math.min(props.max, Math.max(props.min, stepped))
-  const decimals = stepDecimals.value
-  return decimals > 0 ? Number(bounded.toFixed(decimals)) : Math.round(bounded)
-}
+const quantizeValue = (rawVal) =>
+  quantizeStepValue(rawVal, {
+    min: props.min,
+    max: props.max,
+    step: props.step,
+    origin: props.min
+  })
 
 const resolvedLabel = computed(() => {
   if (props.label !== undefined) return props.label
@@ -147,8 +137,7 @@ const resolvedLabel = computed(() => {
 const progressPercent = computed(() => {
   const range = props.max - props.min
   if (range <= 0) return 0
-  const pct = ((props.modelValue - props.min) / range) * 100
-  return Math.min(100, Math.max(0, pct))
+  return clamp(((props.modelValue - props.min) / range) * 100, 0, 100)
 })
 
 const formatNum = (num, decimals = stepDecimals.value) => {

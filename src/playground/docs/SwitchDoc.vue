@@ -5,6 +5,7 @@ import NanoCheckbox from '../../components/NanoCheckbox.vue';
 import { createDocTabs } from '../docSnippets.js';
 
 const basicVal = ref(true);
+const sizeDefaultVal = ref(true);
 const compactVal = ref(false);
 const miniVal = ref(true);
 
@@ -13,6 +14,19 @@ const purpleVal = ref(true);
 const emeraldVal = ref(true);
 const dangerVal = ref(true);
 const goldVal = ref(true);
+
+const cbSm = ref(true);
+const cbMd = ref(true);
+const cbLg = ref(true);
+
+const cbPrimary = ref(true);
+const cbCyan = ref(true);
+const cbPurple = ref(true);
+const cbEmerald = ref(true);
+const cbDanger = ref(true);
+const cbGold = ref(true);
+const cbIndeterminate = ref(null);
+const cbIsIndeterminate = ref(true);
 
 const disabledOn = ref(true);
 const disabledOff = ref(false);
@@ -105,10 +119,10 @@ const codeTabs = createDocTabs({
     </p>
 
     <div class="switch-card">
-      <div class="switch-item">
+      <label class="switch-item is-clickable">
         <span class="item-label">Basic Switch</span>
         <NanoSwitch v-model="basicVal" label="Enable Telemetry & Analytics" />
-      </div>
+      </label>
       <div 
         class="code-snippet" 
         :class="{ 'is-copied': copiedId === 'basic' }"
@@ -136,18 +150,18 @@ const codeTabs = createDocTabs({
         </button>
       </div>
 
-      <div class="switch-item">
+      <label class="switch-item is-clickable">
         <span class="item-label">Default (44×24)</span>
         <NanoSwitch v-model="triStateVal" size="default" label="Bulk Permissions (Partial Selection)" />
-      </div>
-      <div class="switch-item">
+      </label>
+      <label class="switch-item is-clickable">
         <span class="item-label">Compact (38×20)</span>
         <NanoSwitch v-model="triStateVal" size="compact" color="purple" label="Sub-task Checklist (Mixed Items)" />
-      </div>
-      <div class="switch-item">
+      </label>
+      <label class="switch-item is-clickable">
         <span class="item-label">Mini (30×16)</span>
         <NanoSwitch v-model="triStateVal" size="mini" color="emerald" label="Tree Node Selection" />
-      </div>
+      </label>
       <div 
         class="code-snippet" 
         :class="{ 'is-copied': copiedId === 'indeterminate' }"
@@ -164,18 +178,18 @@ const codeTabs = createDocTabs({
     <p class="desc">Three carefully proportioned scales for dense tables, sidebars, or primary application settings.</p>
 
     <div class="switch-card">
-      <div class="switch-item">
+      <label class="switch-item is-clickable">
         <span class="item-label">Default (44×24)</span>
-        <NanoSwitch v-model="basicVal" size="default" label="Default Size Switch" />
-      </div>
-      <div class="switch-item">
+        <NanoSwitch v-model="sizeDefaultVal" size="default" label="Default Size Switch" />
+      </label>
+      <label class="switch-item is-clickable">
         <span class="item-label">Compact (38×20)</span>
         <NanoSwitch v-model="compactVal" size="compact" label="Compact Size Switch" />
-      </div>
-      <div class="switch-item">
+      </label>
+      <label class="switch-item is-clickable">
         <span class="item-label">Mini (30×16)</span>
         <NanoSwitch v-model="miniVal" size="mini" label="Mini Size Switch" />
-      </div>
+      </label>
     </div>
 
     <!-- Color Themes -->
@@ -183,26 +197,26 @@ const codeTabs = createDocTabs({
     <p class="desc">Presets matching standard workspace design systems (Cyber Cyan, Electric Purple, Emerald, Danger Red, Warm Gold).</p>
 
     <div class="switch-card">
-      <div class="switch-item">
+      <label class="switch-item is-clickable">
         <span class="item-label">Primary / Cyan</span>
         <NanoSwitch v-model="cyanVal" color="cyan" label="Cyan Active Glow" />
-      </div>
-      <div class="switch-item">
+      </label>
+      <label class="switch-item is-clickable">
         <span class="item-label">Purple</span>
         <NanoSwitch v-model="purpleVal" color="purple" label="Purple Accent Switch" />
-      </div>
-      <div class="switch-item">
+      </label>
+      <label class="switch-item is-clickable">
         <span class="item-label">Emerald</span>
         <NanoSwitch v-model="emeraldVal" color="emerald" label="Emerald Active Switch" />
-      </div>
-      <div class="switch-item">
+      </label>
+      <label class="switch-item is-clickable">
         <span class="item-label">Danger</span>
         <NanoSwitch v-model="dangerVal" color="danger" label="Danger Red Action" />
-      </div>
-      <div class="switch-item">
+      </label>
+      <label class="switch-item is-clickable">
         <span class="item-label">Gold</span>
         <NanoSwitch v-model="goldVal" color="gold" label="Warm Gold Switch" />
-      </div>
+      </label>
     </div>
 
     <!-- Disabled States -->
@@ -218,12 +232,42 @@ const codeTabs = createDocTabs({
         <span class="item-label">Disabled (Inactive)</span>
         <NanoSwitch v-model="disabledOff" :disabled="true" label="Locked Inactive Switch" />
       </div>
+    </div>
+
+    <!-- NanoCheckbox Section -->
+    <h3 class="section-title">NanoCheckbox Component (Sizes, Indeterminate &amp; Color Themes)</h3>
+    <p class="desc">
+      Tactile custom SVG checkbox with crisp Light &amp; Dark mode contrast, <code>sm</code> / <code>md</code> / <code>lg</code> scales, <code>indeterminate</code> dash state, and full color theme parity (<code>primary</code>, <code>cyan</code>, <code>purple</code>, <code>emerald</code>, <code>danger</code>, <code>gold</code>, or any CSS hex color).
+    </p>
+
+    <div class="switch-card">
       <div class="switch-item">
-        <span class="item-label">NanoCheckbox (sm / md / lg)</span>
+        <span class="item-label">Sizes (sm / md / lg)</span>
         <div class="controls-row">
-          <NanoCheckbox v-model="basicVal" size="sm" label="Small" />
-          <NanoCheckbox v-model="basicVal" size="md" label="Medium" />
-          <NanoCheckbox v-model="basicVal" size="lg" label="Large" />
+          <NanoCheckbox v-model="cbSm" size="sm" color="primary" label="Small (14px)" />
+          <NanoCheckbox v-model="cbMd" size="md" color="primary" label="Medium (16px)" />
+          <NanoCheckbox v-model="cbLg" size="lg" color="primary" label="Large (19px)" />
+        </div>
+      </div>
+
+      <div class="switch-item">
+        <span class="item-label">Color Themes</span>
+        <div class="controls-row">
+          <NanoCheckbox v-model="cbPrimary" color="primary" label="Primary" />
+          <NanoCheckbox v-model="cbCyan" color="cyan" label="Cyan" />
+          <NanoCheckbox v-model="cbPurple" color="purple" label="Purple" />
+          <NanoCheckbox v-model="cbEmerald" color="emerald" label="Emerald" />
+          <NanoCheckbox v-model="cbDanger" color="danger" label="Danger" />
+          <NanoCheckbox v-model="cbGold" color="gold" label="Gold" />
+        </div>
+      </div>
+
+      <div class="switch-item">
+        <span class="item-label">Indeterminate &amp; Disabled</span>
+        <div class="controls-row">
+          <NanoCheckbox v-model="cbIndeterminate" v-model:indeterminate="cbIsIndeterminate" color="purple" label="Indeterminate" />
+          <NanoCheckbox :model-value="true" :disabled="true" color="emerald" label="Disabled Checked" />
+          <NanoCheckbox :model-value="false" :disabled="true" label="Disabled Unchecked" />
         </div>
       </div>
     </div>
@@ -301,6 +345,12 @@ const codeTabs = createDocTabs({
   gap: 1.5rem;
   padding: 0.5rem 0;
   border-bottom: 1px solid var(--nano-border-subtle);
+}
+
+.switch-item.is-clickable {
+  cursor: pointer;
+  user-select: none;
+  -webkit-user-select: none;
 }
 
 .switch-item:last-child {
@@ -396,5 +446,28 @@ const codeTabs = createDocTabs({
   color: var(--nano-text-code);
   line-height: 1.6;
   display: block;
+}
+
+.sortable-check-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px;
+  border-radius: 8px;
+  background: var(--nano-bg-muted);
+  border: 1px solid var(--nano-border-card);
+  transition: border-color 0.15s ease;
+}
+
+.sortable-check-row:hover {
+  border-color: var(--nano-border-hover);
+}
+
+.sortable-grip {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--nano-text-muted);
+  min-width: 36px;
 }
 </style>

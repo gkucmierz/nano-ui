@@ -164,25 +164,25 @@ const cssApiDoc = `/* Nano UI Button Primitives & Modifiers */
           </div>
         </div>
 
-        <div class="control-group toggle-row">
+        <label class="control-group toggle-row">
           <span class="control-label">Outline / Bordered</span>
           <NanoSwitch v-model="isOutline" />
-        </div>
+        </label>
 
-        <div class="control-group toggle-row">
+        <label class="control-group toggle-row">
           <span class="control-label">With Icon</span>
           <NanoSwitch v-model="hasIcon" />
-        </div>
+        </label>
 
-        <div class="control-group toggle-row">
+        <label class="control-group toggle-row">
           <span class="control-label">v-ripple Directive</span>
           <NanoSwitch v-model="hasRipple" />
-        </div>
+        </label>
 
-        <div class="control-group toggle-row">
+        <label class="control-group toggle-row">
           <span class="control-label">Disabled</span>
           <NanoSwitch v-model="isDisabled" />
-        </div>
+        </label>
       </div>
     </div>
 
@@ -466,6 +466,8 @@ const cssApiDoc = `/* Nano UI Button Primitives & Modifiers */
   align-items: center;
   justify-content: space-between;
   padding-top: 0.25rem;
+  cursor: pointer;
+  user-select: none;
 }
 
 .control-label {

@@ -218,6 +218,16 @@ export const PLAYGROUND_NAV_ITEMS = [
     keywords: 'card karta kafelki tile metric kpi dashboard surface panel header footer',
   },
   {
+    id: '/docs/sortable',
+    to: '/docs/sortable',
+    sectionKey: 'nav.layoutNavigation',
+    navKey: 'nav.sortable',
+    docFile: 'SortableDoc.vue',
+    localeKeys: [],
+    componentTag: 'NanoSortableList',
+    keywords: 'sortable draggable drag drop reorder przeciaganie kolejnosc lista karty grid ghost placeholder',
+  },
+  {
     id: '/docs/tables',
     to: '/docs/tables',
     sectionKey: 'nav.layoutNavigation',

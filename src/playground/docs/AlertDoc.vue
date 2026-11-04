@@ -153,30 +153,30 @@ const cssApiDoc = `/* Nano UI Alert & Banner Primitives */
           </div>
         </div>
 
-        <div class="control-group toggle-row">
-          <label class="control-label">Icon</label>
+        <label class="control-group toggle-row">
+          <span class="control-label">Icon</span>
           <NanoSwitch v-model="hasIcon" />
-        </div>
+        </label>
 
-        <div class="control-group toggle-row">
-          <label class="control-label">Title Heading</label>
+        <label class="control-group toggle-row">
+          <span class="control-label">Title Heading</span>
           <NanoSwitch v-model="hasTitle" />
-        </div>
+        </label>
 
-        <div class="control-group toggle-row">
-          <label class="control-label">Close Button</label>
+        <label class="control-group toggle-row">
+          <span class="control-label">Close Button</span>
           <NanoSwitch v-model="hasClose" />
-        </div>
+        </label>
 
-        <div class="control-group toggle-row">
-          <label class="control-label">Accent Left Border</label>
+        <label class="control-group toggle-row">
+          <span class="control-label">Accent Left Border</span>
           <NanoSwitch v-model="isAccentLeft" />
-        </div>
+        </label>
 
-        <div class="control-group toggle-row">
-          <label class="control-label">Banner Mode</label>
+        <label class="control-group toggle-row">
+          <span class="control-label">Banner Mode</span>
           <NanoSwitch v-model="isBanner" />
-        </div>
+        </label>
       </div>
     </div>
 
@@ -335,6 +335,8 @@ h2 {
   align-items: center;
   justify-content: space-between;
   padding-top: 0.25rem;
+  cursor: pointer;
+  user-select: none;
 }
 
 .control-label {

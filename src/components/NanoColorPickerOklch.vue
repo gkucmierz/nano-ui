@@ -8,7 +8,7 @@ import {
   getContrastTextColor,
   getWcagContrastRatio,
 } from '../utils/colors.js';
-import { normalizeAngle } from '../utils/math.js';
+import { clamp, normalizeAngle } from '../utils/math.js';
 
 const props = defineProps({
   modelValue: {
@@ -52,8 +52,6 @@ const copied = ref(false);
 let copyTimer = null;
 const discRef = ref(null);
 const isDraggingDisc = ref(false);
-
-const clamp = (val, min, max) => Math.min(max, Math.max(min, val));
 
 const syncFromModel = (val) => {
   const parsed = parseColor(val);

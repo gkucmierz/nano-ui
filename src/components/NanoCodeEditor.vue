@@ -124,6 +124,13 @@ const props = defineProps({
     type: Boolean,
     default: false,
   },
+  /**
+   * UI language for header tooltips & labels ('en' | 'pl')
+   */
+  uiLang: {
+    type: String,
+    default: 'en',
+  },
 });
 
 const emit = defineEmits([
@@ -532,8 +539,8 @@ defineExpose({
           type="button"
           class="nce-icon-btn"
           :class="{ active: isWrapped }"
-          v-tooltip="isWrapped ? 'Unwrap lines' : 'Wrap lines'"
-          :aria-label="isWrapped ? 'Unwrap lines' : 'Wrap lines'"
+          v-tooltip="uiLang === 'pl' ? (isWrapped ? 'Wyłącz zawijanie wierszy' : 'Zawijaj wiersze') : (isWrapped ? 'Unwrap lines' : 'Wrap lines')"
+          :aria-label="uiLang === 'pl' ? (isWrapped ? 'Wyłącz zawijanie wierszy' : 'Zawijaj wiersze') : (isWrapped ? 'Unwrap lines' : 'Wrap lines')"
           @click="isWrapped = !isWrapped"
         >
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -547,8 +554,8 @@ defineExpose({
           v-if="downloadable"
           type="button"
           class="nce-icon-btn"
-          v-tooltip="`Download ${filePath || 'file'}`"
-          :aria-label="`Download ${filePath || 'file'}`"
+          v-tooltip="uiLang === 'pl' ? `Pobierz ${filePath || 'plik'}` : `Download ${filePath || 'file'}`"
+          :aria-label="uiLang === 'pl' ? `Pobierz ${filePath || 'plik'}` : `Download ${filePath || 'file'}`"
           @click="downloadContent"
         >
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -563,8 +570,8 @@ defineExpose({
           type="button"
           class="nce-icon-btn"
           :class="{ copied }"
-          v-tooltip="copied ? 'Copied!' : 'Copy to clipboard'"
-          :aria-label="copied ? 'Copied' : 'Copy to clipboard'"
+          v-tooltip="uiLang === 'pl' ? (copied ? 'Skopiowano!' : 'Kopiuj do schowka') : (copied ? 'Copied!' : 'Copy to clipboard')"
+          :aria-label="uiLang === 'pl' ? (copied ? 'Skopiowano' : 'Kopiuj do schowka') : (copied ? 'Copied' : 'Copy to clipboard')"
           @click="copyContent"
         >
           <svg v-if="!copied" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -767,6 +774,7 @@ defineExpose({
 }
 
 .nce-header {
+  flex-shrink: 0;
   display: flex;
   align-items: center;
   justify-content: space-between;

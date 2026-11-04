@@ -1,5 +1,6 @@
 <script setup>
 import { ref, computed, watch } from 'vue';
+import { clamp, countStepDecimals, quantizeStepValue } from '../utils/math.js';
 
 const props = defineProps({
   modelValue: {
@@ -53,17 +54,15 @@ const pendingOverlapResolve = ref(false);
 
 const isRange = computed(() => Boolean(props.range || Array.isArray(props.modelValue)));
 
-const decimals = computed(() => {
-  const s = String(props.step || 1);
-  const dot = s.indexOf('.');
-  return dot === -1 ? 0 : s.length - dot - 1;
-});
+const decimals = computed(() => countStepDecimals(props.step || 1));
 
 function quantizeValue(raw) {
-  const stepVal = props.step > 0 ? props.step : 1;
-  const stepped = props.min + Math.round((raw - props.min) / stepVal) * stepVal;
-  const clamped = Math.max(props.min, Math.min(props.max, stepped));
-  return Number(clamped.toFixed(decimals.value));
+  return quantizeStepValue(raw, {
+    min: props.min,
+    max: props.max,
+    step: props.step,
+    origin: props.min,
+  });
 }
 
 function normalizePairFromProp(val) {
@@ -107,8 +106,7 @@ const percentage = computed(() => {
   const span = props.max - props.min;
   if (span <= 0) return 0;
   const current = Number.isFinite(Number(props.modelValue)) ? Number(props.modelValue) : props.min;
-  const clamped = Math.max(props.min, Math.min(props.max, current));
-  return ((clamped - props.min) / span) * 100;
+  return ((clamp(current, props.min, props.max) - props.min) / span) * 100;
 });
 
 const thumb0Percentage = computed(() => {
@@ -132,7 +130,7 @@ function rawValueFromClientX(clientX) {
   if (!trackRef.value) return props.min;
   const rect = trackRef.value.getBoundingClientRect();
   if (rect.width <= 0) return props.min;
-  const ratio = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
+  const ratio = clamp((clientX - rect.left) / rect.width, 0, 1);
   return props.min + ratio * (props.max - props.min);
 }
 

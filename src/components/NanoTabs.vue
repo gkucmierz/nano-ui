@@ -11,6 +11,10 @@ const props = defineProps({
     type: Array,
     default: () => [],
   },
+  tabs: {
+    type: Array,
+    default: () => [],
+  },
   variant: {
     type: String,
     default: 'docked', // 'docked' | 'segmented'
@@ -37,8 +41,9 @@ const emit = defineEmits(['update:modelValue', 'change']);
 
 const tabButtonRefs = ref([]);
 
-const normalizedItems = computed(() =>
-  (props.items || []).map((raw, idx) => {
+const normalizedItems = computed(() => {
+  const source = Array.isArray(props.items) && props.items.length > 0 ? props.items : (props.tabs || []);
+  return source.map((raw, idx) => {
     if (raw && typeof raw === 'object') {
       const id = raw.id !== undefined ? raw.id : raw.value !== undefined ? raw.value : String(idx);
       return {
@@ -61,8 +66,8 @@ const normalizedItems = computed(() =>
       disabled: false,
       tooltip: '',
     };
-  })
-);
+  });
+});
 
 const isFullWidth = computed(() =>
   props.fullWidth !== undefined ? props.fullWidth : props.variant === 'docked'
@@ -191,14 +196,8 @@ const handleKeydown = (e, index) => {
 /* VARIANT 1: DOCKED TABS (md-viewer / KBE sidebar & panel headers)           */
 /* ========================================================================== */
 .nano-tabs--docked {
-  background: var(--nano-bg-surface-secondary, rgba(15, 23, 42, 0.72));
-  border-bottom: 1px solid var(--nano-border-subtle, rgba(148, 163, 184, 0.16));
-}
-
-:root[data-theme='light'] .nano-tabs--docked,
-.light .nano-tabs--docked {
-  background: var(--nano-bg-surface-secondary, #f8fafc);
-  border-bottom-color: var(--nano-border-subtle, #e2e8f0);
+  background: var(--nano-tabs-docked-bg, rgba(15, 23, 42, 0.72));
+  border-bottom: 1px solid var(--nano-tabs-docked-border, var(--nano-border-subtle, rgba(148, 163, 184, 0.16)));
 }
 
 .nano-tabs--docked .nano-tab-btn {
@@ -220,33 +219,15 @@ const handleKeydown = (e, index) => {
     border-color var(--nano-duration-fast, 150ms) ease;
 }
 
-:root[data-theme='light'] .nano-tabs--docked .nano-tab-btn,
-.light .nano-tabs--docked .nano-tab-btn {
-  color: var(--nano-text-muted, #64748b);
-}
-
 .nano-tabs--docked .nano-tab-btn:hover:not(.is-disabled) {
-  color: var(--nano-text-primary, #f8fafc);
-  background: rgba(148, 163, 184, 0.06);
-}
-
-:root[data-theme='light'] .nano-tabs--docked .nano-tab-btn:hover:not(.is-disabled),
-.light .nano-tabs--docked .nano-tab-btn:hover:not(.is-disabled) {
-  color: var(--nano-text-primary, #0f172a);
-  background: rgba(15, 23, 42, 0.04);
+  color: var(--nano-text-main, #f8fafc);
+  background: var(--nano-tabs-docked-hover-bg, rgba(148, 163, 184, 0.06));
 }
 
 .nano-tabs--docked .nano-tab-btn.is-active {
   color: var(--nano-accent-primary, #6366f1);
   border-bottom-color: var(--nano-accent-primary, #6366f1);
-  background: rgba(99, 102, 241, 0.08);
-}
-
-:root[data-theme='light'] .nano-tabs--docked .nano-tab-btn.is-active,
-.light .nano-tabs--docked .nano-tab-btn.is-active {
-  color: var(--nano-accent-primary, #4f46e5);
-  border-bottom-color: var(--nano-accent-primary, #4f46e5);
-  background: rgba(79, 70, 229, 0.06);
+  background: var(--nano-tabs-docked-active-bg, rgba(99, 102, 241, 0.08));
 }
 
 /* ========================================================================== */
@@ -256,14 +237,8 @@ const handleKeydown = (e, index) => {
   padding: 3px;
   gap: 3px;
   border-radius: 10px;
-  background: var(--nano-bg-surface-secondary, rgba(30, 41, 59, 0.72));
-  border: 1px solid var(--nano-border-subtle, rgba(148, 163, 184, 0.22));
-}
-
-:root[data-theme='light'] .nano-tabs--segmented,
-.light .nano-tabs--segmented {
-  background: #f1f5f9;
-  border-color: #cbd5e1;
+  background: var(--nano-tabs-segmented-bg, rgba(30, 41, 59, 0.72));
+  border: 1px solid var(--nano-tabs-segmented-border, rgba(148, 163, 184, 0.22));
 }
 
 .nano-tabs--segmented .nano-tab-btn {
@@ -290,33 +265,15 @@ const handleKeydown = (e, index) => {
   flex: 1;
 }
 
-:root[data-theme='light'] .nano-tabs--segmented .nano-tab-btn,
-.light .nano-tabs--segmented .nano-tab-btn {
-  color: #475569;
-}
-
 .nano-tabs--segmented .nano-tab-btn:hover:not(.is-disabled):not(.is-active) {
-  color: var(--nano-text-primary, #f8fafc);
-  background: rgba(148, 163, 184, 0.08);
-}
-
-:root[data-theme='light'] .nano-tabs--segmented .nano-tab-btn:hover:not(.is-disabled):not(.is-active),
-.light .nano-tabs--segmented .nano-tab-btn:hover:not(.is-disabled):not(.is-active) {
-  color: #0f172a;
-  background: rgba(15, 23, 42, 0.05);
+  color: var(--nano-text-main, #f8fafc);
+  background: var(--nano-tabs-segmented-hover-bg, rgba(148, 163, 184, 0.08));
 }
 
 .nano-tabs--segmented .nano-tab-btn.is-active {
   background: var(--nano-accent-primary, #4f46e5);
   color: #ffffff;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.22);
-}
-
-:root[data-theme='light'] .nano-tabs--segmented .nano-tab-btn.is-active,
-.light .nano-tabs--segmented .nano-tab-btn.is-active {
-  background: var(--nano-accent-primary, #4f46e5);
-  color: #ffffff;
-  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.12);
+  box-shadow: var(--nano-tabs-segmented-active-shadow, 0 1px 3px rgba(0, 0, 0, 0.22));
 }
 
 /* ========================================================================== */
@@ -407,7 +364,14 @@ const handleKeydown = (e, index) => {
   font-weight: 700;
   padding: 1px 6px;
   border-radius: 999px;
-  background: rgba(56, 189, 248, 0.18);
-  color: #38bdf8;
+  background: var(--nano-tab-badge-bg, rgba(56, 189, 248, 0.18));
+  color: var(--nano-tab-badge-color, #38bdf8);
+  border: 1px solid var(--nano-tab-badge-border, rgba(56, 189, 248, 0.28));
+}
+
+.nano-tab-btn.is-active .nano-tab-badge {
+  background: rgba(255, 255, 255, 0.22);
+  color: #ffffff;
+  border-color: rgba(255, 255, 255, 0.35);
 }
 </style>

@@ -198,15 +198,15 @@ const cssApiDoc = `/* Nano UI Input Primitives & Form Controls */
           </div>
         </div>
 
-        <div class="control-group toggle-row">
+        <label class="control-group toggle-row">
           <span class="control-label">Prefix Addon</span>
           <NanoSwitch v-model="hasPrefix" />
-        </div>
+        </label>
 
-        <div class="control-group toggle-row">
+        <label class="control-group toggle-row">
           <span class="control-label">Action Button</span>
           <NanoSwitch v-model="hasButton" />
-        </div>
+        </label>
 
         <div v-if="hasButton" class="control-group">
           <label class="control-label">Button Style</label>
@@ -449,6 +449,8 @@ const cssApiDoc = `/* Nano UI Input Primitives & Form Controls */
   align-items: center;
   justify-content: space-between;
   padding-top: 0.25rem;
+  cursor: pointer;
+  user-select: none;
 }
 
 .control-label {

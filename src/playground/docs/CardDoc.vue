@@ -167,20 +167,20 @@ const cssApiDoc = `/* Nano UI Card & Panel Primitives */
           </div>
         </div>
 
-        <div class="control-group toggle-row">
-          <label class="control-label">Header Bar</label>
+        <label class="control-group toggle-row">
+          <span class="control-label">Header Bar</span>
           <NanoSwitch v-model="hasHeader" />
-        </div>
+        </label>
 
-        <div v-if="hasHeader" class="control-group toggle-row">
-          <label class="control-label">Header Action</label>
+        <label v-if="hasHeader" class="control-group toggle-row">
+          <span class="control-label">Header Action</span>
           <NanoSwitch v-model="hasHeaderAction" />
-        </div>
+        </label>
 
-        <div class="control-group toggle-row">
-          <label class="control-label">Footer Bar</label>
+        <label class="control-group toggle-row">
+          <span class="control-label">Footer Bar</span>
           <NanoSwitch v-model="hasFooter" />
-        </div>
+        </label>
       </div>
     </div>
 
@@ -398,6 +398,8 @@ const cssApiDoc = `/* Nano UI Card & Panel Primitives */
   align-items: center;
   justify-content: space-between;
   padding-top: 0.25rem;
+  cursor: pointer;
+  user-select: none;
 }
 
 .control-label {

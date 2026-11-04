@@ -79,6 +79,21 @@ const updateViewport = () => {
   }
 };
 
+const syncThemeFavicon = (dark) => {
+  if (typeof document === 'undefined') return;
+  const iconLink = document.querySelector('link[rel="icon"]');
+  if (iconLink) {
+    const nextHref = dark ? '/nano-ui-dark.svg' : '/nano-ui-light.svg';
+    if (iconLink.getAttribute('href') !== nextHref) {
+      iconLink.setAttribute('href', nextHref);
+    }
+  }
+  const themeColorMeta = document.querySelector('meta[name="theme-color"]');
+  if (themeColorMeta) {
+    themeColorMeta.setAttribute('content', dark ? '#09090b' : '#f8fafc');
+  }
+};
+
 const toggleTheme = () => {
   document.documentElement.classList.add('theme-switching');
   isDark.value = !isDark.value;
@@ -90,11 +105,40 @@ const toggleTheme = () => {
   }
   document.documentElement.style.colorScheme = theme;
   localStorage.setItem('nano-ui-theme', theme);
+  syncThemeFavicon(isDark.value);
   requestAnimationFrame(() => {
     requestAnimationFrame(() => {
       document.documentElement.classList.remove('theme-switching');
     });
   });
+};
+
+const NON_TEXT_INPUT_TYPES = new Set([
+  'checkbox',
+  'radio',
+  'range',
+  'button',
+  'submit',
+  'reset',
+  'image',
+  'color',
+  'file',
+  'hidden',
+]);
+
+const isEditableTextTarget = (target) => {
+  if (!target || typeof target !== 'object') return false;
+  if (target.isContentEditable || target.contentEditable === 'true') return true;
+  const tag = String(target.tagName || '').toUpperCase();
+  if (tag === 'TEXTAREA' || tag === 'SELECT') {
+    return !target.readOnly && !target.disabled;
+  }
+  if (tag === 'INPUT') {
+    const type = String(target.type || 'text').toLowerCase();
+    if (NON_TEXT_INPUT_TYPES.has(type)) return false;
+    return !target.readOnly && !target.disabled;
+  }
+  return false;
 };
 
 const handleKeyDown = (e) => {
@@ -104,7 +148,7 @@ const handleKeyDown = (e) => {
     searchInputRef.value?.select();
     return;
   }
-  if (e.target && (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.isContentEditable)) {
+  if (isEditableTextTarget(e.target)) {
     return;
   }
   if (e.metaKey || e.ctrlKey || e.altKey) {
@@ -146,6 +190,7 @@ onMounted(() => {
     document.documentElement.setAttribute('data-theme', 'light');
     document.documentElement.style.colorScheme = 'light';
   }
+  syncThemeFavicon(isDark.value);
 });
 
 onUnmounted(() => {
@@ -424,6 +469,20 @@ onUnmounted(() => {
             <span class="nav-label-group">
               <span class="nav-label">{{ t('nav.cards') }}</span>
               <span v-if="searchQuery.trim()" class="nav-match-tag">{{ getComponentTag('/docs/cards') }}</span>
+            </span>
+          </router-link>
+          <router-link v-show="isRouteVisible('/docs/sortable')" to="/docs/sortable" class="nav-link" :class="{ 'kbd-selected': isKeyboardSelected('/docs/sortable') }" active-class="active" v-tooltip="isNarrow ? t('nav.sortable') : undefined">
+            <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="9" cy="6" r="1.2" fill="currentColor"/>
+              <circle cx="15" cy="6" r="1.2" fill="currentColor"/>
+              <circle cx="9" cy="12" r="1.2" fill="currentColor"/>
+              <circle cx="15" cy="12" r="1.2" fill="currentColor"/>
+              <circle cx="9" cy="18" r="1.2" fill="currentColor"/>
+              <circle cx="15" cy="18" r="1.2" fill="currentColor"/>
+            </svg>
+            <span class="nav-label-group">
+              <span class="nav-label">{{ t('nav.sortable') }}</span>
+              <span v-if="searchQuery.trim()" class="nav-match-tag">{{ getComponentTag('/docs/sortable') }}</span>
             </span>
           </router-link>
           <router-link v-show="isRouteVisible('/docs/tables')" to="/docs/tables" class="nav-link" :class="{ 'kbd-selected': isKeyboardSelected('/docs/tables') }" active-class="active" v-tooltip="isNarrow ? t('nav.tables') : undefined">

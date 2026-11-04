@@ -3,17 +3,8 @@ import { computed } from 'vue';
 import KineticRotator from './KineticRotator.vue';
 import NanoIcon from './NanoIcon.vue';
 import { tooltipDirective as vTooltip } from '../directives/tooltip.js';
-import { normalizeAngle } from '../utils/math.js';
-
-const COLOR_MAP = {
-  primary: 'var(--nano-accent-primary, #6366f1)',
-  indigo: '#6366f1',
-  cyan: 'var(--nano-state-active, #00f2fe)',
-  purple: '#a855f7',
-  emerald: '#10b981',
-  amber: '#f59e0b',
-  rose: '#f43f5e',
-};
+import { clamp, normalizeAngle } from '../utils/math.js';
+import { resolveNanoColor } from '../utils/colors.js';
 
 const props = defineProps({
   /**
@@ -146,8 +137,10 @@ const emit = defineEmits([
 ]);
 
 const resolvedAccent = computed(() => {
-  if (!props.color) return COLOR_MAP.primary;
-  return COLOR_MAP[props.color] || props.color;
+  if (!props.color || props.color === 'primary') {
+    return resolveNanoColor('indigo');
+  }
+  return resolveNanoColor(props.color, 'indigo');
 });
 
 const hubSizePx = computed(() => {
@@ -173,10 +166,7 @@ const displayValueText = computed(() => {
 
 const clampOrWrap = (nextVal) => {
   const stepVal = props.step > 0 ? Math.round(nextVal / props.step) * props.step : nextVal;
-  if (props.wrap) {
-    return Math.min(props.max, Math.max(props.min, Number(stepVal.toFixed(2))));
-  }
-  return Math.min(props.max, Math.max(props.min, Number(stepVal.toFixed(2))));
+  return clamp(Number(stepVal.toFixed(2)), props.min, props.max);
 };
 
 const updateAngle = (val) => {
