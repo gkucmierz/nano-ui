@@ -1,6 +1,8 @@
 <script setup>
 import { ref } from 'vue';
 import NanoNumberStepper from '../../components/NanoNumberStepper.vue';
+import NanoDatePicker from '../../components/NanoDatePicker.vue';
+import NanoSecretPipe from '../../components/NanoSecretPipe.vue';
 import NanoSwitch from '../../components/NanoSwitch.vue';
 import NanoCodeBlock from '../../components/NanoCodeBlock.vue';
 import { createDocTabs } from '../docSnippets.js';
@@ -93,6 +95,7 @@ const smVal = ref(12);
 const mdVal = ref(27);
 const lgVal = ref(64);
 const isDisabled = ref(false);
+const demoDateIso = ref('2027-02-02');
 </script>
 
 <template>
@@ -394,7 +397,25 @@ const isDisabled = ref(false);
       </div>
     </div>
 
-    <!-- CARD 4: Standard 4-Tab Code & API Reference -->
+    <!-- CARD 5: NanoDatePicker Companion (ISO 8601 Calendar Picker) -->
+    <div class="demo-section">
+      <h3>5. Companion: <code>NanoDatePicker</code> (ISO 8601 Calendar Popover)</h3>
+      <p class="demo-desc">
+        Replaces ugly native <code>&lt;input type="date"&gt;</code> with a Monday-first ISO 8601 calendar grid, quick presets (Today, +30d, +90d), and full Light/Dark theme reactivity.
+      </p>
+      <div class="size-row">
+        <span class="size-tag mono">NanoDatePicker</span>
+        <div class="size-control-wrap">
+          <NanoDatePicker v-model="demoDateIso" color="emerald" size="md" />
+        </div>
+        <span class="value-badge mono">{{ demoDateIso || '—' }}</span>
+      </div>
+      <div style="margin-top: 12px;">
+        <NanoSecretPipe :auto-focus="false" prompt="Demo SSH / Sudo Zero-Cache Pipe:" />
+      </div>
+    </div>
+
+    <!-- CARD 6: Standard 4-Tab Code & API Reference -->
     <NanoCodeBlock :tabs="codeTabs" />
   </div>
 </template>

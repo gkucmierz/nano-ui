@@ -40,6 +40,21 @@ import NanoNumberStepper from './components/NanoNumberStepper.vue';
 import NanoTabs from './components/NanoTabs.vue';
 import NanoCheckbox from './components/NanoCheckbox.vue';
 import NanoSortableList from './components/NanoSortableList.vue';
+import NanoDatePicker from './components/NanoDatePicker.vue';
+import NanoSecretPipe from './components/NanoSecretPipe.vue';
+import { sanitizeSecretPaste, createSecretByteBuffer } from './utils/secretPipe.js';
+import {
+  MONTH_NAMES,
+  MONTH_SHORT_NAMES,
+  WEEKDAY_MONDAY_FIRST,
+  formatIsoDate,
+  parseIsoDate,
+  getTodayIso,
+  addDaysToIso,
+  formatDisplayDate,
+  isIsoDateDisabled,
+  buildCalendarMonthGrid,
+} from './utils/datepicker.js';
 import {
   DEFAULT_INTERACTIVE_IGNORE_SELECTOR,
   reorderArray,
@@ -235,6 +250,22 @@ export {
   NanoTabs,
   NanoCheckbox,
   NanoSortableList,
+  NanoDatePicker,
+  NanoDatePicker as NanoCalendar,
+  NanoSecretPipe,
+  NanoSecretPipe as NanoPasswordTunnel,
+  sanitizeSecretPaste,
+  createSecretByteBuffer,
+  MONTH_NAMES,
+  MONTH_SHORT_NAMES,
+  WEEKDAY_MONDAY_FIRST,
+  formatIsoDate,
+  parseIsoDate,
+  getTodayIso,
+  addDaysToIso,
+  formatDisplayDate,
+  isIsoDateDisabled,
+  buildCalendarMonthGrid,
   DEFAULT_INTERACTIVE_IGNORE_SELECTOR,
   reorderArray,
   mutualRange,
@@ -412,5 +443,9 @@ export default {
     app.component(`${cp}NanoTabs`, NanoTabs);
     app.component(`${cp}NanoCheckbox`, NanoCheckbox);
     app.component(`${cp}NanoSortableList`, NanoSortableList);
+    app.component(`${cp}NanoDatePicker`, NanoDatePicker);
+    app.component(`${cp}NanoCalendar`, NanoDatePicker);
+    app.component(`${cp}NanoSecretPipe`, NanoSecretPipe);
+    app.component(`${cp}NanoPasswordTunnel`, NanoSecretPipe);
   },
 };
