@@ -11,7 +11,11 @@ import {
   camPolygonsToSvgPath,
   camPolylineToSvgPath,
   densifyRing,
-  isSouthPolarRing
+  isSouthPolarRing,
+  computeSolarCosZenith,
+  computeSolarIrradiance,
+  computeSolarTwilightOpacity,
+  buildSolarTerminatorSvgPrimitives
 } from '../../src/utils/globe-geometry.js'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
@@ -175,5 +179,62 @@ describe('NanoGlobe Component & WORLD_COUNTRIES_LITE Dataset', () => {
     assert.ok(src.includes('renderedCustomPolygons'), 'NanoGlobe must compute horizon-clipped custom polygons')
     assert.ok(src.includes('name="svg-overlay"'), 'NanoGlobe must expose #svg-overlay scoped slot with projection helpers')
     assert.ok(src.includes('clipRingToSvgPath'), 'NanoGlobe must expose clipRingToSvgPath helper')
+  })
+
+  it('computes solar incidence cos(theta_z) via spherical law of cosines and builds gradient / line terminator primitives', () => {
+    // At subsolar point (lat=20, lon=30), cos(theta_z) === 1
+    assert.ok(Math.abs(computeSolarCosZenith(20, 30, 20, 30) - 1) < 1e-12)
+    // At antisolar point (lat=-20, lon=-150), cos(theta_z) === -1
+    assert.ok(Math.abs(computeSolarCosZenith(-20, -150, 20, 30) + 1) < 1e-12)
+    // At 90 deg away on equator when sun is at (0, 0), cos(theta_z) === 0
+    assert.ok(Math.abs(computeSolarCosZenith(0, 90, 0, 0)) < 1e-12)
+
+    assert.equal(computeSolarIrradiance(0, 0, 0, 0), 1)
+    assert.equal(computeSolarIrradiance(0, 180, 0, 0), 0)
+    assert.equal(computeSolarTwilightOpacity(20, 0.5), 0)
+    assert.equal(computeSolarTwilightOpacity(-30, 0.5), 0.5)
+    const midOpacity = computeSolarTwilightOpacity(0, 0.5, 12, -24)
+    assert.ok(midOpacity > 0.05 && midOpacity < 0.45)
+
+    const trig = makeTrig(15, 25)
+    const grad = buildSolarTerminatorSvgPrimitives([-25, 18], trig, { mode: 'gradient', bandCount: 16 })
+    assert.ok(grad.bands.length >= 10)
+    assert.equal(grad.lineD, '')
+
+    const lineOnly = buildSolarTerminatorSvgPrimitives([-25, 18], trig, { mode: 'line' })
+    assert.equal(lineOnly.bands.length, 0)
+    assert.ok(lineOnly.lineD.startsWith('M'))
+
+    const both = buildSolarTerminatorSvgPrimitives([-25, 18], trig, { mode: 'both', bandCount: 12 })
+    assert.ok(both.bands.length >= 8)
+    assert.ok(both.lineD.startsWith('M'))
+  })
+
+  it('supports radial atmosphere halo gradient (100% at surface to 0% outward), autoRotateTurnsPerSec, and drag kinetic feedback guard', () => {
+    const src = readFileSync(resolve(ROOT, 'src/components/NanoGlobe.vue'), 'utf8')
+    assert.ok(
+      src.includes('atmosphereMode') && src.includes('atmo-grad'),
+      'NanoGlobe must support atmosphereMode ("ring" | "gradient") with radial gradient'
+    )
+    assert.ok(
+      src.includes('offset="88.3%"') && src.includes('stop-opacity="1"') && src.includes('stop-opacity="0"'),
+      'Atmosphere gradient must have 100% opacity at Earth surface (r=212/240 ≈ 88.3%) fading to 0% at outer edge'
+    )
+    assert.ok(
+      src.includes('autoRotateTurnsPerSec') && src.includes('* 360'),
+      'NanoGlobe must support autoRotateTurnsPerSec converting turns/sec to 360 deg/sec'
+    )
+    assert.ok(
+      src.includes('if (isDragging.value) return') && src.includes('preparedHealpixWorldCells'),
+      'NanoGlobe must guard props.center watcher during drag and precompute world-space HEALPix & country vectors'
+    )
+    assert.ok(
+      src.includes('speedKinetic = createKineticTransition') && src.includes('ensureAutoRotateLoop'),
+      'NanoGlobe must interpolate angular velocity via C1 Hermite speedKinetic without resetting RAF dt on slider updates'
+    )
+    assert.ok(
+      src.includes('var(--nano-bg-card') && src.includes('var(--nano-text-secondary'),
+      'NanoGlobe HUD pills must use Nano UI SSoT light/dark theme variables instead of hardcoded dark slate'
+    )
   })
 })

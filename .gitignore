@@ -14,8 +14,6 @@ code-recipes
 # Local AI Agent Rules & Code Recipes (Never Commit)
 .agents
 .agent
-.agent-working
-.llm-working
 AGENTS.md
 agents.md
-.dashboard
+.dashboard-app

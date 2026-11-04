@@ -5,6 +5,9 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { parse } from '@vue/compiler-sfc';
 import {
+  NANO_COLOR_PRESETS,
+  isNanoColorPreset,
+  resolveNanoColor,
   getPerceivedLightness,
   getContrastTextColor,
   pickBestContrastColor,
@@ -12,6 +15,11 @@ import {
   getWcagContrastRatio,
   parseColor,
 } from '../../src/utils/colors.js';
+import {
+  clamp,
+  countStepDecimals,
+  quantizeStepValue,
+} from '../../src/utils/math.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -110,6 +118,25 @@ describe('OKLCH Perceptual Lightness & Contrast Utilities', () => {
       const ratio = getWcagContrastRatio('#000000', '#ffffff');
       assert.ok(Math.abs(ratio - 21) < 0.05);
       assert.ok(Math.abs(getWcagContrastRatio('#3b4394', '#3b4394') - 1) < 1e-6);
+    });
+  });
+
+  describe('SSoT Color Presets (NANO_COLOR_PRESETS, resolveNanoColor) & Math Quantization Utilities', () => {
+    test('should resolve named presets to --nano-preset-* CSS tokens and pass through custom CSS colors', () => {
+      assert.equal(isNanoColorPreset('purple'), true);
+      assert.equal(isNanoColorPreset('emerald'), true);
+      assert.equal(isNanoColorPreset('#ff0055'), false);
+      assert.equal(resolveNanoColor('purple'), NANO_COLOR_PRESETS.purple);
+      assert.equal(resolveNanoColor('#ff0055'), '#ff0055');
+      assert.equal(resolveNanoColor('', 'cyan'), NANO_COLOR_PRESETS.cyan);
+    });
+
+    test('should clamp, count step decimals, and quantize step values without floating-point drift', () => {
+      assert.equal(clamp(15, 0, 10), 10);
+      assert.equal(clamp(-3, 0, 10), 0);
+      assert.equal(countStepDecimals(0.005), 3);
+      assert.equal(countStepDecimals(1e-4), 4);
+      assert.equal(quantizeStepValue(0.88 + 0.333 * 0.24, { min: 0.88, max: 1.12, step: 0.002 }), 0.96);
     });
   });
 

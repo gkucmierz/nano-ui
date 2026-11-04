@@ -1,0 +1,15 @@
+node_modules
+dist
+dist-app
+dist-ssg
+test-results
+.git
+.gitea
+.agents
+.agent
+.dashboard-app
+AGENTS.md
+agents.md
+code-recipes
+*.log
+.DS_Store
