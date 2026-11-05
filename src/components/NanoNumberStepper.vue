@@ -1,117 +1,3 @@
-<template>
-  <div
-    class="nano-number-stepper"
-    :class="[
-      `is-${variant}`,
-      `is-${size}`,
-      presetColorClass,
-      { 'is-disabled': disabled, 'is-focused': isFocused }
-    ]"
-    :style="rootStyle"
-  >
-    <!-- Variant 'split': Left Decrement Button [ - | input | + ] -->
-    <button
-      v-if="variant === 'split'"
-      type="button"
-      class="nano-stepper-btn is-left"
-      :disabled="disabled || isAtMin"
-      :aria-label="decrementAriaLabel"
-      @pointerdown.prevent="startAutoStep(-1)"
-      @pointerup="stopAutoStep"
-      @pointerleave="stopAutoStep"
-      @pointercancel="stopAutoStep"
-      @keydown.enter.prevent="stepBy(-1)"
-      @keydown.space.prevent="stepBy(-1)"
-    >
-      <span v-if="decrementLabel" class="nano-stepper-text">{{ decrementLabel }}</span>
-      <svg v-else viewBox="0 0 12 12" width="11" height="11" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
-        <line x1="2.5" y1="6" x2="9.5" y2="6" />
-      </svg>
-    </button>
-
-    <span v-if="prefix" class="nano-stepper-affix is-prefix">{{ prefix }}</span>
-
-    <input
-      ref="inputRef"
-      type="number"
-      class="nano-stepper-input"
-      :class="{ 'is-center': variant === 'split' || align === 'center' }"
-      :value="displayValue"
-      :min="Number.isFinite(min) ? min : undefined"
-      :max="Number.isFinite(max) ? max : undefined"
-      :step="step"
-      :disabled="disabled"
-      :placeholder="placeholder"
-      :aria-label="ariaLabel"
-      @focus="isFocused = true"
-      @blur="handleBlur"
-      @input="handleInput"
-      @keydown.up.prevent="stepBy($event.shiftKey ? 10 : 1)"
-      @keydown.down.prevent="stepBy($event.shiftKey ? -10 : -1)"
-      @wheel="handleWheel"
-    />
-
-    <span v-if="suffix" class="nano-stepper-affix is-suffix">{{ suffix }}</span>
-
-    <!-- Variant 'split': Right Increment Button [ - | input | + ] -->
-    <button
-      v-if="variant === 'split'"
-      type="button"
-      class="nano-stepper-btn is-right"
-      :disabled="disabled || isAtMax"
-      :aria-label="incrementAriaLabel"
-      @pointerdown.prevent="startAutoStep(1)"
-      @pointerup="stopAutoStep"
-      @pointerleave="stopAutoStep"
-      @pointercancel="stopAutoStep"
-      @keydown.enter.prevent="stepBy(1)"
-      @keydown.space.prevent="stepBy(1)"
-    >
-      <span v-if="incrementLabel" class="nano-stepper-text">{{ incrementLabel }}</span>
-      <svg v-else viewBox="0 0 12 12" width="11" height="11" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
-        <line x1="6" y1="2.5" x2="6" y2="9.5" />
-        <line x1="2.5" y1="6" x2="9.5" y2="6" />
-      </svg>
-    </button>
-
-    <!-- Variant 'stacked': Right-Side Half-Height Up/Down Buttons [ input | ▲ / ▼ ] -->
-    <div v-else class="nano-stepper-stack">
-      <button
-        type="button"
-        class="nano-stepper-half is-up"
-        :disabled="disabled || isAtMax"
-        :aria-label="incrementAriaLabel"
-        @pointerdown.prevent="startAutoStep(1)"
-        @pointerup="stopAutoStep"
-        @pointerleave="stopAutoStep"
-        @pointercancel="stopAutoStep"
-        @keydown.enter.prevent="stepBy(1)"
-        @keydown.space.prevent="stepBy(1)"
-      >
-        <svg viewBox="0 0 12 8" width="9" height="6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <polyline points="1.5 6.2 6 1.8 10.5 6.2" />
-        </svg>
-      </button>
-      <button
-        type="button"
-        class="nano-stepper-half is-down"
-        :disabled="disabled || isAtMin"
-        :aria-label="decrementAriaLabel"
-        @pointerdown.prevent="startAutoStep(-1)"
-        @pointerup="stopAutoStep"
-        @pointerleave="stopAutoStep"
-        @pointercancel="stopAutoStep"
-        @keydown.enter.prevent="stepBy(-1)"
-        @keydown.space.prevent="stepBy(-1)"
-      >
-        <svg viewBox="0 0 12 8" width="9" height="6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <polyline points="1.5 1.8 6 6.2 10.5 1.8" />
-        </svg>
-      </button>
-    </div>
-  </div>
-</template>
-
 <script setup>
 import { ref, computed, onBeforeUnmount } from 'vue'
 import { clamp, countStepDecimals } from '../utils/math.js'
@@ -203,10 +89,24 @@ const props = defineProps({
   incrementAriaLabel: {
     type: String,
     default: 'Increase value'
+  },
+  id: {
+    type: String,
+    default: ''
+  },
+  name: {
+    type: String,
+    default: ''
   }
 })
 
+let stepperUidSeq = 0
+
 const emit = defineEmits(['update:modelValue', 'change'])
+
+const autoId = `nano-stepper-${++stepperUidSeq}`
+const resolvedId = computed(() => props.id || autoId)
+const resolvedName = computed(() => props.name || resolvedId.value)
 
 const inputRef = ref(null)
 const isFocused = ref(false)
@@ -337,6 +237,122 @@ onBeforeUnmount(() => {
   stopAutoStep()
 })
 </script>
+
+<template>
+  <div
+    class="nano-number-stepper"
+    :class="[
+      `is-${variant}`,
+      `is-${size}`,
+      presetColorClass,
+      { 'is-disabled': disabled, 'is-focused': isFocused }
+    ]"
+    :style="rootStyle"
+  >
+    <!-- Variant 'split': Left Decrement Button [ - | input | + ] -->
+    <button
+      v-if="variant === 'split'"
+      type="button"
+      class="nano-stepper-btn is-left"
+      :disabled="disabled || isAtMin"
+      :aria-label="decrementAriaLabel"
+      @pointerdown.prevent="startAutoStep(-1)"
+      @pointerup="stopAutoStep"
+      @pointerleave="stopAutoStep"
+      @pointercancel="stopAutoStep"
+      @keydown.enter.prevent="stepBy(-1)"
+      @keydown.space.prevent="stepBy(-1)"
+    >
+      <span v-if="decrementLabel" class="nano-stepper-text">{{ decrementLabel }}</span>
+      <svg v-else viewBox="0 0 12 12" width="11" height="11" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+        <line x1="2.5" y1="6" x2="9.5" y2="6" />
+      </svg>
+    </button>
+
+    <span v-if="prefix" class="nano-stepper-affix is-prefix">{{ prefix }}</span>
+
+    <input
+      :id="resolvedId"
+      ref="inputRef"
+      :name="resolvedName"
+      type="number"
+      class="nano-stepper-input"
+      :class="{ 'is-center': variant === 'split' || align === 'center' }"
+      :value="displayValue"
+      :min="Number.isFinite(min) ? min : undefined"
+      :max="Number.isFinite(max) ? max : undefined"
+      :step="step"
+      :disabled="disabled"
+      :placeholder="placeholder"
+      :aria-label="ariaLabel"
+      @focus="isFocused = true"
+      @blur="handleBlur"
+      @input="handleInput"
+      @keydown.up.prevent="stepBy($event.shiftKey ? 10 : 1)"
+      @keydown.down.prevent="stepBy($event.shiftKey ? -10 : -1)"
+      @wheel="handleWheel"
+    />
+
+    <span v-if="suffix" class="nano-stepper-affix is-suffix">{{ suffix }}</span>
+
+    <!-- Variant 'split': Right Increment Button [ - | input | + ] -->
+    <button
+      v-if="variant === 'split'"
+      type="button"
+      class="nano-stepper-btn is-right"
+      :disabled="disabled || isAtMax"
+      :aria-label="incrementAriaLabel"
+      @pointerdown.prevent="startAutoStep(1)"
+      @pointerup="stopAutoStep"
+      @pointerleave="stopAutoStep"
+      @pointercancel="stopAutoStep"
+      @keydown.enter.prevent="stepBy(1)"
+      @keydown.space.prevent="stepBy(1)"
+    >
+      <span v-if="incrementLabel" class="nano-stepper-text">{{ incrementLabel }}</span>
+      <svg v-else viewBox="0 0 12 12" width="11" height="11" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+        <line x1="6" y1="2.5" x2="6" y2="9.5" />
+        <line x1="2.5" y1="6" x2="9.5" y2="6" />
+      </svg>
+    </button>
+
+    <!-- Variant 'stacked': Right-Side Half-Height Up/Down Buttons [ input | ▲ / ▼ ] -->
+    <div v-else class="nano-stepper-stack">
+      <button
+        type="button"
+        class="nano-stepper-half is-up"
+        :disabled="disabled || isAtMax"
+        :aria-label="incrementAriaLabel"
+        @pointerdown.prevent="startAutoStep(1)"
+        @pointerup="stopAutoStep"
+        @pointerleave="stopAutoStep"
+        @pointercancel="stopAutoStep"
+        @keydown.enter.prevent="stepBy(1)"
+        @keydown.space.prevent="stepBy(1)"
+      >
+        <svg viewBox="0 0 12 8" width="9" height="6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="1.5 6.2 6 1.8 10.5 6.2" />
+        </svg>
+      </button>
+      <button
+        type="button"
+        class="nano-stepper-half is-down"
+        :disabled="disabled || isAtMin"
+        :aria-label="decrementAriaLabel"
+        @pointerdown.prevent="startAutoStep(-1)"
+        @pointerup="stopAutoStep"
+        @pointerleave="stopAutoStep"
+        @pointercancel="stopAutoStep"
+        @keydown.enter.prevent="stepBy(-1)"
+        @keydown.space.prevent="stepBy(-1)"
+      >
+        <svg viewBox="0 0 12 8" width="9" height="6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="1.5 1.8 6 6.2 10.5 1.8" />
+        </svg>
+      </button>
+    </div>
+  </div>
+</template>
 
 <style scoped>
 /* Semantic Color Presets (matching Nano UI .nano-btn-* variants) */

@@ -1,7 +1,6 @@
 <script setup>
 import { ref } from 'vue';
 import NanoDatePicker from '../../components/NanoDatePicker.vue';
-import NanoSecretPipe from '../../components/NanoSecretPipe.vue';
 import NanoCodeBlock from '../../components/NanoCodeBlock.vue';
 import { getTodayIso, addDaysToIso } from '../../utils/datepicker.js';
 import { createDocTabs } from '../docSnippets.js';
@@ -12,14 +11,6 @@ const rangeStartDate = ref(todayIso);
 const rangeEndDate = ref(addDaysToIso(todayIso, 90));
 const smallDate = ref(todayIso);
 const largeDate = ref(addDaysToIso(todayIso, 30));
-const lastSubmittedBytes = ref(0);
-
-const onDemoPipeSubmit = (bytes) => {
-  lastSubmittedBytes.value = bytes ? bytes.length : 0;
-  if (bytes && typeof bytes.fill === 'function') {
-    bytes.fill(0);
-  }
-};
 
 const codeTabs = createDocTabs({
   componentName: 'NanoDatePicker',
@@ -111,22 +102,6 @@ const codeTabs = createDocTabs({
           </div>
         </div>
       </div>
-    </div>
-
-    <div class="demo-section">
-      <h3>2. Companion Security Control: <code>NanoSecretPipe</code> (Zero-Cache <code>Uint8Array</code> Tunnel)</h3>
-      <p class="demo-desc">
-        Captures SSH / GPG / Sudo passphrases without any <code>&lt;input&gt;</code>, <code>&lt;textarea&gt;</code>, or JS
-        <code>String</code> in the DOM, wiping the underlying <code>Uint8Array(512)</code> with <code>.fill(0)</code> immediately after submission.
-      </p>
-      <NanoSecretPipe
-        :auto-focus="false"
-        prompt="Enter SSH / Sudo passphrase (Demo):"
-        :on-submit-bytes="onDemoPipeSubmit"
-      />
-      <p v-if="lastSubmittedBytes > 0" class="pipe-feedback mono">
-        ✅ Transmitted {{ lastSubmittedBytes }} raw bytes and zero-wiped RAM buffer (.fill(0)).
-      </p>
     </div>
 
     <NanoCodeBlock :tabs="codeTabs" />

@@ -4,6 +4,7 @@ import { useRouter } from 'vue-router';
 import pkg from '../../package.json';
 import { currentLang, toggleLang, initSavedLang, t } from '../locales.js';
 import { usePlaygroundSearch, PLAYGROUND_NAV_ITEMS } from './usePlaygroundSearch.js';
+import { sharedBrandConcept, playConceptSonicLogo } from './brandLogoState.js';
 import './playground.css';
 
 const router = useRouter();
@@ -203,12 +204,29 @@ onUnmounted(() => {
   <div class="playground-layout">
     <aside class="sidebar">
       <div class="sidebar-header">
-        <router-link to="/" class="header-brand" v-tooltip="isNarrow ? 'Nano UI' : undefined">
+        <router-link to="/" class="header-brand" v-tooltip="isNarrow ? 'Nano UI' : undefined" @click="playConceptSonicLogo(sharedBrandConcept)">
           <svg class="brand-icon" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg" width="40" height="40">
-            <rect width="32" height="32" rx="9" fill="var(--nano-bg-card-elevated, #0f172a)" stroke="var(--nano-border-card, rgba(255,255,255,0.18))" stroke-width="1.5"/>
-            <path d="M8.5 23.5V8.5L23.5 23.5V8.5" stroke="var(--nano-accent-primary, #6366f1)" stroke-width="5.0" stroke-linecap="round" stroke-linejoin="round"/>
-            <circle cx="23.5" cy="8.5" r="3.2" fill="var(--nano-state-active, #00f2fe)"/>
-            <circle cx="23.5" cy="8.5" r="1.2" fill="#ffffff"/>
+            <rect x="1" y="1" width="30" height="30" rx="7.2" fill="var(--nano-bg-card-elevated, #0f172a)" stroke="var(--nano-border-card, rgba(148,163,184,0.35))" stroke-width="1"/>
+            <template v-if="sharedBrandConcept === 'PHI'">
+              <rect x="7" y="7" width="4.25" height="18" rx="0.9" fill="var(--nano-accent-primary, #6366f1)"/>
+              <polygon points="11.85,7 25,25 25,15.85" fill="#06b6d4"/>
+              <circle cx="22.55" cy="9.45" r="2.45" fill="var(--nano-state-active, #0284c7)"/>
+            </template>
+            <template v-else-if="sharedBrandConcept === 'A'">
+              <path d="M6.5 9.8 L11.5 6.8 L11.5 22.8 L6.5 25.8 Z" fill="var(--nano-accent-primary, #6366f1)"/>
+              <path d="M13.3 7.2 L18.7 16.6 L18.7 24.8 L13.3 15.4 Z" fill="#06b6d4"/>
+              <path d="M20.5 6.8 L25.5 9.8 L25.5 21.8 L20.5 18.8 Z" fill="var(--nano-state-active, #00f2fe)"/>
+            </template>
+            <template v-else-if="sharedBrandConcept === 'B'">
+              <path d="M6.8 7.5 H11.4 V24.5 H6.8 Z" fill="var(--nano-accent-primary, #6366f1)"/>
+              <path d="M12.9 7.5 H17.5 L22.2 24.5 H17.6 Z" fill="#10b981"/>
+              <path d="M20.6 7.5 H25.2 V18.5 L20.6 13.5 Z" fill="var(--nano-state-active, #00f2fe)"/>
+            </template>
+            <template v-else>
+              <rect x="7" y="7.2" width="4.8" height="17.6" rx="2.4" fill="var(--nano-accent-primary, #6366f1)"/>
+              <path d="M10.5 9.2 L22.2 22.8 V16.2" stroke="#06b6d4" stroke-width="4.6" stroke-linecap="round" stroke-linejoin="round"/>
+              <circle cx="22.2" cy="9.4" r="3.1" fill="var(--nano-state-active, #00f2fe)"/>
+            </template>
           </svg>
           <div class="brand-info">
             <h1 class="brand-title">Nano UI</h1>
@@ -245,8 +263,10 @@ onUnmounted(() => {
             <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
           </svg>
           <input
+            id="nano-playground-search"
             ref="searchInputRef"
             v-model="searchQuery"
+            name="nano-playground-search"
             type="text"
             class="sidebar-search-input"
             :placeholder="t('common.searchPlaceholder')"
@@ -289,6 +309,12 @@ onUnmounted(() => {
             <span class="nav-label-group">
               <span class="nav-label">{{ t('nav.overview') }}</span>
               <span v-if="searchQuery.trim()" class="nav-match-tag">{{ getComponentTag('/docs/overview') }}</span>
+            </span>
+          </router-link>
+          <router-link to="/showoff" class="nav-link" active-class="active" v-tooltip="isNarrow ? '3D Showoff (Φ)' : undefined">
+            <NanoIcon name="sparkles" class="nav-icon" :size="18" />
+            <span class="nav-label-group">
+              <span class="nav-label">3D Showoff (/showoff)</span>
             </span>
           </router-link>
           <router-link v-show="isRouteVisible('/docs/typography')" to="/docs/typography" class="nav-link" :class="{ 'kbd-selected': isKeyboardSelected('/docs/typography') }" active-class="active" v-tooltip="isNarrow ? t('nav.typography') : undefined">
@@ -383,6 +409,16 @@ onUnmounted(() => {
             <span class="nav-label-group">
               <span class="nav-label">{{ t('nav.datePicker') }}</span>
               <span v-if="searchQuery.trim()" class="nav-match-tag">{{ getComponentTag('/docs/date-picker') }}</span>
+            </span>
+          </router-link>
+          <router-link v-show="isRouteVisible('/docs/secret-pipe')" to="/docs/secret-pipe" class="nav-link" :class="{ 'kbd-selected': isKeyboardSelected('/docs/secret-pipe') }" active-class="active" v-tooltip="isNarrow ? t('nav.secretPipe') : undefined">
+            <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+              <path d="M12 8v4M12 16h.01"/>
+            </svg>
+            <span class="nav-label-group">
+              <span class="nav-label">{{ t('nav.secretPipe') }}</span>
+              <span v-if="searchQuery.trim()" class="nav-match-tag">{{ getComponentTag('/docs/secret-pipe') }}</span>
             </span>
           </router-link>
           <router-link v-show="isRouteVisible('/docs/masked-input')" to="/docs/masked-input" class="nav-link" :class="{ 'kbd-selected': isKeyboardSelected('/docs/masked-input') }" active-class="active" v-tooltip="isNarrow ? t('nav.maskedInput') : undefined">

@@ -42,7 +42,11 @@ const props = defineProps({
   },
 });
 
+let oklchUidSeq = 0;
+
 const emit = defineEmits(['update:modelValue', 'update:format', 'change', 'copy']);
+
+const oklchAutoId = `nano-oklch-${++oklchUidSeq}`;
 
 const activeFormat = ref(props.format || 'oklch');
 const lightness = ref(0.65);
@@ -350,6 +354,8 @@ defineExpose({
       </div>
       <div class="nano-oklch-slider-track" :style="{ backgroundImage: lightnessGradient }">
         <input
+          :id="`${oklchAutoId}-lightness`"
+          :name="`${oklchAutoId}-lightness`"
           type="range"
           class="nano-oklch-range"
           min="0"
@@ -383,6 +389,8 @@ defineExpose({
 
       <div class="nano-oklch-input-row">
         <input
+          :id="`${oklchAutoId}-value`"
+          :name="`${oklchAutoId}-value`"
           type="text"
           class="nano-oklch-value-input"
           :value="formattedValue"

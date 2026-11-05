@@ -569,10 +569,10 @@ onUnmounted(() => {
 
         <!-- Angular Units Switcher -->
         <div class="control-group">
-          <label class="group-label">
+          <div class="group-label">
             <span>Angular Units</span>
             <span class="unit-indicator">{{ selectedUnit.toUpperCase() }}</span>
-          </label>
+          </div>
           <div class="preset-pills">
             <button
               type="button"
@@ -606,10 +606,10 @@ onUnmounted(() => {
 
         <!-- Timing Mode Switcher -->
         <div class="control-group">
-          <label class="group-label">
+          <div class="group-label">
             <span>Timing Mode</span>
             <span class="unit-indicator">{{ timingMode === 'fixed' ? 'T = const' : 'v ~ const' }}</span>
-          </label>
+          </div>
           <div class="preset-pills">
             <button
               type="button"
@@ -634,7 +634,7 @@ onUnmounted(() => {
 
         <!-- Angular Stepping Actions -->
         <div class="control-group">
-          <label class="group-label">Step Rotations</label>
+          <div class="group-label">Step Rotations</div>
           <div class="actions-grid">
             <button type="button" class="btn btn-action" @click="triggerRotate(90, '+90°')" v-ripple>
               {{ selectedUnit === 'turn' ? '+0.25 turn' : selectedUnit === 'rad' ? '+0.5π rad' : '+90° CW' }}
@@ -669,10 +669,10 @@ onUnmounted(() => {
 
         <!-- Duration / Speed Base Selector -->
         <div class="control-group">
-          <label class="group-label">
+          <div class="group-label">
             <span>Base Unit Duration (T)</span>
             <span class="unit-indicator">{{ (baseDuration / 1000).toFixed(1) }}s per 90°</span>
-          </label>
+          </div>
           <div class="preset-pills">
             <button
               v-for="p in speedPresets"
@@ -701,10 +701,10 @@ onUnmounted(() => {
 
         <!-- Inertia Reversal Threshold -->
         <div class="control-group" v-if="isShortestPath">
-          <label class="group-label">
+          <div class="group-label">
             <span>Inertia Reversal Threshold</span>
             <span class="unit-indicator">{{ inertiaThreshold > 0 ? `${inertiaThreshold}s` : 'Disabled (Strict)' }}</span>
-          </label>
+          </div>
           <div class="preset-pills">
             <button
               type="button"
@@ -758,17 +758,17 @@ onUnmounted(() => {
         </div>
         <div class="legend-wrap">
           <label class="legend-channel">
-            <input type="checkbox" v-model="showAngle" class="channel-check" />
+            <input id="kinetic-show-angle" name="kinetic-show-angle" type="checkbox" v-model="showAngle" class="channel-check" />
             <span class="legend-line solid cyan"></span>
             <span class="ch-name">Angle θ</span>
           </label>
           <label class="legend-channel">
-            <input type="checkbox" v-model="showVelocity" class="channel-check" />
+            <input id="kinetic-show-velocity" name="kinetic-show-velocity" type="checkbox" v-model="showVelocity" class="channel-check" />
             <span class="legend-line solid emerald"></span>
             <span class="ch-name">Velocity ω</span>
           </label>
           <label class="legend-channel">
-            <input type="checkbox" v-model="showAcceleration" class="channel-check" />
+            <input id="kinetic-show-acceleration" name="kinetic-show-acceleration" type="checkbox" v-model="showAcceleration" class="channel-check" />
             <span class="legend-line dashed amber"></span>
             <span class="ch-name">Accel α</span>
           </label>

@@ -181,6 +181,22 @@
   --nano-tab-badge-bg: rgba(56, 189, 248, 0.18);
   --nano-tab-badge-color: #38bdf8;
   --nano-tab-badge-border: rgba(56, 189, 248, 0.28);
+
+  /* NanoDatePicker & NanoSecretPipe Tokens - Dark Theme */
+  --nano-datepicker-bg: rgba(255, 255, 255, 0.05);
+  --nano-datepicker-hover-bg: rgba(255, 255, 255, 0.08);
+  --nano-datepicker-popover-bg: #18181b;
+  --nano-datepicker-border: rgba(255, 255, 255, 0.15);
+  --nano-datepicker-shadow: 0 16px 36px rgba(0, 0, 0, 0.42);
+  --nano-secret-bg: #0b1120;
+  --nano-secret-input-bg: #020617;
+  --nano-secret-fg: #f8fafc;
+  --nano-secret-muted: #94a3b8;
+  --nano-secret-border: rgba(16, 185, 129, 0.35);
+  --nano-secret-input-border: rgba(148, 163, 184, 0.28);
+  --nano-secret-badge-bg: rgba(16, 185, 129, 0.15);
+  --nano-secret-badge-fg: #34d399;
+  --nano-secret-prompt-fg: #34d399;
 }
 
 :root[data-theme="light"],
@@ -352,4 +368,20 @@ html[data-theme="light"],
   --nano-tab-badge-bg: rgba(2, 132, 199, 0.14);
   --nano-tab-badge-color: #0369a1;
   --nano-tab-badge-border: rgba(2, 132, 199, 0.32);
+
+  /* NanoDatePicker & NanoSecretPipe Tokens - Light Theme */
+  --nano-datepicker-bg: #f8fafc;
+  --nano-datepicker-hover-bg: #ffffff;
+  --nano-datepicker-popover-bg: #ffffff;
+  --nano-datepicker-border: #cbd5e1;
+  --nano-datepicker-shadow: 0 14px 32px rgba(15, 23, 42, 0.14);
+  --nano-secret-bg: #f8fafc;
+  --nano-secret-input-bg: #ffffff;
+  --nano-secret-fg: #0f172a;
+  --nano-secret-muted: #475569;
+  --nano-secret-border: rgba(5, 150, 105, 0.38);
+  --nano-secret-input-border: #cbd5e1;
+  --nano-secret-badge-bg: rgba(5, 150, 105, 0.12);
+  --nano-secret-badge-fg: #047857;
+  --nano-secret-prompt-fg: #047857;
 }

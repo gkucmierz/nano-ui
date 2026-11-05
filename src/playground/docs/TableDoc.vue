@@ -127,8 +127,11 @@ const cssApiDoc = `/* Nano UI Data Table Primitives */
           <div class="table-sandbox-wrapper">
             <div class="table-toolbar">
               <input
+                id="table-doc-filter"
+                name="table-doc-filter"
                 v-model="filterQuery"
                 type="text"
+                aria-label="Filter tables"
                 class="nano-input filter-search-input"
                 placeholder="Filter tables..."
                 :disabled="isEmpty"
@@ -221,7 +224,7 @@ const cssApiDoc = `/* Nano UI Data Table Primitives */
       <!-- Controls Panel -->
       <div class="controls-panel">
         <div class="control-group">
-          <label class="control-label">Density</label>
+          <span class="control-label">Density</span>
           <div class="nano-btn-group">
             <button
               class="nano-btn nano-btn-secondary nano-btn-sm"

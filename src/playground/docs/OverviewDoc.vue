@@ -2,6 +2,7 @@
 import pkg from '../../../package.json';
 import { currentLang, t } from '../../locales.js';
 import NanoCodeBlock from '../../components/NanoCodeBlock.vue';
+import LogoConceptsLab from '../LogoConceptsLab.vue';
 
 const version = pkg.version;
 
@@ -61,7 +62,12 @@ export default defineConfig({
 <template>
   <div class="doc-page">
     <div class="hero-section">
-      <span class="hero-badge">NANO UI {{ version }}</span>
+      <div class="hero-badges-row">
+        <span class="hero-badge">NANO UI {{ version }}</span>
+        <router-link to="/showoff" class="showoff-route-pill">
+          ✨ Dedykowana Scena 3D: /showoff →
+        </router-link>
+      </div>
       <h2>{{ currentLang === 'pl' ? 'Wprowadzenie i Konfiguracja' : 'Overview & Setup' }}</h2>
       <p class="desc">
         {{ currentLang === 'pl' 
@@ -69,6 +75,8 @@ export default defineConfig({
           : 'High-performance, minimal footprint Vue 3 UI library, interactive 3D charts, and kinematic directives with built-in Zero-FOUC design tokens.' }}
       </p>
     </div>
+
+    <LogoConceptsLab />
 
     <!-- Quick Installation -->
     <h3 class="section-title">{{ currentLang === 'pl' ? '1. Instalacja' : '1. Installation' }}</h3>
@@ -134,6 +142,14 @@ export default defineConfig({
   margin-bottom: 2rem;
 }
 
+.hero-badges-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 0.75rem;
+}
+
 .hero-badge {
   display: inline-block;
   font-family: var(--font-mono, monospace);
@@ -144,8 +160,26 @@ export default defineConfig({
   background: rgba(99, 102, 241, 0.12);
   color: var(--nano-accent-primary, #6366f1);
   border: 1px solid rgba(99, 102, 241, 0.25);
-  margin-bottom: 0.75rem;
   letter-spacing: 0.5px;
+}
+
+.showoff-route-pill {
+  display: inline-flex;
+  align-items: center;
+  font-family: var(--font-mono, monospace);
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 3px 10px;
+  border-radius: 6px;
+  background: rgba(16, 185, 129, 0.12);
+  color: #10b981;
+  border: 1px solid rgba(16, 185, 129, 0.32);
+  text-decoration: none;
+  transition: background-color 0.15s ease;
+}
+
+.showoff-route-pill:hover {
+  background: rgba(16, 185, 129, 0.22);
 }
 
 .doc-page h2 {

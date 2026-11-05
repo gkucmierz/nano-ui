@@ -158,9 +158,9 @@ const demoDateIso = ref('2027-02-02');
           </p>
           <div class="stepper-row">
             <div class="stepper-field">
-              <label>Range Min (Od)</label>
+              <label for="doc-stepper-min">Range Min (Od)</label>
               <NanoNumberStepper
-                v-model="rangeMin"
+                id="doc-stepper-min" v-model="rangeMin"
                 variant="stacked"
                 :color="selectedColor"
                 :min="2"
@@ -172,9 +172,9 @@ const demoDateIso = ref('2027-02-02');
             </div>
             <span class="range-dash">–</span>
             <div class="stepper-field">
-              <label>Range Max (Do)</label>
+              <label for="doc-stepper-max">Range Max (Do)</label>
               <NanoNumberStepper
-                v-model="rangeMax"
+                id="doc-stepper-max" v-model="rangeMax"
                 variant="stacked"
                 :color="selectedColor"
                 :min="3"
@@ -198,7 +198,7 @@ const demoDateIso = ref('2027-02-02');
           </p>
           <div class="stepper-row">
             <div class="stepper-field">
-              <label>Single Seed n</label>
+              <label for="doc-stepper-seed">Single Seed n</label>
               <NanoNumberStepper
                 v-model="seedVal"
                 variant="split"
@@ -211,9 +211,9 @@ const demoDateIso = ref('2027-02-02');
               />
             </div>
             <div class="stepper-field">
-              <label>Custom Step (±100 Hz)</label>
+              <label for="doc-stepper-freq">Custom Step (±100 Hz)</label>
               <NanoNumberStepper
-                v-model="freqVal"
+                id="doc-stepper-freq" v-model="freqVal"
                 variant="split"
                 :color="selectedColor"
                 :min="0"
@@ -273,7 +273,7 @@ const demoDateIso = ref('2027-02-02');
         </div>
         <div class="stepper-row">
           <div class="stepper-field">
-            <label class="mono">--nano-stepper-color: #f59e0b</label>
+            <label for="doc-stepper-amber" class="mono">--nano-stepper-color: #f59e0b</label>
             <NanoNumberStepper
               v-model="colorVals.customAmber"
               variant="split"
@@ -282,7 +282,7 @@ const demoDateIso = ref('2027-02-02');
             />
           </div>
           <div class="stepper-field">
-            <label class="mono">color="#a855f7"</label>
+            <label for="doc-stepper-purple" class="mono">color="#a855f7"</label>
             <NanoNumberStepper
               v-model="colorVals.customPurple"
               variant="stacked"

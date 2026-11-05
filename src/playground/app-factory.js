@@ -1,11 +1,11 @@
-import { createSSRApp } from 'vue';
+import { createApp, createSSRApp } from 'vue';
 import App from './App.vue';
 import NanoUI from '../index.js';
 import { createAppRouter } from './router/index.js';
 import i18n from '../locales.js';
 
-export const createAppInstance = ({ isServer = false } = {}) => {
-  const app = createSSRApp(App);
+export const createAppInstance = ({ isServer = false, hydrate = false } = {}) => {
+  const app = isServer || hydrate ? createSSRApp(App) : createApp(App);
   const router = createAppRouter({ isServer });
 
   app.use(router);

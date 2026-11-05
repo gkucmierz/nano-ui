@@ -83,7 +83,21 @@ const props = defineProps({
   color: {
     type: String,
     default: 'indigo',
-    validator: (v) => ['indigo', 'emerald', 'cyan', 'amber', 'rose', 'violet', 'slate'].includes(v),
+    validator: (v) =>
+      [
+        'indigo',
+        'primary',
+        'emerald',
+        'cyan',
+        'amber',
+        'gold',
+        'rose',
+        'crimson',
+        'danger',
+        'violet',
+        'purple',
+        'slate',
+      ].includes(v),
   },
   /**
    * Placeholder when nothing is selected
@@ -142,9 +156,22 @@ const props = defineProps({
     type: Number,
     default: 8,
   },
+  id: {
+    type: String,
+    default: '',
+  },
+  name: {
+    type: String,
+    default: '',
+  },
 });
 
+let selectUidSeq = 0;
+
 const emit = defineEmits(['update:modelValue', 'change', 'open', 'close', 'search', 'clear']);
+
+const autoSelectId = `nano-select-${++selectUidSeq}`;
+const resolvedSearchId = computed(() => `${props.id || autoSelectId}-search`);
 
 const isOpen = ref(false);
 const filterText = ref('');
@@ -680,11 +707,14 @@ defineExpose({
               <line x1="21" y1="21" x2="16.65" y2="16.65" />
             </svg>
             <input
+              :id="resolvedSearchId"
               ref="searchInputRef"
               v-model="filterText"
+              :name="resolvedSearchId"
               type="text"
               class="nano-select-search-input"
               :placeholder="resolvedSearchPlaceholder"
+              :aria-label="resolvedSearchPlaceholder"
               @input="onSearchInput"
               @click.stop
             />

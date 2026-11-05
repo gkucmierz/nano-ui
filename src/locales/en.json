@@ -44,6 +44,7 @@
     "channelOsd": "Channel OSD (TV HUD)",
     "numberStepper": "Nano Number Stepper",
     "datePicker": "Calendar (NanoDatePicker)",
+    "secretPipe": "Secret Pipe (NanoSecretPipe)",
     "tabs": "Nano Tabs (Docked & Segmented)",
     "ripple": "v-ripple Directive",
     "tooltip": "v-tooltip Directive"

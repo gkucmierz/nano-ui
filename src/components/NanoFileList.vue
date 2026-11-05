@@ -92,6 +92,8 @@ const props = defineProps({
   },
 });
 
+let fileListUidSeq = 0;
+
 const emit = defineEmits([
   'update:modelValue',
   'select',
@@ -99,6 +101,8 @@ const emit = defineEmits([
   'selectCommit',
   'copyHash',
 ]);
+
+const fileListAutoId = `nano-file-list-search-${++fileListUidSeq}`;
 
 const rootRef = ref(null);
 const measuredWidth = ref(0);
@@ -296,7 +300,7 @@ watch(
           class="nfl-author-avatar"
         />
         <span v-else class="nfl-author-initials">{{ authorInitials }}</span>
-        <span class="nfl-author-name" :title="activeCommit.author">{{ activeCommit.author }}</span>
+        <span class="nfl-author-name" v-tooltip="activeCommit.author">{{ activeCommit.author }}</span>
       </div>
 
       <div v-if="shortSha" class="nfl-sha-group">
@@ -335,10 +339,13 @@ watch(
     <!-- Optional Search Filter -->
     <div v-if="searchable" class="nfl-search-bar">
       <input
+        :id="fileListAutoId"
         v-model="searchQuery"
+        :name="fileListAutoId"
         type="text"
         class="nfl-search-input"
         :placeholder="searchPlaceholder"
+        :aria-label="searchPlaceholder"
       />
     </div>
 
@@ -373,7 +380,8 @@ watch(
           <span
             class="nfl-status-box"
             :class="`is-${file.statusInfo.type}`"
-            :title="file.statusInfo.label"
+            v-tooltip="file.statusInfo.label"
+            :aria-label="file.statusInfo.label"
           >
             <!-- Added [+] -->
             <svg v-if="file.statusInfo.type === 'added'" viewBox="0 0 14 14" fill="none">

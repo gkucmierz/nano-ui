@@ -5,7 +5,14 @@ if (typeof window !== 'undefined') {
   tracker.init('nano-ui', 'https://analytics.7u.pl');
 }
 
-const { app, router } = createAppInstance({ isServer: false });
+const hasSsrMarkup =
+  typeof document !== 'undefined' &&
+  Boolean(document.getElementById('app')?.firstElementChild);
+
+const { app, router } = createAppInstance({
+  isServer: false,
+  hydrate: hasSsrMarkup,
+});
 
 router.isReady().then(() => {
   app.mount('#app');

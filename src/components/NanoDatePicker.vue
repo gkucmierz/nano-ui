@@ -21,6 +21,14 @@ const props = defineProps({
     type: String,
     default: '',
   },
+  min: {
+    type: String,
+    default: '',
+  },
+  max: {
+    type: String,
+    default: '',
+  },
   minDate: {
     type: String,
     default: '',
@@ -42,7 +50,20 @@ const props = defineProps({
     type: String,
     default: 'emerald',
     validator: (v) =>
-      ['indigo', 'emerald', 'cyan', 'amber', 'rose', 'violet', 'slate'].includes(v),
+      [
+        'emerald',
+        'primary',
+        'indigo',
+        'cyan',
+        'amber',
+        'gold',
+        'rose',
+        'crimson',
+        'danger',
+        'violet',
+        'purple',
+        'slate',
+      ].includes(v) || (typeof v === 'string' && v.startsWith('#')),
   },
   clearable: {
     type: Boolean,
@@ -56,13 +77,35 @@ const props = defineProps({
     type: Boolean,
     default: true,
   },
+  locale: {
+    type: String,
+    default: '',
+  },
   lang: {
+    type: String,
+    default: '',
+  },
+  id: {
+    type: String,
+    default: '',
+  },
+  name: {
+    type: String,
+    default: '',
+  },
+  ariaLabel: {
     type: String,
     default: '',
   },
 });
 
+let ndpUidSeq = 0;
+
 const emit = defineEmits(['update:modelValue', 'change']);
+
+const autoId = `nano-date-picker-${++ndpUidSeq}`;
+const resolvedId = computed(() => props.id || autoId);
+const resolvedName = computed(() => props.name || resolvedId.value);
 
 const rootRef = ref(null);
 const triggerRef = ref(null);
@@ -71,8 +114,12 @@ const isOpen = ref(false);
 const teleportTarget = ref('body');
 const popoverStyle = ref({});
 
+const effectiveMin = computed(() => props.minDate || props.min || '');
+const effectiveMax = computed(() => props.maxDate || props.max || '');
+
 const effectiveLang = computed(() => {
-  if (props.lang === 'pl' || props.lang === 'en') return props.lang;
+  const explicit = props.locale || props.lang;
+  if (explicit === 'pl' || explicit === 'en') return explicit;
   return currentLang?.value === 'en' ? 'en' : 'pl';
 });
 
@@ -115,8 +162,8 @@ const calendarCells = computed(() => {
   return buildCalendarMonthGrid(viewYear.value, viewMonth.value, {
     selectedIso: parsedSelected.value?.iso || '',
     todayIso: todayIso.value,
-    minIso: props.minDate,
-    maxIso: props.maxDate,
+    minIso: effectiveMin.value,
+    maxIso: effectiveMax.value,
   });
 });
 
@@ -257,11 +304,14 @@ onUnmounted(() => {
     ]"
   >
     <button
+      :id="resolvedId"
       ref="triggerRef"
+      :name="resolvedName"
       type="button"
       class="ndp-trigger"
       :disabled="disabled"
       :aria-expanded="isOpen"
+      :aria-label="ariaLabel || displayLabel || effectivePlaceholder"
       @click="togglePopover"
     >
       <span class="ndp-icon" aria-hidden="true">
@@ -400,9 +450,10 @@ onUnmounted(() => {
 .nano-date-picker {
   --ndp-accent: #10b981;
   --ndp-accent-soft: rgba(16, 185, 129, 0.16);
-  --ndp-bg: var(--nano-bg-input, var(--bg-elevated, #0f172a));
-  --ndp-border: var(--nano-border-subtle, var(--border-subtle, #334155));
-  --ndp-text: var(--nano-text-primary, var(--text-main, #f1f5f9));
+  --ndp-bg: var(--nano-datepicker-bg, var(--nano-bg-muted, var(--bg-elevated, #0f172a)));
+  --ndp-hover-bg: var(--nano-datepicker-hover-bg, var(--nano-bg-card, var(--bg-card, #18181b)));
+  --ndp-border: var(--nano-datepicker-border, var(--nano-border-card, var(--border-subtle, #334155)));
+  --ndp-text: var(--nano-text-main, var(--text-main, #f1f5f9));
   --ndp-muted: var(--nano-text-muted, var(--text-muted, #94a3b8));
   position: relative;
   display: inline-flex;
@@ -411,6 +462,8 @@ onUnmounted(() => {
   -webkit-user-select: none;
 }
 
+.nano-date-picker.theme-primary,
+.ndp-popover.theme-primary,
 .nano-date-picker.theme-indigo,
 .ndp-popover.theme-indigo {
   --ndp-accent: #6366f1;
@@ -424,15 +477,35 @@ onUnmounted(() => {
 }
 
 .nano-date-picker.theme-amber,
-.ndp-popover.theme-amber {
+.ndp-popover.theme-amber,
+.nano-date-picker.theme-gold,
+.ndp-popover.theme-gold {
   --ndp-accent: #f59e0b;
   --ndp-accent-soft: rgba(245, 158, 11, 0.16);
 }
 
 .nano-date-picker.theme-rose,
-.ndp-popover.theme-rose {
+.ndp-popover.theme-rose,
+.nano-date-picker.theme-crimson,
+.ndp-popover.theme-crimson,
+.nano-date-picker.theme-danger,
+.ndp-popover.theme-danger {
   --ndp-accent: #f43f5e;
   --ndp-accent-soft: rgba(244, 63, 94, 0.16);
+}
+
+.nano-date-picker.theme-violet,
+.ndp-popover.theme-violet,
+.nano-date-picker.theme-purple,
+.ndp-popover.theme-purple {
+  --ndp-accent: #a855f7;
+  --ndp-accent-soft: rgba(168, 85, 247, 0.16);
+}
+
+.nano-date-picker.theme-slate,
+.ndp-popover.theme-slate {
+  --ndp-accent: #64748b;
+  --ndp-accent-soft: rgba(100, 116, 139, 0.16);
 }
 
 .ndp-trigger {
@@ -450,7 +523,7 @@ onUnmounted(() => {
   line-height: 1.25;
   cursor: pointer;
   outline: none !important;
-  transition: border-color 0.15s ease, background-color 0.15s ease;
+  transition: border-color 0.15s ease, background-color 0.15s ease, box-shadow 0.15s ease;
 }
 
 .nano-date-picker.is-sm .ndp-trigger {
@@ -472,6 +545,11 @@ onUnmounted(() => {
 .ndp-trigger:hover:not(:disabled),
 .nano-date-picker.is-open .ndp-trigger {
   border-color: var(--ndp-accent);
+  background: var(--ndp-hover-bg);
+}
+
+.nano-date-picker.is-open .ndp-trigger {
+  box-shadow: 0 0 0 2px var(--ndp-accent-soft);
 }
 
 .ndp-icon {
@@ -508,7 +586,7 @@ onUnmounted(() => {
   border-radius: 50%;
   font-size: 0.68rem;
   color: var(--ndp-muted);
-  background: rgba(148, 163, 184, 0.14);
+  background: rgba(148, 163, 184, 0.16);
 }
 
 .ndp-clear:hover {
@@ -519,12 +597,12 @@ onUnmounted(() => {
 .ndp-popover {
   --ndp-accent: #10b981;
   --ndp-accent-soft: rgba(16, 185, 129, 0.18);
-  background: var(--nano-modal-bg, var(--bg-card, #0f172a));
-  color: var(--nano-text-primary, var(--text-main, #f1f5f9));
-  border: 1px solid var(--nano-border-card, var(--border-subtle, #334155));
+  background: var(--nano-datepicker-popover-bg, var(--nano-bg-sidebar, var(--bg-card, #0f172a)));
+  color: var(--nano-text-main, var(--text-main, #f1f5f9));
+  border: 1px solid var(--nano-datepicker-border, var(--nano-border-card, var(--border-subtle, #334155)));
   border-radius: 12px;
   padding: 12px;
-  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.35);
+  box-shadow: var(--nano-datepicker-shadow, 0 16px 36px rgba(0, 0, 0, 0.35));
   user-select: none;
   -webkit-user-select: none;
 }
@@ -547,8 +625,8 @@ onUnmounted(() => {
   width: 26px;
   height: 26px;
   border-radius: 7px;
-  border: 1px solid var(--nano-border-subtle, var(--border-subtle, #334155));
-  background: var(--nano-bg-muted, var(--bg-elevated, #1e293b));
+  border: 1px solid var(--nano-datepicker-border, var(--nano-border-card, var(--border-subtle, #334155)));
+  background: var(--nano-datepicker-bg, var(--nano-bg-muted, var(--bg-elevated, #1e293b)));
   color: inherit;
   font-size: 0.88rem;
   font-weight: 700;
@@ -627,7 +705,7 @@ onUnmounted(() => {
 
 .ndp-day.is-selected {
   background: var(--ndp-accent) !important;
-  color: #04130d !important;
+  color: #ffffff !important;
   font-weight: 800;
 }
 
@@ -643,15 +721,15 @@ onUnmounted(() => {
   gap: 6px;
   margin-top: 10px;
   padding-top: 8px;
-  border-top: 1px solid var(--nano-border-subtle, var(--border-subtle, #334155));
+  border-top: 1px solid var(--nano-datepicker-border, var(--nano-border-subtle, var(--border-subtle, #334155)));
 }
 
 .ndp-preset-btn {
   flex: 1;
   padding: 5px 6px;
   border-radius: 6px;
-  border: 1px solid var(--nano-border-subtle, var(--border-subtle, #334155));
-  background: var(--nano-bg-muted, var(--bg-elevated, #1e293b));
+  border: 1px solid var(--nano-datepicker-border, var(--nano-border-card, var(--border-subtle, #334155)));
+  background: var(--nano-datepicker-bg, var(--nano-bg-muted, var(--bg-elevated, #1e293b)));
   color: inherit;
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
   font-size: 0.72rem;

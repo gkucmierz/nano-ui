@@ -1,76 +1,3 @@
-<template>
-  <div class="doc-page">
-    <div class="header-section">
-      <h2>NanoChannelOsd</h2>
-      <p class="desc">
-        TV-style multi-digit glassmorphic HUD overlay (inspired by geo-words.7u.pl). Listens for 0–9 digit sequences (e.g. typing <code>1</code> then <code>2</code> selects channel <code>12</code>) and renders a centered translucent badge that auto-dismisses after a configurable timeout.
-      </p>
-    </div>
-
-    <div class="demo-section">
-      <div class="osd-stage-card">
-        <div class="osd-stage-hint">
-          <div class="active-channel-pill">
-            Active Channel: <strong>#{{ String(activeChannel).padStart(2, '0') }}</strong>
-          </div>
-          <p>Press digits <kbd>0</kbd>–<kbd>9</kbd> on your keyboard (e.g. <kbd>1</kbd> + <kbd>2</kbd> for <strong>12</strong>) or click the keypad below:</p>
-          <div class="keypad-row">
-            <button
-              v-for="d in [1, 2, 3, 4, 5, 6, 7, 8, 9, 0]"
-              :key="d"
-              type="button"
-              class="keypad-btn"
-              @click="triggerDigit(d)"
-            >
-              {{ d }}
-            </button>
-          </div>
-        </div>
-
-        <NanoChannelOsd
-          ref="osdRef"
-          v-model="activeChannel"
-          :min="1"
-          :max="maxChannel"
-          :timeout="timeoutMs"
-          :size="hudSize"
-        />
-      </div>
-
-      <div class="osd-controls-card">
-        <h3 class="controls-title">Playground Controls</h3>
-        <div class="controls-grid">
-          <div class="control-item">
-            <label class="control-label">
-              <span>Max Channel</span>
-              <span class="control-value">{{ maxChannel }}</span>
-            </label>
-            <NanoSlider v-model="maxChannel" :min="9" :max="99" :step="1" size="sm" aria-label="Max Channel" />
-          </div>
-
-          <div class="control-item">
-            <label class="control-label">
-              <span>HUD Size (px)</span>
-              <span class="control-value">{{ hudSize }}px</span>
-            </label>
-            <NanoSlider v-model="hudSize" :min="96" :max="200" :step="4" size="sm" aria-label="HUD Size" />
-          </div>
-
-          <div class="control-item">
-            <label class="control-label">
-              <span>Fade Timeout</span>
-              <span class="control-value">{{ timeoutMs }}ms</span>
-            </label>
-            <NanoSlider v-model="timeoutMs" :min="250" :max="1500" :step="50" size="sm" aria-label="Fade Timeout" />
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <NanoCodeBlock :tabs="codeTabs" />
-  </div>
-</template>
-
 <script setup>
 import { ref } from 'vue';
 import NanoChannelOsd from '../../components/NanoChannelOsd.vue';
@@ -132,6 +59,79 @@ const codeTabs = createDocTabs({
   ],
 });
 </script>
+
+<template>
+  <div class="doc-page">
+    <div class="header-section">
+      <h2>NanoChannelOsd</h2>
+      <p class="desc">
+        TV-style multi-digit glassmorphic HUD overlay (inspired by geo-words.7u.pl). Listens for 0–9 digit sequences (e.g. typing <code>1</code> then <code>2</code> selects channel <code>12</code>) and renders a centered translucent badge that auto-dismisses after a configurable timeout.
+      </p>
+    </div>
+
+    <div class="demo-section">
+      <div class="osd-stage-card">
+        <div class="osd-stage-hint">
+          <div class="active-channel-pill">
+            Active Channel: <strong>#{{ String(activeChannel).padStart(2, '0') }}</strong>
+          </div>
+          <p>Press digits <kbd>0</kbd>–<kbd>9</kbd> on your keyboard (e.g. <kbd>1</kbd> + <kbd>2</kbd> for <strong>12</strong>) or click the keypad below:</p>
+          <div class="keypad-row">
+            <button
+              v-for="d in [1, 2, 3, 4, 5, 6, 7, 8, 9, 0]"
+              :key="d"
+              type="button"
+              class="keypad-btn"
+              @click="triggerDigit(d)"
+            >
+              {{ d }}
+            </button>
+          </div>
+        </div>
+
+        <NanoChannelOsd
+          ref="osdRef"
+          v-model="activeChannel"
+          :min="1"
+          :max="maxChannel"
+          :timeout="timeoutMs"
+          :size="hudSize"
+        />
+      </div>
+
+      <div class="osd-controls-card">
+        <h3 class="controls-title">Playground Controls</h3>
+        <div class="controls-grid">
+          <div class="control-item">
+            <div class="control-label">
+              <span>Max Channel</span>
+              <span class="control-value">{{ maxChannel }}</span>
+            </div>
+            <NanoSlider v-model="maxChannel" :min="9" :max="99" :step="1" size="sm" aria-label="Max Channel" />
+          </div>
+
+          <div class="control-item">
+            <div class="control-label">
+              <span>HUD Size (px)</span>
+              <span class="control-value">{{ hudSize }}px</span>
+            </div>
+            <NanoSlider v-model="hudSize" :min="96" :max="200" :step="4" size="sm" aria-label="HUD Size" />
+          </div>
+
+          <div class="control-item">
+            <div class="control-label">
+              <span>Fade Timeout</span>
+              <span class="control-value">{{ timeoutMs }}ms</span>
+            </div>
+            <NanoSlider v-model="timeoutMs" :min="250" :max="1500" :step="50" size="sm" aria-label="Fade Timeout" />
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <NanoCodeBlock :tabs="codeTabs" />
+  </div>
+</template>
 
 <style scoped>
 .doc-page {

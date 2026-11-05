@@ -1,73 +1,3 @@
-<template>
-  <div class="doc-page">
-    <div class="header-section">
-      <h2>TopologyRadar</h2>
-      <p class="desc">
-        A multi-dimensional radar chart capable of rendering Z-axis historical contour lines, perfect for visualizing momentum and telemetry data.
-      </p>
-    </div>
-
-    <div class="demo-section">
-      <div class="radar-preview-card">
-        <TopologyRadar
-          :size="260"
-          :labels="demoLabels"
-          :history="demoHistory"
-          :color="radarColor"
-        />
-      </div>
-
-      <div class="radar-controls-card">
-        <h3 class="controls-title">Playground Controls</h3>
-
-        <div class="controls-grid">
-          <div class="control-item">
-            <label class="control-label">
-              <span>Axes Count</span>
-              <span class="control-value">{{ axesCount }}</span>
-            </label>
-            <NanoSlider v-model="axesCount" :min="3" :max="15" :step="1" size="sm" aria-label="Axes Count" />
-          </div>
-
-          <div class="control-item">
-            <label class="control-label">
-              <span>History Length</span>
-              <span class="control-value">{{ historyLimit }}</span>
-            </label>
-            <NanoSlider v-model="historyLimit" :min="1" :max="30" :step="1" size="sm" aria-label="History Length" />
-          </div>
-
-          <div class="control-item">
-            <label class="control-label">
-              <span>Auto Feed</span>
-              <span class="control-value">{{ feedRate }}ms</span>
-            </label>
-            <NanoSlider v-model="feedRate" :min="100" :max="2000" :step="100" size="sm" aria-label="Auto Feed" />
-          </div>
-        </div>
-
-        <div class="actions-row">
-          <button type="button" class="btn btn-primary" v-ripple @click="feedRandom">
-            Feed Random Point
-          </button>
-          <button type="button" class="btn btn-secondary btn-stable-width" v-ripple @click="toggleAutoFeed">
-            <span class="btn-label-stack">
-              <span :class="{ 'is-hidden': Boolean(autoFeedTimer) }">Start Auto Feed</span>
-              <span :class="{ 'is-hidden': !autoFeedTimer }">Stop Auto Feed</span>
-            </span>
-          </button>
-          <button type="button" class="btn btn-danger" v-ripple @click="demoHistory = []">
-            Clear History
-          </button>
-        </div>
-      </div>
-    </div>
-
-    <!-- API Reference / Usage / Granular -->
-    <NanoCodeBlock :tabs="codeTabs" />
-  </div>
-</template>
-
 <script setup>
 import { ref, computed, watch, onBeforeUnmount } from 'vue';
 import TopologyRadar from '../../components/TopologyRadar.vue';
@@ -174,6 +104,76 @@ onBeforeUnmount(() => {
   if (autoFeedTimer.value) clearInterval(autoFeedTimer.value);
 });
 </script>
+
+<template>
+  <div class="doc-page">
+    <div class="header-section">
+      <h2>TopologyRadar</h2>
+      <p class="desc">
+        A multi-dimensional radar chart capable of rendering Z-axis historical contour lines, perfect for visualizing momentum and telemetry data.
+      </p>
+    </div>
+
+    <div class="demo-section">
+      <div class="radar-preview-card">
+        <TopologyRadar
+          :size="260"
+          :labels="demoLabels"
+          :history="demoHistory"
+          :color="radarColor"
+        />
+      </div>
+
+      <div class="radar-controls-card">
+        <h3 class="controls-title">Playground Controls</h3>
+
+        <div class="controls-grid">
+          <div class="control-item">
+            <div class="control-label">
+              <span>Axes Count</span>
+              <span class="control-value">{{ axesCount }}</span>
+            </div>
+            <NanoSlider v-model="axesCount" :min="3" :max="15" :step="1" size="sm" aria-label="Axes Count" />
+          </div>
+
+          <div class="control-item">
+            <div class="control-label">
+              <span>History Length</span>
+              <span class="control-value">{{ historyLimit }}</span>
+            </div>
+            <NanoSlider v-model="historyLimit" :min="1" :max="30" :step="1" size="sm" aria-label="History Length" />
+          </div>
+
+          <div class="control-item">
+            <div class="control-label">
+              <span>Auto Feed</span>
+              <span class="control-value">{{ feedRate }}ms</span>
+            </div>
+            <NanoSlider v-model="feedRate" :min="100" :max="2000" :step="100" size="sm" aria-label="Auto Feed" />
+          </div>
+        </div>
+
+        <div class="actions-row">
+          <button type="button" class="btn btn-primary" v-ripple @click="feedRandom">
+            Feed Random Point
+          </button>
+          <button type="button" class="btn btn-secondary btn-stable-width" v-ripple @click="toggleAutoFeed">
+            <span class="btn-label-stack">
+              <span :class="{ 'is-hidden': Boolean(autoFeedTimer) }">Start Auto Feed</span>
+              <span :class="{ 'is-hidden': !autoFeedTimer }">Stop Auto Feed</span>
+            </span>
+          </button>
+          <button type="button" class="btn btn-danger" v-ripple @click="demoHistory = []">
+            Clear History
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- API Reference / Usage / Granular -->
+    <NanoCodeBlock :tabs="codeTabs" />
+  </div>
+</template>
 
 <style scoped>
 .doc-page {

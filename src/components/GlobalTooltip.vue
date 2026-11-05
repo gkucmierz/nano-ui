@@ -96,7 +96,7 @@ onUnmounted(() => {
       '--arrow-offset': `${arrowX}px`
     }"
   >
-    {{ tooltipState.text }}
+    <span class="global-tooltip-text">{{ tooltipState.text }}</span>
   </div>
 </template>
 
@@ -124,7 +124,7 @@ onUnmounted(() => {
   font-size: 0.85rem;
   font-weight: 500;
   width: max-content;
-  max-width: min(350px, calc(100vw - var(--nano-space-xl, 32px)));
+  max-width: min(40vw, 420px, calc(100vw - var(--nano-space-xl, 32px)));
   text-align: center;
   line-height: 1.4;
   white-space: normal;
@@ -135,6 +135,17 @@ onUnmounted(() => {
   transition: opacity var(--nano-transition-tooltip), transform var(--nano-transition-tooltip);
   opacity: 0;
   visibility: hidden;
+}
+
+.global-tooltip-text {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: var(--nano-tooltip-max-lines, 4);
+  line-clamp: var(--nano-tooltip-max-lines, 4);
+  max-height: calc(1.4em * var(--nano-tooltip-max-lines, 4));
+  overflow: hidden;
+  text-overflow: ellipsis;
+  word-break: break-word;
 }
 
 .global-tooltip::after {

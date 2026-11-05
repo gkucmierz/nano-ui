@@ -1,515 +1,3 @@
-<template>
-  <div 
-    ref="wrapperRef"
-    class="donut-canvas-wrapper" 
-    :class="{ 
-      'is-expanded': isExpanded,
-      'has-labels': isExpanded && showLabels,
-      'no-transitions': isAnimating || immediate
-    }"
-    :style="wrapperStyle"
-    @mousemove="handleWrapperMouseMove"
-    @mouseleave="handleWrapperMouseLeave"
-  >
-    <svg 
-      :viewBox="`0 0 ${animVbWidth} ${animVbHeight}`" 
-      class="items-svg-chart"
-      xmlns="http://www.w3.org/2000/svg"
-    >
-      <defs v-if="normalizedData && normalizedData.length > 0">
-        <!-- Glossy top face gradient -->
-        <linearGradient 
-          v-for="slice in uniqueSlices" 
-          :key="getGradientId('top-grad', slice)" 
-          :id="getGradientId('top-grad', slice)"
-          gradientUnits="userSpaceOnUse"
-          :x1="slice.topGradX1" :y1="slice.topGradY1" :x2="slice.topGradX2" :y2="slice.topGradY2"
-        >
-          <stop offset="0%" :stop-color="getBrighterColor(slice.color, 1.15)" />
-          <stop offset="100%" :stop-color="getDarkerColor(slice.color, 0.85)" />
-        </linearGradient>
-
-        <!-- 3D Outer Wall vertical gradient -->
-        <linearGradient 
-          v-for="slice in uniqueSlices" 
-          :key="getGradientId('outer-grad', slice)" 
-          :id="getGradientId('outer-grad', slice)"
-          gradientUnits="userSpaceOnUse"
-          x1="0" :y1="slice.wallY1" x2="0" :y2="slice.wallY2"
-        >
-          <stop offset="0%" :stop-color="getDarkerColor(slice.color, 0.75)" />
-          <stop offset="100%" :stop-color="getDarkerColor(slice.color, 0.5)" />
-        </linearGradient>
-
-        <!-- 3D Inner Wall vertical gradient -->
-        <linearGradient 
-          v-for="slice in uniqueSlices" 
-          :key="getGradientId('inner-grad', slice)" 
-          :id="getGradientId('inner-grad', slice)"
-          gradientUnits="userSpaceOnUse"
-          x1="0" :y1="slice.wallY1" x2="0" :y2="slice.wallY2"
-        >
-          <stop offset="0%" :stop-color="getDarkerColor(slice.color, 0.6)" />
-          <stop offset="100%" :stop-color="getDarkerColor(slice.color, 0.4)" />
-        </linearGradient>
-      </defs>
-
-      <!-- Centered text for empty state -->
-      <g v-if="!normalizedData || normalizedData.length === 0">
-        <text 
-          :x="animCx" 
-          :y="animCy" 
-          fill="#64748b" 
-          font-size="12" 
-          font-family="system-ui, -apple-system, sans-serif"
-          text-anchor="middle" 
-          dominant-baseline="middle"
-        >
-          {{ emptyText || 'No data' }}
-        </text>
-      </g>
-
-      <!-- Donut Slices (walls and top faces grouped for perfect Z-indexing) -->
-      <g v-else>
-        <!-- 3D MODE: 9-Layer Painter's Algorithm Architecture -->
-        <template v-if="props.is3D">
-          <!-- 1. Back Outer Walls -->
-          <g 
-            v-for="slice in backSlices" 
-            :key="'slice-back-outer-' + slice.item.id + '-' + slice.midAngle"
-            class="slice-group-3d"
-            :class="{ 
-              'is-hovered': effectiveActiveId === slice.item.id,
-              'is-dimmed': effectiveActiveId !== null && effectiveActiveId !== slice.item.id 
-            }"
-            :style="getSliceStyle(slice)"
-            :data-testid="'slice-' + slice.item.id"
-            :data-slice-id="slice.item.id"
-            data-half="back"
-            :data-sub-index="slice.subIndex"
-          >
-            <path 
-              v-if="isExpanded && slice.outerWallPath" 
-              :d="slice.outerWallPath" 
-              :fill="`url(#${getGradientId('outer-grad', slice)})`" 
-              stroke="none"
-              data-wall="outer-wall"
-              data-half="back"
-            />
-            <path 
-              v-if="isExpanded && slice.outerWallStrokePath" 
-              :d="slice.outerWallStrokePath" 
-              fill="none"
-              :stroke="`url(#${getGradientId('outer-grad', slice)})`" 
-              stroke-width="0.8"
-              stroke-linejoin="round"
-              data-wall="outer-wall-stroke"
-              data-half="back"
-            />
-          </g>
-
-          <!-- 2. Back Cut Walls (sorted by angle order / depth cutY ascending) -->
-          <g 
-            v-for="cut in backCutWallsSorted" 
-            :key="'cut-back-' + cut.id"
-            class="slice-group-3d"
-            :class="{ 
-              'is-hovered': effectiveActiveId === cut.slice.item.id,
-              'is-dimmed': effectiveActiveId !== null && effectiveActiveId !== cut.slice.item.id 
-            }"
-            :style="getSliceStyle(cut.slice)"
-            :data-testid="'slice-' + cut.slice.item.id"
-            :data-slice-id="cut.slice.item.id"
-            :data-cut-type="cut.type"
-            data-layer="cut-wall"
-            data-half="back"
-            :data-sub-index="cut.slice.subIndex"
-          >
-            <path 
-              v-if="isExpanded && shouldRenderCut(cut) && cut.path"
-              :d="cut.path" 
-              :fill="cut.fill" 
-              stroke="none"
-              :data-wall="cut.type"
-              data-half="back"
-            />
-          </g>
-
-          <!-- 3. Back Inner Walls (drawn after back cut walls so cuts never clip inner walls) -->
-          <g 
-            v-for="slice in backSlices" 
-            :key="'slice-back-inner-' + slice.item.id + '-' + slice.midAngle"
-            class="slice-group-3d"
-            :class="{ 
-              'is-hovered': effectiveActiveId === slice.item.id,
-              'is-dimmed': effectiveActiveId !== null && effectiveActiveId !== slice.item.id 
-            }"
-            :style="getSliceStyle(slice)"
-            :data-testid="'slice-' + slice.item.id"
-            :data-slice-id="slice.item.id"
-            data-half="back"
-            :data-sub-index="slice.subIndex"
-          >
-            <path 
-              v-if="isExpanded && slice.innerWallPath" 
-              :d="slice.innerWallPath" 
-              :fill="`url(#${getGradientId('inner-grad', slice)})`" 
-              stroke="none"
-              data-wall="inner-wall"
-              data-half="back"
-            />
-            <path 
-              v-if="isExpanded && slice.innerWallStrokePath" 
-              :d="slice.innerWallStrokePath" 
-              fill="none"
-              :stroke="`url(#${getGradientId('inner-grad', slice)})`" 
-              stroke-width="0.8"
-              stroke-linejoin="round"
-              data-wall="inner-wall-stroke"
-              data-half="back"
-            />
-          </g>
-
-          <!-- 4. Front Inner Walls -->
-          <g 
-            v-for="slice in frontSlices" 
-            :key="'slice-front-inner-' + slice.item.id + '-' + slice.midAngle"
-            class="slice-group-3d"
-            :class="{ 
-              'is-hovered': effectiveActiveId === slice.item.id,
-              'is-dimmed': effectiveActiveId !== null && effectiveActiveId !== slice.item.id 
-            }"
-            :style="getSliceStyle(slice)"
-            :data-testid="'slice-' + slice.item.id"
-            :data-slice-id="slice.item.id"
-            data-half="front"
-            :data-sub-index="slice.subIndex"
-          >
-            <path 
-              v-if="isExpanded && slice.innerWallPath" 
-              :d="slice.innerWallPath" 
-              :fill="`url(#${getGradientId('inner-grad', slice)})`" 
-              stroke="none"
-              data-wall="inner-wall"
-              data-half="front"
-            />
-            <path 
-              v-if="isExpanded && slice.innerWallStrokePath" 
-              :d="slice.innerWallStrokePath" 
-              fill="none"
-              :stroke="`url(#${getGradientId('inner-grad', slice)})`" 
-              stroke-width="0.8"
-              stroke-linejoin="round"
-              data-wall="inner-wall-stroke"
-              data-half="front"
-            />
-          </g>
-
-          <!-- 5. Front Cut Walls (sorted by angle order / depth cutY ascending) -->
-          <g 
-            v-for="cut in frontCutWallsSorted" 
-            :key="'cut-front-' + cut.id"
-            class="slice-group-3d"
-            :class="{ 
-              'is-hovered': effectiveActiveId === cut.slice.item.id,
-              'is-dimmed': effectiveActiveId !== null && effectiveActiveId !== cut.slice.item.id 
-            }"
-            :style="getSliceStyle(cut.slice)"
-            :data-testid="'slice-' + cut.slice.item.id"
-            :data-slice-id="cut.slice.item.id"
-            :data-cut-type="cut.type"
-            data-layer="cut-wall"
-            data-half="front"
-            :data-sub-index="cut.slice.subIndex"
-          >
-            <path 
-              v-if="isExpanded && shouldRenderCut(cut) && cut.path"
-              :d="cut.path" 
-              :fill="cut.fill" 
-              stroke="none"
-              :data-wall="cut.type"
-              data-half="front"
-            />
-          </g>
-
-          <!-- 6. Front Outer Walls -->
-          <g 
-            v-for="slice in frontSlices" 
-            :key="'slice-front-outer-' + slice.item.id + '-' + slice.midAngle"
-            class="slice-group-3d"
-            :class="{ 
-              'is-hovered': effectiveActiveId === slice.item.id,
-              'is-dimmed': effectiveActiveId !== null && effectiveActiveId !== slice.item.id 
-            }"
-            :style="getSliceStyle(slice)"
-            :data-testid="'slice-' + slice.item.id"
-            :data-slice-id="slice.item.id"
-            data-half="front"
-            :data-sub-index="slice.subIndex"
-          >
-            <path 
-              v-if="isExpanded && slice.outerWallPath" 
-              :d="slice.outerWallPath" 
-              :fill="`url(#${getGradientId('outer-grad', slice)})`" 
-              stroke="none"
-              data-wall="outer-wall"
-              data-half="front"
-            />
-            <path 
-              v-if="isExpanded && slice.outerWallStrokePath" 
-              :d="slice.outerWallStrokePath" 
-              fill="none"
-              :stroke="`url(#${getGradientId('outer-grad', slice)})`" 
-              stroke-width="0.8"
-              stroke-linejoin="round"
-              data-wall="outer-wall-stroke"
-              data-half="front"
-            />
-          </g>
-
-          <!-- 7. Top Faces (unsplit continuous surfaces, 1 per data item) -->
-          <g 
-            v-for="slice in topSlices"
-            :key="'slice-top-' + slice.item.id"
-            class="slice-group-3d"
-            :class="{ 
-              'is-hovered': effectiveActiveId === slice.item.id,
-              'is-dimmed': effectiveActiveId !== null && effectiveActiveId !== slice.item.id 
-            }"
-            :style="getSliceStyle(slice)"
-            :data-testid="'slice-' + slice.item.id"
-            :data-slice-id="slice.item.id"
-            data-layer="top-face"
-          >
-            <path 
-              :d="slice.topPath" 
-              :fill="`url(#${getGradientId('top-grad', slice)})`" 
-              :stroke="`url(#${getGradientId('top-grad', slice)})`" 
-              stroke-width="0.8"
-              stroke-linejoin="round"
-              data-wall="top-face"
-            />
-            <path 
-              :d="slice.topPath"
-              fill="none" 
-              :stroke="TOP_HIGHLIGHT_COLOR"
-              stroke-width="0.8"
-              stroke-linejoin="round"
-              data-wall="top-face-highlight"
-            />
-          </g>
-
-          <!-- 8. Center Hole Text / Label (strictly on top of all 3D geometry) -->
-          <g
-            v-if="props.showCenterText"
-            :transform="`translate(${animCx}, ${centerTextY})`"
-            class="center-text-group"
-          >
-            <text
-              x="0"
-              y="-3"
-              class="center-text-value"
-              :font-size="animFontSizeValue"
-              font-weight="bold"
-              font-family="'JetBrains Mono', monospace"
-              text-anchor="middle"
-              dominant-baseline="middle"
-            >
-              {{ displayCenterValue }}
-            </text>
-            <text
-              x="0"
-              y="10"
-              class="center-text-label"
-              :font-size="animFontSizeLabel"
-              font-family="system-ui, -apple-system, sans-serif"
-              font-weight="600"
-              text-anchor="middle"
-              dominant-baseline="middle"
-            >
-              {{ displayCenterLabel }}
-            </text>
-          </g>
-        </template>
-
-        <!-- 2D FLAT MODE: All slices rendered first, center label strictly on top of all elements -->
-        <template v-else>
-          <g 
-            v-for="slice in topSlices"
-            :key="'slice-2d-' + slice.item.id"
-            class="slice-group-3d"
-            :class="{ 
-              'is-hovered': effectiveActiveId === slice.item.id,
-              'is-dimmed': effectiveActiveId !== null && effectiveActiveId !== slice.item.id 
-            }"
-            :style="getSliceStyle(slice)"
-          >
-            <!-- Top Face in 2D -->
-            <path 
-              :d="slice.topPath" 
-              :fill="`url(#${getGradientId('top-grad', slice)})`" 
-              :stroke="`url(#${getGradientId('top-grad', slice)})`" 
-              stroke-width="0.8"
-              stroke-linejoin="round"
-            />
-
-            <!-- Top Face White Highlight Outline -->
-            <path 
-              :d="slice.topPath"
-              fill="none" 
-              :stroke="TOP_HIGHLIGHT_COLOR"
-              stroke-width="0.8"
-              stroke-linejoin="round"
-            />
-          </g>
-
-          <!-- Center Hole Text details (Strictly on top of all 2D slices) -->
-          <g v-if="props.showCenterText" :transform="`translate(${animCx}, ${animCy})`" class="center-text-group">
-            <text 
-              x="0" 
-              y="-3" 
-              class="center-text-value"
-              :font-size="animFontSizeValue" 
-              font-weight="bold" 
-              font-family="'JetBrains Mono', monospace" 
-              text-anchor="middle" 
-              dominant-baseline="middle"
-            >
-              {{ displayCenterValue }}
-            </text>
-            <text 
-              x="0" 
-              y="10" 
-              class="center-text-label"
-              :font-size="animFontSizeLabel" 
-              font-family="system-ui, -apple-system, sans-serif" 
-              font-weight="600"
-              text-anchor="middle" 
-              dominant-baseline="middle"
-            >
-              {{ displayCenterLabel }}
-            </text>
-          </g>
-        </template>
-
-        <!-- Transparent Static Hover Triggers to prevent hover feedback loops -->
-        <g 
-          v-for="slice in uniqueSlices" 
-          :key="'hover-trigger-' + slice.item.id"
-          class="hover-trigger-group"
-          :style="{ cursor: (props.selectable && !isSingleSlice) ? 'pointer' : 'default' }"
-          @mouseenter="handleHoverStart(slice.item.id)"
-          @mouseleave="handleHoverEnd(slice.item.id)"
-          @click="handleSliceClick(slice.item.id, $event)"
-          @mousemove="handleSliceMouseMove(slice.item.id, $event)"
-        >
-          <!-- Transparent Top Face -->
-          <path 
-            :d="slice.hoverPath || slice.originalTopPath" 
-            fill="transparent"
-            stroke="none"
-          />
-          <!-- Transparent Outer Wall -->
-          <path 
-            v-if="slice.originalOuterWallPath" 
-            :d="slice.originalOuterWallPath" 
-            fill="transparent"
-            stroke="none"
-          />
-          <!-- Transparent Inner Wall -->
-          <path 
-            v-if="slice.originalInnerWallPath" 
-            :d="slice.originalInnerWallPath" 
-            fill="transparent"
-            stroke="none"
-          />
-        </g>
-
-        <!-- Leader Lines & Text Labels (only in expanded view) -->
-        <g class="labels-layer" :style="{ opacity: labelOpacity, pointerEvents: labelOpacity > 0.01 ? 'auto' : 'none' }">
-          <!-- Left Labels -->
-          <g 
-            v-for="(label, idx) in leftLabels" 
-            :key="'label-left-' + label.item.id"
-            class="label-group"
-            :class="{ 
-              'is-hovered': effectiveActiveId === label.item.id,
-              'is-dimmed': effectiveActiveId !== null && effectiveActiveId !== label.item.id 
-            }"
-            @mouseenter="handleHoverStart(label.item.id)"
-            @mouseleave="handleHoverEnd(label.item.id)"
-            @click="handleSliceClick(label.item.id, $event)"
-            @mousemove="handleSliceMouseMove(label.item.id, $event)"
-            :style="getLabelGroupStyle(label)"
-          >
-            <path 
-              v-if="getLeaderLinePath(label)"
-              class="leader-line"
-              :d="getLeaderLinePath(label)" 
-              fill="none" 
-              :stroke="label.color" 
-              :stroke-width="leaderStrokeWidth" 
-              pointer-events="none"
-            />
-            <text 
-              :x="leftLabelAnchorX - 5" 
-              :y="label.finalY" 
-              :fill="label.color" 
-              :font-size="resolvedLabelFontSize" 
-              font-weight="600" 
-              font-family="system-ui, -apple-system, sans-serif" 
-              text-anchor="end" 
-              dominant-baseline="middle"
-              :style="getLabelTextStyle(label)"
-            >
-              {{ truncateText(label.item.name || label.item.label, 24) }} {{ formatValue(label.item.value) }} {{ label.item.unit || '' }} ({{ label.item.percentage }}%)
-            </text>
-          </g>
-
-          <!-- Right Labels -->
-          <g 
-            v-for="(label, idx) in rightLabels" 
-            :key="'label-right-' + label.item.id"
-            class="label-group"
-            :class="{ 
-              'is-hovered': effectiveActiveId === label.item.id,
-              'is-dimmed': effectiveActiveId !== null && effectiveActiveId !== label.item.id 
-            }"
-            @mouseenter="handleHoverStart(label.item.id)"
-            @mouseleave="handleHoverEnd(label.item.id)"
-            @click="handleSliceClick(label.item.id, $event)"
-            @mousemove="handleSliceMouseMove(label.item.id, $event)"
-            :style="getLabelGroupStyle(label)"
-          >
-            <path 
-              v-if="getLeaderLinePath(label)"
-              class="leader-line"
-              :d="getLeaderLinePath(label)" 
-              fill="none" 
-              :stroke="label.color" 
-              :stroke-width="leaderStrokeWidth" 
-              pointer-events="none"
-            />
-            <text 
-              :x="rightLabelAnchorX + 5" 
-              :y="label.finalY" 
-              :fill="label.color" 
-              :font-size="resolvedLabelFontSize" 
-              font-weight="600" 
-              font-family="system-ui, -apple-system, sans-serif" 
-              text-anchor="start" 
-              dominant-baseline="middle"
-              :style="getLabelTextStyle(label)"
-            >
-              {{ truncateText(label.item.name || label.item.label, 24) }} {{ formatValue(label.item.value) }} {{ label.item.unit || '' }} ({{ label.item.percentage }}%)
-            </text>
-          </g>
-        </g>
-      </g>
-    </svg>
-  </div>
-</template>
-
 <script setup>
 import { ref, computed, watch, onMounted, onUnmounted, nextTick } from 'vue'
 import { normalizeAngle, shortestAngleDiff } from '../utils/math.js'
@@ -2383,6 +1871,518 @@ defineExpose({
   resolvedLabelDistance
 })
 </script>
+
+<template>
+  <div 
+    ref="wrapperRef"
+    class="donut-canvas-wrapper" 
+    :class="{ 
+      'is-expanded': isExpanded,
+      'has-labels': isExpanded && showLabels,
+      'no-transitions': isAnimating || immediate
+    }"
+    :style="wrapperStyle"
+    @mousemove="handleWrapperMouseMove"
+    @mouseleave="handleWrapperMouseLeave"
+  >
+    <svg 
+      :viewBox="`0 0 ${animVbWidth} ${animVbHeight}`" 
+      class="items-svg-chart"
+      xmlns="http://www.w3.org/2000/svg"
+    >
+      <defs v-if="normalizedData && normalizedData.length > 0">
+        <!-- Glossy top face gradient -->
+        <linearGradient 
+          v-for="slice in uniqueSlices" 
+          :key="getGradientId('top-grad', slice)" 
+          :id="getGradientId('top-grad', slice)"
+          gradientUnits="userSpaceOnUse"
+          :x1="slice.topGradX1" :y1="slice.topGradY1" :x2="slice.topGradX2" :y2="slice.topGradY2"
+        >
+          <stop offset="0%" :stop-color="getBrighterColor(slice.color, 1.15)" />
+          <stop offset="100%" :stop-color="getDarkerColor(slice.color, 0.85)" />
+        </linearGradient>
+
+        <!-- 3D Outer Wall vertical gradient -->
+        <linearGradient 
+          v-for="slice in uniqueSlices" 
+          :key="getGradientId('outer-grad', slice)" 
+          :id="getGradientId('outer-grad', slice)"
+          gradientUnits="userSpaceOnUse"
+          x1="0" :y1="slice.wallY1" x2="0" :y2="slice.wallY2"
+        >
+          <stop offset="0%" :stop-color="getDarkerColor(slice.color, 0.75)" />
+          <stop offset="100%" :stop-color="getDarkerColor(slice.color, 0.5)" />
+        </linearGradient>
+
+        <!-- 3D Inner Wall vertical gradient -->
+        <linearGradient 
+          v-for="slice in uniqueSlices" 
+          :key="getGradientId('inner-grad', slice)" 
+          :id="getGradientId('inner-grad', slice)"
+          gradientUnits="userSpaceOnUse"
+          x1="0" :y1="slice.wallY1" x2="0" :y2="slice.wallY2"
+        >
+          <stop offset="0%" :stop-color="getDarkerColor(slice.color, 0.6)" />
+          <stop offset="100%" :stop-color="getDarkerColor(slice.color, 0.4)" />
+        </linearGradient>
+      </defs>
+
+      <!-- Centered text for empty state -->
+      <g v-if="!normalizedData || normalizedData.length === 0">
+        <text 
+          :x="animCx" 
+          :y="animCy" 
+          fill="#64748b" 
+          font-size="12" 
+          font-family="system-ui, -apple-system, sans-serif"
+          text-anchor="middle" 
+          dominant-baseline="middle"
+        >
+          {{ emptyText || 'No data' }}
+        </text>
+      </g>
+
+      <!-- Donut Slices (walls and top faces grouped for perfect Z-indexing) -->
+      <g v-else>
+        <!-- 3D MODE: 9-Layer Painter's Algorithm Architecture -->
+        <template v-if="props.is3D">
+          <!-- 1. Back Outer Walls -->
+          <g 
+            v-for="slice in backSlices" 
+            :key="'slice-back-outer-' + slice.item.id + '-' + slice.midAngle"
+            class="slice-group-3d"
+            :class="{ 
+              'is-hovered': effectiveActiveId === slice.item.id,
+              'is-dimmed': effectiveActiveId !== null && effectiveActiveId !== slice.item.id 
+            }"
+            :style="getSliceStyle(slice)"
+            :data-testid="'slice-' + slice.item.id"
+            :data-slice-id="slice.item.id"
+            data-half="back"
+            :data-sub-index="slice.subIndex"
+          >
+            <path 
+              v-if="isExpanded && slice.outerWallPath" 
+              :d="slice.outerWallPath" 
+              :fill="`url(#${getGradientId('outer-grad', slice)})`" 
+              stroke="none"
+              data-wall="outer-wall"
+              data-half="back"
+            />
+            <path 
+              v-if="isExpanded && slice.outerWallStrokePath" 
+              :d="slice.outerWallStrokePath" 
+              fill="none"
+              :stroke="`url(#${getGradientId('outer-grad', slice)})`" 
+              stroke-width="0.8"
+              stroke-linejoin="round"
+              data-wall="outer-wall-stroke"
+              data-half="back"
+            />
+          </g>
+
+          <!-- 2. Back Cut Walls (sorted by angle order / depth cutY ascending) -->
+          <g 
+            v-for="cut in backCutWallsSorted" 
+            :key="'cut-back-' + cut.id"
+            class="slice-group-3d"
+            :class="{ 
+              'is-hovered': effectiveActiveId === cut.slice.item.id,
+              'is-dimmed': effectiveActiveId !== null && effectiveActiveId !== cut.slice.item.id 
+            }"
+            :style="getSliceStyle(cut.slice)"
+            :data-testid="'slice-' + cut.slice.item.id"
+            :data-slice-id="cut.slice.item.id"
+            :data-cut-type="cut.type"
+            data-layer="cut-wall"
+            data-half="back"
+            :data-sub-index="cut.slice.subIndex"
+          >
+            <path 
+              v-if="isExpanded && shouldRenderCut(cut) && cut.path"
+              :d="cut.path" 
+              :fill="cut.fill" 
+              stroke="none"
+              :data-wall="cut.type"
+              data-half="back"
+            />
+          </g>
+
+          <!-- 3. Back Inner Walls (drawn after back cut walls so cuts never clip inner walls) -->
+          <g 
+            v-for="slice in backSlices" 
+            :key="'slice-back-inner-' + slice.item.id + '-' + slice.midAngle"
+            class="slice-group-3d"
+            :class="{ 
+              'is-hovered': effectiveActiveId === slice.item.id,
+              'is-dimmed': effectiveActiveId !== null && effectiveActiveId !== slice.item.id 
+            }"
+            :style="getSliceStyle(slice)"
+            :data-testid="'slice-' + slice.item.id"
+            :data-slice-id="slice.item.id"
+            data-half="back"
+            :data-sub-index="slice.subIndex"
+          >
+            <path 
+              v-if="isExpanded && slice.innerWallPath" 
+              :d="slice.innerWallPath" 
+              :fill="`url(#${getGradientId('inner-grad', slice)})`" 
+              stroke="none"
+              data-wall="inner-wall"
+              data-half="back"
+            />
+            <path 
+              v-if="isExpanded && slice.innerWallStrokePath" 
+              :d="slice.innerWallStrokePath" 
+              fill="none"
+              :stroke="`url(#${getGradientId('inner-grad', slice)})`" 
+              stroke-width="0.8"
+              stroke-linejoin="round"
+              data-wall="inner-wall-stroke"
+              data-half="back"
+            />
+          </g>
+
+          <!-- 4. Front Inner Walls -->
+          <g 
+            v-for="slice in frontSlices" 
+            :key="'slice-front-inner-' + slice.item.id + '-' + slice.midAngle"
+            class="slice-group-3d"
+            :class="{ 
+              'is-hovered': effectiveActiveId === slice.item.id,
+              'is-dimmed': effectiveActiveId !== null && effectiveActiveId !== slice.item.id 
+            }"
+            :style="getSliceStyle(slice)"
+            :data-testid="'slice-' + slice.item.id"
+            :data-slice-id="slice.item.id"
+            data-half="front"
+            :data-sub-index="slice.subIndex"
+          >
+            <path 
+              v-if="isExpanded && slice.innerWallPath" 
+              :d="slice.innerWallPath" 
+              :fill="`url(#${getGradientId('inner-grad', slice)})`" 
+              stroke="none"
+              data-wall="inner-wall"
+              data-half="front"
+            />
+            <path 
+              v-if="isExpanded && slice.innerWallStrokePath" 
+              :d="slice.innerWallStrokePath" 
+              fill="none"
+              :stroke="`url(#${getGradientId('inner-grad', slice)})`" 
+              stroke-width="0.8"
+              stroke-linejoin="round"
+              data-wall="inner-wall-stroke"
+              data-half="front"
+            />
+          </g>
+
+          <!-- 5. Front Cut Walls (sorted by angle order / depth cutY ascending) -->
+          <g 
+            v-for="cut in frontCutWallsSorted" 
+            :key="'cut-front-' + cut.id"
+            class="slice-group-3d"
+            :class="{ 
+              'is-hovered': effectiveActiveId === cut.slice.item.id,
+              'is-dimmed': effectiveActiveId !== null && effectiveActiveId !== cut.slice.item.id 
+            }"
+            :style="getSliceStyle(cut.slice)"
+            :data-testid="'slice-' + cut.slice.item.id"
+            :data-slice-id="cut.slice.item.id"
+            :data-cut-type="cut.type"
+            data-layer="cut-wall"
+            data-half="front"
+            :data-sub-index="cut.slice.subIndex"
+          >
+            <path 
+              v-if="isExpanded && shouldRenderCut(cut) && cut.path"
+              :d="cut.path" 
+              :fill="cut.fill" 
+              stroke="none"
+              :data-wall="cut.type"
+              data-half="front"
+            />
+          </g>
+
+          <!-- 6. Front Outer Walls -->
+          <g 
+            v-for="slice in frontSlices" 
+            :key="'slice-front-outer-' + slice.item.id + '-' + slice.midAngle"
+            class="slice-group-3d"
+            :class="{ 
+              'is-hovered': effectiveActiveId === slice.item.id,
+              'is-dimmed': effectiveActiveId !== null && effectiveActiveId !== slice.item.id 
+            }"
+            :style="getSliceStyle(slice)"
+            :data-testid="'slice-' + slice.item.id"
+            :data-slice-id="slice.item.id"
+            data-half="front"
+            :data-sub-index="slice.subIndex"
+          >
+            <path 
+              v-if="isExpanded && slice.outerWallPath" 
+              :d="slice.outerWallPath" 
+              :fill="`url(#${getGradientId('outer-grad', slice)})`" 
+              stroke="none"
+              data-wall="outer-wall"
+              data-half="front"
+            />
+            <path 
+              v-if="isExpanded && slice.outerWallStrokePath" 
+              :d="slice.outerWallStrokePath" 
+              fill="none"
+              :stroke="`url(#${getGradientId('outer-grad', slice)})`" 
+              stroke-width="0.8"
+              stroke-linejoin="round"
+              data-wall="outer-wall-stroke"
+              data-half="front"
+            />
+          </g>
+
+          <!-- 7. Top Faces (unsplit continuous surfaces, 1 per data item) -->
+          <g 
+            v-for="slice in topSlices"
+            :key="'slice-top-' + slice.item.id"
+            class="slice-group-3d"
+            :class="{ 
+              'is-hovered': effectiveActiveId === slice.item.id,
+              'is-dimmed': effectiveActiveId !== null && effectiveActiveId !== slice.item.id 
+            }"
+            :style="getSliceStyle(slice)"
+            :data-testid="'slice-' + slice.item.id"
+            :data-slice-id="slice.item.id"
+            data-layer="top-face"
+          >
+            <path 
+              :d="slice.topPath" 
+              :fill="`url(#${getGradientId('top-grad', slice)})`" 
+              :stroke="`url(#${getGradientId('top-grad', slice)})`" 
+              stroke-width="0.8"
+              stroke-linejoin="round"
+              data-wall="top-face"
+            />
+            <path 
+              :d="slice.topPath"
+              fill="none" 
+              :stroke="TOP_HIGHLIGHT_COLOR"
+              stroke-width="0.8"
+              stroke-linejoin="round"
+              data-wall="top-face-highlight"
+            />
+          </g>
+
+          <!-- 8. Center Hole Text / Label (strictly on top of all 3D geometry) -->
+          <g
+            v-if="props.showCenterText"
+            :transform="`translate(${animCx}, ${centerTextY})`"
+            class="center-text-group"
+          >
+            <text
+              x="0"
+              y="-3"
+              class="center-text-value"
+              :font-size="animFontSizeValue"
+              font-weight="bold"
+              font-family="'JetBrains Mono', monospace"
+              text-anchor="middle"
+              dominant-baseline="middle"
+            >
+              {{ displayCenterValue }}
+            </text>
+            <text
+              x="0"
+              y="10"
+              class="center-text-label"
+              :font-size="animFontSizeLabel"
+              font-family="system-ui, -apple-system, sans-serif"
+              font-weight="600"
+              text-anchor="middle"
+              dominant-baseline="middle"
+            >
+              {{ displayCenterLabel }}
+            </text>
+          </g>
+        </template>
+
+        <!-- 2D FLAT MODE: All slices rendered first, center label strictly on top of all elements -->
+        <template v-else>
+          <g 
+            v-for="slice in topSlices"
+            :key="'slice-2d-' + slice.item.id"
+            class="slice-group-3d"
+            :class="{ 
+              'is-hovered': effectiveActiveId === slice.item.id,
+              'is-dimmed': effectiveActiveId !== null && effectiveActiveId !== slice.item.id 
+            }"
+            :style="getSliceStyle(slice)"
+          >
+            <!-- Top Face in 2D -->
+            <path 
+              :d="slice.topPath" 
+              :fill="`url(#${getGradientId('top-grad', slice)})`" 
+              :stroke="`url(#${getGradientId('top-grad', slice)})`" 
+              stroke-width="0.8"
+              stroke-linejoin="round"
+            />
+
+            <!-- Top Face White Highlight Outline -->
+            <path 
+              :d="slice.topPath"
+              fill="none" 
+              :stroke="TOP_HIGHLIGHT_COLOR"
+              stroke-width="0.8"
+              stroke-linejoin="round"
+            />
+          </g>
+
+          <!-- Center Hole Text details (Strictly on top of all 2D slices) -->
+          <g v-if="props.showCenterText" :transform="`translate(${animCx}, ${animCy})`" class="center-text-group">
+            <text 
+              x="0" 
+              y="-3" 
+              class="center-text-value"
+              :font-size="animFontSizeValue" 
+              font-weight="bold" 
+              font-family="'JetBrains Mono', monospace" 
+              text-anchor="middle" 
+              dominant-baseline="middle"
+            >
+              {{ displayCenterValue }}
+            </text>
+            <text 
+              x="0" 
+              y="10" 
+              class="center-text-label"
+              :font-size="animFontSizeLabel" 
+              font-family="system-ui, -apple-system, sans-serif" 
+              font-weight="600"
+              text-anchor="middle" 
+              dominant-baseline="middle"
+            >
+              {{ displayCenterLabel }}
+            </text>
+          </g>
+        </template>
+
+        <!-- Transparent Static Hover Triggers to prevent hover feedback loops -->
+        <g 
+          v-for="slice in uniqueSlices" 
+          :key="'hover-trigger-' + slice.item.id"
+          class="hover-trigger-group"
+          :style="{ cursor: (props.selectable && !isSingleSlice) ? 'pointer' : 'default' }"
+          @mouseenter="handleHoverStart(slice.item.id)"
+          @mouseleave="handleHoverEnd(slice.item.id)"
+          @click="handleSliceClick(slice.item.id, $event)"
+          @mousemove="handleSliceMouseMove(slice.item.id, $event)"
+        >
+          <!-- Transparent Top Face -->
+          <path 
+            :d="slice.hoverPath || slice.originalTopPath" 
+            fill="transparent"
+            stroke="none"
+          />
+          <!-- Transparent Outer Wall -->
+          <path 
+            v-if="slice.originalOuterWallPath" 
+            :d="slice.originalOuterWallPath" 
+            fill="transparent"
+            stroke="none"
+          />
+          <!-- Transparent Inner Wall -->
+          <path 
+            v-if="slice.originalInnerWallPath" 
+            :d="slice.originalInnerWallPath" 
+            fill="transparent"
+            stroke="none"
+          />
+        </g>
+
+        <!-- Leader Lines & Text Labels (only in expanded view) -->
+        <g class="labels-layer" :style="{ opacity: labelOpacity, pointerEvents: labelOpacity > 0.01 ? 'auto' : 'none' }">
+          <!-- Left Labels -->
+          <g 
+            v-for="(label, idx) in leftLabels" 
+            :key="'label-left-' + label.item.id"
+            class="label-group"
+            :class="{ 
+              'is-hovered': effectiveActiveId === label.item.id,
+              'is-dimmed': effectiveActiveId !== null && effectiveActiveId !== label.item.id 
+            }"
+            @mouseenter="handleHoverStart(label.item.id)"
+            @mouseleave="handleHoverEnd(label.item.id)"
+            @click="handleSliceClick(label.item.id, $event)"
+            @mousemove="handleSliceMouseMove(label.item.id, $event)"
+            :style="getLabelGroupStyle(label)"
+          >
+            <path 
+              v-if="getLeaderLinePath(label)"
+              class="leader-line"
+              :d="getLeaderLinePath(label)" 
+              fill="none" 
+              :stroke="label.color" 
+              :stroke-width="leaderStrokeWidth" 
+              pointer-events="none"
+            />
+            <text 
+              :x="leftLabelAnchorX - 5" 
+              :y="label.finalY" 
+              :fill="label.color" 
+              :font-size="resolvedLabelFontSize" 
+              font-weight="600" 
+              font-family="system-ui, -apple-system, sans-serif" 
+              text-anchor="end" 
+              dominant-baseline="middle"
+              :style="getLabelTextStyle(label)"
+            >
+              {{ truncateText(label.item.name || label.item.label, 24) }} {{ formatValue(label.item.value) }} {{ label.item.unit || '' }} ({{ label.item.percentage }}%)
+            </text>
+          </g>
+
+          <!-- Right Labels -->
+          <g 
+            v-for="(label, idx) in rightLabels" 
+            :key="'label-right-' + label.item.id"
+            class="label-group"
+            :class="{ 
+              'is-hovered': effectiveActiveId === label.item.id,
+              'is-dimmed': effectiveActiveId !== null && effectiveActiveId !== label.item.id 
+            }"
+            @mouseenter="handleHoverStart(label.item.id)"
+            @mouseleave="handleHoverEnd(label.item.id)"
+            @click="handleSliceClick(label.item.id, $event)"
+            @mousemove="handleSliceMouseMove(label.item.id, $event)"
+            :style="getLabelGroupStyle(label)"
+          >
+            <path 
+              v-if="getLeaderLinePath(label)"
+              class="leader-line"
+              :d="getLeaderLinePath(label)" 
+              fill="none" 
+              :stroke="label.color" 
+              :stroke-width="leaderStrokeWidth" 
+              pointer-events="none"
+            />
+            <text 
+              :x="rightLabelAnchorX + 5" 
+              :y="label.finalY" 
+              :fill="label.color" 
+              :font-size="resolvedLabelFontSize" 
+              font-weight="600" 
+              font-family="system-ui, -apple-system, sans-serif" 
+              text-anchor="start" 
+              dominant-baseline="middle"
+              :style="getLabelTextStyle(label)"
+            >
+              {{ truncateText(label.item.name || label.item.label, 24) }} {{ formatValue(label.item.value) }} {{ label.item.unit || '' }} ({{ label.item.percentage }}%)
+            </text>
+          </g>
+        </g>
+      </g>
+    </svg>
+  </div>
+</template>
 
 <style scoped>
 .donut-canvas-wrapper {

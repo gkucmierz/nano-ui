@@ -38,7 +38,13 @@ const props = defineProps({
   }
 });
 
+let switchUidSeq = 0;
+
 const emit = defineEmits(['update:modelValue', 'update:indeterminate', 'change']);
+
+const autoId = `nano-switch-${++switchUidSeq}`;
+const resolvedId = computed(() => props.id || autoId);
+const resolvedName = computed(() => props.name || resolvedId.value);
 
 const inputRef = ref(null);
 
@@ -88,17 +94,18 @@ const toggle = (event) => {
       }
     ]"
     :style="resolvedSwitchColor ? { '--nano-switch-accent': resolvedSwitchColor } : undefined"
-    :for="id || undefined"
+    :for="resolvedId"
   >
     <input
+      :id="resolvedId"
       ref="inputRef"
+      :name="resolvedName"
       type="checkbox"
       switch
       class="nano-switch-input"
       :checked="isChecked"
       :disabled="disabled"
-      :name="name || undefined"
-      :id="id || undefined"
+      :aria-label="label || 'Toggle switch'"
       @change="toggle"
       role="switch"
       :aria-checked="isIndeterminate ? 'mixed' : isChecked"

@@ -4,6 +4,7 @@ import { getAvailableIcons, isIconColorable } from '../../icons/index.js';
 import NanoCodeBlock from '../../components/NanoCodeBlock.vue';
 import NanoIcon from '../../components/NanoIcon.vue';
 import NanoSlider from '../../components/NanoSlider.vue';
+import { tooltipDirective as vTooltip } from '../../directives/tooltip.js';
 import { createDocTabs } from '../docSnippets.js';
 
 const allIcons = getAvailableIcons();
@@ -133,8 +134,11 @@ const codeTabs = createDocTabs({
       <div class="explorer-toolbar">
         <div class="search-box">
           <input
+            id="icon-doc-search"
+            name="icon-doc-search"
             v-model="searchQuery"
             type="text"
+            aria-label="Search icons"
             placeholder="Search icons (e.g. warn, compass-rose, close)..."
             class="nano-input"
           />
@@ -170,14 +174,14 @@ const codeTabs = createDocTabs({
 
         <div class="toolbar-controls">
           <div class="control-item">
-            <label>Size: {{ iconSize }}px</label>
+            <span class="control-label">Size: {{ iconSize }}px</span>
             <div class="slider-box">
               <NanoSlider v-model="iconSize" :min="14" :max="36" :step="2" size="sm" :show-ticks="false" aria-label="Icon Size" />
             </div>
           </div>
 
           <div class="control-item">
-            <label>Stroke: {{ strokeWidth }}px</label>
+            <span class="control-label">Stroke: {{ strokeWidth }}px</span>
             <div class="slider-box">
               <NanoSlider v-model="strokeWidth" :min="1" :max="3" :step="0.5" size="sm" :show-ticks="false" aria-label="Stroke Width" />
             </div>
@@ -190,7 +194,8 @@ const codeTabs = createDocTabs({
               class="color-dot"
               :class="{ 'is-active': activeColor === c.value }"
               :style="{ background: c.value === 'currentColor' ? 'var(--nano-text-main)' : c.value }"
-              :title="c.label"
+              v-tooltip="c.label"
+              :aria-label="c.label"
               @click="activeColor = c.value"
             />
           </div>
@@ -210,7 +215,8 @@ const codeTabs = createDocTabs({
           <span
             v-if="!isIconColorable(name)"
             class="fixed-palette-badge"
-            title="Fixed multi-color palette (ignores currentColor)"
+            v-tooltip="'Fixed multi-color palette (ignores currentColor)'"
+            aria-label="Fixed multi-color palette (ignores currentColor)"
           />
           <div class="tile-icon-wrap">
             <NanoIcon :name="name" :size="iconSize" :stroke-width="strokeWidth" />
@@ -361,7 +367,8 @@ h2 {
   gap: 0.25rem;
 }
 
-.control-item label {
+.control-item label,
+.control-item .control-label {
   font-size: 0.75rem;
   font-weight: 600;
   color: var(--nano-text-muted);

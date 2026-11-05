@@ -64,9 +64,28 @@ const props = defineProps({
     type: String,
     default: '',
   },
+  id: {
+    type: String,
+    default: '',
+  },
+  name: {
+    type: String,
+    default: '',
+  },
+  ariaLabel: {
+    type: String,
+    default: '',
+  },
 });
 
+let maskedUidSeq = 0;
+
 const emit = defineEmits(['update:modelValue', 'update:unmasked', 'complete', 'submit']);
+
+const autoId = `nu-masked-input-${++maskedUidSeq}`;
+const resolvedId = computed(() => props.id || autoId);
+const resolvedName = computed(() => props.name || resolvedId.value);
+const resolvedAriaLabel = computed(() => props.ariaLabel || `Masked input (${props.mask})`);
 
 const inputRef = ref(null);
 const rawState = ref(props.modelValue || props.unmasked || '');
@@ -216,13 +235,16 @@ defineExpose({
 
       <!-- Single Native Input with Transparent Text & Visible Caret -->
       <input
+        :id="resolvedId"
         ref="inputRef"
+        :name="resolvedName"
         type="text"
         class="nu-masked-native"
         :value="maskResult.formatted"
         :maxlength="steps.length"
         :disabled="disabled"
         :autofocus="autofocus"
+        :aria-label="resolvedAriaLabel"
         autocomplete="off"
         autocorrect="off"
         autocapitalize="off"

@@ -133,6 +133,8 @@ const props = defineProps({
   },
 });
 
+let editorUidSeq = 0;
+
 const emit = defineEmits([
   'update:modelValue',
   'update:code',
@@ -144,6 +146,8 @@ const emit = defineEmits([
   'downloaded',
   'run',
 ]);
+
+const editorAutoId = `nano-code-editor-${++editorUidSeq}`;
 
 const parserVersion = ref(0);
 const internalSyntaxTheme = ref(props.syntaxTheme || 'nano');
@@ -469,7 +473,7 @@ defineExpose({
     <!-- Header Bar -->
     <header class="nce-header">
       <div class="nce-header-left">
-        <span v-if="filePath" class="nce-filepath" :title="filePath">{{ filePath }}</span>
+        <span v-if="filePath" class="nce-filepath" v-tooltip="filePath">{{ filePath }}</span>
         <span v-else class="nce-filepath">Code Inspector</span>
 
         <span v-if="resolvedLang" class="nce-lang-badge">{{ resolvedLang }}</span>
@@ -690,8 +694,11 @@ defineExpose({
         ><code class="nano-syntax-code" v-html="fullHighlightedHtml"></code></pre>
 
         <textarea
+          :id="editorAutoId"
           ref="textareaRef"
+          :name="editorAutoId"
           :value="currentCode"
+          :aria-label="filePath ? `Code editor (${filePath})` : 'Code editor'"
           class="nce-live-textarea nano-scrollbar"
           spellcheck="false"
           autocapitalize="off"

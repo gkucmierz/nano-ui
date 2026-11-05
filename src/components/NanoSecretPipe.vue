@@ -292,12 +292,12 @@ defineExpose({
 <style scoped>
 .nano-secret-pipe {
   border-radius: 12px;
-  border: 1px solid rgba(16, 185, 129, 0.35);
-  background: var(--nano-secret-bg, #090e17);
-  color: var(--nano-secret-fg, #e2e8f0);
+  border: 1px solid var(--nano-secret-border, rgba(16, 185, 129, 0.35));
+  background: var(--nano-secret-bg, var(--nano-bg-card-elevated, #090e17));
+  color: var(--nano-secret-fg, var(--nano-text-main, #e2e8f0));
   padding: 12px 14px;
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.22);
+  box-shadow: var(--nano-shadow-card, 0 10px 28px rgba(0, 0, 0, 0.14));
 }
 
 .nano-secret-pipe__header {
@@ -308,7 +308,7 @@ defineExpose({
   flex-wrap: wrap;
   padding-bottom: 8px;
   margin-bottom: 10px;
-  border-bottom: 1px solid rgba(148, 163, 184, 0.16);
+  border-bottom: 1px solid var(--nano-border-subtle, rgba(148, 163, 184, 0.16));
 }
 
 .nano-secret-pipe__title-group {
@@ -321,7 +321,7 @@ defineExpose({
 .nano-secret-pipe__title {
   font-size: 0.78rem;
   font-weight: 700;
-  color: #f8fafc;
+  color: var(--nano-secret-fg, var(--nano-text-main, #f8fafc));
 }
 
 .nano-secret-pipe__badge {
@@ -330,30 +330,31 @@ defineExpose({
   letter-spacing: 0.04em;
   padding: 2px 7px;
   border-radius: 999px;
-  background: rgba(16, 185, 129, 0.15);
-  color: #34d399;
-  border: 1px solid rgba(16, 185, 129, 0.35);
+  background: var(--nano-secret-badge-bg, rgba(16, 185, 129, 0.15));
+  color: var(--nano-secret-badge-fg, #10b981);
+  border: 1px solid var(--nano-secret-border, rgba(16, 185, 129, 0.35));
 }
 
 .nano-secret-pipe__mode-btn {
-  background: rgba(30, 41, 59, 0.85);
-  color: #cbd5e1;
-  border: 1px solid rgba(148, 163, 184, 0.28);
+  background: var(--nano-secret-input-bg, var(--nano-bg-muted, rgba(30, 41, 59, 0.85)));
+  color: var(--nano-secret-fg, var(--nano-text-secondary, #cbd5e1));
+  border: 1px solid var(--nano-secret-input-border, var(--nano-border-card, rgba(148, 163, 184, 0.28)));
   border-radius: 6px;
   padding: 4px 9px;
   font-size: 0.72rem;
   font-weight: 600;
   cursor: pointer;
+  transition: border-color 0.15s ease, color 0.15s ease;
 }
 
 .nano-secret-pipe__mode-btn:hover {
-  border-color: #38bdf8;
-  color: #f8fafc;
+  border-color: var(--nano-state-active, #0284c7);
+  color: var(--nano-secret-fg, var(--nano-text-main, #f8fafc));
 }
 
 .nano-secret-pipe__logs {
-  background: rgba(2, 6, 23, 0.75);
-  border: 1px solid rgba(51, 65, 85, 0.6);
+  background: var(--nano-secret-input-bg, var(--nano-bg-code, rgba(2, 6, 23, 0.75)));
+  border: 1px solid var(--nano-secret-input-border, var(--nano-border-card, rgba(51, 65, 85, 0.6)));
   border-radius: 8px;
   padding: 8px 10px;
   margin-bottom: 10px;
@@ -364,18 +365,18 @@ defineExpose({
 }
 
 .nano-secret-pipe__log-line {
-  color: #94a3b8;
+  color: var(--nano-secret-muted, var(--nano-text-muted, #94a3b8));
   white-space: pre-wrap;
   word-break: break-all;
 }
 
 .nano-secret-pipe__log-line.is-prompt {
-  color: #fbbf24;
+  color: var(--nano-status-warn, #d97706);
   font-weight: 700;
 }
 
 .nano-secret-pipe__log-line.is-stderr {
-  color: #f87171;
+  color: var(--nano-status-danger, #ef4444);
 }
 
 .nano-secret-pipe__prompt-label {
@@ -384,7 +385,7 @@ defineExpose({
   gap: 6px;
   font-size: 0.78rem;
   font-weight: 700;
-  color: #34d399;
+  color: var(--nano-secret-prompt-fg, #10b981);
   margin-bottom: 6px;
 }
 
@@ -407,9 +408,9 @@ defineExpose({
   gap: 8px;
   padding: 9px 12px;
   border-radius: 8px;
-  background: #020617;
-  border: 1px solid rgba(148, 163, 184, 0.32);
-  color: #f8fafc;
+  background: var(--nano-secret-input-bg, var(--nano-bg-code, #020617));
+  border: 1px solid var(--nano-secret-input-border, var(--nano-border-card, rgba(148, 163, 184, 0.32)));
+  color: var(--nano-secret-fg, var(--nano-text-main, #f8fafc));
   font-size: 0.82rem;
   cursor: text;
   user-select: none;
@@ -423,18 +424,18 @@ defineExpose({
 }
 
 .nano-secret-pipe__placeholder {
-  color: #64748b;
+  color: var(--nano-secret-muted, var(--nano-text-muted, #64748b));
   font-size: 0.78rem;
 }
 
 .nano-secret-pipe__stealth {
-  color: #34d399;
+  color: var(--nano-secret-badge-fg, #10b981);
   font-weight: 700;
   font-size: 0.78rem;
 }
 
 .nano-secret-pipe__bullets {
-  color: #38bdf8;
+  color: var(--nano-state-active, #0284c7);
   letter-spacing: 0.12em;
   font-weight: 700;
 }
@@ -476,9 +477,9 @@ defineExpose({
 .nano-secret-pipe__clear-btn {
   padding: 8px 11px;
   border-radius: 8px;
-  border: 1px solid rgba(248, 113, 113, 0.4);
-  background: rgba(127, 29, 29, 0.35);
-  color: #fecaca;
+  border: 1px solid var(--nano-status-danger-border, rgba(248, 113, 113, 0.4));
+  background: var(--nano-status-danger-bg, rgba(127, 29, 29, 0.35));
+  color: var(--nano-status-danger-text, #fecaca);
   font-size: 0.75rem;
   font-weight: 600;
   cursor: pointer;

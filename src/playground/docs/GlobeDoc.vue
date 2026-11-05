@@ -7,6 +7,10 @@ import NanoNumberStepper from '../../components/NanoNumberStepper.vue';
 import NanoSlider from '../../components/NanoSlider.vue';
 import NanoCodeBlock from '../../components/NanoCodeBlock.vue';
 import { createDocTabs } from '../docSnippets.js';
+import {
+  TIMEZONE_ANOMALY_HOTSPOTS,
+  buildSphericalVariableWidthLinePolygon,
+} from '../../utils/globe-geometry.js';
 import { t } from '../../locales.js';
 
 const center = ref([19.0, 52.0]);
@@ -20,11 +24,38 @@ const highlightHealpixCell = ref(true);
 const activeHealpixIndex = ref(19);
 const showAtmosphere = ref(true);
 const atmosphereMode = ref('gradient');
-const autoRotate = ref(false);
-const autoRotateTurnsPerSec = ref(0.05);
+// Strict anti-vertigo rule: at most 1 globe on the entire page can auto-rotate at a time
+const activeRotatingGlobe = ref('ribbons');
+const autoRotateTurnsPerSec = ref(0.04);
+const autoRotate = computed({
+  get: () => activeRotatingGlobe.value === 'studio',
+  set: (val) => {
+    activeRotatingGlobe.value = val ? 'studio' : 'none';
+  },
+});
+function toggleGlobeOrbit(globeId) {
+  activeRotatingGlobe.value = activeRotatingGlobe.value === globeId ? 'none' : globeId;
+}
 const terminatorMode = ref('gradient');
 const subsolarLon = ref(-25.0);
 const subsolarLat = ref(18.5);
+const showTimezones = ref(true);
+const timezoneMode = ref('complicated');
+const timezoneMorph = ref(1);
+const activeTimezoneOffset = ref(1);
+
+function selectTimezoneMode(mode) {
+  timezoneMode.value = mode;
+  timezoneMorph.value = mode === 'complicated' ? 1 : 0;
+}
+
+function jumpToAnomaly(anom) {
+  showTimezones.value = true;
+  timezoneMode.value = 'complicated';
+  timezoneMorph.value = 1;
+  activeTimezoneOffset.value = anom.offsetHours;
+  center.value = [anom.lon, anom.lat];
+}
 
 const healpixCellCount = computed(() => 12 * (1 << (2 * healpixOrder.value)));
 const maxHealpixIndex = computed(() => Math.max(0, healpixCellCount.value - 1));
@@ -64,15 +95,99 @@ const presetOptions = [
   { value: 'cyber-amber', label: 'Cyber Amber (Obsidian / Gold)', badge: 'NEON' },
 ];
 
-const demoArcs = [
-  { from: [21.01, 52.23], to: [-74.0, 40.71], dashed: true, width: 1.8 },
-  { from: [21.01, 52.23], to: [139.69, 35.68], dashed: false, width: 1.8 },
+// Example Gallery 1: Variable-Width Spherical Lines / Ribbons rendered natively via :polygons
+const variableWidthRibbonPolygons = [
+  buildSphericalVariableWidthLinePolygon(
+    [
+      [-80.2, 25.8, 0.5],
+      [-72.0, 35.0, 2.2],
+      [-50.0, 43.0, 3.6],
+      [-22.0, 53.0, 2.6],
+      [6.0, 63.0, 0.9],
+    ],
+    {
+      id: 'gulf-stream-ribbon',
+      name: 'Prąd Zatokowy (Gulf Stream · zmienna szerokość 0.5° → 3.6° → 0.9°)',
+      label: 'GULF STREAM',
+      fill: 'rgba(0, 242, 254, 0.48)',
+      hoverFill: 'rgba(0, 242, 254, 0.72)',
+      stroke: '#00f2fe',
+      strokeWidth: 1.4,
+    }
+  ),
+  buildSphericalVariableWidthLinePolygon(
+    [
+      [-15.0, 18.0],
+      [-42.0, 14.0],
+      [-68.0, 12.0],
+      [-88.0, 16.0],
+    ],
+    {
+      id: 'trade-wind-jet',
+      name: 'Pasat Północnoatlantycki (profil soczewkowy Taper)',
+      label: 'TRADE JET',
+      profile: 'taper',
+      startWidthDeg: 0.4,
+      midWidthDeg: 2.8,
+      endWidthDeg: 0.4,
+      fill: 'rgba(244, 114, 182, 0.46)',
+      hoverFill: 'rgba(244, 114, 182, 0.72)',
+      stroke: '#f472b6',
+      strokeWidth: 1.3,
+    }
+  ),
+  buildSphericalVariableWidthLinePolygon(
+    [
+      [-45.0, -6.0],
+      [-15.0, -2.0],
+      [12.0, -4.0],
+      [38.0, -8.0],
+    ],
+    {
+      id: 'kelvin-wave-pulse',
+      name: 'Równikowa Fala Kelvina (profil falowy Pulse)',
+      label: 'KELVIN WAVE',
+      profile: 'pulse',
+      midWidthDeg: 2.4,
+      fill: 'rgba(250, 204, 21, 0.42)',
+      hoverFill: 'rgba(250, 204, 21, 0.68)',
+      stroke: '#facc15',
+      strokeWidth: 1.2,
+    }
+  ),
 ];
 
-const demoMarkers = [
-  { id: 'waw', lon: 21.01, lat: 52.23, type: 'target', label: 'WAW' },
-  { id: 'nyc', lon: -74.0, lat: 40.71, type: 'dot', label: 'NYC' },
-  { id: 'tyo', lon: 139.69, lat: 35.68, type: 'dot', label: 'TYO' },
+const galleryHealpixSelected = ref([42, 43, 58, 74]);
+const galleryChoroplethColors = {
+  POL: '#10b981',
+  DEU: '#0ea5e9',
+  FRA: '#6366f1',
+  ESP: '#f59e0b',
+  ITA: '#ec4899',
+  GBR: '#14b8a6',
+  NOR: '#38bdf8',
+  SWE: '#8b5cf6',
+  UKR: '#eab308',
+};
+const galleryChoroplethPolygons = [
+  buildSphericalVariableWidthLinePolygon(
+    [
+      [-9.1, 38.7, 0.6],
+      [2.3, 48.8, 1.8],
+      [13.4, 52.5, 2.4],
+      [21.0, 52.2, 1.5],
+      [24.9, 60.2, 0.7],
+    ],
+    {
+      id: 'ten-t-corridor',
+      name: 'Korytarz Transportowy TEN-T (Lizbona → Paryż → Berlin → Warszawa → Helsinki)',
+      label: 'TEN-T CORRIDOR',
+      fill: 'rgba(234, 88, 12, 0.42)',
+      hoverFill: 'rgba(234, 88, 12, 0.68)',
+      stroke: '#ea580c',
+      strokeWidth: 1.4,
+    }
+  ),
 ];
 
 const codeTabs = createDocTabs({
@@ -157,6 +272,10 @@ const codeTabs = createDocTabs({
             v-model:show-graticule="showGraticule"
             v-model:show-healpix="showHealpix"
             v-model:healpix-order="healpixOrder"
+            v-model:show-timezones="showTimezones"
+            v-model:timezone-mode="timezoneMode"
+            v-model:active-timezone-offset="activeTimezoneOffset"
+            :timezone-morph="timezoneMorph"
             :size="420"
             :preset="preset"
             :show-healpix-labels="showHealpixLabels"
@@ -166,8 +285,6 @@ const codeTabs = createDocTabs({
             :subsolar-point="[subsolarLon, subsolarLat]"
             :solar-terminator="terminatorMode !== 'off'"
             :terminator-mode="terminatorMode === 'off' ? 'gradient' : terminatorMode"
-            :arcs="demoArcs"
-            :markers="demoMarkers"
             :show-controls="true"
           />
         </div>
@@ -203,6 +320,78 @@ const codeTabs = createDocTabs({
             <NanoSwitch v-model="showGraticule" size="compact" />
             <span>{{ t('globe.graticule') }}</span>
           </label>
+
+          <!-- Spherical Vector-Spine Timezones: Clear (Solar 15°) vs Complicated (Political IANA) -->
+          <div class="ctrl-card">
+            <div class="sub-ctrl-row">
+              <label class="toggle-row">
+                <NanoSwitch v-model="showTimezones" size="compact" color="cyan" />
+                <span>Strefy Czasowe (Wektory S²: Clear vs Complicated)</span>
+              </label>
+            </div>
+
+            <div class="sub-ctrl-row">
+              <div class="nano-btn-group">
+                <button
+                  type="button"
+                  class="nano-btn nano-btn-secondary nano-btn-sm"
+                  :class="{ 'nano-btn-active': timezoneMorph < 0.5 }"
+                  :disabled="!showTimezones"
+                  @click="selectTimezoneMode('clear')"
+                >
+                  📐 Clear (Słoneczne 15°)
+                </button>
+                <button
+                  type="button"
+                  class="nano-btn nano-btn-secondary nano-btn-sm"
+                  :class="{ 'nano-btn-active': timezoneMorph >= 0.5 }"
+                  :disabled="!showTimezones"
+                  @click="selectTimezoneMode('complicated')"
+                >
+                  🧩 Complicated (IANA)
+                </button>
+              </div>
+              <NanoNumberStepper
+                v-model="activeTimezoneOffset"
+                :min="-11"
+                :max="12"
+                :step="1"
+                variant="split"
+                align="center"
+                size="sm"
+                width="98px"
+                :disabled="!showTimezones"
+              />
+            </div>
+
+            <div class="slider-with-badge">
+              <NanoSlider
+                v-model="timezoneMorph"
+                :min="0"
+                :max="1"
+                :step="0.02"
+                :show-ticks="false"
+                size="sm"
+                :disabled="!showTimezones"
+              />
+              <span class="mono-badge">
+                SLERP τ={{ Number(timezoneMorph).toFixed(2) }} (UTC{{ activeTimezoneOffset >= 0 ? '+' : '' }}{{ activeTimezoneOffset }})
+              </span>
+            </div>
+
+            <div v-if="showTimezones" class="anomaly-pills-row">
+              <button
+                v-for="anom in TIMEZONE_ANOMALY_HOTSPOTS"
+                :key="anom.id"
+                type="button"
+                class="nano-btn nano-btn-secondary nano-btn-sm anomaly-pill-btn"
+                :class="{ 'nano-btn-active': activeTimezoneOffset === anom.offsetHours }"
+                @click="jumpToAnomaly(anom)"
+              >
+                🎯 {{ anom.titlePl.split(' (')[0] }} (UTC{{ anom.offsetHours >= 0 ? '+' : '' }}{{ anom.offsetHours }})
+              </button>
+            </div>
+          </div>
 
           <!-- Grouped HEALPix Equal-Area Controls -->
           <div class="ctrl-card">
@@ -332,6 +521,137 @@ const codeTabs = createDocTabs({
             <div><strong>Center:</strong> {{ center[0].toFixed(1) }}°, {{ center[1].toFixed(1) }}°</div>
             <div><strong>Countries:</strong> {{ selectedCountries.join(', ') || 'None' }}</div>
             <div><strong>HEALPix cells:</strong> {{ selectedHealpixPixels.join(', ') || 'None' }}</div>
+            <div><strong>Aktywna Orbits (Max 1):</strong> {{ activeRotatingGlobe }}</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Showcase Gallery: 3 Specialized Globes with Strict Max-1 Auto-Rotate Guard -->
+    <div class="demo-section">
+      <div class="gallery-header-row">
+        <div>
+          <h3>Galeria Zastosowań Sferycznych (Linie o Zmiennej Grubości, HEALPix &amp; Choropleth)</h3>
+          <p class="demo-desc">
+            Generyczny silnik <code>:polygons</code> i <code>:layers</code> pozwala renderować nie tylko strefy czasowe, ale też
+            <strong>wstęgi sferyczne o zmiennej grubości</strong> (prądy oceaniczne, korytarze jet-stream, fale Kelvina) z wygładzaniem
+            krzywymi Beziera <code>Q</code> oraz płynnym wyłanianiem etykiet (<code>1.5%</code> obrotu <code>ease-in-out</code>).
+            <strong>Zasada Zero-Oczopląsu:</strong> w danym momencie może obracać się maksymalnie <strong>1 globus</strong>!
+          </p>
+        </div>
+        <div class="nano-btn-group">
+          <button
+            v-for="gOpt in [
+              { id: 'none', label: '⏸ Wszystkie Stop' },
+              { id: 'studio', label: '🪐 #1 Studio' },
+              { id: 'ribbons', label: '🌊 #2 Wstęgi' },
+              { id: 'healpix', label: '❖ #3 HEALPix' },
+              { id: 'choropleth', label: '🗺️ #4 Choropleth' },
+            ]"
+            :key="gOpt.id"
+            type="button"
+            class="nano-btn nano-btn-secondary nano-btn-sm"
+            :class="{ 'nano-btn-active': activeRotatingGlobe === gOpt.id }"
+            @click="activeRotatingGlobe = gOpt.id"
+          >
+            {{ gOpt.label }}
+          </button>
+        </div>
+      </div>
+
+      <div class="globe-gallery-grid">
+        <!-- Card 1: Variable-Width Spherical Lines / Ribbons -->
+        <div class="globe-gallery-card">
+          <div class="gallery-card-top">
+            <div>
+              <h4>🌊 Linie o Zmiennej Grubości (:polygons)</h4>
+              <p>Wstęgi sferyczne S²: Gulf Stream (0.5° → 3.6° → 0.9°), Pasat (Taper) i Fala Kelvina (Pulse).</p>
+            </div>
+            <button
+              type="button"
+              class="nano-btn nano-btn-secondary nano-btn-sm"
+              :class="{ 'nano-btn-active': activeRotatingGlobe === 'ribbons' }"
+              @click="toggleGlobeOrbit('ribbons')"
+            >
+              {{ activeRotatingGlobe === 'ribbons' ? '⏸ Kręci się (1/1)' : '🪐 Obracaj ten' }}
+            </button>
+          </div>
+          <div class="gallery-globe-wrap">
+            <NanoGlobe
+              :size="300"
+              :center="[-38, 24]"
+              preset="nano-dark"
+              :show-graticule="true"
+              :show-atmosphere="true"
+              atmosphere-mode="gradient"
+              :polygons="variableWidthRibbonPolygons"
+              :auto-rotate-turns-per-sec="activeRotatingGlobe === 'ribbons' ? 0.035 : 0"
+            />
+          </div>
+        </div>
+
+        <!-- Card 2: Astrophysical Equal-Area HEALPix Nside=4 -->
+        <div class="globe-gallery-card">
+          <div class="gallery-card-top">
+            <div>
+              <h4>❖ Siatka Astrofizyczna HEALPix (Nside=4)</h4>
+              <p>192 komórki o równej powierzchni z płynnym wyłanianiem indeksów (1.5% obrotu ease-in-out).</p>
+            </div>
+            <button
+              type="button"
+              class="nano-btn nano-btn-secondary nano-btn-sm"
+              :class="{ 'nano-btn-active': activeRotatingGlobe === 'healpix' }"
+              @click="toggleGlobeOrbit('healpix')"
+            >
+              {{ activeRotatingGlobe === 'healpix' ? '⏸ Kręci się (1/1)' : '🪐 Obracaj ten' }}
+            </button>
+          </div>
+          <div class="gallery-globe-wrap">
+            <NanoGlobe
+              v-model:selected-healpix-pixels="galleryHealpixSelected"
+              :size="300"
+              :center="[18, 28]"
+              preset="cyber-amber"
+              :show-graticule="false"
+              :show-healpix="true"
+              :healpix-order="2"
+              :show-healpix-labels="true"
+              :show-atmosphere="true"
+              atmosphere-mode="gradient"
+              :auto-rotate-turns-per-sec="activeRotatingGlobe === 'healpix' ? 0.035 : 0"
+            />
+          </div>
+        </div>
+
+        <!-- Card 3: Geopolitical Choropleth & Corridor Ribbon -->
+        <div class="globe-gallery-card">
+          <div class="gallery-card-top">
+            <div>
+              <h4>🗺️ Choropleth + Korytarz TEN-T (Nano Light)</h4>
+              <p>Indywidualne barwienie państw (countryColors) + wstęga korytarza Lizbona → Helsinki.</p>
+            </div>
+            <button
+              type="button"
+              class="nano-btn nano-btn-secondary nano-btn-sm"
+              :class="{ 'nano-btn-active': activeRotatingGlobe === 'choropleth' }"
+              @click="toggleGlobeOrbit('choropleth')"
+            >
+              {{ activeRotatingGlobe === 'choropleth' ? '⏸ Kręci się (1/1)' : '🪐 Obracaj ten' }}
+            </button>
+          </div>
+          <div class="gallery-globe-wrap">
+            <NanoGlobe
+              :size="300"
+              :center="[12, 49]"
+              preset="nano-light"
+              :country-colors="galleryChoroplethColors"
+              :selected-countries="['POL']"
+              :polygons="galleryChoroplethPolygons"
+              :show-graticule="true"
+              :show-atmosphere="true"
+              atmosphere-mode="gradient"
+              :auto-rotate-turns-per-sec="activeRotatingGlobe === 'choropleth' ? 0.035 : 0"
+            />
           </div>
         </div>
       </div>
@@ -405,6 +725,21 @@ const codeTabs = createDocTabs({
   gap: 6px;
 }
 
+.anomaly-pills-row {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.anomaly-pill-btn {
+  width: 100%;
+  justify-content: flex-start;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .sub-ctrl-label {
   display: flex;
   flex-direction: column;
@@ -466,5 +801,59 @@ const codeTabs = createDocTabs({
   display: flex;
   flex-direction: column;
   gap: 4px;
+}
+
+.gallery-header-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-bottom: 16px;
+}
+
+.globe-gallery-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(290px, 1fr));
+  gap: 16px;
+}
+
+.globe-gallery-card {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 16px;
+  border-radius: 12px;
+  background: var(--nano-bg-card);
+  border: 1px solid var(--nano-border-card);
+}
+
+.gallery-card-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.gallery-card-top h4 {
+  margin: 0 0 4px;
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--nano-text-main);
+}
+
+.gallery-card-top p {
+  margin: 0;
+  font-size: 0.76rem;
+  line-height: 1.4;
+  color: var(--nano-text-muted);
+}
+
+.gallery-globe-wrap {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 12px 0 4px;
 }
 </style>

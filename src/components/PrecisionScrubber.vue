@@ -1,47 +1,3 @@
-<template>
-  <div 
-    class="nano-scrub-track"
-    @mousedown="startScrubbing"
-    ref="trackRef"
-    v-bind="$attrs"
-  >
-    <!-- Visual progress bar inside the track -->
-    <div 
-      class="nano-scrub-progress"
-      :style="{ width: progressPercent + '%' }"
-    ></div>
-    
-    <span class="nano-scrub-label">{{ resolvedLabel }}</span>
-  </div>
-
-  <!-- HUD Overlay for high-precision scrubbing -->
-  <Teleport v-if="isMounted" to="body">
-    <div v-if="isScrubbing" class="nano-scrub-overlay">
-      <!-- Start location anchor dot -->
-      <div v-if="isScrubbingRelative" class="nano-scrub-anchor" :style="{ left: scrubStartX + 'px', top: scrubStartY + 'px' }"></div>
-      <!-- Dotted indicator line -->
-      <svg v-if="isScrubbingRelative" class="nano-scrub-svg-line">
-        <line 
-          :x1="scrubStartX" 
-          :y1="scrubStartY" 
-          :x2="scrubCurrentX" 
-          :y2="scrubCurrentY" 
-          stroke="#00e5ff" 
-          stroke-dasharray="4,4" 
-          stroke-width="1.5"
-          opacity="0.6"
-        />
-      </svg>
-      <!-- Floating HUD panel -->
-      <div class="nano-scrub-popup" :style="{ left: (scrubCurrentX + 15) + 'px', top: (scrubCurrentY + 15) + 'px' }">
-        <div class="nano-scrub-popup-title">Scrubbing Mode</div>
-        <div class="nano-scrub-popup-val">{{ formattedValue }}</div>
-        <div class="nano-scrub-popup-res">{{ scrubResolutionText }}</div>
-      </div>
-    </div>
-  </Teleport>
-</template>
-
 <script>
 export default {
   inheritAttrs: false
@@ -316,6 +272,50 @@ defineExpose({
   progressPercentage: progressPercent,
 })
 </script>
+
+<template>
+  <div 
+    class="nano-scrub-track"
+    @mousedown="startScrubbing"
+    ref="trackRef"
+    v-bind="$attrs"
+  >
+    <!-- Visual progress bar inside the track -->
+    <div 
+      class="nano-scrub-progress"
+      :style="{ width: progressPercent + '%' }"
+    ></div>
+    
+    <span class="nano-scrub-label">{{ resolvedLabel }}</span>
+  </div>
+
+  <!-- HUD Overlay for high-precision scrubbing -->
+  <Teleport v-if="isMounted" to="body">
+    <div v-if="isScrubbing" class="nano-scrub-overlay">
+      <!-- Start location anchor dot -->
+      <div v-if="isScrubbingRelative" class="nano-scrub-anchor" :style="{ left: scrubStartX + 'px', top: scrubStartY + 'px' }"></div>
+      <!-- Dotted indicator line -->
+      <svg v-if="isScrubbingRelative" class="nano-scrub-svg-line">
+        <line 
+          :x1="scrubStartX" 
+          :y1="scrubStartY" 
+          :x2="scrubCurrentX" 
+          :y2="scrubCurrentY" 
+          stroke="#00e5ff" 
+          stroke-dasharray="4,4" 
+          stroke-width="1.5"
+          opacity="0.6"
+        />
+      </svg>
+      <!-- Floating HUD panel -->
+      <div class="nano-scrub-popup" :style="{ left: (scrubCurrentX + 15) + 'px', top: (scrubCurrentY + 15) + 'px' }">
+        <div class="nano-scrub-popup-title">Scrubbing Mode</div>
+        <div class="nano-scrub-popup-val">{{ formattedValue }}</div>
+        <div class="nano-scrub-popup-res">{{ scrubResolutionText }}</div>
+      </div>
+    </div>
+  </Teleport>
+</template>
 
 <style scoped>
 .nano-scrub-track {

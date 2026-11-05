@@ -141,7 +141,7 @@ const cssApiDoc = `/* Nano UI Card & Panel Primitives */
       <!-- Controls Panel -->
       <div class="controls-panel">
         <div class="control-group">
-          <label class="control-label">Card Style</label>
+          <span class="control-label">Card Style</span>
           <div class="nano-btn-group">
             <button
               class="nano-btn nano-btn-secondary nano-btn-sm"

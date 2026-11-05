@@ -42,7 +42,25 @@ import NanoCheckbox from './components/NanoCheckbox.vue';
 import NanoSortableList from './components/NanoSortableList.vue';
 import NanoDatePicker from './components/NanoDatePicker.vue';
 import NanoSecretPipe from './components/NanoSecretPipe.vue';
+import { secretPipeDirective } from './directives/secretPipe.js';
 import { sanitizeSecretPaste, createSecretByteBuffer } from './utils/secretPipe.js';
+import {
+  PHI,
+  INV_PHI,
+  INV_PHI2,
+  INV_PHI3,
+  INV_PHI4,
+  BAUHAUS_PHI_EXACT_TARGETS,
+  BAUHAUS_PHI_2D_SPEC,
+  NANO_UI_SONIC_LOGO_NSD,
+  MATH_FORMULA_SWEEP_BANK,
+  projectOrthographic3D,
+  buildExtrudedSolid3D,
+  computeLogoPerfectionScalar,
+  computeFloating3DArtifacts,
+  computeOrbitingMathTokens3D,
+  computeBauhausPhiScene3D,
+} from './utils/bauhausPhiLogo.js';
 import {
   MONTH_NAMES,
   MONTH_SHORT_NAMES,
@@ -198,11 +216,22 @@ import {
   getPositionedReferenceEl,
 } from './utils/selectPositioning.js';
 import {
+  easeInOutCubic,
+  computeSphericalLabelOpacity,
   computeSolarCosZenith,
   computeSolarIrradiance,
   computeSolarTwilightOpacity,
   buildSphericalCapSvgPath,
   buildSolarTerminatorSvgPrimitives,
+  lonLatToWorldUnitVec3,
+  slerpWorldUnitVec3,
+  TIMEZONE_SPINE_LAT_KNOTS,
+  POLITICAL_TIMEZONE_SPINE_DELTAS,
+  TIMEZONE_ANOMALY_HOTSPOTS,
+  smoothTimezoneBoundarySpineLonLat,
+  buildTimezoneBoundarySpineVec3,
+  buildSphericalTimezoneBands,
+  buildSphericalVariableWidthLinePolygon,
 } from './utils/globe-geometry.js';
 import { transitions, durations, easings, transitionVariables } from './config/transitions.js';
 import './style.css';
@@ -221,6 +250,7 @@ export {
   handleCancel,
   dialogState,
   GlobalTooltip,
+  GlobalTooltip as NanoTooltip,
   NanoModal,
   NanoDialog,
   ThreeDDonutChart,
@@ -254,8 +284,25 @@ export {
   NanoDatePicker as NanoCalendar,
   NanoSecretPipe,
   NanoSecretPipe as NanoPasswordTunnel,
+  secretPipeDirective,
+  secretPipeDirective as vSecretPipe,
   sanitizeSecretPaste,
   createSecretByteBuffer,
+  PHI,
+  INV_PHI,
+  INV_PHI2,
+  INV_PHI3,
+  INV_PHI4,
+  BAUHAUS_PHI_EXACT_TARGETS,
+  BAUHAUS_PHI_2D_SPEC,
+  NANO_UI_SONIC_LOGO_NSD,
+  MATH_FORMULA_SWEEP_BANK,
+  projectOrthographic3D,
+  buildExtrudedSolid3D,
+  computeLogoPerfectionScalar,
+  computeFloating3DArtifacts,
+  computeOrbitingMathTokens3D,
+  computeBauhausPhiScene3D,
   MONTH_NAMES,
   MONTH_SHORT_NAMES,
   WEEKDAY_MONDAY_FIRST,
@@ -382,11 +429,22 @@ export {
   findSafeSelectMount,
   computeSelectDropdownLayout,
   getPositionedReferenceEl,
+  easeInOutCubic,
+  computeSphericalLabelOpacity,
   computeSolarCosZenith,
   computeSolarIrradiance,
   computeSolarTwilightOpacity,
   buildSphericalCapSvgPath,
   buildSolarTerminatorSvgPrimitives,
+  lonLatToWorldUnitVec3,
+  slerpWorldUnitVec3,
+  TIMEZONE_SPINE_LAT_KNOTS,
+  POLITICAL_TIMEZONE_SPINE_DELTAS,
+  TIMEZONE_ANOMALY_HOTSPOTS,
+  smoothTimezoneBoundarySpineLonLat,
+  buildTimezoneBoundarySpineVec3,
+  buildSphericalTimezoneBands,
+  buildSphericalVariableWidthLinePolygon,
   initTheme,
   useTheme,
   getZeroFoucScript,
@@ -412,6 +470,7 @@ export default {
 
     app.directive(`${dp}ripple`, Ripple);
     app.directive(`${dp}tooltip`, tooltipDirective);
+    app.directive(`${dp}secret-pipe`, secretPipeDirective);
 
     app.component(`${cp}GlobalTooltip`, GlobalTooltip);
     app.component(`${cp}NanoModal`, NanoModal);

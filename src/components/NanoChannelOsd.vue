@@ -1,19 +1,3 @@
-<template>
-  <transition name="nano-osd-fade">
-    <div
-      v-if="osdDisplay !== null"
-      class="nano-channel-osd"
-      :class="{ 'is-fixed': fixed }"
-      :style="osdStyle"
-      role="status"
-      aria-live="polite"
-    >
-      <span class="nano-channel-osd-digits">{{ osdDisplay }}</span>
-      <span v-if="subtitle" class="nano-channel-osd-subtitle">{{ subtitle }}</span>
-    </div>
-  </transition>
-</template>
-
 <script setup>
 import { ref, computed, onMounted, onUnmounted } from 'vue';
 
@@ -165,6 +149,22 @@ defineExpose({
   clearOsdTimer,
 });
 </script>
+
+<template>
+  <transition name="nano-osd-fade">
+    <div
+      v-if="osdDisplay !== null"
+      class="nano-channel-osd"
+      :class="{ 'is-fixed': fixed }"
+      :style="osdStyle"
+      role="status"
+      aria-live="polite"
+    >
+      <span class="nano-channel-osd-digits">{{ osdDisplay }}</span>
+      <span v-if="subtitle" class="nano-channel-osd-subtitle">{{ subtitle }}</span>
+    </div>
+  </transition>
+</template>
 
 <style scoped>
 .nano-channel-osd {

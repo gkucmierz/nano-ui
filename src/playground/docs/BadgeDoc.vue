@@ -118,7 +118,7 @@ const cssApiDoc = `/* Nano UI Badge & Status Indicator Primitives */
       <!-- Controls Panel -->
       <div class="controls-panel">
         <div class="control-group">
-          <label class="control-label">Variant</label>
+          <span class="control-label">Variant</span>
           <div class="nano-btn-group wrap-group">
             <button
               v-for="v in variants"
@@ -133,7 +133,7 @@ const cssApiDoc = `/* Nano UI Badge & Status Indicator Primitives */
         </div>
 
         <div class="control-group">
-          <label class="control-label">Shape</label>
+          <span class="control-label">Shape</span>
           <div class="nano-btn-group">
             <button
               class="nano-btn nano-btn-secondary nano-btn-sm"

@@ -322,7 +322,7 @@ const codeTabs = createDocTabs({
 
           <div style="display: grid; grid-template-columns: 160px 1fr; gap: 12px; align-items: end;">
             <div>
-              <label class="sim-field-label">Language</label>
+              <span class="sim-field-label">Language</span>
               <NanoSelect
                 v-model="simUiLang"
                 :options="uiLangOptions"
@@ -330,7 +330,7 @@ const codeTabs = createDocTabs({
               />
             </div>
             <div>
-              <label class="sim-field-label">Commit Style</label>
+              <span class="sim-field-label">Commit Style</span>
               <NanoSelect
                 v-model="simCommitStyle"
                 :options="commitStyleOptions"
@@ -446,7 +446,7 @@ const codeTabs = createDocTabs({
 
                   <div class="sim-commit-grid">
                     <div>
-                      <label class="sim-field-label">UI Locale</label>
+                      <span class="sim-field-label">UI Locale</span>
                       <NanoSelect
                         v-model="simUiLang"
                         :options="uiLangOptions"
@@ -455,7 +455,7 @@ const codeTabs = createDocTabs({
                       />
                     </div>
                     <div>
-                      <label class="sim-field-label">Commit Style</label>
+                      <span class="sim-field-label">Commit Style</span>
                       <NanoSelect
                         ref="commitSelectRef"
                         v-model="simCommitStyle"
@@ -541,7 +541,7 @@ const codeTabs = createDocTabs({
 
               <div class="sim-bottom-dock">
                 <div style="flex: 1; max-width: 340px;">
-                  <label class="sim-field-label">Edge Cluster Region (Near Screen Bottom)</label>
+                  <span class="sim-field-label">Edge Cluster Region (Near Screen Bottom)</span>
                   <NanoSelect
                     ref="bottomSelectRef"
                     v-model="simBottomEdgeValue"
@@ -575,6 +575,9 @@ const codeTabs = createDocTabs({
           <div class="sim-slider-bar">
             <span>{{ currentLang === 'pl' ? 'Wysokość ekranu:' : 'Screen Height:' }}</span>
             <input
+              id="select-sim-viewport-height"
+              name="select-sim-viewport-height"
+              aria-label="Screen height"
               v-model.number="simTightViewportHeight"
               type="range"
               min="170"
@@ -618,11 +621,11 @@ const codeTabs = createDocTabs({
               data-nano-viewport
             >
               <div style="width: 100%; max-width: 350px;">
-                <label class="sim-field-label">
+                <span class="sim-field-label">
                   {{ currentLang === 'pl'
                     ? 'Kliknij — wykorzysta maks. wysokość ekranu z równym marginesem góra=dół:'
                     : 'Click — uses max screen height with equal top=bottom margin:' }}
-                </label>
+                </span>
                 <NanoSelect
                   ref="overlapSelectRef"
                   v-model="simOverlapValue"

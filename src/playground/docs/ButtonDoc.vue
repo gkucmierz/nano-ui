@@ -135,7 +135,7 @@ const cssApiDoc = `/* Nano UI Button Primitives & Modifiers */
       <!-- Controls Panel -->
       <div class="controls-panel">
         <div class="control-group">
-          <label class="control-label">Variant</label>
+          <span class="control-label">Variant</span>
           <div class="nano-cluster">
             <button
               v-for="v in variants"
@@ -150,7 +150,7 @@ const cssApiDoc = `/* Nano UI Button Primitives & Modifiers */
         </div>
 
         <div class="control-group">
-          <label class="control-label">Size</label>
+          <span class="control-label">Size</span>
           <div class="nano-btn-group">
             <button
               v-for="s in sizes"

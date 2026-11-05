@@ -1,5 +1,6 @@
 import { createRouter, createWebHistory, createMemoryHistory } from 'vue-router';
 import OverviewDoc from '../docs/OverviewDoc.vue';
+import ShowoffDoc from '../docs/ShowoffDoc.vue';
 import TypographyDoc from '../docs/TypographyDoc.vue';
 import ButtonDoc from '../docs/ButtonDoc.vue';
 import InputDoc from '../docs/InputDoc.vue';
@@ -30,6 +31,7 @@ import TrendChartDoc from '../docs/TrendChartDoc.vue';
 import ChannelOsdDoc from '../docs/ChannelOsdDoc.vue';
 import NumberStepperDoc from '../docs/NumberStepperDoc.vue';
 import DatePickerDoc from '../docs/DatePickerDoc.vue';
+import SecretPipeDoc from '../docs/SecretPipeDoc.vue';
 import TabsDoc from '../docs/TabsDoc.vue';
 import SortableDoc from '../docs/SortableDoc.vue';
 import KineticAnimationsDoc from '../docs/KineticAnimationsDoc.vue';
@@ -51,6 +53,24 @@ export const routes = [
     meta: {
       title: 'Overview & Setup | Nano UI',
       description: 'High-performance, minimal footprint Vue 3 UI library, interactive 3D charts, and kinematic directives with built-in Zero-FOUC design tokens.',
+    },
+  },
+  {
+    path: '/showoff',
+    name: 'Showoff',
+    component: ShowoffDoc,
+    meta: {
+      title: 'Bauhaus Φ 3D Showoff & Monte Carlo N | Nano UI',
+      description: 'Interactive 3D -> 2D Bauhaus Φ Tri-Primitive studio, Monte Carlo N-shadow optimization, and 432Hz warm ambient audio.',
+    },
+  },
+  {
+    path: '/docs/showoff',
+    name: 'DocsShowoff',
+    component: ShowoffDoc,
+    meta: {
+      title: 'Bauhaus Φ 3D Showoff & Monte Carlo N | Nano UI',
+      description: 'Interactive 3D -> 2D Bauhaus Φ Tri-Primitive studio, Monte Carlo N-shadow optimization, and 432Hz warm ambient audio.',
     },
   },
   {
@@ -369,7 +389,18 @@ export const routes = [
       title: 'NanoDatePicker (ISO 8601 Calendar) | Nano UI',
       componentName: 'NanoDatePicker',
       type: 'component',
-      description: 'ISO 8601 (YYYY-MM-DD) calendar popover picker with Monday-first 42-cell grid, quick presets, and NanoSecretPipe Zero-Cache Uint8Array tunnel.',
+      description: 'ISO 8601 (YYYY-MM-DD) calendar popover picker with Monday-first 42-cell grid and quick rotation presets.',
+    },
+  },
+  {
+    path: '/docs/secret-pipe',
+    name: 'SecretPipe',
+    component: SecretPipeDoc,
+    meta: {
+      title: 'NanoSecretPipe & v-secret-pipe | Nano UI',
+      componentName: 'NanoSecretPipe',
+      type: 'component',
+      description: 'Zero-cache cryptographic passphrase tunnel and directive backed by a RAM Uint8Array(512) buffer with automatic .fill(0) wipe.',
     },
   },
   {

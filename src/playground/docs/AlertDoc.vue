@@ -139,7 +139,7 @@ const cssApiDoc = `/* Nano UI Alert & Banner Primitives */
       <!-- Controls Panel -->
       <div class="controls-panel">
         <div class="control-group">
-          <label class="control-label">Variant</label>
+          <span class="control-label">Variant</span>
           <div class="nano-btn-group wrap-group">
             <button
               v-for="v in variants"

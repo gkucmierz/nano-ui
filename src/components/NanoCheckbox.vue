@@ -2,7 +2,17 @@
 import { computed } from 'vue';
 import { resolveNanoColor } from '../utils/colors.js';
 
+let nanoCheckboxSeq = 0;
+
 const props = defineProps({
+  id: {
+    type: String,
+    default: '',
+  },
+  name: {
+    type: String,
+    default: '',
+  },
   modelValue: {
     type: [Boolean, null],
     default: false,
@@ -58,6 +68,9 @@ const resolvedColor = computed(() => {
 
 const isIndeterminate = computed(() => props.indeterminate || props.modelValue === null);
 const isChecked = computed(() => !isIndeterminate.value && Boolean(props.modelValue));
+const fallbackId = `nano-checkbox-${++nanoCheckboxSeq}`;
+const resolvedId = computed(() => props.id || fallbackId);
+const resolvedName = computed(() => props.name || resolvedId.value);
 
 const toggle = (event) => {
   if (props.disabled) return;
@@ -75,6 +88,7 @@ const toggle = (event) => {
 
 <template>
   <label
+    :for="resolvedId"
     class="nano-checkbox"
     :class="[
       `nano-checkbox--${size}`,
@@ -90,11 +104,13 @@ const toggle = (event) => {
     @click.stop.prevent="toggle"
   >
     <button
+      :id="resolvedId"
+      :name="resolvedName"
       type="button"
       role="checkbox"
       class="nano-checkbox-box"
       :aria-checked="isIndeterminate ? 'mixed' : isChecked ? 'true' : 'false'"
-      :aria-label="label || undefined"
+      :aria-label="label || 'Checkbox'"
       :disabled="disabled"
       @keydown.space.prevent="toggle"
       @keydown.enter.prevent="toggle"

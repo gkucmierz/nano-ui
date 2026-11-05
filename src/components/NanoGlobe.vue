@@ -2,8 +2,11 @@
 import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import { WORLD_COUNTRIES_LITE } from '../data/worldCountriesLite.js'
 import { createKineticTransition } from '../utils/kinetics.js'
+import { tooltipDirective as vTooltip } from '../directives/tooltip.js'
+import { hideTooltip } from '../composables/useTooltip.js'
 import {
   DEG2RAD,
+  computeSphericalLabelOpacity,
   lonLatToCamVec3,
   worldVec3ToCamVec3,
   clipSphericalRingToHorizon,
@@ -13,7 +16,9 @@ import {
   camPolylineToSvgPath,
   densifyRing,
   isSouthPolarRing,
-  buildSolarTerminatorSvgPrimitives
+  buildSolarTerminatorSvgPrimitives,
+  buildSphericalTimezoneBands,
+  buildSphericalVariableWidthLinePolygon
 } from '../utils/globe-geometry.js'
 
 const props = defineProps({
@@ -95,6 +100,20 @@ const props = defineProps({
   terminatorLineColor: { type: String, default: 'rgba(56, 189, 248, 0.72)' },
   /** Thin terminator line stroke width in px */
   terminatorLineWidth: { type: Number, default: 1.0 },
+  /** Show built-in spherical timezone bands (UTC-11..+12) */
+  showTimezones: { type: Boolean, default: false },
+  /** Timezone geometry mode: 'clear' ('solar' 15-deg meridians) | 'complicated' ('political' IANA vector spines) */
+  timezoneMode: { type: String, default: 'clear' },
+  /** Optional explicit SLERP morph factor in [0, 1] between Clear (0) and Complicated (1) */
+  timezoneMorph: { type: Number, default: undefined },
+  /** Highlighted UTC offset in hours (-11..+12) */
+  activeTimezoneOffset: { type: Number, default: 1 },
+  /** Show UTC offset text labels on visible timezone bands */
+  showTimezoneLabels: { type: Boolean, default: true },
+  /** Smooth label emergence/hiding span in fraction of a full 360-deg turn (default 0.015 = 1.5% turn = 5.4 deg, ease-in-out) */
+  labelFadeTurns: { type: Number, default: 0.015 },
+  /** Peak opacity at Earth surface for atmosphere radial halo gradient */
+  atmospherePeakOpacity: { type: Number, default: 0.44 },
   /** Optional custom countries array (defaults to WORLD_COUNTRIES_LITE) */
   countriesData: { type: Array, default: null }
 })
@@ -106,10 +125,14 @@ const emit = defineEmits([
   'update:showGraticule',
   'update:showHealpix',
   'update:healpixOrder',
+  'update:showTimezones',
+  'update:timezoneMode',
+  'update:activeTimezoneOffset',
   'country-click',
   'country-hover',
   'polygon-click',
   'polygon-hover',
+  'timezone-click',
   'pixel-click'
 ])
 
@@ -117,9 +140,9 @@ const uid = `nano-globe-${Math.random().toString(36).slice(2, 9)}`
 
 const PRESET_PALETTES = {
   'teal-coral': {
-    atmosphereOuter: 'rgba(255, 255, 255, 0.92)',
-    atmosphereGlow: 'rgba(13, 104, 115, 0.16)',
-    atmosphereColor: '#2dd4bf',
+    atmosphereOuter: 'rgba(153, 246, 228, 0.28)',
+    atmosphereGlow: 'rgba(45, 212, 191, 0.12)',
+    atmosphereColor: '#5eead4',
     oceanHighlight: '#167885',
     oceanMid: '#0c5e69',
     oceanDeep: '#05343c',
@@ -132,16 +155,12 @@ const PRESET_PALETTES = {
     landHoverFill: '#f28b73',
     selectedFill: '#e05a3f',
     selectedStroke: '#ffffff',
-    selectedGlow: 'rgba(224, 90, 63, 0.68)',
-    arcStroke: '#ffffff',
-    markerTarget: '#ffffff',
-    markerDotFill: '#b8be62',
-    markerDotStroke: 'rgba(255, 255, 255, 0.82)'
+    selectedGlow: 'rgba(224, 90, 63, 0.68)'
   },
   'nano-dark': {
-    atmosphereOuter: 'rgba(56, 189, 248, 0.22)',
-    atmosphereGlow: 'rgba(16, 185, 129, 0.14)',
-    atmosphereColor: '#38bdf8',
+    atmosphereOuter: 'rgba(125, 211, 252, 0.20)',
+    atmosphereGlow: 'rgba(56, 189, 248, 0.10)',
+    atmosphereColor: '#7dd3fc',
     oceanHighlight: '#112236',
     oceanMid: '#091321',
     oceanDeep: '#040811',
@@ -154,16 +173,12 @@ const PRESET_PALETTES = {
     landHoverFill: '#0ea5e9',
     selectedFill: '#10b981',
     selectedStroke: '#ecfdf5',
-    selectedGlow: 'rgba(16, 185, 129, 0.65)',
-    arcStroke: '#38bdf8',
-    markerTarget: '#ffffff',
-    markerDotFill: '#f59e0b',
-    markerDotStroke: '#ffffff'
+    selectedGlow: 'rgba(16, 185, 129, 0.65)'
   },
   'nano-light': {
-    atmosphereOuter: 'rgba(226, 232, 240, 0.95)',
-    atmosphereGlow: 'rgba(14, 165, 233, 0.12)',
-    atmosphereColor: '#38bdf8',
+    atmosphereOuter: 'rgba(186, 230, 253, 0.42)',
+    atmosphereGlow: 'rgba(56, 189, 248, 0.12)',
+    atmosphereColor: '#7dd3fc',
     oceanHighlight: '#e0f2fe',
     oceanMid: '#bae6fd',
     oceanDeep: '#7dd3fc',
@@ -176,16 +191,12 @@ const PRESET_PALETTES = {
     landHoverFill: '#fb923c',
     selectedFill: '#ea580c',
     selectedStroke: '#ffffff',
-    selectedGlow: 'rgba(234, 88, 12, 0.5)',
-    arcStroke: '#0f172a',
-    markerTarget: '#ffffff',
-    markerDotFill: '#10b981',
-    markerDotStroke: '#ffffff'
+    selectedGlow: 'rgba(234, 88, 12, 0.5)'
   },
   'cyber-amber': {
-    atmosphereOuter: 'rgba(245, 158, 11, 0.26)',
-    atmosphereGlow: 'rgba(245, 158, 11, 0.14)',
-    atmosphereColor: '#f59e0b',
+    atmosphereOuter: 'rgba(251, 191, 36, 0.22)',
+    atmosphereGlow: 'rgba(245, 158, 11, 0.10)',
+    atmosphereColor: '#fbbf24',
     oceanHighlight: '#1c1917',
     oceanMid: '#0f0e0d',
     oceanDeep: '#050504',
@@ -198,11 +209,7 @@ const PRESET_PALETTES = {
     landHoverFill: '#fbbf24',
     selectedFill: '#f59e0b',
     selectedStroke: '#fffbeb',
-    selectedGlow: 'rgba(245, 158, 11, 0.7)',
-    arcStroke: '#fde68a',
-    markerTarget: '#ffffff',
-    markerDotFill: '#38bdf8',
-    markerDotStroke: '#ffffff'
+    selectedGlow: 'rgba(245, 158, 11, 0.7)'
   }
 }
 
@@ -353,10 +360,66 @@ watch(
 const localShowGraticule = ref(props.showGraticule)
 const localShowHealpix = ref(props.showHealpix)
 const localHealpixOrder = ref(props.healpixOrder)
+const localShowTimezones = ref(props.showTimezones)
+const localTimezoneMode = ref(props.timezoneMode || 'clear')
+const localActiveTimezoneOffset = ref(props.activeTimezoneOffset)
+
+const resolveTargetMorph = (mode, explicitMorph) => {
+  if (explicitMorph !== undefined && Number.isFinite(Number(explicitMorph))) {
+    return Math.max(0, Math.min(1, Number(explicitMorph)))
+  }
+  const m = String(mode || 'clear').toLowerCase()
+  return m === 'complicated' || m === 'political' || m === 'iana' ? 1 : 0
+}
+
+const currentTimezoneMorph = ref(resolveTargetMorph(props.timezoneMode, props.timezoneMorph))
+
+const timezoneMorphKinetic = createKineticTransition({
+  initialValue: currentTimezoneMorph.value,
+  duration: 520,
+  modular: false,
+  onUpdate: ({ value }) => {
+    currentTimezoneMorph.value = Math.max(0, Math.min(1, value))
+  },
+  onSettled: ({ value }) => {
+    currentTimezoneMorph.value = Math.max(0, Math.min(1, value))
+  }
+})
+
+function updateTimezoneMorphTarget(immediate = false) {
+  const target = resolveTargetMorph(localTimezoneMode.value, props.timezoneMorph)
+  const useKinetic =
+    !immediate &&
+    props.kinetic &&
+    props.timezoneMorph === undefined &&
+    typeof window !== 'undefined' &&
+    typeof requestAnimationFrame === 'function'
+  if (!useKinetic) {
+    timezoneMorphKinetic.setTarget(target, { immediate: true })
+    currentTimezoneMorph.value = target
+  } else {
+    timezoneMorphKinetic.setTarget(target)
+  }
+}
 
 watch(() => props.showGraticule, (v) => { localShowGraticule.value = v })
 watch(() => props.showHealpix, (v) => { localShowHealpix.value = v })
 watch(() => props.healpixOrder, (v) => { localHealpixOrder.value = v })
+watch(() => props.showTimezones, (v) => { localShowTimezones.value = v })
+watch(() => props.activeTimezoneOffset, (v) => { localActiveTimezoneOffset.value = v })
+watch(
+  () => props.timezoneMode,
+  (v) => {
+    localTimezoneMode.value = v || 'clear'
+    updateTimezoneMorphTarget(false)
+  }
+)
+watch(
+  () => props.timezoneMorph,
+  () => {
+    updateTimezoneMorphTarget(true)
+  }
+)
 
 const hoveredCountryId = ref(null)
 const hoveredPolygonId = ref(null)
@@ -367,8 +430,8 @@ const VIEW_SIZE = 500
 const CX = 250
 const CY = 250
 const R = 212
-const ATMO_R = 232
-const ATMO_GRAD_R = 240
+const ATMO_R = 236
+const ATMO_GRAD_R = 249
 
 function lonLatToWorldVec3(lon, lat) {
   const phi = lat * DEG2RAD
@@ -622,99 +685,26 @@ const healpixCells = computed(() => {
     const pathD = camPolygonsToSvgPath(clippedPolys, CX, CY, R)
     if (!pathD) continue
 
+    const cellLabelOpacity = props.showHealpixLabels
+      ? computeSphericalLabelOpacity(centerCam.z, {
+          minZ: 0.14,
+          fadeTurns: props.labelFadeTurns
+        })
+      : 0
+
     cells.push({
       ipix: wc.ipix,
       face: wc.face,
       d: pathD,
       selected: selectedPixSet.has(String(wc.ipix)),
       hovered: !isDragging.value && hoveredHealpixPix.value === wc.ipix,
-      labelVisible: props.showHealpixLabels && centerCam.z > 0.15,
+      labelVisible: cellLabelOpacity > 0.005,
+      labelOpacity: Number(cellLabelOpacity.toFixed(3)),
       labelX: CX + centerCam.x * R,
       labelY: CY - centerCam.y * R
     })
   }
   return cells
-})
-
-/**
- * Great-circle geodesic arcs (SLERP interpolation between two [lon, lat] points).
- */
-const renderedArcs = computed(() => {
-  if (!props.arcs || !props.arcs.length) return []
-  const trig = cameraTrig.value
-  const out = []
-
-  const toUnit3 = (lon, lat) => {
-    const phi = lat * DEG2RAD
-    const lam = lon * DEG2RAD
-    return [Math.cos(phi) * Math.cos(lam), Math.cos(phi) * Math.sin(lam), Math.sin(phi)]
-  }
-
-  for (let idx = 0; idx < props.arcs.length; idx++) {
-    const arc = props.arcs[idx]
-    if (!Array.isArray(arc.from) || !Array.isArray(arc.to)) continue
-    const v1 = toUnit3(arc.from[0], arc.from[1])
-    const v2 = toUnit3(arc.to[0], arc.to[1])
-    const dot = Math.max(-1, Math.min(1, v1[0] * v2[0] + v1[1] * v2[1] + v1[2] * v2[2]))
-    const omega = Math.acos(dot)
-    const sinOmega = Math.sin(omega)
-    const steps = 40
-    const camPts = []
-
-    for (let s = 0; s <= steps; s++) {
-      const t = s / steps
-      let wx, wy, wz
-      if (sinOmega < 1e-6) {
-        wx = v1[0]
-        wy = v1[1]
-        wz = v1[2]
-      } else {
-        const a = Math.sin((1 - t) * omega) / sinOmega
-        const b = Math.sin(t * omega) / sinOmega
-        wx = a * v1[0] + b * v2[0]
-        wy = a * v1[1] + b * v2[1]
-        wz = a * v1[2] + b * v2[2]
-      }
-      camPts.push(worldVec3ToCamVec3(wx, wy, wz, trig))
-    }
-
-    const d = camPolylineToSvgPath(camPts, CX, CY, R)
-
-    if (d) {
-      out.push({
-        id: arc.id || `arc-${idx}`,
-        d,
-        color: arc.color || palette.value.arcStroke,
-        width: arc.width || 2.2,
-        dashed: arc.dashed !== false
-      })
-    }
-  }
-  return out
-})
-
-const renderedMarkers = computed(() => {
-  if (!props.markers || !props.markers.length) return []
-  const trig = cameraTrig.value
-  const out = []
-
-  for (let i = 0; i < props.markers.length; i++) {
-    const m = props.markers[i]
-    const lon = Number(m.lon ?? m.coordinates?.[0] ?? 0)
-    const lat = Number(m.lat ?? m.coordinates?.[1] ?? 0)
-    const cam = lonLatToCamVec3(lon, lat, trig)
-    if (cam.z < 0.02) continue
-    out.push({
-      id: m.id || `marker-${i}`,
-      x: CX + cam.x * R,
-      y: CY - cam.y * R,
-      type: m.type || 'dot',
-      color: m.color,
-      size: m.size || (m.type === 'target' ? 11 : 6.5),
-      label: m.label || ''
-    })
-  }
-  return out
 })
 
 function projectLonLat(lon, lat) {
@@ -734,7 +724,7 @@ function clipRingToSvgPath(ring, stepDeg = 4) {
   const clipped = clipSphericalRingToHorizon(camPts, {
     isSouthPolar: isSouthPolarRing(ring)
   })
-  return clipped.length > 0 ? camPolygonsToSvgPath(clipped, CX, CY, R) : ''
+  return clipped.length > 0 ? camPolygonsToSvgPath(clipped, CX, CY, R, { smoothBezier: true }) : ''
 }
 
 function projectPolygonItems(polyList, trig, layerId = 'default', layerInteractive = undefined) {
@@ -742,10 +732,26 @@ function projectPolygonItems(polyList, trig, layerId = 'default', layerInteracti
   const out = []
 
   for (let i = 0; i < polyList.length; i++) {
-    const poly = polyList[i]
+    let poly = polyList[i]
     if (!poly || poly.visible === false) continue
     const id = poly.id ?? `${layerId}-poly-${i}`
     let pathD = typeof poly.d === 'string' ? poly.d : ''
+
+    // Generic support for variable-width spherical lines/ribbons passed via poly.line or poly.waypoints
+    if (
+      !pathD &&
+      !Array.isArray(poly.worldRings) &&
+      !Array.isArray(poly.rings) &&
+      (Array.isArray(poly.line) || Array.isArray(poly.waypoints))
+    ) {
+      const builtRibbon = buildSphericalVariableWidthLinePolygon(poly.line || poly.waypoints, poly)
+      poly = {
+        ...builtRibbon,
+        ...poly,
+        worldRings: builtRibbon.worldRings,
+        labelCoords: poly.labelCoords || builtRibbon.labelCoords
+      }
+    }
 
     const rings = Array.isArray(poly.rings)
       ? poly.rings
@@ -754,8 +760,27 @@ function projectPolygonItems(polyList, trig, layerId = 'default', layerInteracti
       Array.isArray(poly.interiorCenter) && poly.interiorCenter.length >= 2
         ? lonLatToCamVec3(Number(poly.interiorCenter[0]), Number(poly.interiorCenter[1]), trig)
         : null
+    const useSmoothBezier = poly.smoothBezier !== false
 
-    if (!pathD && rings) {
+    if (!pathD && Array.isArray(poly.worldRings) && poly.worldRings.length > 0) {
+      for (const wRing of poly.worldRings) {
+        if (!Array.isArray(wRing) || wRing.length < 3) continue
+        const camPts = new Array(wRing.length)
+        for (let k = 0; k < wRing.length; k++) {
+          const w = wRing[k]
+          const cPt = worldVec3ToCamVec3(w.wx, w.wy, w.wz, trig)
+          if (w.cornerPin) cPt.cornerPin = true
+          camPts[k] = cPt
+        }
+        const clipped = clipSphericalRingToHorizon(camPts, {
+          isSouthPolar: Boolean(poly.isSouthPolar),
+          interiorCam
+        })
+        if (clipped.length > 0) {
+          pathD += camPolygonsToSvgPath(clipped, CX, CY, R, { smoothBezier: useSmoothBezier })
+        }
+      }
+    } else if (!pathD && rings) {
       for (const ring of rings) {
         if (!Array.isArray(ring) || ring.length < 3) continue
         const dense = densifyRing(ring, poly.stepDeg || 4)
@@ -765,7 +790,7 @@ function projectPolygonItems(polyList, trig, layerId = 'default', layerInteracti
           interiorCam
         })
         if (clipped.length > 0) {
-          pathD += camPolygonsToSvgPath(clipped, CX, CY, R)
+          pathD += camPolygonsToSvgPath(clipped, CX, CY, R, { smoothBezier: useSmoothBezier })
         }
       }
     }
@@ -777,14 +802,26 @@ function projectPolygonItems(polyList, trig, layerId = 'default', layerInteracti
         ? Boolean(poly.interactive)
         : (layerInteractive !== undefined ? Boolean(layerInteractive) : true)
 
+    const isActive = Boolean(poly.isActive)
     let labelPos = null
     if (poly.label && Array.isArray(poly.labelCoords) && poly.labelCoords.length >= 2) {
       const lCam = lonLatToCamVec3(Number(poly.labelCoords[0]), Number(poly.labelCoords[1]), trig)
-      if (lCam.z > 0.16) {
+      const minZ = isActive ? 0.14 : 0.24
+      const labelOpacity = computeSphericalLabelOpacity(lCam.z, {
+        minZ,
+        fadeTurns: props.labelFadeTurns
+      })
+      if (labelOpacity > 0.005) {
+        const textStr = String(poly.label)
+        const pillW = Math.max(34, textStr.length * 6.2 + 10)
         labelPos = {
           x: CX + lCam.x * R,
           y: CY - lCam.y * R,
-          text: String(poly.label),
+          text: textStr,
+          pillW,
+          pillH: isActive ? 16 : 14,
+          isActive,
+          opacity: Number(labelOpacity.toFixed(3)),
           color: poly.labelColor || '#ffffff'
         }
       }
@@ -801,6 +838,7 @@ function projectPolygonItems(polyList, trig, layerId = 'default', layerInteracti
       dashed: Boolean(poly.dashed),
       interactive,
       hovered,
+      isActive,
       labelPos,
       raw: poly
     })
@@ -812,9 +850,35 @@ const renderedCustomPolygons = computed(() =>
   projectPolygonItems(props.polygons || [], cameraTrig.value, 'polygons')
 )
 
+const builtInTimezonePolygons = computed(() => {
+  if (!localShowTimezones.value) return []
+  return buildSphericalTimezoneBands({
+    mode: localTimezoneMode.value,
+    morph: currentTimezoneMorph.value,
+    activeOffsetHours: localActiveTimezoneOffset.value,
+    showLabels: props.showTimezoneLabels
+  })
+})
+
 const renderedLayers = computed(() => {
   const trig = cameraTrig.value
   const result = []
+
+  if (localShowTimezones.value && builtInTimezonePolygons.value.length > 0) {
+    const tzPolys = projectPolygonItems(
+      builtInTimezonePolygons.value,
+      trig,
+      '__builtin_timezones__',
+      true
+    )
+    if (tzPolys.length > 0) {
+      result.push({
+        id: '__builtin_timezones__',
+        opacity: 1,
+        polygons: tzPolys
+      })
+    }
+  }
 
   if (Array.isArray(props.layers) && props.layers.length > 0) {
     for (let lIdx = 0; lIdx < props.layers.length; lIdx++) {
@@ -871,6 +935,16 @@ const renderedSolarTerminator = computed(() => {
 
 function onPolygonClick(poly) {
   if (dragMovedDistance > 5 || !poly.interactive) return
+  if (poly.raw && typeof poly.raw.offsetHours === 'number') {
+    localActiveTimezoneOffset.value = poly.raw.offsetHours
+    emit('update:activeTimezoneOffset', poly.raw.offsetHours)
+    emit('timezone-click', {
+      offsetHours: poly.raw.offsetHours,
+      name: poly.name,
+      centerLon: poly.raw.centerLon,
+      polygon: poly.raw
+    })
+  }
   emit('polygon-click', {
     id: poly.id,
     name: poly.name,
@@ -905,11 +979,13 @@ function flushPendingDrag() {
 function onPointerDown(e) {
   if (!props.interactive) return
   if (e.button !== undefined && e.button !== 0) return
+  hideTooltip()
   lonKinetic.stop()
   latKinetic.stop()
   isDragging.value = true
   hoveredCountryId.value = null
   hoveredHealpixPix.value = null
+  hoveredPolygonId.value = null
   dragStartX = e.clientX
   dragStartY = e.clientY
   startLon = rotLon.value
@@ -1012,6 +1088,19 @@ function setOrderBtn(o) {
   emit('update:showHealpix', true)
 }
 
+function toggleTimezonesBtn() {
+  localShowTimezones.value = !localShowTimezones.value
+  emit('update:showTimezones', localShowTimezones.value)
+}
+
+function setTimezoneModeBtn(nextMode) {
+  localTimezoneMode.value = nextMode
+  localShowTimezones.value = true
+  updateTimezoneMorphTarget(false)
+  emit('update:timezoneMode', nextMode)
+  emit('update:showTimezones', true)
+}
+
 function stepAutoRotate(ts) {
   animFrameId = null
   if (isUnmounted) return
@@ -1092,12 +1181,15 @@ defineExpose({
   toggleGraticule: toggleGraticuleBtn,
   toggleHealpix: toggleHealpixBtn,
   setHealpixOrder: setOrderBtn,
+  toggleTimezones: toggleTimezonesBtn,
+  setTimezoneMode: setTimezoneModeBtn,
   projectLonLat,
   clipRingToSvgPath,
   rotLon,
   rotLat,
   currentAutoRotateSpeed,
   currentTurnsPerSec,
+  currentTimezoneMorph,
   isDragging,
 })
 
@@ -1111,6 +1203,7 @@ onUnmounted(() => {
   lonKinetic.destroy()
   latKinetic.destroy()
   speedKinetic.destroy()
+  timezoneMorphKinetic.destroy()
   if (animFrameId) {
     cancelAnimationFrame(animFrameId)
     animFrameId = null
@@ -1146,12 +1239,15 @@ onUnmounted(() => {
           <stop offset="100%" :stop-color="palette.oceanDeep" />
         </radialGradient>
 
-        <!-- Outer Atmosphere Radial Gradient (100% opacity at Earth's surface r=R=212 -> 88.3% of r=240, fading to 0% at 100%) -->
+        <!-- Outer Atmosphere Radial Gradient (Cubic ease-out Rayleigh decay from Earth's surface r=212 -> 85.1% of r=249 to 0% at 100%) -->
         <radialGradient :id="`${uid}-atmo-grad`" cx="50%" cy="50%" r="50%">
-          <stop offset="0%" :stop-color="palette.atmosphereColor" stop-opacity="1" />
-          <stop offset="88.3%" :stop-color="palette.atmosphereColor" stop-opacity="1" />
-          <stop offset="93.2%" :stop-color="palette.atmosphereColor" stop-opacity="0.54" />
-          <stop offset="97.0%" :stop-color="palette.atmosphereColor" stop-opacity="0.18" />
+          <stop offset="0%" :stop-color="palette.atmosphereColor" :stop-opacity="atmospherePeakOpacity" />
+          <stop offset="85.1%" :stop-color="palette.atmosphereColor" :stop-opacity="atmospherePeakOpacity" />
+          <stop offset="87.6%" :stop-color="palette.atmosphereColor" :stop-opacity="(atmospherePeakOpacity * 0.66).toFixed(3)" />
+          <stop offset="90.1%" :stop-color="palette.atmosphereColor" :stop-opacity="(atmospherePeakOpacity * 0.38).toFixed(3)" />
+          <stop offset="92.6%" :stop-color="palette.atmosphereColor" :stop-opacity="(atmospherePeakOpacity * 0.19).toFixed(3)" />
+          <stop offset="95.1%" :stop-color="palette.atmosphereColor" :stop-opacity="(atmospherePeakOpacity * 0.08).toFixed(3)" />
+          <stop offset="97.6%" :stop-color="palette.atmosphereColor" :stop-opacity="(atmospherePeakOpacity * 0.02).toFixed(3)" />
           <stop offset="100%" :stop-color="palette.atmosphereColor" stop-opacity="0" />
         </radialGradient>
 
@@ -1246,6 +1342,8 @@ onUnmounted(() => {
               :stroke="country.selected ? palette.selectedStroke : palette.landStroke"
               :stroke-width="country.selected ? 1.55 : 0.65"
               stroke-linejoin="round"
+              v-tooltip="!isDragging ? `${country.name} (${country.id})` : undefined"
+              :aria-label="`${country.name} (${country.id})`"
               @mouseenter="
                 !isDragging &&
                   ((hoveredCountryId = country.id),
@@ -1253,95 +1351,11 @@ onUnmounted(() => {
               "
               @mouseleave="!isDragging && (hoveredCountryId = null)"
               @click.stop="onCountryClick(country)"
-            >
-              <title>{{ country.name }} ({{ country.id }})</title>
-            </path>
+            />
           </template>
         </g>
 
-        <!-- 3. HEALPix Equal-Area Spherical Grid Overlay -->
-        <g v-if="localShowHealpix" class="nano-globe-healpix">
-          <path
-            v-for="cell in healpixCells"
-            :key="cell.ipix"
-            :d="cell.d"
-            class="nano-globe-healpix-cell"
-            :fill="
-              cell.selected
-                ? palette.healpixFillSelected
-                : cell.hovered
-                  ? palette.healpixFillHover
-                  : 'transparent'
-            "
-            :stroke="palette.healpixStroke"
-            :stroke-width="cell.selected ? 1.5 : 0.9"
-            stroke-linejoin="round"
-            @mouseenter="!isDragging && (hoveredHealpixPix = cell.ipix)"
-            @mouseleave="!isDragging && (hoveredHealpixPix = null)"
-            @click.stop="onHealpixClick(cell)"
-          >
-            <title>HEALPix #{{ cell.ipix }} (face {{ cell.face }}, Nside={{ 1 << localHealpixOrder }})</title>
-          </path>
-          <text
-            v-for="cell in healpixCells.filter((c) => c.labelVisible)"
-            :key="`lbl-${cell.ipix}`"
-            :x="cell.labelX"
-            :y="cell.labelY"
-            text-anchor="middle"
-            dominant-baseline="central"
-            class="nano-globe-healpix-label"
-          >
-            {{ cell.ipix }}
-          </text>
-        </g>
-
-        <!-- 3b. Generic Spherical Overlay Layers & Polygons (e.g. Timezones, Solar Terminator, Custom Regions) -->
-        <template v-for="layer in renderedLayers" :key="layer.id">
-          <g
-            class="nano-globe-custom-polygons"
-            :data-layer-id="layer.id"
-            :opacity="layer.opacity"
-          >
-            <path
-              v-for="poly in layer.polygons"
-              :key="poly.id"
-              :d="poly.d"
-              class="nano-globe-custom-polygon"
-              :class="{ 'is-hovered': poly.hovered, 'is-interactive': poly.interactive }"
-              :fill="poly.fill"
-              :stroke="poly.stroke"
-              :stroke-width="poly.strokeWidth"
-              :stroke-dasharray="poly.dashed ? '4 4' : undefined"
-              stroke-linejoin="round"
-              :pointer-events="poly.interactive ? 'auto' : 'none'"
-              @mouseenter="
-                !isDragging &&
-                  poly.interactive &&
-                  ((hoveredPolygonId = poly.id),
-                  emit('polygon-hover', { id: poly.id, layerId: layer.id, name: poly.name, polygon: poly.raw }))
-              "
-              @mouseleave="!isDragging && (hoveredPolygonId = null)"
-              @click.stop="onPolygonClick(poly)"
-            >
-              <title v-if="poly.name">{{ poly.name }}</title>
-            </path>
-            <text
-              v-for="poly in layer.polygons.filter((p) => p.labelPos)"
-              :key="`lbl-${poly.id}`"
-              :x="poly.labelPos.x"
-              :y="poly.labelPos.y"
-              text-anchor="middle"
-              dominant-baseline="central"
-              class="nano-globe-layer-label"
-              :fill="poly.labelPos.color"
-              pointer-events="none"
-            >
-              {{ poly.labelPos.text }}
-            </text>
-          </g>
-        </template>
-
-        <!-- 3c. Physical Solar Terminator (Lambert Cosine Twilight Gradient & Thin Line) -->
+        <!-- 2b. Physical Solar Terminator (Lambert Cosine Twilight Gradient & Thin Line) -->
         <g
           v-if="renderedSolarTerminator.bands.length || renderedSolarTerminator.lineD"
           class="nano-globe-solar-terminator"
@@ -1366,6 +1380,124 @@ onUnmounted(() => {
           />
         </g>
 
+        <!-- 3. HEALPix Equal-Area Spherical Grid Overlay -->
+        <g v-if="localShowHealpix" class="nano-globe-healpix">
+          <path
+            v-for="cell in healpixCells"
+            :key="cell.ipix"
+            :d="cell.d"
+            class="nano-globe-healpix-cell"
+            :fill="
+              cell.selected
+                ? palette.healpixFillSelected
+                : cell.hovered
+                  ? palette.healpixFillHover
+                  : 'transparent'
+            "
+            :stroke="palette.healpixStroke"
+            :stroke-width="cell.selected ? 1.5 : 0.9"
+            stroke-linejoin="round"
+            v-tooltip="
+              !isDragging
+                ? `HEALPix #${cell.ipix} (face ${cell.face}, Nside=${1 << localHealpixOrder})`
+                : undefined
+            "
+            :aria-label="`HEALPix #${cell.ipix} (face ${cell.face}, Nside=${1 << localHealpixOrder})`"
+            @mouseenter="!isDragging && (hoveredHealpixPix = cell.ipix)"
+            @mouseleave="!isDragging && (hoveredHealpixPix = null)"
+            @click.stop="onHealpixClick(cell)"
+          />
+          <text
+            v-for="cell in healpixCells.filter((c) => c.labelVisible)"
+            :key="`lbl-${cell.ipix}`"
+            :x="cell.labelX"
+            :y="cell.labelY"
+            :opacity="cell.labelOpacity"
+            text-anchor="middle"
+            dominant-baseline="central"
+            class="nano-globe-healpix-label"
+          >
+            {{ cell.ipix }}
+          </text>
+        </g>
+
+        <!-- 3b. Generic Spherical Overlay Layers & Polygons (e.g. Timezones, Variable-Width Ribbons, Custom Regions) -->
+        <template v-for="layer in renderedLayers" :key="layer.id">
+          <g
+            class="nano-globe-custom-polygons"
+            :data-layer-id="layer.id"
+            :opacity="layer.opacity"
+          >
+            <template v-for="poly in layer.polygons" :key="poly.id">
+              <path
+                v-if="poly.isActive || poly.hovered"
+                :d="poly.d"
+                class="nano-globe-custom-polygon-glow"
+                fill="none"
+                stroke="rgba(0, 242, 254, 0.45)"
+                :stroke-width="poly.isActive ? 6.5 : 4.5"
+                stroke-linejoin="round"
+                stroke-linecap="round"
+                pointer-events="none"
+              />
+              <path
+                :d="poly.d"
+                class="nano-globe-custom-polygon"
+                :class="{
+                  'is-hovered': poly.hovered,
+                  'is-active': poly.isActive,
+                  'is-interactive': poly.interactive
+                }"
+                :fill="poly.fill"
+                :stroke="poly.stroke"
+                :stroke-width="poly.strokeWidth"
+                :stroke-dasharray="poly.dashed ? '5 3' : undefined"
+                stroke-linejoin="round"
+                stroke-linecap="round"
+                :pointer-events="poly.interactive ? 'auto' : 'none'"
+                v-tooltip="!isDragging && poly.interactive && poly.name ? poly.name : undefined"
+                :aria-label="poly.name || undefined"
+                @mouseenter="
+                  !isDragging &&
+                    poly.interactive &&
+                    ((hoveredPolygonId = poly.id),
+                    emit('polygon-hover', { id: poly.id, layerId: layer.id, name: poly.name, polygon: poly.raw }))
+                "
+                @mouseleave="!isDragging && (hoveredPolygonId = null)"
+                @click.stop="onPolygonClick(poly)"
+              />
+            </template>
+            <g
+              v-for="poly in layer.polygons.filter((p) => p.labelPos)"
+              :key="`lbl-${poly.id}`"
+              :opacity="poly.labelPos.opacity"
+              pointer-events="none"
+            >
+              <rect
+                :x="poly.labelPos.x - poly.labelPos.pillW / 2"
+                :y="poly.labelPos.y - poly.labelPos.pillH / 2"
+                :width="poly.labelPos.pillW"
+                :height="poly.labelPos.pillH"
+                rx="4"
+                :fill="poly.labelPos.isActive ? 'rgba(2, 6, 23, 0.92)' : 'rgba(2, 6, 23, 0.76)'"
+                :stroke="poly.labelPos.isActive ? '#00f2fe' : 'rgba(255, 255, 255, 0.36)'"
+                :stroke-width="poly.labelPos.isActive ? 1.4 : 0.8"
+              />
+              <text
+                :x="poly.labelPos.x"
+                :y="poly.labelPos.y"
+                text-anchor="middle"
+                dominant-baseline="central"
+                class="nano-globe-layer-label"
+                :class="{ 'is-active': poly.labelPos.isActive }"
+                :fill="poly.labelPos.color"
+              >
+                {{ poly.labelPos.text }}
+              </text>
+            </g>
+          </g>
+        </template>
+
         <!-- 3c. Scoped SVG Overlay Slot for Arbitrary Custom SVG Elements on the Sphere -->
         <slot
           name="svg-overlay"
@@ -1378,60 +1510,7 @@ onUnmounted(() => {
           :rot-lat="rotLat"
         />
 
-        <!-- 4. Great-Circle Geodesic Arcs (e.g. dashed route lines) -->
-        <g v-if="renderedArcs.length" class="nano-globe-arcs" pointer-events="none">
-          <path
-            v-for="arc in renderedArcs"
-            :key="arc.id"
-            :d="arc.d"
-            fill="none"
-            :stroke="arc.color"
-            :stroke-width="arc.width"
-            :stroke-dasharray="arc.dashed ? '6 6' : undefined"
-            stroke-linecap="round"
-          />
-        </g>
-
-        <!-- 5. Spherical Markers (Bullseye Target & Waypoint Dots) -->
-        <g v-if="renderedMarkers.length" class="nano-globe-markers" pointer-events="none">
-          <g
-            v-for="m in renderedMarkers"
-            :key="m.id"
-            :transform="`translate(${m.x.toFixed(1)}, ${m.y.toFixed(1)})`"
-          >
-            <template v-if="m.type === 'target'">
-              <circle
-                r="11"
-                fill="none"
-                :stroke="m.color || palette.markerTarget"
-                stroke-width="2.4"
-              />
-              <circle
-                r="4.5"
-                :fill="m.color || palette.markerTarget"
-              />
-              <!-- Subtle NE target tick matching screenshot -->
-              <polygon
-                points="6,-11 12,-12 11,-6"
-                :fill="m.color || palette.markerTarget"
-              />
-            </template>
-            <template v-else>
-              <circle
-                :r="m.size + 2.5"
-                fill="rgba(255,255,255,0.22)"
-              />
-              <circle
-                :r="m.size"
-                :fill="m.color || palette.markerDotFill"
-                :stroke="palette.markerDotStroke"
-                stroke-width="2"
-              />
-            </template>
-          </g>
-        </g>
-
-        <!-- 6. Spherical 3D Limb Shading Overlay & Crisp Horizon Bezel -->
+        <!-- 4. Spherical 3D Limb Shading Overlay & Crisp Horizon Bezel -->
         <circle
           :cx="CX"
           :cy="CY"
@@ -1485,6 +1564,32 @@ onUnmounted(() => {
           Nside={{ 1 << o }}
         </button>
       </div>
+      <button
+        type="button"
+        class="nano-globe-btn"
+        :class="{ active: localShowTimezones }"
+        @click="toggleTimezonesBtn"
+      >
+        🕒 Strefy (UTC)
+      </button>
+      <div v-if="localShowTimezones" class="nano-globe-order-pills">
+        <button
+          type="button"
+          class="nano-globe-pill"
+          :class="{ active: localTimezoneMode === 'clear' || localTimezoneMode === 'solar' }"
+          @click="setTimezoneModeBtn('clear')"
+        >
+          📐 Clear (15°)
+        </button>
+        <button
+          type="button"
+          class="nano-globe-pill"
+          :class="{ active: localTimezoneMode === 'complicated' || localTimezoneMode === 'political' }"
+          @click="setTimezoneModeBtn('complicated')"
+        >
+          🧩 Complicated (IANA)
+        </button>
+      </div>
       <div class="nano-globe-order-pills">
         <button
           v-for="pKey in ['teal-coral', 'nano-dark', 'nano-light', 'cyber-amber']"
@@ -1536,8 +1641,13 @@ onUnmounted(() => {
   cursor: grabbing;
 }
 
-.nano-globe-healpix-cell {
+.nano-globe-healpix-cell,
+.nano-globe-custom-polygon.is-interactive {
   cursor: pointer;
+}
+
+.nano-globe-svg.is-dragging .nano-globe-custom-polygon.is-interactive {
+  cursor: grabbing;
 }
 
 .nano-globe-healpix-label,
@@ -1545,9 +1655,14 @@ onUnmounted(() => {
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
   font-size: 9px;
   font-weight: 700;
-  fill: rgba(255, 255, 255, 0.9);
+  fill: rgba(255, 255, 255, 0.94);
   pointer-events: none;
   text-shadow: 0 1px 3px rgba(0, 0, 0, 0.9);
+}
+
+.nano-globe-layer-label.is-active {
+  font-size: 10px;
+  font-weight: 800;
 }
 
 .nano-globe-controls {

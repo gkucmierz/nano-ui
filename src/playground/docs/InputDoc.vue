@@ -125,6 +125,8 @@ const cssApiDoc = `/* Nano UI Input Primitives & Form Controls */
           >
             <span v-if="hasPrefix" class="nano-input-addon">https://</span>
             <input
+              id="input-doc-sandbox-group"
+              name="input-doc-sandbox-group"
               type="text"
               v-model="inputValue"
               :class="[
@@ -132,6 +134,7 @@ const cssApiDoc = `/* Nano UI Input Primitives & Form Controls */
                 selectedSize !== 'default' ? `nano-input-${selectedSize}` : ''
               ]"
               :placeholder="placeholder"
+              aria-label="Sandbox input with addon"
               :disabled="selectedState === 'disabled'"
             />
             <button
@@ -150,6 +153,8 @@ const cssApiDoc = `/* Nano UI Input Primitives & Form Controls */
 
           <input
             v-else
+            id="input-doc-sandbox-plain"
+            name="input-doc-sandbox-plain"
             type="text"
             v-model="inputValue"
             :class="[
@@ -159,6 +164,7 @@ const cssApiDoc = `/* Nano UI Input Primitives & Form Controls */
               selectedState === 'success' ? 'nano-input-success' : ''
             ]"
             :placeholder="placeholder"
+            aria-label="Sandbox input"
             :disabled="selectedState === 'disabled'"
           />
         </div>
@@ -169,7 +175,7 @@ const cssApiDoc = `/* Nano UI Input Primitives & Form Controls */
       <!-- Controls Panel -->
       <div class="controls-panel">
         <div class="control-group">
-          <label class="control-label">Size</label>
+          <span class="control-label">Size</span>
           <div class="nano-btn-group">
             <button
               v-for="s in sizes"
@@ -184,7 +190,7 @@ const cssApiDoc = `/* Nano UI Input Primitives & Form Controls */
         </div>
 
         <div class="control-group">
-          <label class="control-label">State</label>
+          <span class="control-label">State</span>
           <div class="nano-cluster">
             <button
               v-for="st in states"
@@ -209,7 +215,7 @@ const cssApiDoc = `/* Nano UI Input Primitives & Form Controls */
         </label>
 
         <div v-if="hasButton" class="control-group">
-          <label class="control-label">Button Style</label>
+          <span class="control-label">Button Style</span>
           <div class="nano-btn-group">
             <button
               class="nano-btn nano-btn-secondary nano-btn-sm"
@@ -244,7 +250,7 @@ const cssApiDoc = `/* Nano UI Input Primitives & Form Controls */
               <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
             </svg>
           </span>
-          <input type="text" class="nano-input" v-model="searchQuery" placeholder="Search components, APIs..." />
+          <input id="input-doc-search" name="input-doc-search" type="text" class="nano-input" v-model="searchQuery" placeholder="Search components, APIs..." aria-label="Global Search Field" />
           <button class="nano-btn nano-btn-secondary" v-ripple>Search</button>
         </div>
       </div>
@@ -253,7 +259,7 @@ const cssApiDoc = `/* Nano UI Input Primitives & Form Controls */
       <div class="composition-card">
         <span class="composition-title">API Token (Secret Key)</span>
         <div class="nano-input-group">
-          <input type="text" class="nano-input" :value="apiKey" readonly />
+          <input id="input-doc-api-key" name="input-doc-api-key" type="text" class="nano-input" :value="apiKey" aria-label="API Token" readonly />
           <button
             class="nano-btn nano-btn-secondary nano-btn-icon"
             v-tooltip="copyFeedback ? 'Copied!' : 'Copy to clipboard'"
@@ -276,7 +282,7 @@ const cssApiDoc = `/* Nano UI Input Primitives & Form Controls */
         <span class="composition-title">Financial & Units Addon</span>
         <div class="nano-input-group">
           <span class="nano-input-addon">$</span>
-          <input type="number" class="nano-input" placeholder="0.00" />
+          <input id="input-doc-amount" name="input-doc-amount" type="number" class="nano-input" placeholder="0.00" aria-label="Amount in USD" />
           <span class="nano-input-addon">USD</span>
         </div>
       </div>
@@ -287,9 +293,12 @@ const cssApiDoc = `/* Nano UI Input Primitives & Form Controls */
         <div class="nano-input-group">
           <button class="nano-btn nano-btn-secondary" @click="stepperValue = Math.max(0, stepperValue - 100)" v-ripple>-100</button>
           <input
+            id="input-doc-stepper"
+            name="input-doc-stepper"
             type="number"
             class="nano-input nano-input-center"
             v-model.number="stepperValue"
+            aria-label="Precision Numeric Stepper"
           />
           <button class="nano-btn nano-btn-secondary" @click="stepperValue = Math.min(10000, stepperValue + 100)" v-ripple>+100</button>
         </div>
@@ -300,7 +309,7 @@ const cssApiDoc = `/* Nano UI Input Primitives & Form Controls */
         <span class="composition-title">Subdomain & Vanity URL</span>
         <div class="nano-input-group">
           <span class="nano-input-addon">https://</span>
-          <input type="text" class="nano-input" placeholder="app-name" />
+          <input id="input-doc-subdomain" name="input-doc-subdomain" type="text" class="nano-input" placeholder="app-name" aria-label="Subdomain name" />
           <span class="nano-input-addon">.7u.pl</span>
         </div>
       </div>
@@ -315,7 +324,7 @@ const cssApiDoc = `/* Nano UI Input Primitives & Form Controls */
           <span>Compact inputs for dense data tables and filter bars (height: ~24px)</span>
         </div>
         <div class="matrix-actions">
-          <input type="text" class="nano-input nano-input-sm matrix-input-demo" placeholder="Compact input..." />
+          <input id="input-doc-size-sm" name="input-doc-size-sm" type="text" class="nano-input nano-input-sm matrix-input-demo" placeholder="Compact input..." aria-label="Compact input demo" />
         </div>
       </div>
 
@@ -325,7 +334,7 @@ const cssApiDoc = `/* Nano UI Input Primitives & Form Controls */
           <span>Standard UI form controls (height: ~32px)</span>
         </div>
         <div class="matrix-actions">
-          <input type="text" class="nano-input matrix-input-demo" placeholder="Standard input..." />
+          <input id="input-doc-size-md" name="input-doc-size-md" type="text" class="nano-input matrix-input-demo" placeholder="Standard input..." aria-label="Standard input demo" />
         </div>
       </div>
 
@@ -335,7 +344,7 @@ const cssApiDoc = `/* Nano UI Input Primitives & Form Controls */
           <span>Prominent search bars and hero inputs (height: ~40px)</span>
         </div>
         <div class="matrix-actions">
-          <input type="text" class="nano-input nano-input-lg matrix-input-demo" placeholder="Large input..." />
+          <input id="input-doc-size-lg" name="input-doc-size-lg" type="text" class="nano-input nano-input-lg matrix-input-demo" placeholder="Large input..." aria-label="Large input demo" />
         </div>
       </div>
     </div>

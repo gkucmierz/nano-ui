@@ -144,7 +144,17 @@ export const PLAYGROUND_NAV_ITEMS = [
     docFile: 'DatePickerDoc.vue',
     localeKeys: [],
     componentTag: 'NanoDatePicker',
-    keywords: 'calendar kalendarz date picker data iso 8601 yyyy-mm-dd NanoCalendar NanoSecretPipe password tunnel',
+    keywords: 'calendar kalendarz date picker data iso 8601 yyyy-mm-dd NanoCalendar',
+  },
+  {
+    id: '/docs/secret-pipe',
+    to: '/docs/secret-pipe',
+    sectionKey: 'nav.formControls',
+    navKey: 'nav.secretPipe',
+    docFile: 'SecretPipeDoc.vue',
+    localeKeys: [],
+    componentTag: 'NanoSecretPipe',
+    keywords: 'secret pipe password tunnel haslo ssh sudo askpass uint8array v-secret-pipe stealth',
   },
   {
     id: '/docs/masked-input',

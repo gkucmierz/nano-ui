@@ -459,9 +459,9 @@ const networkData = [
         <h4>1. Slices / Data Points</h4>
         <div class="slices-list">
           <div v-for="(item, idx) in testData" :key="idx" class="slice-row">
-            <input type="text" v-model="item.name" class="input-name" placeholder="Name" />
-            <input type="number" v-model.number="item.value" class="input-value" min="0.01" step="0.01" placeholder="Value" />
-            <input type="color" v-model="item.color" class="input-color" />
+            <input :id="`donut-slice-name-${idx}`" :name="`donut-slice-name-${idx}`" aria-label="Slice name" type="text" v-model="item.name" class="input-name" placeholder="Name" />
+            <input :id="`donut-slice-val-${idx}`" :name="`donut-slice-val-${idx}`" aria-label="Slice value" type="number" v-model.number="item.value" class="input-value" min="0.01" step="0.01" placeholder="Value" />
+            <input :id="`donut-slice-color-${idx}`" :name="`donut-slice-color-${idx}`" aria-label="Slice color" type="color" v-model="item.color" class="input-color" />
             <button @click="removeItem(idx)" class="btn-remove" aria-label="Remove slice">
               <NanoIcon name="trash" :size="13" />
             </button>
@@ -498,7 +498,7 @@ const networkData = [
 
         <div class="slider-row" :style="!showCenterText || !is3D ? 'opacity: 0.35; pointer-events: none;' : ''">
           <span class="slider-label">Center Text Z (Depth): {{ centerTextZ === 'auto' ? `Auto (${autoZValue.toFixed(2)})` : (centerTextZ === 0 ? 'Top (0.0)' : centerTextZ === 0.5 ? 'Center (0.5)' : centerTextZ === 1 ? 'Bottom (1.0)' : Number(centerTextZ).toFixed(2)) }}</span>
-          <input type="range" v-model.number="sliderCenterTextZ" min="0.0" max="1.0" step="0.01" />
+          <input id="donut-ctrl-4" name="donut-ctrl-4" aria-label="Chart control 4" type="range" v-model.number="sliderCenterTextZ" min="0.0" max="1.0" step="0.01" />
           <div class="nano-btn-group" style="width: 100%; margin-top: 4px;">
             <button 
               type="button" 
@@ -568,22 +568,22 @@ const networkData = [
 
         <div class="slider-row" :style="!is3D ? 'opacity: 0.35; pointer-events: none;' : ''">
           <span class="slider-label">Slope Ratio (Tilt): {{ slopeRatio }}</span>
-          <input type="range" v-model.number="slopeRatio" min="0" max="1.0" step="0.01" :disabled="!is3D" />
+          <input id="donut-ctrl-5" name="donut-ctrl-5" aria-label="Chart control 5" type="range" v-model.number="slopeRatio" min="0" max="1.0" step="0.01" :disabled="!is3D" />
         </div>
 
         <div class="slider-row" :style="!is3D ? 'opacity: 0.35; pointer-events: none;' : ''">
           <span class="slider-label">3D Wall Depth: {{ depth }}px</span>
-          <input type="range" v-model.number="depth" min="0" max="80" step="1" :disabled="!is3D" />
+          <input id="donut-ctrl-6" name="donut-ctrl-6" aria-label="Chart control 6" type="range" v-model.number="depth" min="0" max="80" step="1" :disabled="!is3D" />
         </div>
 
         <div class="slider-row">
           <span class="slider-label">Donut Thickness: {{ (thickness * 100).toFixed(0) }}%</span>
-          <input type="range" v-model.number="thickness" min="0.0" max="1.0" step="0.01" />
+          <input id="donut-ctrl-7" name="donut-ctrl-7" aria-label="Chart control 7" type="range" v-model.number="thickness" min="0.0" max="1.0" step="0.01" />
         </div>
 
         <div class="slider-row">
           <span class="slider-label">Label Decimals: {{ valueDecimalsRange === -1 ? 'Auto' : valueDecimalsRange }}</span>
-          <input type="range" v-model.number="valueDecimalsRange" min="-1" max="10" step="1" />
+          <input id="donut-ctrl-8" name="donut-ctrl-8" aria-label="Chart control 8" type="range" v-model.number="valueDecimalsRange" min="-1" max="10" step="1" />
         </div>
 
         <div class="control-subgroup" style="margin-top: 14px;">
@@ -627,7 +627,7 @@ const networkData = [
 
         <div class="slider-row" style="margin-top: 14px;" :style="!showLabels ? 'opacity: 0.35; pointer-events: none;' : ''">
           <span class="slider-label">Label Distance: {{ labelDistance }}px</span>
-          <input type="range" v-model.number="labelDistance" min="0" max="100" step="5" :disabled="!showLabels" />
+          <input id="donut-ctrl-9" name="donut-ctrl-9" aria-label="Chart control 9" type="range" v-model.number="labelDistance" min="0" max="100" step="5" :disabled="!showLabels" />
         </div>
       </div>
 
@@ -649,7 +649,7 @@ const networkData = [
             <span class="badge-msp">{{ chartAnimationDuration === 0 ? 'Instant (0ms)' : chartAnimationDuration + 'ms Anim' }}</span>
           </div>
           
-          <input 
+          <input id="donut-ctrl-10" name="donut-ctrl-10" aria-label="Chart control 10" 
             type="range" 
             v-model.number="rotationAngle" 
             min="-360" 
@@ -687,12 +687,12 @@ const networkData = [
 
         <div class="slider-row" :style="!aggregateOthers ? 'opacity: 0.4; pointer-events: none;' : ''">
           <span class="slider-label">Others Threshold: {{ (othersThreshold * 100).toFixed(1) }}%</span>
-          <input type="range" v-model.number="othersThreshold" min="0.001" max="0.30" step="0.001" />
+          <input id="donut-ctrl-11" name="donut-ctrl-11" aria-label="Chart control 11" type="range" v-model.number="othersThreshold" min="0.001" max="0.30" step="0.001" />
         </div>
 
         <div class="input-row" :style="!aggregateOthers ? 'opacity: 0.4; pointer-events: none;' : ''" style="display: flex; gap: 8px; margin-top: 10px;">
-          <input type="text" v-model="othersLabel" class="input-name" style="width: 100%;" placeholder="Other Label" />
-          <input type="color" v-model="othersColor" class="input-color" style="height: 32px;" />
+          <input id="donut-ctrl-12" name="donut-ctrl-12" aria-label="Chart control 12" type="text" v-model="othersLabel" class="input-name" style="width: 100%;" placeholder="Other Label" />
+          <input id="donut-ctrl-13" name="donut-ctrl-13" aria-label="Chart control 13" type="color" v-model="othersColor" class="input-color" style="height: 32px;" />
         </div>
       </div>
     </div>
@@ -780,7 +780,7 @@ const networkData = [
 
               <div class="slider-row" :style="autoRotateDemo ? 'opacity: 0.35; pointer-events: none;' : ''">
                 <span class="slider-label">Manual Rotation: {{ Math.round(autoRotateDemoAngle) }}°</span>
-                <input type="range" v-model.number="autoRotateDemoAngle" min="-180" max="180" step="1" :disabled="autoRotateDemo" />
+                <input id="donut-ctrl-14" name="donut-ctrl-14" aria-label="Chart control 14" type="range" v-model.number="autoRotateDemoAngle" min="-180" max="180" step="1" :disabled="autoRotateDemo" />
               </div>
 
               <div class="showcase-info-box">
@@ -845,12 +845,12 @@ const networkData = [
 
               <div class="slider-row" :style="!thresholdDemoAggregate ? 'opacity: 0.35; pointer-events: none;' : ''">
                 <span class="slider-label">othersThreshold: {{ (thresholdDemoThreshold * 100).toFixed(1) }}%</span>
-                <input type="range" v-model.number="thresholdDemoThreshold" min="0.005" max="0.15" step="0.005" :disabled="!thresholdDemoAggregate" />
+                <input id="donut-ctrl-15" name="donut-ctrl-15" aria-label="Chart control 15" type="range" v-model.number="thresholdDemoThreshold" min="0.005" max="0.15" step="0.005" :disabled="!thresholdDemoAggregate" />
               </div>
 
               <div class="input-row" :style="!thresholdDemoAggregate ? 'opacity: 0.35; pointer-events: none;' : ''" style="display: flex; gap: 8px; margin-top: 10px;">
-                <input type="text" v-model="thresholdDemoLabel" class="input-name" placeholder="othersLabel" :disabled="!thresholdDemoAggregate" />
-                <input type="color" v-model="thresholdDemoColor" class="input-color" style="height: 32px;" :disabled="!thresholdDemoAggregate" />
+                <input id="donut-ctrl-16" name="donut-ctrl-16" aria-label="Chart control 16" type="text" v-model="thresholdDemoLabel" class="input-name" placeholder="othersLabel" :disabled="!thresholdDemoAggregate" />
+                <input id="donut-ctrl-17" name="donut-ctrl-17" aria-label="Chart control 17" type="color" v-model="thresholdDemoColor" class="input-color" style="height: 32px;" :disabled="!thresholdDemoAggregate" />
               </div>
 
               <div class="showcase-info-box">

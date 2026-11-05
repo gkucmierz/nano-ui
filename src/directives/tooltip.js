@@ -82,7 +82,9 @@ export const tooltipDirective = {
     const currentText = typeof binding.value === 'object' ? binding.value.text : binding.value;
 
     if (tooltipState.isVisible && tooltipState.text !== currentText) {
-      if (el.matches(':hover') || document.activeElement === el) {
+      if (!currentText) {
+        hideTooltip();
+      } else if (el.matches?.(':hover') || document.activeElement === el) {
         showTooltip(el, binding.value);
       }
     }
