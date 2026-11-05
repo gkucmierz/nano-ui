@@ -1498,7 +1498,8 @@ const concepts = [
                 </span>
               </div>
 
-              <svg viewBox="0 0 32 32" width="216" height="216" class="stage-svg">
+              <div class="stage-2d-canvas-wrap">
+                <svg viewBox="0 0 32 32" width="216" height="216" class="stage-svg">
                 <rect
                   x="1"
                   y="1"
@@ -1582,6 +1583,7 @@ const concepts = [
                   />
                 </g>
               </svg>
+              </div>
             </div>
           </div>
 
@@ -1892,19 +1894,90 @@ const concepts = [
   margin: 0 !important;
   border-radius: 0 !important;
   border: none !important;
-  width: 100dvw !important;
+  box-sizing: border-box !important;
+  width: 100vw !important;
+  max-width: 100vw !important;
   height: 100dvh !important;
-  padding: 1.15rem 1.75rem !important;
-  overflow-y: auto !important;
+  max-height: 100dvh !important;
+  padding: 12px 18px !important;
+  overflow: hidden !important;
   display: flex;
   flex-direction: column;
-  justify-content: center;
+  justify-content: stretch;
+  align-items: stretch;
   background: var(--nano-bg-app, #090d16);
 }
 
 .logo-lab-card.is-fullscreen-deck .device-viewport-frame {
-  max-width: 1240px;
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
   margin-bottom: 0;
+}
+
+.logo-lab-card.is-fullscreen-deck .device-viewport-frame.frame-desktop {
+  width: 100% !important;
+  max-width: none !important;
+}
+
+.logo-lab-card.is-fullscreen-deck .perfection-hud {
+  flex-shrink: 0;
+  margin-bottom: 8px;
+}
+
+.logo-lab-card.is-fullscreen-deck .projection-stage {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 12px 16px;
+}
+
+.logo-lab-card.is-fullscreen-deck .stage-visuals {
+  flex: 1;
+  min-height: 0;
+  width: 100%;
+  flex-wrap: nowrap;
+  align-items: stretch;
+}
+
+.logo-lab-card.is-fullscreen-deck .stage-box {
+  flex: 1;
+  min-height: 0;
+  height: 100%;
+}
+
+.logo-lab-card.is-fullscreen-deck .stage-box-wide {
+  flex: 1.75;
+  min-height: 0;
+  height: 100%;
+}
+
+.logo-lab-card.is-fullscreen-deck .stage-3d-canvas-wrap,
+.logo-lab-card.is-fullscreen-deck .stage-2d-canvas-wrap {
+  flex: 1;
+  min-height: 0;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.logo-lab-card.is-fullscreen-deck .stage-svg {
+  width: 100% !important;
+  height: 100% !important;
+  max-width: 100% !important;
+  max-height: 100% !important;
+}
+
+.logo-lab-card.is-fullscreen-deck .stage-controls {
+  flex-shrink: 0;
+  gap: 8px;
+  padding-top: 8px;
 }
 
 .logo-lab-header {
@@ -1918,8 +1991,9 @@ const concepts = [
 
 .logo-lab-header.is-fullscreen-header {
   width: 100%;
-  max-width: 1240px;
-  margin: 0 auto 0.85rem auto;
+  max-width: none !important;
+  margin: 0 0 8px 0;
+  flex-shrink: 0;
 }
 
 .header-actions-col {
@@ -2148,11 +2222,13 @@ const concepts = [
   min-width: 280px;
 }
 
-.stage-3d-canvas-wrap {
+.stage-3d-canvas-wrap,
+.stage-2d-canvas-wrap {
   position: relative;
   width: 100%;
   display: flex;
   justify-content: center;
+  align-items: center;
 }
 
 .mobile-pip-shadow {
