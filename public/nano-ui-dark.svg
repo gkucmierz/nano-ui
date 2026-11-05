@@ -1,54 +1,41 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
   <defs>
-    <!-- Background Squircle Gradient -->
-    <linearGradient id="nanoBgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+    <!-- Dark Squircle Surface Gradient -->
+    <linearGradient id="nanoBgGradDark" x1="0%" y1="0%" x2="100%" y2="100%">
       <stop offset="0%" stop-color="#0f172a" />
       <stop offset="100%" stop-color="#020617" />
     </linearGradient>
 
-    <!-- Ambient Core Radial Glow -->
-    <radialGradient id="nanoAmbientGlow" cx="50%" cy="50%" r="50%">
-      <stop offset="0%" stop-color="#6366f1" stop-opacity="0.38" />
-      <stop offset="55%" stop-color="#00f2fe" stop-opacity="0.14" />
-      <stop offset="100%" stop-color="#020617" stop-opacity="0" />
-    </radialGradient>
-
-    <!-- Continuous Kinetic Energy Monogram Gradient -->
-    <linearGradient id="nanoKineticGrad" x1="136" y1="376" x2="376" y2="136" gradientUnits="userSpaceOnUse">
-      <stop offset="0%" stop-color="#4f46e5" />
-      <stop offset="28%" stop-color="#6366f1" />
-      <stop offset="58%" stop-color="#38bdf8" />
-      <stop offset="100%" stop-color="#00f2fe" />
+    <!-- [□] Golden Pillar Gradient (Indigo -> Electric Violet) -->
+    <linearGradient id="nanoPhiRectDark" x1="112" y1="112" x2="180" y2="400" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#818cf8" />
+      <stop offset="100%" stop-color="#4f46e5" />
     </linearGradient>
+
+    <!-- [△] Golden Wedge Triangle Gradient (Indigo -> Emerald/Cyan) -->
+    <linearGradient id="nanoPhiTriDark" x1="212" y1="112" x2="400" y2="400" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#6366f1" />
+      <stop offset="55%" stop-color="#06b6d4" />
+      <stop offset="100%" stop-color="#10b981" />
+    </linearGradient>
+
+    <!-- [○] Quantum Sphere Radial Gradient (Cyan Core) -->
+    <radialGradient id="nanoPhiCircleDark" cx="38%" cy="35%" r="65%">
+      <stop offset="0%" stop-color="#e0f2fe" />
+      <stop offset="45%" stop-color="#00f2fe" />
+      <stop offset="100%" stop-color="#0284c7" />
+    </radialGradient>
   </defs>
 
-  <!-- Squircle Base Canvas (App Icon & OG Surface) -->
-  <rect width="512" height="512" rx="144" fill="url(#nanoBgGrad)" stroke="rgba(255, 255, 255, 0.14)" stroke-width="4" />
+  <!-- Squircle Base Canvas (Inset by 6px for stroke-width="12" -> [0, 0, 512, 512] zero clipping) -->
+  <rect x="6" y="6" width="500" height="500" rx="140" fill="url(#nanoBgGradDark)" stroke="rgba(255, 255, 255, 0.14)" stroke-width="12" />
 
-  <!-- Ambient Glow -->
-  <circle cx="256" cy="256" r="220" fill="url(#nanoAmbientGlow)" />
+  <!-- 1. [□] BAUHAUS GOLDEN PILLAR (H = 288, w = H * phi^-3 = 68) -->
+  <rect x="112" y="112" width="68" height="288" rx="14.4" fill="url(#nanoPhiRectDark)" />
 
-  <!-- High-Precision Quantum Reticle Rings -->
-  <circle cx="256" cy="256" r="208" stroke="rgba(255, 255, 255, 0.08)" stroke-width="2" stroke-dasharray="8 12" />
-  <circle cx="256" cy="256" r="160" stroke="rgba(255, 255, 255, 0.05)" stroke-width="1.5" />
+  <!-- 2. [△] BAUHAUS GOLDEN RIGHT TRIANGLE (Right leg = H * phi^-1 = 178 -> y = 400 - 178 = 222) -->
+  <polygon points="212,112 400,400 400,222" fill="url(#nanoPhiTriDark)" />
 
-  <!-- Diagonal Alignment Axis -->
-  <line x1="84" y1="84" x2="428" y2="428" stroke="rgba(255, 255, 255, 0.05)" stroke-width="1.5" stroke-dasharray="6 10" />
-
-  <!-- BOLD KINETIC 'N' MONOGRAM (Continuous 72px Joined Path) -->
-  <path
-    d="M136 376 V136 L376 376 V136"
-    stroke="url(#nanoKineticGrad)"
-    stroke-width="72"
-    stroke-linecap="round"
-    stroke-linejoin="round"
-  />
-
-  <!-- Prominent Quantum Pulsar (Upper Right) -->
-  <circle cx="376" cy="136" r="54" fill="rgba(0, 242, 254, 0.24)" />
-  <circle cx="376" cy="136" r="32" fill="#00f2fe" />
-  <circle cx="376" cy="136" r="13" fill="#ffffff" />
-
-  <!-- Secondary Anchor Core (Bottom Left) -->
-  <circle cx="136" cy="376" r="15" fill="#4f46e5" />
+  <!-- 3. [○] BAUHAUS GOLDEN SPHERE (Upper-right phi^-2 pocket, tangent to x=400, y=112) -->
+  <circle cx="360.8" cy="151.2" r="39.2" fill="url(#nanoPhiCircleDark)" />
 </svg>

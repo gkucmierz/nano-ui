@@ -6,8 +6,19 @@ import { fileURLToPath } from 'node:url'
 import { WORLD_COUNTRIES_LITE } from '../../src/data/worldCountriesLite.js'
 import {
   DEG2RAD,
+  easeInOutCubic,
+  computeSphericalLabelOpacity,
   lonLatToCamVec3,
+  lonLatToWorldUnitVec3,
+  slerpWorldUnitVec3,
+  TIMEZONE_SPINE_LAT_KNOTS,
+  POLITICAL_TIMEZONE_SPINE_DELTAS,
+  smoothTimezoneBoundarySpineLonLat,
+  buildTimezoneBoundarySpineVec3,
+  buildSphericalTimezoneBands,
+  buildSphericalVariableWidthLinePolygon,
   clipSphericalRingToHorizon,
+  camPolygonToSvgPath,
   camPolygonsToSvgPath,
   camPolylineToSvgPath,
   densifyRing,
@@ -217,8 +228,8 @@ describe('NanoGlobe Component & WORLD_COUNTRIES_LITE Dataset', () => {
       'NanoGlobe must support atmosphereMode ("ring" | "gradient") with radial gradient'
     )
     assert.ok(
-      src.includes('offset="88.3%"') && src.includes('stop-opacity="1"') && src.includes('stop-opacity="0"'),
-      'Atmosphere gradient must have 100% opacity at Earth surface (r=212/240 ≈ 88.3%) fading to 0% at outer edge'
+      src.includes('offset="85.1%"') && src.includes('atmospherePeakOpacity') && src.includes('stop-opacity="0"'),
+      'Atmosphere gradient must use Cubic ease-out Rayleigh decay from Earth surface (r=212/249 ≈ 85.1%) fading to 0% at outer edge'
     )
     assert.ok(
       src.includes('autoRotateTurnsPerSec') && src.includes('* 360'),
@@ -236,5 +247,101 @@ describe('NanoGlobe Component & WORLD_COUNTRIES_LITE Dataset', () => {
       src.includes('var(--nano-bg-card') && src.includes('var(--nano-text-secondary'),
       'NanoGlobe HUD pills must use Nano UI SSoT light/dark theme variables instead of hardcoded dark slate'
     )
+  })
+
+  it('builds 24 Spherical Vector-Spine timezone bands (Clear 15° vs Complicated IANA) with unit vectors and SLERP morphing', () => {
+    assert.equal(TIMEZONE_SPINE_LAT_KNOTS.length, 19)
+    assert.ok(Array.isArray(POLITICAL_TIMEZONE_SPINE_DELTAS[8]))
+
+    const u = lonLatToWorldUnitVec3(0, 0)
+    const v = lonLatToWorldUnitVec3(90, 0)
+    const mid = slerpWorldUnitVec3(u, v, 0.5)
+    const midNorm = Math.hypot(mid.wx, mid.wy, mid.wz)
+    assert.ok(Math.abs(midNorm - 1) < 1e-12, 'SLERP midpoint must lie strictly on unit sphere S^2')
+
+    const clearSpine7 = buildTimezoneBoundarySpineVec3(7, 0)
+    const complicatedSpine7 = buildTimezoneBoundarySpineVec3(7, 1)
+    assert.equal(clearSpine7.length, 19)
+    assert.equal(complicatedSpine7.length, 19)
+    // Western China knot (index 5 -> 43 deg N, delta -38.7 deg) shifts west in complicated mode
+    assert.notDeepEqual(clearSpine7[5], complicatedSpine7[5])
+
+    const clearBands = buildSphericalTimezoneBands({ mode: 'clear', activeOffsetHours: 1 })
+    const compBands = buildSphericalTimezoneBands({ mode: 'complicated', activeOffsetHours: 8 })
+    assert.equal(clearBands.length, 24)
+    assert.equal(compBands.length, 24)
+    // With 2 Chaikin corner-cutting passes on 19 knots -> 76 points per spine -> 152 per closed band ring
+    assert.ok(clearBands[0].worldRings && clearBands[0].worldRings[0].length === 152)
+    assert.equal(clearBands[0].smoothBezier, true)
+    assert.equal(clearBands[0].dashed, false)
+
+    const src = readFileSync(resolve(ROOT, 'src/components/NanoGlobe.vue'), 'utf8')
+    assert.ok(src.includes('showTimezones') && src.includes('timezoneMode'), 'NanoGlobe must expose showTimezones and timezoneMode props')
+    assert.ok(src.includes('buildSphericalTimezoneBands'), 'NanoGlobe must use Spherical Vector-Spine timezone generator')
+  })
+
+  it('guarantees zero topological self-intersections (strictly monotonic westLon < eastLon) across all 24 timezone bands and Chaikin-smoothed spines', () => {
+    for (let i = 0; i < TIMEZONE_SPINE_LAT_KNOTS.length; i++) {
+      const lat = TIMEZONE_SPINE_LAT_KNOTS[i]
+      let prevLon = -12 * 15 + 7.5
+      for (let b = -11; b <= 12; b++) {
+        const base = b * 15 + 7.5
+        const d = (POLITICAL_TIMEZONE_SPINE_DELTAS[String(b)] || [])[i] || 0
+        const lon = base + d
+        assert.ok(
+          lon > prevLon + 1.0,
+          `Band UTC${b >= 0 ? '+' + b : b} must have strictly positive width (> 1 deg) at lat=${lat}, got west=${prevLon.toFixed(2)} >= east=${lon.toFixed(2)}`
+        )
+        prevLon = lon
+      }
+    }
+
+    // Verify Chaikin subdivision preserves polar endpoints and increases resolution 19 -> 38 -> 76
+    const rawPts = TIMEZONE_SPINE_LAT_KNOTS.map((lat, idx) => [-52.5 + (POLITICAL_TIMEZONE_SPINE_DELTAS['-4'][idx] || 0), lat])
+    const sub2 = smoothTimezoneBoundarySpineLonLat(rawPts, 2)
+    assert.equal(sub2.length, 76)
+    assert.deepEqual(sub2[0], rawPts[0])
+    assert.deepEqual(sub2[sub2.length - 1], rawPts[rawPts.length - 1])
+  })
+
+  it('fades labels smoothly over 1-2% of a full turn via easeInOutCubic and renders Quadratic Bezier (Q) & variable-width spherical ribbons', () => {
+    assert.equal(easeInOutCubic(0), 0)
+    assert.equal(easeInOutCubic(0.5), 0.5)
+    assert.equal(easeInOutCubic(1), 1)
+
+    const minZ = Math.sin(10 * DEG2RAD)
+    // Below threshold -> 0
+    assert.equal(computeSphericalLabelOpacity(Math.sin(9.9 * DEG2RAD), { minZ, fadeTurns: 0.015 }), 0)
+    // At +0.75% of a turn (+2.7 deg above 10 deg -> 12.7 deg), progress is 0.5 -> easeInOutCubic(0.5) === 0.5
+    const midOp = computeSphericalLabelOpacity(Math.sin(12.7 * DEG2RAD), { minZ, fadeTurns: 0.015 })
+    assert.ok(Math.abs(midOp - 0.5) < 1e-6, `Expected 0.5 opacity at midpoint of 1.5% turn window, got ${midOp}`)
+    // At +1.5% of a turn (+5.4 deg above 10 deg -> 15.4 deg), opacity reaches 1
+    const fullOp = computeSphericalLabelOpacity(Math.sin(15.5 * DEG2RAD), { minZ, fadeTurns: 0.015 })
+    assert.equal(fullOp, 1)
+
+    // Quadratic Bezier (Q) path generation on visible interior vertices
+    const samplePoly = [
+      { x: -0.2, y: -0.2, z: 0.8, cornerPin: true },
+      { x: -0.15, y: 0.0, z: 0.85 },
+      { x: -0.18, y: 0.2, z: 0.8 },
+      { x: 0.2, y: 0.2, z: 0.8, cornerPin: true },
+      { x: 0.15, y: 0.0, z: 0.85 },
+      { x: 0.18, y: -0.2, z: 0.8 }
+    ]
+    const bezierD = camPolygonToSvgPath(samplePoly, 250, 250, 212, { smoothBezier: true })
+    assert.ok(bezierD.includes('Q'), `Expected Quadratic Bezier Q commands in path: ${bezierD}`)
+
+    // Variable-width spherical ribbon polygon
+    const ribbon = buildSphericalVariableWidthLinePolygon(
+      [
+        [-80, 25, 0.5],
+        [-50, 42, 3.2],
+        [-10, 54, 1.0]
+      ],
+      { id: 'test-gulf-stream', label: 'GULF STREAM' }
+    )
+    assert.equal(ribbon.id, 'test-gulf-stream')
+    assert.ok(Array.isArray(ribbon.worldRings) && ribbon.worldRings[0].length >= 20)
+    assert.equal(ribbon.smoothBezier, true)
   })
 })
