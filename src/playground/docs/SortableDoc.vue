@@ -5,7 +5,22 @@ import NanoCheckbox from '../../components/NanoCheckbox.vue';
 import NanoSwitch from '../../components/NanoSwitch.vue';
 import NanoNumberStepper from '../../components/NanoNumberStepper.vue';
 import NanoCodeBlock from '../../components/NanoCodeBlock.vue';
+import { getScopedStorageController } from '../../utils/storage-controller.js';
 import { currentLang } from '../../locales.js';
+
+const sortableStorageCtrl = getScopedStorageController('nano-ui');
+const storageMode = ref('ls');
+const storageAppPrefix = ref('dashboard-app');
+const storageKeyName = ref('sortable_demo');
+const storageRevision = ref(0);
+
+const inspectedSortableStorage = computed(() => {
+  void storageRevision.value;
+  return sortableStorageCtrl.inspect(storageKeyName.value, {
+    mode: storageMode.value,
+    appPrefix: storageAppPrefix.value,
+  });
+});
 
 const handleOnlyMode = ref(false);
 const sortableDisabled = ref(false);
@@ -65,6 +80,7 @@ const macroGroups = ref([
 const onTrackReorder = ({ fromIndex, toIndex, item }) => {
   const label = currentLang.value === 'pl' ? item.namePl : item.nameEn;
   lastReorderLog.value = `${label}: #${fromIndex + 1} → #${toIndex + 1}`;
+  storageRevision.value++;
 };
 
 const isPl = computed(() => currentLang.value === 'pl');
@@ -83,6 +99,9 @@ placeholderRadius: String           (default: '10px')
 ghostScale:        Number           (default: 1.015)
 ghostOpacity:      Number           (default: 0.88)
 dragThreshold:     Number           (default: 3)          // px threshold before card lift
+storage:           String|Boolean   (default: 'ls')       // 'ls' | 'ss' | 'none' | false (when storageKey is set)
+appPrefix:         String           (default: '')         // auto-detected acronym e.g. 'DA'
+storageKey:        String           (default: '')         // resolves to 'DA_NU_<storageKey>' ({ order: [...] })
 
 // Events
 @update:modelValue (nextItems: Array)
@@ -106,7 +125,14 @@ const tracks = ref([
 
 <template>
   <!-- Grab anywhere on the card background; inputs/checkboxes stay interactive automatically -->
-  <NanoSortableList v-model="tracks" item-key="id" :gap="10">
+  <NanoSortableList
+    v-model="tracks"
+    item-key="id"
+    :gap="10"
+    storage="ls"
+    app-prefix="dashboard-app"
+    storage-key="tracks_order"
+  >
     <template #item="{ item, index, moveUp, moveDown }">
       <div class="nano-card" style="padding: 12px 16px; display: flex; align-items: center; gap: 12px;">
         <span data-drag-handle style="cursor: grab; opacity: 0.6;">⠿ #{{ index + 1 }}</span>
@@ -176,6 +202,9 @@ const codeTabs = computed(() => [
         :handle-only="handleOnlyMode"
         :disabled="sortableDisabled"
         :placeholder-color="placeholderTheme"
+        :storage="storageMode"
+        :app-prefix="storageAppPrefix"
+        :storage-key="storageKeyName"
         @reorder="onTrackReorder"
       >
         <template #item="{ item, index, moveUp, moveDown }">
@@ -222,6 +251,27 @@ const codeTabs = computed(() => [
       <div class="telemetry-bar">
         <span><strong>{{ isPl ? 'Kolejność ID:' : 'Current Order:' }}</strong> <code>{{ pipelineTracks.map(t => t.badge).join(' → ') }}</code></span>
         <span><strong>{{ isPl ? 'Ostatni ruch:' : 'Last Reorder:' }}</strong> <code>{{ lastReorderLog }}</code></span>
+        <span>
+          <strong>Storage (<code>@gkucmierz/storage-controller</code>):</strong>
+          <button
+            v-for="m in ['ls', 'ss', 'none']"
+            :key="m"
+            type="button"
+            class="arrow-btn"
+            style="width: auto; padding: 0 7px; margin-left: 4px; font-weight: 700;"
+            :style="storageMode === m ? 'border-color: #38bdf8; color: #38bdf8;' : ''"
+            @click="storageMode = m; storageRevision++;"
+          >
+            {{ m.toUpperCase() }}
+          </button>
+          <code
+            v-tooltip="`from ${inspectedSortableStorage.verboseKey}`"
+            style="margin-left: 6px; cursor: help;"
+          >
+            <span style="color: var(--nano-status-info-text); font-weight: 700;">{{ inspectedSortableStorage.displayAppSeg }}</span>_<span style="color: var(--nano-status-purple-text); font-weight: 700;">{{ inspectedSortableStorage.displayScopeSeg }}</span>_<span style="color: var(--nano-status-success-text); font-weight: 600;">{{ inspectedSortableStorage.rawKey }}</span>
+            = {{ inspectedSortableStorage.rawValue || 'null' }}
+          </code>
+        </span>
       </div>
     </div>
 

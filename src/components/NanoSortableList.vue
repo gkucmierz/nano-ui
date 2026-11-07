@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed, onBeforeUnmount } from 'vue';
+import { ref, computed, watch, onMounted, onBeforeUnmount } from 'vue';
 import {
   DEFAULT_INTERACTIVE_IGNORE_SELECTOR,
   reorderArray,
@@ -7,6 +7,13 @@ import {
   resolvePlaceholderBeforeIndex,
 } from '../utils/sortable.js';
 import { resolveNanoColor } from '../utils/colors.js';
+import {
+  getScopedStorageController,
+  normalizeStorageMode,
+  STORAGE_MODES,
+} from '../utils/storage-controller.js';
+
+const sortableStorageCtrl = getScopedStorageController('nano-ui');
 
 const props = defineProps({
   modelValue: {
@@ -61,9 +68,49 @@ const props = defineProps({
     type: Number,
     default: 3,
   },
+  /**
+   * Storage backend mode when `storageKey` is provided:
+   * - `'ls'` (default): localStorage (`window.localStorage`)
+   * - `'ss'`: sessionStorage (`window.sessionStorage`)
+   * - `'none'` | `false`: disable persistence
+   */
+  storage: {
+    type: [String, Boolean],
+    default: 'ls',
+  },
+  /**
+   * Optional application-level prefix override (e.g. `'dashboard-app'` -> `'DA_NU_<storageKey>'`).
+   */
+  appPrefix: {
+    type: String,
+    default: '',
+  },
+  /**
+   * Optional storage key for persisting item order (`{ order: [id1, id2, ...] }`) across reloads.
+   */
+  storageKey: {
+    type: String,
+    default: '',
+  },
 });
 
 const emit = defineEmits(['update:modelValue', 'reorder', 'drag-start', 'drag-end']);
+
+const resolvedStorageMode = computed(() => {
+  if (!props.storageKey) return STORAGE_MODES.NONE;
+  return normalizeStorageMode(props.storage, STORAGE_MODES.LS);
+});
+
+const isStorageEnabled = computed(
+  () => Boolean(props.storageKey) && resolvedStorageMode.value !== STORAGE_MODES.NONE
+);
+
+const resolvedStorageKey = computed(() => {
+  if (!props.storageKey) return '';
+  return sortableStorageCtrl.resolveKey(props.storageKey, {
+    appPrefix: props.appPrefix || undefined,
+  });
+});
 
 const containerRef = ref(null);
 const isDragging = ref(false);
@@ -286,6 +333,64 @@ const onGlobalPointerMove = (e) => {
   updateTargetSlotFromCursor(clientX, clientY);
 };
 
+const saveItemOrder = (items = props.modelValue) => {
+  if (!isStorageEnabled.value || !Array.isArray(items)) return;
+  const order = items.map((it, idx) => getItemKey(it, idx));
+  sortableStorageCtrl.set(
+    props.storageKey,
+    { order },
+    {
+      mode: resolvedStorageMode.value,
+      appPrefix: props.appPrefix || undefined,
+    }
+  );
+};
+
+const applySavedOrder = () => {
+  if (!isStorageEnabled.value || !Array.isArray(props.modelValue) || props.modelValue.length <= 1) {
+    return;
+  }
+  const saved = sortableStorageCtrl.get(props.storageKey, null, {
+    mode: resolvedStorageMode.value,
+    appPrefix: props.appPrefix || undefined,
+  });
+  const order = Array.isArray(saved)
+    ? saved
+    : saved && Array.isArray(saved.order)
+      ? saved.order
+      : null;
+  if (!order || order.length === 0) return;
+
+  const currentKeys = props.modelValue.map((it, idx) => String(getItemKey(it, idx)));
+  const byKey = new Map();
+  props.modelValue.forEach((it, idx) => {
+    byKey.set(String(getItemKey(it, idx)), it);
+  });
+
+  const reordered = [];
+  const used = new Set();
+  for (const rawId of order) {
+    const k = String(rawId);
+    if (byKey.has(k) && !used.has(k)) {
+      reordered.push(byKey.get(k));
+      used.add(k);
+    }
+  }
+  props.modelValue.forEach((it, idx) => {
+    const k = String(getItemKey(it, idx));
+    if (!used.has(k)) {
+      reordered.push(it);
+      used.add(k);
+    }
+  });
+
+  const nextKeys = reordered.map((it, idx) => String(getItemKey(it, idx)));
+  const changed = nextKeys.some((k, idx) => k !== currentKeys[idx]);
+  if (changed) {
+    emit('update:modelValue', reordered);
+  }
+};
+
 const commitDrop = () => {
   const fromIndex = draggedIndex.value;
   const toIndex = targetSlot.value;
@@ -300,6 +405,7 @@ const commitDrop = () => {
   const item = props.modelValue[fromIndex];
   if (fromIndex !== toIndex) {
     const nextItems = reorderArray(props.modelValue, fromIndex, toIndex);
+    saveItemOrder(nextItems);
     emit('update:modelValue', nextItems);
     emit('reorder', { fromIndex, toIndex, item, items: nextItems });
   }
@@ -380,9 +486,21 @@ const moveItemByDelta = (fromIndex, delta) => {
   if (toIndex < 0 || toIndex >= props.modelValue.length) return;
   const item = props.modelValue[fromIndex];
   const nextItems = reorderArray(props.modelValue, fromIndex, toIndex);
+  saveItemOrder(nextItems);
   emit('update:modelValue', nextItems);
   emit('reorder', { fromIndex, toIndex, item, items: nextItems });
 };
+
+onMounted(() => {
+  applySavedOrder();
+});
+
+watch(
+  () => [props.storageKey, props.storage, props.appPrefix],
+  () => {
+    applySavedOrder();
+  }
+);
 
 onBeforeUnmount(() => {
   cleanupGlobalListeners();
@@ -393,6 +511,10 @@ defineExpose({
   draggedIndex,
   targetSlot,
   moveItemByDelta,
+  resolvedStorageKey,
+  resolvedStorageMode,
+  saveItemOrder,
+  applySavedOrder,
 });
 </script>
 
