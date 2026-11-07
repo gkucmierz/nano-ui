@@ -14,7 +14,8 @@ import {
   computeGeoBounds,
   computeFitBoundsView,
   evaluatePolylineCursor,
-  normalizeGeoPoint
+  normalizeGeoPoint,
+  normalizeMapPolygons
 } from '../../src/utils/map-engine.js';
 import { BUILTIN_ICONS } from '../../src/icons/index.js';
 
@@ -139,6 +140,58 @@ describe('NanoMap & map-engine utilities', () => {
     assert.ok(Math.abs(fromSeparate.lon - 18.9214) < 1e-9);
 
     assert.equal(normalizeGeoPoint(null), null);
+  });
+
+  test('normalizeMapPolygons should support both [lat, lon] polygons and RFC 7946 GeoJSON [lon, lat] FeatureCollections', () => {
+    const geojson = {
+      type: 'FeatureCollection',
+      features: [
+        {
+          type: 'Feature',
+          properties: {
+            id: 'milowice-district',
+            name: 'Sosnowiec-Milowice',
+            color: '#f59e0b',
+            fillOpacity: 0.25
+          },
+          geometry: {
+            type: 'Polygon',
+            coordinates: [
+              [
+                [19.085, 50.292],
+                [19.118, 50.292],
+                [19.118, 50.268],
+                [19.085, 50.268],
+                [19.085, 50.292]
+              ]
+            ]
+          }
+        }
+      ]
+    };
+
+    const customPolygons = [
+      {
+        id: 'custom-zone',
+        name: 'Custom Zone',
+        color: '#38bdf8',
+        points: [
+          [50.29, 19.09],
+          [50.29, 19.11],
+          [50.27, 19.11]
+        ]
+      }
+    ];
+
+    const normalized = normalizeMapPolygons(customPolygons, geojson);
+    assert.equal(normalized.length, 2);
+    assert.equal(normalized[0].id, 'custom-zone');
+    assert.equal(normalized[0].rings[0].length, 3);
+    assert.equal(normalized[1].id, 'milowice-district');
+    assert.equal(normalized[1].name, 'Sosnowiec-Milowice');
+    assert.equal(normalized[1].fillOpacity, 0.25);
+    // Verify RFC 7946 [lon, lat] was converted to internal [lat, lon]
+    assert.deepEqual(normalized[1].rings[0][0], [50.292, 19.085]);
   });
 
   test('BUILTIN_ICONS should expose map, compass-rose, locate-fixed, plus, minus and layers icons', () => {

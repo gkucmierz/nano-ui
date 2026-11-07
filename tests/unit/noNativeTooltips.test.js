@@ -41,9 +41,8 @@ describe('Zero Native Browser Tooltips Policy (0 native tooltips)', () => {
     );
   });
 
-  it('forbids native HTML :title= attributes on DOM/SVG elements in src/components/', () => {
-    const compDir = path.join(SRC_DIR, 'components');
-    const files = collectVueFiles(compDir);
+  it('forbids native HTML :title= attributes on DOM/SVG elements across all of src/ (components & playground)', () => {
+    const files = collectVueFiles(SRC_DIR);
     const violations = [];
 
     for (const file of files) {
@@ -59,7 +58,7 @@ describe('Zero Native Browser Tooltips Policy (0 native tooltips)', () => {
     assert.deepEqual(
       violations,
       [],
-      `Found forbidden native :title= attributes in components: ${violations.join(', ')}`
+      `Found forbidden native :title= attributes on DOM elements (use v-tooltip instead): ${violations.join(', ')}`
     );
   });
 });
