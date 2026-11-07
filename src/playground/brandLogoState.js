@@ -54,7 +54,6 @@ export const liveAudioTelemetry = ref({
 });
 
 let sharedAudioCtx = null;
-let ambientNodes = null;
 let ambientStopTimer = null;
 let bgMusicNodes = null;
 let bgMusicArpTimer = null;
@@ -77,15 +76,22 @@ function ensureAudioCtx() {
 
 /**
  * Plays a single warm, soft-attack ambient acoustic droplet (like a felt piano / handpan / celesta note)
- * at a discrete consonant scale frequency — never glides pitch like a ghost!
+ * at a discrete consonant scale frequency — high-pass filtered above 220 Hz so zero low-frequency hum occurs.
  */
-function triggerWarmAmbientNote(ctx, freqHz, panVal = 0, cutoffHz = 920, gainLevel = 0.045) {
+function triggerWarmAmbientNote(ctx, freqHz, panVal = 0, cutoffHz = 980, gainLevel = 0.045, durationSec = 2.1) {
   const now = ctx.currentTime;
+
+  const highpass = ctx.createBiquadFilter();
+  highpass.type = 'highpass';
+  highpass.frequency.setValueAtTime(220, now);
+  highpass.Q.setValueAtTime(0.5, now);
 
   const filter = ctx.createBiquadFilter();
   filter.type = 'lowpass';
   filter.frequency.setValueAtTime(cutoffHz, now);
   filter.Q.setValueAtTime(0.65, now);
+
+  highpass.connect(filter);
 
   const panner = typeof ctx.createStereoPanner === 'function' ? ctx.createStereoPanner() : null;
   if (panner) {
@@ -96,35 +102,79 @@ function triggerWarmAmbientNote(ctx, freqHz, panVal = 0, cutoffHz = 920, gainLev
     filter.connect(ctx.destination);
   }
 
-  // Fundamental warm sine + soft octave-down sub-warmth
+  // Fundamental warm sine + gentle upper harmonic overtone (2x octave shimmer, zero sub-bass hum)
   const oscMain = ctx.createOscillator();
-  const oscWarmth = ctx.createOscillator();
+  const oscShimmer = ctx.createOscillator();
   const gMain = ctx.createGain();
-  const gWarmth = ctx.createGain();
+  const gShimmer = ctx.createGain();
 
   oscMain.type = 'sine';
-  oscWarmth.type = 'triangle';
+  oscShimmer.type = 'sine';
   oscMain.frequency.setValueAtTime(freqHz, now);
-  oscWarmth.frequency.setValueAtTime(freqHz * 0.5, now);
+  oscShimmer.frequency.setValueAtTime(freqHz * 2.0, now);
 
-  // Soft felt-like attack (35ms) and long, peaceful decay (1.65s)
+  // Soft felt-like attack (35ms) and long, peaceful decay
   gMain.gain.setValueAtTime(0.0001, now);
   gMain.gain.linearRampToValueAtTime(gainLevel, now + 0.035);
-  gMain.gain.exponentialRampToValueAtTime(0.0001, now + 1.65);
+  gMain.gain.exponentialRampToValueAtTime(0.0001, now + durationSec);
 
-  gWarmth.gain.setValueAtTime(0.0001, now);
-  gWarmth.gain.linearRampToValueAtTime(gainLevel * 0.35, now + 0.045);
-  gWarmth.gain.exponentialRampToValueAtTime(0.0001, now + 1.45);
+  gShimmer.gain.setValueAtTime(0.0001, now);
+  gShimmer.gain.linearRampToValueAtTime(gainLevel * 0.18, now + 0.025);
+  gShimmer.gain.exponentialRampToValueAtTime(0.0001, now + durationSec * 0.65);
 
   oscMain.connect(gMain);
-  oscWarmth.connect(gWarmth);
-  gMain.connect(filter);
-  gWarmth.connect(filter);
+  oscShimmer.connect(gShimmer);
+  gMain.connect(highpass);
+  gShimmer.connect(highpass);
 
   oscMain.start(now);
-  oscWarmth.start(now);
-  oscMain.stop(now + 1.72);
-  oscWarmth.stop(now + 1.52);
+  oscShimmer.start(now);
+  oscMain.stop(now + durationSec + 0.08);
+  oscShimmer.stop(now + durationSec * 0.65 + 0.08);
+}
+
+/**
+ * Plays a slow-breathing, wide-voiced ambient chord bloom (450ms soft swell -> 4.2s decay)
+ * with intervals >= 108 Hz apart so zero 50-60 Hz Tartini difference-tone hum ever occurs.
+ */
+function triggerWarmChordBloom(ctx, chordFreqs, cutoffHz = 860, gainLevel = 0.018) {
+  const now = ctx.currentTime;
+  chordFreqs.forEach((freqHz, idx) => {
+    const panVal = Number(((idx - 1) * 0.28).toFixed(2));
+    const highpass = ctx.createBiquadFilter();
+    highpass.type = 'highpass';
+    highpass.frequency.setValueAtTime(240, now);
+
+    const lowpass = ctx.createBiquadFilter();
+    lowpass.type = 'lowpass';
+    lowpass.frequency.setValueAtTime(cutoffHz, now);
+    lowpass.Q.setValueAtTime(0.6, now);
+
+    highpass.connect(lowpass);
+
+    const panner = typeof ctx.createStereoPanner === 'function' ? ctx.createStereoPanner() : null;
+    if (panner) {
+      panner.pan.setValueAtTime(panVal, now);
+      lowpass.connect(panner);
+      panner.connect(ctx.destination);
+    } else {
+      lowpass.connect(ctx.destination);
+    }
+
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(freqHz, now);
+
+    gain.gain.setValueAtTime(0.0001, now);
+    gain.gain.linearRampToValueAtTime(gainLevel, now + 0.48 + idx * 0.08);
+    gain.gain.exponentialRampToValueAtTime(0.0001, now + 4.2);
+
+    osc.connect(gain);
+    gain.connect(highpass);
+    osc.start(now);
+    osc.stop(now + 4.3);
+  });
 }
 
 /**
@@ -203,92 +253,17 @@ export function updateInteractive3DAudio(yawDeg = 0, pitchDeg = 0, perfectionSca
   const ctx = ensureAudioCtx();
   if (!ctx) return;
 
-  const now = ctx.currentTime;
-
-  // Modulate background ambient music filter gently if active
+  // Modulate background ambient music brightness gently if active
   if (bgMusicNodes) {
-    bgMusicNodes.filter.frequency.setTargetAtTime(cutoff, now, 0.12);
+    bgMusicNodes.dynamicCutoff = cutoff;
   }
 
-  // Create whisper-soft, fixed-pitch Major 9th velvet pad (zero pitch bending = zero ghost sound!)
-  if (!ambientNodes) {
-    const filter = ctx.createBiquadFilter();
-    filter.type = 'lowpass';
-    filter.frequency.setValueAtTime(cutoff, now);
-    filter.Q.setValueAtTime(0.65, now);
-
-    const panner = typeof ctx.createStereoPanner === 'function' ? ctx.createStereoPanner() : null;
-    if (panner) {
-      panner.pan.setValueAtTime(panVal, now);
-    }
-
-    const masterGain = ctx.createGain();
-    masterGain.gain.setValueAtTime(0.0001, now);
-
-    // Fixed consonant chord: 216 Hz (A3 Root), 270 Hz (C#4 Major 3rd), 324 Hz (E4 Pure 5th)
-    const oscRoot = ctx.createOscillator();
-    const oscThird = ctx.createOscillator();
-    const oscFifth = ctx.createOscillator();
-
-    oscRoot.type = 'sine';
-    oscThird.type = 'sine';
-    oscFifth.type = 'triangle';
-
-    oscRoot.frequency.setValueAtTime(216.0, now);
-    oscThird.frequency.setValueAtTime(270.0, now);
-    oscFifth.frequency.setValueAtTime(324.0, now);
-
-    const gRoot = ctx.createGain();
-    const gThird = ctx.createGain();
-    const gFifth = ctx.createGain();
-
-    gRoot.gain.setValueAtTime(0.45, now);
-    gThird.gain.setValueAtTime(0.30, now);
-    gFifth.gain.setValueAtTime(0.22, now);
-
-    oscRoot.connect(gRoot);
-    oscThird.connect(gThird);
-    oscFifth.connect(gFifth);
-
-    gRoot.connect(filter);
-    gThird.connect(filter);
-    gFifth.connect(filter);
-
-    if (panner) {
-      filter.connect(panner);
-      panner.connect(masterGain);
-    } else {
-      filter.connect(masterGain);
-    }
-    masterGain.connect(ctx.destination);
-
-    oscRoot.start(now);
-    oscThird.start(now);
-    oscFifth.start(now);
-
-    ambientNodes = {
-      filter,
-      panner,
-      masterGain,
-      oscRoot,
-      oscThird,
-      oscFifth,
-    };
-  }
-
-  // Only modulate warm filter brightness and stereo balance — keep pad frequencies 100% locked & consonant!
-  ambientNodes.filter.frequency.setTargetAtTime(cutoff, now, 0.08);
-  if (ambientNodes.panner) {
-    ambientNodes.panner.pan.setTargetAtTime(panVal, now, 0.08);
-  }
-  ambientNodes.masterGain.gain.setTargetAtTime(0.028 + harmonyCloseness * 0.018, now, 0.12);
-
-  // Trigger a delicate pentatonic harp/celesta droplet when entering a new angular zone (throttled to >= 190ms)
+  // Trigger a delicate pentatonic harp/celesta droplet when entering a new angular zone (throttled to >= 165ms)
   const perfNow = typeof performance !== 'undefined' ? performance.now() : Date.now();
-  if (scaleIdx !== lastPluckZone && perfNow - lastPluckTime > 190) {
+  if (scaleIdx !== lastPluckZone && perfNow - lastPluckTime > 165) {
     lastPluckZone = scaleIdx;
     lastPluckTime = perfNow;
-    triggerWarmAmbientNote(ctx, selectedFreq, panVal, cutoff + 260, 0.036);
+    triggerWarmAmbientNote(ctx, selectedFreq, panVal, cutoff + 260, 0.042, 2.2);
   }
 
   if (ambientStopTimer) {
@@ -300,7 +275,7 @@ export function updateInteractive3DAudio(yawDeg = 0, pitchDeg = 0, perfectionSca
 }
 
 /**
- * Gently fades out and cleans up the short-term interactive 3D ambient pad.
+ * Cleans up the interactive 3D audio telemetry state when mouse dragging pauses.
  */
 export function stopInteractive3DAudio() {
   if (ambientStopTimer) {
@@ -311,31 +286,18 @@ export function stopInteractive3DAudio() {
     ...liveAudioTelemetry.value,
     isActive: false,
   };
-  if (!ambientNodes || !sharedAudioCtx) return;
-
-  const nodes = ambientNodes;
-  ambientNodes = null;
-  const now = sharedAudioCtx.currentTime;
-
-  try {
-    nodes.masterGain.gain.setTargetAtTime(0.0001, now, 0.18);
-    setTimeout(() => {
-      try {
-        nodes.oscRoot.stop();
-        nodes.oscThird.stop();
-        nodes.oscFifth.stop();
-        nodes.masterGain.disconnect();
-      } catch {
-        // Ignore cleanup errors
-      }
-    }, 650);
-  } catch {
-    // Ignore context errors
-  }
 }
 
+const GOLDEN_CHORD_PROGRESSION = Object.freeze([
+  [324.0, 432.0, 648.0], // E4 + A4 + E5 (Open 5th + Octave)
+  [270.0, 405.0, 540.0], // C#4 + G#4 + C#5 (Warm Major 3rd + 7th)
+  [243.0, 364.5, 486.0], // B3 + F#4 + B4 (Lydian 2nd + 6th)
+  [324.0, 486.0, 810.0], // E4 + B4 + G#5 (Crystalline Major 9th)
+]);
+
 /**
- * Starts or stops the optional Generative Golden Ratio (432Hz · φ^k) Ambient Background Music.
+ * Starts or stops the Generative Golden Ratio (432Hz · φ^k) Ambient Background Music.
+ * Uses pure transient envelope droplets + wide-voiced chord blooms (zero static oscillator drones = zero 54Hz hum).
  */
 export function setAmbientBackgroundMusic(enabled) {
   ambientMusicEnabled.value = Boolean(enabled);
@@ -347,76 +309,35 @@ export function setAmbientBackgroundMusic(enabled) {
   const ctx = ensureAudioCtx();
   if (!ctx || bgMusicNodes) return;
 
-  const now = ctx.currentTime;
-
-  const filter = ctx.createBiquadFilter();
-  filter.type = 'lowpass';
-  filter.frequency.setValueAtTime(580, now);
-  filter.Q.setValueAtTime(0.65, now);
-
-  // Slow LFO (0.154 Hz ≈ 1 / 4φ) breathing the low-pass filter
-  const lfo = ctx.createOscillator();
-  const lfoGain = ctx.createGain();
-  lfo.type = 'sine';
-  lfo.frequency.setValueAtTime(1 / (PHI * 4), now);
-  lfoGain.gain.setValueAtTime(180, now);
-  lfo.connect(lfoGain);
-  lfoGain.connect(filter.frequency);
-
-  const masterGain = ctx.createGain();
-  masterGain.gain.setValueAtTime(0.0001, now);
-  masterGain.gain.linearRampToValueAtTime(0.055, now + 1.5);
-
-  // Warm 3-voice Major triad drone: 216 Hz (Root) + 270 Hz (Major 3rd) + 324 Hz (Pure 5th)
-  const oscSub = ctx.createOscillator();
-  const oscRoot = ctx.createOscillator();
-  const oscFifth = ctx.createOscillator();
-
-  oscSub.type = 'sine';
-  oscRoot.type = 'sine';
-  oscFifth.type = 'sine';
-
-  oscSub.frequency.setValueAtTime(216.0, now);
-  oscRoot.frequency.setValueAtTime(270.0, now);
-  oscFifth.frequency.setValueAtTime(324.0, now);
-
-  const gSub = ctx.createGain();
-  const gRoot = ctx.createGain();
-  const gFifth = ctx.createGain();
-
-  gSub.gain.setValueAtTime(0.40, now);
-  gRoot.gain.setValueAtTime(0.32, now);
-  gFifth.gain.setValueAtTime(0.28, now);
-
-  oscSub.connect(gSub);
-  oscRoot.connect(gRoot);
-  oscFifth.connect(gFifth);
-  gSub.connect(filter);
-  gRoot.connect(filter);
-  gFifth.connect(filter);
-  filter.connect(masterGain);
-  masterGain.connect(ctx.destination);
-
-  lfo.start(now);
-  oscSub.start(now);
-  oscRoot.start(now);
-  oscFifth.start(now);
-
   bgMusicNodes = {
-    filter,
-    lfo,
-    masterGain,
-    oscSub,
-    oscRoot,
-    oscFifth,
+    dynamicCutoff: 960,
+    chordIdx: 0,
   };
 
   const triggerGoldenDroplet = () => {
     if (!ambientMusicEnabled.value || !sharedAudioCtx || !bgMusicNodes) return;
-    const noteHz = WARM_AMBIENT_SCALE_HZ[bgMusicStep % WARM_AMBIENT_SCALE_HZ.length];
-    const pan = Number((((bgMusicStep % 5) - 2) * 0.22).toFixed(2));
+    const cutoff = bgMusicNodes.dynamicCutoff || 960;
+
+    // Every 3rd step (approx every 4.85s), bloom a soft wide-voiced 3-note ambient chord
+    if (bgMusicStep % 3 === 0) {
+      const chord = GOLDEN_CHORD_PROGRESSION[bgMusicNodes.chordIdx % GOLDEN_CHORD_PROGRESSION.length];
+      bgMusicNodes.chordIdx += 1;
+      triggerWarmChordBloom(sharedAudioCtx, chord, cutoff, 0.016);
+    }
+
+    // Play a primary Golden-stepped felt-piano / celesta melody note (avoiding sub-240Hz bass to keep it airy)
+    const upperScale = WARM_AMBIENT_SCALE_HZ.slice(1);
+    const noteHz = upperScale[bgMusicStep % upperScale.length];
+    const pan = Number((((bgMusicStep % 5) - 2) * 0.24).toFixed(2));
     bgMusicStep += 3;
-    triggerWarmAmbientNote(sharedAudioCtx, noteHz, pan, 980, 0.038);
+    triggerWarmAmbientNote(sharedAudioCtx, noteHz, pan, cutoff + 180, 0.036, 2.6);
+
+    // Golden-ratio delayed companion fifth/octave droplet (618ms later) for organic polyphony
+    setTimeout(() => {
+      if (!ambientMusicEnabled.value || !sharedAudioCtx || !bgMusicNodes) return;
+      const companionHz = upperScale[(bgMusicStep + 2) % upperScale.length];
+      triggerWarmAmbientNote(sharedAudioCtx, companionHz, -pan * 0.7, cutoff + 120, 0.022, 2.2);
+    }, 618);
   };
 
   triggerGoldenDroplet();
@@ -429,26 +350,5 @@ export function stopAmbientBackgroundMusic() {
     clearInterval(bgMusicArpTimer);
     bgMusicArpTimer = null;
   }
-  if (!bgMusicNodes || !sharedAudioCtx) return;
-
-  const nodes = bgMusicNodes;
   bgMusicNodes = null;
-  const now = sharedAudioCtx.currentTime;
-
-  try {
-    nodes.masterGain.gain.setTargetAtTime(0.0001, now, 0.25);
-    setTimeout(() => {
-      try {
-        nodes.lfo.stop();
-        nodes.oscSub.stop();
-        nodes.oscRoot.stop();
-        nodes.oscFifth.stop();
-        nodes.masterGain.disconnect();
-      } catch {
-        // Ignore cleanup errors
-      }
-    }, 850);
-  } catch {
-    // Ignore context errors
-  }
 }
