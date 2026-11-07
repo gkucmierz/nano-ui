@@ -9,6 +9,8 @@ import {
 const isDark = ref(true);
 const themeStorageCtrl = getScopedStorageController('nano-ui');
 
+export const getNextTheme = (currentTheme) => (currentTheme === 'light' ? 'dark' : 'light');
+
 export const useTheme = ({
   storageKey = 'theme',
   storage = 'ls',
@@ -63,6 +65,18 @@ export const useTheme = ({
     }
     return active;
   };
+
+  if (typeof document !== 'undefined' && document.documentElement) {
+    const domTheme = document.documentElement.getAttribute('data-theme');
+    if (domTheme === 'light') {
+      isDark.value = false;
+    } else if (domTheme === 'dark') {
+      isDark.value = true;
+    }
+    if (document.documentElement.classList.contains('preload')) {
+      initTheme();
+    }
+  }
 
   const resolvedStorageKey = () =>
     themeStorageCtrl.resolveKey(storageKey, { appPrefix });
