@@ -12,6 +12,7 @@ import {
   computeFitBoundsView,
   evaluatePolylineCursor,
   normalizeGeoPoint,
+  normalizeMapPolygons,
   clampLatitude,
   normalizeLongitude
 } from '../utils/map-engine.js';
@@ -52,6 +53,14 @@ const props = defineProps({
   tracks: {
     type: Array,
     default: () => []
+  },
+  polygons: {
+    type: Array,
+    default: () => []
+  },
+  geojson: {
+    type: [Object, Array],
+    default: null
   },
   markers: {
     type: Array,
@@ -126,6 +135,7 @@ const emit = defineEmits([
   'update:gps',
   'update:followGps',
   'marker-click',
+  'polygon-click',
   'map-click',
   'locate',
   'locate-error'
@@ -298,6 +308,42 @@ const projectedTracks = computed(() => {
   });
 });
 
+const normalizedPolygons = computed(() => {
+  return normalizeMapPolygons(props.polygons, props.geojson);
+});
+
+const projectedPolygons = computed(() => {
+  const projOpts = {
+    centerLat: internalCenter.value[0],
+    centerLon: internalCenter.value[1],
+    zoom: internalZoom.value,
+    width: viewportWidth.value,
+    height: viewportHeight.value,
+    bearing: 0
+  };
+
+  return normalizedPolygons.value
+    .map((poly) => {
+      const pathParts = poly.rings
+        .map((ring) => {
+          const pts = ring.map(([lat, lon]) => {
+            const p = latLonToViewportPoint(lat, lon, projOpts);
+            return `${p.x.toFixed(1)},${p.y.toFixed(1)}`;
+          });
+          if (pts.length < 3) return '';
+          return `M ${pts.join(' L ')} Z`;
+        })
+        .filter(Boolean);
+
+      if (pathParts.length === 0) return null;
+      return {
+        ...poly,
+        pathD: pathParts.join(' ')
+      };
+    })
+    .filter(Boolean);
+});
+
 const projectedMarkers = computed(() => {
   const projOpts = {
     centerLat: internalCenter.value[0],
@@ -390,6 +436,11 @@ function fitBoundsToTracks() {
   for (const t of normalizedTracks.value) {
     if (Array.isArray(t.points)) {
       allPts.push(...t.points);
+    }
+  }
+  for (const poly of normalizedPolygons.value) {
+    for (const ring of poly.rings || []) {
+      allPts.push(...ring);
     }
   }
   if (allPts.length === 0 && props.markers?.length) {
@@ -677,12 +728,32 @@ defineExpose({
           />
         </div>
 
-        <!-- SVG Vector Layer (Polylines, Waypoint Markers, Active GPS Cursor) -->
+        <!-- SVG Vector Layer (GeoJSON Polygons, Polylines, Waypoint Markers, Active GPS Cursor) -->
         <svg
           class="nano-map-vector-svg"
           :viewBox="`0 0 ${viewportWidth} ${viewportHeight}`"
           aria-hidden="true"
         >
+          <!-- GeoJSON / Shaded Area Polygons (RFC 7946) -->
+          <g class="nano-map-polygons-group">
+            <path
+              v-for="poly in projectedPolygons"
+              :key="poly.id"
+              :d="poly.pathD"
+              fill-rule="evenodd"
+              :fill="poly.fillColor"
+              :fill-opacity="poly.fillOpacity"
+              :stroke="poly.color"
+              :stroke-width="poly.strokeWidth"
+              :stroke-opacity="poly.strokeOpacity"
+              :stroke-dasharray="poly.dashed ? '6 6' : undefined"
+              stroke-linejoin="round"
+              class="nano-map-polygon-hit"
+              v-tooltip="poly.name || undefined"
+              @click.stop="emit('polygon-click', poly)"
+            />
+          </g>
+
           <!-- Route Tracks -->
           <g v-for="track in projectedTracks" :key="track.id">
             <polyline
@@ -961,6 +1032,16 @@ defineExpose({
   height: 100%;
   z-index: 2;
   pointer-events: none;
+}
+
+.nano-map-polygon-hit {
+  pointer-events: auto;
+  cursor: pointer;
+  transition: fill-opacity 0.18s ease, stroke-width 0.18s ease;
+}
+
+.nano-map-polygon-hit:hover {
+  fill-opacity: 0.36;
 }
 
 .nano-map-marker-hit {

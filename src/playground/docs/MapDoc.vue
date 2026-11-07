@@ -27,8 +27,42 @@ const showScaleBar = ref(true);
 const showCompass = ref(true);
 const showLocateControl = ref(true);
 const showSecondTrack = ref(false);
+const showGeoJsonZone = ref(true);
 const useSimulatedGps = ref(true);
 const activeTrackId = ref('primary-route');
+
+const sampleGeoJson = computed(() => {
+  if (!showGeoJsonZone.value) return null;
+  return {
+    type: 'FeatureCollection',
+    features: [
+      {
+        type: 'Feature',
+        properties: {
+          id: 'zone-silesia-corridor',
+          name: 'Silesia DTŚ Sector (RFC 7946 GeoJSON Polygon)',
+          color: '#38bdf8',
+          fillColor: '#38bdf8',
+          fillOpacity: 0.16,
+          strokeWidth: 2
+        },
+        geometry: {
+          type: 'Polygon',
+          // RFC 7946 GeoJSON standard: [longitude, latitude]
+          coordinates: [
+            [
+              [18.742, 50.308],
+              [18.838, 50.308],
+              [18.838, 50.282],
+              [18.742, 50.282],
+              [18.742, 50.308]
+            ]
+          ]
+        }
+      }
+    ]
+  };
+});
 
 const primaryCoords = [
   [50.2945, 18.6658],
@@ -172,6 +206,8 @@ bearing: Number (default: 0) - Compass rotation bearing in degrees (v-model:bear
 layer: String (default: 'osm-dark') - Active tile layer ID (v-model:layer)
 layers: Array<LayerDef> (default: DEFAULT_MAP_LAYERS) - Configurable tile layer definitions (keys 1..9)
 tracks: Array<{ id, name, color, secondaryColor?, width?, opacity?, progress?, points: Array<[lat, lon] | {lat, lon}> }> - SVG GPS polylines
+polygons: Array<{ id?, name?, color?, fillColor?, fillOpacity?, strokeWidth?, points: Array<[lat, lon] | {lat, lon}> }> - Closed shaded area polygons
+geojson: Object (default: null) - Standard IETF RFC 7946 GeoJSON FeatureCollection / Feature / Polygon / MultiPolygon ([lon, lat] rings)
 markers: Array<{ id?, lat, lon, label?, color?, radius? }> - Waypoint markers rendered on the map
 gps: Array<[lat, lon]> | Object<{ lat, lon | lng, heading?, color? }> (default: null) - Reactive GPS position (tuple, object, or null for native device geolocation)
 gpsLat: Number (default: undefined) - Optional separate reactive GPS latitude prop
@@ -202,7 +238,8 @@ requestDeviceGeolocation() - Explicitly query navigator.geolocation.getCurrentPo
 @update:followActivePoint - Emits boolean GPS follow lock state
 @locate - Emits { source: 'prop' | 'device' | 'bounds', lat, lon, accuracy? } when Locate button is triggered
 @locate-error - Emits geolocation error payload if device GPS permission is denied or unavailable
-@marker-click - Emits clicked marker object`;
+@marker-click - Emits clicked marker object
+@polygon-click - Emits clicked normalized polygon / GeoJSON feature object`;
 
 const codeTabs = createDocTabs({
   name: 'NanoMap',
@@ -213,6 +250,7 @@ const codeTabs = createDocTabs({
     'v-model:bearing': 'bearing',
     ':layers': 'DEFAULT_MAP_LAYERS',
     ':tracks': 'tracks',
+    ':geojson': 'districtGeoJson',
     ':gps': 'gpsPosition',
     ':show-zoom-controls': true,
     ':show-layer-picker': true,
@@ -231,6 +269,16 @@ const codeTabs = createDocTabs({
     '// Coordinate input supports: [lat, lon] tuple, { lat, lon } object, or :gps-lat + :gps-lon props',
     '// Omit :gps (or pass null) to let the Locate button request real device GPS via navigator.geolocation',
     'const gpsPosition = ref([50.2934, 18.7988]);',
+    '',
+    '// Standard IETF RFC 7946 GeoJSON ([lon, lat] coordinate order) for shaded boundary polygons:',
+    'const districtGeoJson = {',
+    "  type: 'Feature',",
+    "  properties: { name: 'Sector Alpha', color: '#38bdf8', fillOpacity: 0.18 },",
+    '  geometry: {',
+    "    type: 'Polygon',",
+    '    coordinates: [[[18.742, 50.308], [18.838, 50.308], [18.838, 50.282], [18.742, 50.282], [18.742, 50.308]]]',
+    '  }',
+    '};',
     '',
     'const tracks = [',
     '  {',
@@ -265,6 +313,7 @@ const codeTabs = createDocTabs({
           :height="380"
           :layers="DEFAULT_MAP_LAYERS"
           :tracks="sampleTracks"
+          :geojson="sampleGeoJson"
           :markers="activeWaypoints"
           :gps="liveActivePoint"
           :show-layer-picker="showLayerPicker"
