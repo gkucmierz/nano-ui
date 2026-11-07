@@ -7,6 +7,7 @@
   "nav": {
     "gettingStarted": "Getting Started",
     "overview": "Overview & Setup",
+    "ecosystem": "1st-Party Deps & Controllers",
     "typography": "Typography & 8px Grid",
     "primitives": "Primitives",
     "buttons": "Buttons & Groups",
@@ -46,6 +47,7 @@
     "datePicker": "Calendar (NanoDatePicker)",
     "secretPipe": "Secret Pipe (NanoSecretPipe)",
     "tabs": "Nano Tabs (Docked & Segmented)",
+    "coverFlow": "Nano CoverFlow (3D Shelf)",
     "ripple": "v-ripple Directive",
     "tooltip": "v-tooltip Directive"
   },
