@@ -42,6 +42,13 @@ import NanoCheckbox from './components/NanoCheckbox.vue';
 import NanoSortableList from './components/NanoSortableList.vue';
 import NanoDatePicker from './components/NanoDatePicker.vue';
 import NanoSecretPipe from './components/NanoSecretPipe.vue';
+import NanoCoverFlow from './components/NanoCoverFlow.vue';
+import {
+  COVERFLOW_ORIENTATIONS,
+  clampCoverFlowIndex,
+  stepCoverFlowIndex,
+  computeCoverFlowItemTransform,
+} from './utils/coverflow.js';
 import { secretPipeDirective } from './directives/secretPipe.js';
 import { sanitizeSecretPaste, createSecretByteBuffer } from './utils/secretPipe.js';
 import {
@@ -106,6 +113,7 @@ import {
   computeFitBoundsView,
   evaluatePolylineCursor,
   normalizeGeoPoint,
+  normalizeMapPolygons,
 } from './utils/map-engine.js';
 import {
   registerIcons,
@@ -234,6 +242,21 @@ import {
   buildSphericalVariableWidthLinePolygon,
 } from './utils/globe-geometry.js';
 import { transitions, durations, easings, transitionVariables } from './config/transitions.js';
+import {
+  STORAGE_MODES,
+  normalizeStorageMode,
+  sanitizePrefixSegment,
+  toAcronym,
+  DEFAULT_ACRONYM_DICTIONARY,
+  expandAcronymKey,
+  detectHostAppPrefix,
+  buildHierarchicalKey,
+  createMemoryStorageAdapter,
+  createStorageController,
+  getGlobalStorageController,
+  configureGlobalStorage,
+  getScopedStorageController,
+} from './utils/storage-controller.js';
 import './style.css';
 
 export {
@@ -284,6 +307,12 @@ export {
   NanoDatePicker as NanoCalendar,
   NanoSecretPipe,
   NanoSecretPipe as NanoPasswordTunnel,
+  NanoCoverFlow,
+  NanoCoverFlow as CoverFlow,
+  COVERFLOW_ORIENTATIONS,
+  clampCoverFlowIndex,
+  stepCoverFlowIndex,
+  computeCoverFlowItemTransform,
   secretPipeDirective,
   secretPipeDirective as vSecretPipe,
   sanitizeSecretPaste,
@@ -343,6 +372,7 @@ export {
   computeFitBoundsView,
   evaluatePolylineCursor,
   normalizeGeoPoint,
+  normalizeMapPolygons,
   registerIcons,
   getAvailableIcons,
   isIconColorable,
@@ -454,6 +484,19 @@ export {
   durations,
   easings,
   transitionVariables,
+  STORAGE_MODES,
+  normalizeStorageMode,
+  sanitizePrefixSegment,
+  toAcronym,
+  DEFAULT_ACRONYM_DICTIONARY,
+  expandAcronymKey,
+  detectHostAppPrefix,
+  buildHierarchicalKey,
+  createMemoryStorageAdapter,
+  createStorageController,
+  getGlobalStorageController,
+  configureGlobalStorage,
+  getScopedStorageController,
 };
 
 export const version = pkg.version;
@@ -464,7 +507,10 @@ export const nanoCompilerOptions = {
 
 export default {
   version: pkg.version,
-  install(app, { directivePrefix = '', componentPrefix = '' } = {}) {
+  install(app, { directivePrefix = '', componentPrefix = '', appPrefix = '', storageMode } = {}) {
+    if (appPrefix || storageMode !== undefined) {
+      configureGlobalStorage({ appPrefix, defaultMode: storageMode });
+    }
     const dp = directivePrefix ? `${directivePrefix}-` : '';
     const cp = componentPrefix ? `${componentPrefix}` : '';
 
@@ -506,5 +552,7 @@ export default {
     app.component(`${cp}NanoCalendar`, NanoDatePicker);
     app.component(`${cp}NanoSecretPipe`, NanoSecretPipe);
     app.component(`${cp}NanoPasswordTunnel`, NanoSecretPipe);
+    app.component(`${cp}NanoCoverFlow`, NanoCoverFlow);
+    app.component(`${cp}CoverFlow`, NanoCoverFlow);
   },
 };

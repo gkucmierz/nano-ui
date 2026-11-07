@@ -1,5 +1,6 @@
 import { createRouter, createWebHistory, createMemoryHistory } from 'vue-router';
 import OverviewDoc from '../docs/OverviewDoc.vue';
+import EcosystemDoc from '../docs/EcosystemDoc.vue';
 import ShowoffDoc from '../docs/ShowoffDoc.vue';
 import TypographyDoc from '../docs/TypographyDoc.vue';
 import ButtonDoc from '../docs/ButtonDoc.vue';
@@ -35,6 +36,7 @@ import SecretPipeDoc from '../docs/SecretPipeDoc.vue';
 import TabsDoc from '../docs/TabsDoc.vue';
 import SortableDoc from '../docs/SortableDoc.vue';
 import KineticAnimationsDoc from '../docs/KineticAnimationsDoc.vue';
+import CoverFlowDoc from '../docs/CoverFlowDoc.vue';
 import NotFoundDoc from '../docs/NotFoundDoc.vue';
 
 export const routes = [
@@ -53,6 +55,15 @@ export const routes = [
     meta: {
       title: 'Overview & Setup | Nano UI',
       description: 'High-performance, minimal footprint Vue 3 UI library, interactive 3D charts, and kinematic directives with built-in Zero-FOUC design tokens.',
+    },
+  },
+  {
+    path: '/docs/ecosystem',
+    name: 'Ecosystem',
+    component: EcosystemDoc,
+    meta: {
+      title: '1st-Party Ecosystem & Front-Controllers | Nano UI',
+      description: 'Zero-dependency 1st-party micro-packages (@gkucmierz/storage-controller, @gkucmierz/key-controller, @gkucmierz/nano-sound) and DA_NU_<key> acronym storage compression.',
     },
   },
   {
@@ -445,6 +456,17 @@ export const routes = [
       componentName: 'KineticAnimations',
       type: 'utility',
       description: 'Headless C¹ velocity-preserving Hermite kinematics engine for scalar transitions, multi-point curve resampling, Catmull-Rom splines, and 16-step Bezier bisection.',
+    },
+  },
+  {
+    path: '/docs/coverflow',
+    name: 'CoverFlow',
+    component: CoverFlowDoc,
+    meta: {
+      title: 'NanoCoverFlow (3D Shelf & Curtain Carousel) | Nano UI',
+      componentName: 'NanoCoverFlow',
+      type: 'component',
+      description: '3D CoverFlow bookshelf and curtain carousel for single-row or single-column presentation of images, cards, and custom components.',
     },
   },
   {
