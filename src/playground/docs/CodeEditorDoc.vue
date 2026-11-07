@@ -8,6 +8,7 @@ import NanoSlider from '../../components/NanoSlider.vue';
 import NanoSelect from '../../components/NanoSelect.vue';
 import NanoCodeBlock from '../../components/NanoCodeBlock.vue';
 import { createDocTabs } from '../docSnippets.js';
+import { getScopedStorageController } from '../../utils/storage-controller.js';
 import { SYNTAX_THEMES, getRegisteredParsers } from '../../utils/syntax-highlighter.js';
 import {
   ALL_PARSERS,
@@ -31,6 +32,19 @@ const leftPanePx = ref(320);
 const splitterLocked = ref(false);
 const activeSyntaxTheme = ref('nano');
 const liveSyntaxTheme = ref('dracula');
+const editorStorageCtrl = getScopedStorageController('nano-ui');
+const editorStorageMode = ref('ls');
+const editorStorageAppPrefix = ref('dashboard-app');
+const editorStorageKeyName = ref('editor_demo');
+const editorStorageRevision = ref(0);
+
+const inspectedEditorStorage = computed(() => {
+  void editorStorageRevision.value;
+  return editorStorageCtrl.inspect(editorStorageKeyName.value, {
+    mode: editorStorageMode.value,
+    appPrefix: editorStorageAppPrefix.value,
+  });
+});
 
 const extraParsers = [
   rustParser,
@@ -378,6 +392,9 @@ const codeTabs = createDocTabs({
     'syntax-theme="nano"',
     'mode="code"',
     ':editable="true"',
+    'storage="ls"',
+    'app-prefix="dashboard-app"',
+    'storage-key="editor_prefs"',
   ],
   granularCode: modularImportSnippet,
   apiSections: [
@@ -393,6 +410,10 @@ const codeTabs = createDocTabs({
         'diffStyle: String (default: "unified") - Diff layout ("unified" | "split") (supports v-model:diffStyle)',
         'editable: Boolean (default: false) - Enable live textarea editing with syntax overlay',
         'parsers: Array (default: []) - Additional language parser objects to register',
+        'storage: "ls" | "ss" | "none" | false (default: "ls" when storageKey is set)',
+        'appPrefix: String (default: "" -> auto-detected acronym e.g. "DA")',
+        'storageKey: String (default: "" -> resolves to "DA_NU_<storageKey>")',
+        'persistDraft: Boolean (default: false) - Also persist live editable code draft in storage',
       ],
     },
     {
@@ -456,6 +477,28 @@ const codeTabs = createDocTabs({
           <span class="ctrl-label">{{ t('codeEditor.pathTrunc') }} ({{ maxPathLen }}):</span>
           <NanoSlider v-model="maxPathLen" :min="20" :max="60" :step="1" size="sm" />
         </div>
+        <div class="ctrl-select-wrap">
+          <span class="ctrl-label">Storage (<code>@gkucmierz/storage-controller</code>):</span>
+          <div class="theme-pills-row">
+            <button
+              v-for="m in ['ls', 'ss', 'none']"
+              :key="m"
+              type="button"
+              class="theme-pill-btn"
+              :class="{ active: editorStorageMode === m }"
+              @click="editorStorageMode = m; editorStorageRevision++;"
+            >
+              {{ m.toUpperCase() }}
+            </button>
+          </div>
+          <code
+            v-tooltip="`from ${inspectedEditorStorage.verboseKey}`"
+            style="font-size: 0.75rem; padding: 3px 8px; border-radius: 6px; background: var(--nano-bg-code); border: 1px solid var(--nano-border-card); cursor: help;"
+          >
+            <span style="color: var(--nano-status-info-text); font-weight: 700;">{{ inspectedEditorStorage.displayAppSeg }}</span>_<span style="color: var(--nano-status-purple-text); font-weight: 700;">{{ inspectedEditorStorage.displayScopeSeg }}</span>_<span style="color: var(--nano-status-success-text); font-weight: 600;">{{ inspectedEditorStorage.rawKey }}</span>
+            = {{ inspectedEditorStorage.rawValue || 'null' }}
+          </code>
+        </div>
       </div>
 
       <div class="git-inspector-splitter-box">
@@ -492,6 +535,11 @@ const codeTabs = createDocTabs({
               :diff="currentFile.diff"
               :code="currentFile.code"
               :show-theme-selector="true"
+              :storage="editorStorageMode"
+              :app-prefix="editorStorageAppPrefix"
+              :storage-key="editorStorageKeyName"
+              @update:diff-style="editorStorageRevision++"
+              @update:syntax-theme="editorStorageRevision++"
             />
           </template>
         </NanoSplitter>

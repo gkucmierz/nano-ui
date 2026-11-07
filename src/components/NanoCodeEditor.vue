@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed, watch, onUnmounted } from 'vue';
+import { ref, computed, watch, onMounted, onUnmounted } from 'vue';
 import {
   highlightCode,
   escapeHtml,
@@ -9,7 +9,14 @@ import {
 import { detectLangFromPath, parseUnifiedDiff } from '../utils/git-diff.js';
 import { NANOSOUND_COMPLETIONS } from '../parsers/index.js';
 import { tooltipDirective as vTooltip } from '../directives/tooltip.js';
+import {
+  getScopedStorageController,
+  normalizeStorageMode,
+  STORAGE_MODES,
+} from '../utils/storage-controller.js';
 import NanoSelect from './NanoSelect.vue';
+
+const editorStorageCtrl = getScopedStorageController('nano-ui');
 
 const props = defineProps({
   /**
@@ -131,6 +138,37 @@ const props = defineProps({
     type: String,
     default: 'en',
   },
+  /**
+   * Storage backend mode when `storageKey` is provided:
+   * - `'ls'` (default): localStorage (`window.localStorage`)
+   * - `'ss'`: sessionStorage (`window.sessionStorage`)
+   * - `'none'` | `false`: disable persistence
+   */
+  storage: {
+    type: [String, Boolean],
+    default: 'ls',
+  },
+  /**
+   * Optional application-level prefix override (e.g. `'dashboard-app'` -> `'DA_NU_<storageKey>'`).
+   */
+  appPrefix: {
+    type: String,
+    default: '',
+  },
+  /**
+   * Optional storage key for persisting editor state (`{ diffStyle, syntaxTheme, wrap, draft? }`).
+   */
+  storageKey: {
+    type: String,
+    default: '',
+  },
+  /**
+   * When true and `storageKey` is provided, also persists live editable code draft.
+   */
+  persistDraft: {
+    type: Boolean,
+    default: false,
+  },
 });
 
 let editorUidSeq = 0;
@@ -148,6 +186,22 @@ const emit = defineEmits([
 ]);
 
 const editorAutoId = `nano-code-editor-${++editorUidSeq}`;
+
+const resolvedStorageMode = computed(() => {
+  if (!props.storageKey) return STORAGE_MODES.NONE;
+  return normalizeStorageMode(props.storage, STORAGE_MODES.LS);
+});
+
+const isStorageEnabled = computed(
+  () => Boolean(props.storageKey) && resolvedStorageMode.value !== STORAGE_MODES.NONE
+);
+
+const resolvedStorageKey = computed(() => {
+  if (!props.storageKey) return '';
+  return editorStorageCtrl.resolveKey(props.storageKey, {
+    appPrefix: props.appPrefix || undefined,
+  });
+});
 
 const parserVersion = ref(0);
 const internalSyntaxTheme = ref(props.syntaxTheme || 'nano');
@@ -173,6 +227,7 @@ watch(
 const setSyntaxTheme = (nextTheme) => {
   internalSyntaxTheme.value = nextTheme;
   emit('update:syntaxTheme', nextTheme);
+  saveEditorState();
 };
 
 const syntaxThemeOptions = SYNTAX_THEMES.map((th) => ({
@@ -253,6 +308,49 @@ const containerMaxHeight = computed(() => {
   return typeof props.maxHeight === 'number' ? `${props.maxHeight}px` : props.maxHeight;
 });
 
+const saveEditorState = (extraDraft = undefined) => {
+  if (!isStorageEnabled.value) return;
+  const payload = {
+    diffStyle: internalDiffStyle.value,
+    syntaxTheme: internalSyntaxTheme.value,
+    wrap: Boolean(isWrapped.value),
+  };
+  if (props.persistDraft && props.editable) {
+    payload.draft = extraDraft !== undefined ? extraDraft : currentCode.value;
+  }
+  editorStorageCtrl.set(props.storageKey, payload, {
+    mode: resolvedStorageMode.value,
+    appPrefix: props.appPrefix || undefined,
+  });
+};
+
+const loadEditorState = () => {
+  if (!isStorageEnabled.value) return;
+  const saved = editorStorageCtrl.get(props.storageKey, null, {
+    mode: resolvedStorageMode.value,
+    appPrefix: props.appPrefix || undefined,
+  });
+  if (!saved || typeof saved !== 'object') return;
+
+  if (saved.diffStyle === 'unified' || saved.diffStyle === 'split') {
+    internalDiffStyle.value = saved.diffStyle;
+    emit('update:diffStyle', saved.diffStyle);
+  }
+  if (typeof saved.syntaxTheme === 'string' && saved.syntaxTheme.trim()) {
+    internalSyntaxTheme.value = saved.syntaxTheme.trim();
+    emit('update:syntaxTheme', internalSyntaxTheme.value);
+  }
+  if (typeof saved.wrap === 'boolean') {
+    isWrapped.value = saved.wrap;
+  }
+  if (props.persistDraft && props.editable && typeof saved.draft === 'string') {
+    if (saved.draft !== currentCode.value) {
+      emit('update:modelValue', saved.draft);
+      emit('update:code', saved.draft);
+    }
+  }
+};
+
 const setMode = (m) => {
   internalMode.value = m;
   emit('update:mode', m);
@@ -261,6 +359,7 @@ const setMode = (m) => {
 const setDiffStyle = (style) => {
   internalDiffStyle.value = style;
   emit('update:diffStyle', style);
+  saveEditorState();
 };
 
 const syncEditorScroll = (e) => {
@@ -342,6 +441,7 @@ const applyCompletion = (item) => {
   emit('update:modelValue', nextVal);
   emit('update:code', nextVal);
   emit('change', nextVal);
+  saveEditorState(nextVal);
   updateActiveCursorLine();
   el.focus();
 };
@@ -351,6 +451,7 @@ const handleEditorInput = (e) => {
   emit('update:modelValue', val);
   emit('update:code', val);
   emit('change', val);
+  saveEditorState(val);
   updateActiveCursorLine();
   updateCompletionState();
 };
@@ -402,6 +503,7 @@ const handleEditorKeyDown = (e) => {
     emit('update:modelValue', nextVal);
     emit('update:code', nextVal);
     emit('change', nextVal);
+    saveEditorState(nextVal);
   }
 };
 
@@ -442,6 +544,21 @@ const focus = () => {
   textareaRef.value?.focus?.();
 };
 
+onMounted(() => {
+  loadEditorState();
+});
+
+watch(
+  () => [props.storageKey, props.storage, props.appPrefix],
+  () => {
+    loadEditorState();
+  }
+);
+
+watch(isWrapped, () => {
+  saveEditorState();
+});
+
 onUnmounted(() => {
   if (copyTimer) {
     clearTimeout(copyTimer);
@@ -457,6 +574,10 @@ defineExpose({
   setDiffStyle,
   activeLine,
   parsedDiff,
+  resolvedStorageKey,
+  resolvedStorageMode,
+  saveEditorState,
+  loadEditorState,
 });
 </script>
 
