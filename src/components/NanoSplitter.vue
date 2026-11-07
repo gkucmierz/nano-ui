@@ -1,6 +1,9 @@
 <script setup>
 import { ref, computed, watch, onMounted, onUnmounted } from 'vue';
 import { tooltipDirective as vTooltip } from '../directives/tooltip.js';
+import { getScopedStorageController, normalizeStorageMode } from '../utils/storage-controller.js';
+
+const nanoStorage = getScopedStorageController('nano-ui');
 
 const props = defineProps({
   /**
@@ -104,9 +107,23 @@ const props = defineProps({
     default: true,
   },
   /**
-   * Optional localStorage key to persist split size & lock state
+   * Optional storage key suffix to persist split size & lock state (e.g. 'ide_sidebar' -> 'DA_NU_ide_sidebar')
    */
   storageKey: {
+    type: String,
+    default: '',
+  },
+  /**
+   * Storage persistence mode: 'ls' (localStorage), 'ss' (sessionStorage), or 'none' (false)
+   */
+  storage: {
+    type: [String, Boolean],
+    default: 'ls',
+  },
+  /**
+   * Optional host app prefix override (e.g. 'dashboard-app' -> 'DA')
+   */
+  appPrefix: {
     type: String,
     default: '',
   },
@@ -231,40 +248,60 @@ const hitboxStyle = computed(() => {
   };
 });
 
+const resolvedStorageMode = computed(() => normalizeStorageMode(props.storage, 'ls'));
+
+const effectiveStorageKey = computed(() => {
+  if (!props.storageKey) return '';
+  return nanoStorage.resolveKey(props.storageKey, {
+    appPrefix: props.appPrefix,
+  });
+});
+
 function persistState() {
-  if (!props.storageKey || typeof window === 'undefined') return;
-  try {
-    window.localStorage.setItem(
-      props.storageKey,
-      JSON.stringify({
-        size: currentSize.value,
-        locked: isLocked.value,
-      })
-    );
-  } catch {}
+  const mode = resolvedStorageMode.value;
+  if (!props.storageKey || mode === 'none') return;
+  nanoStorage.set(
+    props.storageKey,
+    {
+      size: currentSize.value,
+      locked: isLocked.value,
+    },
+    {
+      mode,
+      appPrefix: props.appPrefix,
+    }
+  );
 }
 
 function restoreState() {
-  if (!props.storageKey || typeof window === 'undefined') return;
-  try {
-    const raw = window.localStorage.getItem(props.storageKey);
-    if (!raw) return;
-    const parsed = JSON.parse(raw);
-    if (typeof parsed?.size === 'number' && Number.isFinite(parsed.size)) {
-      const clamped = clampSize(parsed.size);
-      internalSize.value = clamped;
-      if (props.modelValue !== undefined && props.modelValue !== clamped) {
-        emit('update:modelValue', clamped);
-      }
+  const mode = resolvedStorageMode.value;
+  if (!props.storageKey || mode === 'none') return;
+  const parsed = nanoStorage.get(props.storageKey, null, {
+    mode,
+    appPrefix: props.appPrefix,
+  });
+  if (!parsed) return;
+  if (typeof parsed?.size === 'number' && Number.isFinite(parsed.size)) {
+    const clamped = clampSize(parsed.size);
+    internalSize.value = clamped;
+    if (props.modelValue !== undefined && props.modelValue !== clamped) {
+      emit('update:modelValue', clamped);
     }
-    if (typeof parsed?.locked === 'boolean') {
-      internalLocked.value = parsed.locked;
-      if (props.locked !== undefined && props.locked !== parsed.locked) {
-        emit('update:locked', parsed.locked);
-      }
+  }
+  if (typeof parsed?.locked === 'boolean') {
+    internalLocked.value = parsed.locked;
+    if (props.locked !== undefined && props.locked !== parsed.locked) {
+      emit('update:locked', parsed.locked);
     }
-  } catch {}
+  }
 }
+
+watch(
+  () => [props.storage, props.appPrefix, props.storageKey],
+  () => {
+    restoreState();
+  }
+);
 
 restoreState();
 
@@ -393,7 +430,12 @@ onUnmounted(() => {
 function resetToDefault() {
   const resetVal = clampSize(fallbackDefault.value);
   updateSize(resetVal);
-  persistState();
+  if (props.storageKey && resolvedStorageMode.value !== 'none') {
+    nanoStorage.remove(props.storageKey, {
+      mode: resolvedStorageMode.value,
+      appPrefix: props.appPrefix,
+    });
+  }
   emit('reset', resetVal);
 }
 
@@ -401,6 +443,10 @@ defineExpose({
   setSize: updateSize,
   reset: resetToDefault,
   toggleLock,
+  persistState,
+  restoreState,
+  effectiveStorageKey,
+  resolvedStorageMode,
   currentSize,
   isLocked,
   isDragging,

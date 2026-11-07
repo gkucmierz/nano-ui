@@ -1,21 +1,51 @@
 <script setup>
-import { ref } from 'vue';
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue';
 import NanoSplitter from '../../components/NanoSplitter.vue';
 import NanoFileList from '../../components/NanoFileList.vue';
 import NanoCodeEditor from '../../components/NanoCodeEditor.vue';
 import NanoSwitch from '../../components/NanoSwitch.vue';
 import NanoSlider from '../../components/NanoSlider.vue';
 import NanoCodeBlock from '../../components/NanoCodeBlock.vue';
+import { getScopedStorageController } from '../../utils/storage-controller.js';
 import { createDocTabs } from '../docSnippets.js';
 import { t } from '../../locales.js';
 
-// Demo 1: Interactive Configurator
+// Demo 1: Interactive Configurator + Storage Persistence (ls / ss / none)
 const splitRatio = ref(0.38);
 const orientation = ref('horizontal');
 const lockable = ref(true);
 const isLocked = ref(false);
 const showGrip = ref(false);
 const gapPx = ref(12);
+const storageMode = ref('ls');
+const hostAppPrefix = ref('dashboard-app');
+const splitterStorageKey = ref('splitter_demo');
+const storageTick = ref(0);
+
+const nanoStorage = getScopedStorageController('nano-ui');
+let unsubscribeStorage = null;
+
+onMounted(() => {
+  unsubscribeStorage = nanoStorage.subscribe(() => {
+    storageTick.value += 1;
+  });
+});
+
+onUnmounted(() => {
+  if (unsubscribeStorage) unsubscribeStorage();
+});
+
+watch([storageMode, hostAppPrefix, splitterStorageKey, splitRatio, isLocked], () => {
+  storageTick.value += 1;
+});
+
+const liveSplitterStorage = computed(() => {
+  const _tick = storageTick.value;
+  return nanoStorage.inspect(splitterStorageKey.value, {
+    mode: storageMode.value,
+    appPrefix: hostAppPrefix.value,
+  });
+});
 
 // Demo 2: Nested 3-pane IDE layout (Horizontal + Vertical)
 const ideLeftWidth = ref(290);
@@ -58,6 +88,9 @@ const codeTabs = createDocTabs({
     ':max="560"',
     ':gap="12"',
     'lockable',
+    'storage="ls"',
+    'app-prefix="dashboard-app"',
+    'storage-key="ide_sidebar"',
   ],
   slotContent: '<template #first>Left Pane</template>\n    <template #second>Right Pane</template>',
   apiSections: [
@@ -72,7 +105,9 @@ const codeTabs = createDocTabs({
         'min / max: Number - Lower and upper bounds for first pane',
         'gap: Number (default: 12) - Gutter spacing in px',
         'lockable: Boolean (default: false) - Render triangle lock tab on gutter',
-        'storageKey: String (default: "") - Optional localStorage key for persisting size & lock state',
+        'storage: "ls" | "ss" | "none" | Boolean (default: "ls") - Persist split size & lock state in localStorage, sessionStorage, or disable persistence',
+        'appPrefix: String (default: auto-detected) - Host app prefix compressed to acronym in <APP>_NU_<storageKey>',
+        'storageKey: String (default: "") - Key suffix for persisting size & lock state (e.g. "ide_sidebar" -> "DA_NU_ide_sidebar")',
       ],
     },
     {
@@ -146,6 +181,28 @@ const codeTabs = createDocTabs({
           <span class="ctrl-label">{{ t('splitter.gap') }} ({{ gapPx }}px):</span>
           <NanoSlider v-model="gapPx" :min="0" :max="28" :step="2" size="sm" />
         </div>
+
+        <div class="seg-orient" role="radiogroup" aria-label="Splitter storage mode">
+          <button
+            v-for="m in ['ls', 'ss', 'none']"
+            :key="m"
+            type="button"
+            class="orient-btn"
+            :class="{ active: storageMode === m }"
+            @click="storageMode = m"
+          >
+            {{ m.toUpperCase() }}
+          </button>
+        </div>
+
+        <code
+          v-tooltip="`from ${liveSplitterStorage.verboseKey}`"
+          class="splitter-storage-pill"
+          style="cursor: help;"
+        ><template v-if="liveSplitterStorage.displayAppSeg && liveSplitterStorage.displayAppSeg !== liveSplitterStorage.displayScopeSeg"><span class="seg-app">{{ liveSplitterStorage.displayAppSeg }}</span>_</template><span class="seg-lib">{{ liveSplitterStorage.displayScopeSeg }}</span>_<span class="seg-key">{{ liveSplitterStorage.rawKey }}</span></code>
+        <span class="splitter-storage-val">
+          {{ liveSplitterStorage.exists ? liveSplitterStorage.rawValue : `(${liveSplitterStorage.backend}: drag to persist)` }}
+        </span>
       </div>
 
       <div class="splitter-demo-stage" :class="{ 'is-vert': orientation === 'vertical' }">
@@ -160,6 +217,9 @@ const codeTabs = createDocTabs({
           :gap="gapPx"
           :lockable="lockable"
           :show-grip="showGrip"
+          :storage="storageMode"
+          :app-prefix="hostAppPrefix"
+          :storage-key="splitterStorageKey"
         >
           <template #first>
             <div class="demo-pane pane-alpha">
@@ -304,6 +364,37 @@ const codeTabs = createDocTabs({
   font-size: 0.78rem;
   color: var(--nano-text-muted, #94a3b8);
   white-space: nowrap;
+}
+
+.splitter-storage-pill {
+  padding: 4px 9px;
+  border-radius: 6px;
+  background: var(--nano-bg-code);
+  border: 1px solid var(--nano-border-card);
+  color: var(--nano-text-main);
+  font-family: ui-monospace, SFMono-Regular, monospace;
+  font-size: 0.78rem;
+}
+
+.seg-app {
+  color: var(--nano-status-info-text);
+  font-weight: 600;
+}
+
+.seg-lib {
+  color: var(--nano-status-purple-text);
+  font-weight: 600;
+}
+
+.seg-key {
+  color: var(--nano-status-success-text);
+  font-weight: 600;
+}
+
+.splitter-storage-val {
+  font-family: ui-monospace, SFMono-Regular, monospace;
+  font-size: 0.76rem;
+  color: var(--nano-text-muted);
 }
 
 .splitter-demo-stage {
