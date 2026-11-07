@@ -3,7 +3,22 @@ import { ref, computed } from 'vue';
 import NanoTabs from '../../components/NanoTabs.vue';
 import NanoCodeBlock from '../../components/NanoCodeBlock.vue';
 import { createDocTabs } from '../docSnippets.js';
+import { getScopedStorageController } from '../../utils/storage-controller.js';
 import { t, currentLang } from '../../locales.js';
+
+const tabsStorageCtrl = getScopedStorageController('nano-ui');
+const storageMode = ref('ss');
+const storageAppPrefix = ref('dashboard-app');
+const storageKeyName = ref('tabs_demo');
+const storageRevision = ref(0);
+
+const inspectedTabsStorage = computed(() => {
+  void storageRevision.value;
+  return tabsStorageCtrl.inspect(storageKeyName.value, {
+    mode: storageMode.value,
+    appPrefix: storageAppPrefix.value,
+  });
+});
 
 const activeSize = ref('md');
 const sizeOptions = [
@@ -44,6 +59,9 @@ size: 'sm' | 'md' | 'lg' (default: 'md')
 fullWidth: Boolean (default: true for 'docked', false for 'segmented')
 countFormat: 'auto' | 'parens' | 'badge' (default: 'auto')
 ariaLabel: String (default: 'Navigation tabs')
+storage: 'ss' | 'ls' | 'none' | false (default: 'ss' when storageKey is set)
+appPrefix: String (default: '' -> auto-detected acronym e.g. 'DA')
+storageKey: String (default: '' -> resolves to 'DA_NU_<storageKey>')
 
 // Events
 @update:modelValue(id: String | Number)
@@ -61,6 +79,9 @@ const codeTabs = createDocTabs({
     variant: 'docked',
     size: 'md',
     ':items': 'tabs',
+    storage: 'ss',
+    'app-prefix': 'dashboard-app',
+    'storage-key': 'tabs_demo',
   },
   imports: [
     "import { ref } from 'vue';",
@@ -85,6 +106,25 @@ const codeTabs = createDocTabs({
       <span class="size-control-label">{{ t('tabsDoc.sizeLabel') }}</span>
       <NanoTabs v-model="activeSize" :items="sizeOptions" variant="segmented" size="sm" />
       <code class="active-size-code">size="{{ activeSize }}"</code>
+      <span class="size-control-label" style="margin-left: 8px;">Storage (<code>@gkucmierz/storage-controller</code>):</span>
+      <NanoTabs
+        v-model="storageMode"
+        :items="[
+          { id: 'ss', label: 'SS (default)' },
+          { id: 'ls', label: 'LS' },
+          { id: 'none', label: 'NONE' },
+        ]"
+        variant="segmented"
+        size="sm"
+        @change="storageRevision++"
+      />
+      <code
+        v-tooltip="`from ${inspectedTabsStorage.verboseKey}`"
+        class="storage-key-pill"
+      >
+        <span class="seg-app">{{ inspectedTabsStorage.displayAppSeg }}</span>_<span class="seg-lib">{{ inspectedTabsStorage.displayScopeSeg }}</span>_<span class="seg-key">{{ inspectedTabsStorage.rawKey }}</span>
+        = {{ inspectedTabsStorage.rawValue || 'null' }}
+      </code>
     </div>
 
     <h3 class="section-title">{{ t('tabsDoc.sec1Title') }}</h3>
@@ -93,7 +133,16 @@ const codeTabs = createDocTabs({
     </p>
 
     <div class="demo-box docked-demo-shell">
-      <NanoTabs v-model="dockedTab" :items="dockedItems" variant="docked" :size="activeSize" />
+      <NanoTabs
+        v-model="dockedTab"
+        :items="dockedItems"
+        variant="docked"
+        :size="activeSize"
+        :storage="storageMode"
+        :app-prefix="storageAppPrefix"
+        :storage-key="storageKeyName"
+        @change="storageRevision++"
+      />
       <div class="docked-demo-body">
         <template v-if="dockedTab === 'toc'">
           <div class="demo-row"># 1. {{ currentLang === 'pl' ? 'Przegląd architektury' : 'Architecture Overview' }}</div>
@@ -156,6 +205,32 @@ const codeTabs = createDocTabs({
   border-radius: 6px;
   background: rgba(99, 102, 241, 0.14);
   color: var(--nano-accent-primary, #6366f1);
+}
+
+.storage-key-pill {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 12px;
+  padding: 4px 9px;
+  border-radius: 6px;
+  background: var(--nano-bg-code);
+  border: 1px solid var(--nano-border-card);
+  color: var(--nano-text-main);
+  cursor: help;
+}
+
+.seg-app {
+  color: var(--nano-status-info-text);
+  font-weight: 700;
+}
+
+.seg-lib {
+  color: var(--nano-status-purple-text);
+  font-weight: 700;
+}
+
+.seg-key {
+  color: var(--nano-status-success-text);
+  font-weight: 600;
 }
 
 .demo-box {

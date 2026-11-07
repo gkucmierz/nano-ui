@@ -1,6 +1,13 @@
 <script setup>
-import { ref, computed } from 'vue';
+import { ref, computed, watch, onMounted } from 'vue';
 import NanoIcon from './NanoIcon.vue';
+import {
+  getScopedStorageController,
+  normalizeStorageMode,
+  STORAGE_MODES,
+} from '../utils/storage-controller.js';
+
+const tabsStorageCtrl = getScopedStorageController('nano-ui');
 
 const props = defineProps({
   modelValue: {
@@ -35,11 +42,51 @@ const props = defineProps({
     type: String,
     default: 'Navigation tabs',
   },
+  /**
+   * Storage backend mode when `storageKey` is provided:
+   * - `'ss'` (default for tabs): sessionStorage (`window.sessionStorage`)
+   * - `'ls'`: localStorage (`window.localStorage`)
+   * - `'none'` | `false`: disable persistence
+   */
+  storage: {
+    type: [String, Boolean],
+    default: 'ss',
+  },
+  /**
+   * Optional application-level prefix override (e.g. `'dashboard-app'` -> `'DA_NU_<storageKey>'`).
+   */
+  appPrefix: {
+    type: String,
+    default: '',
+  },
+  /**
+   * Optional storage key for persisting the active tab across reloads.
+   */
+  storageKey: {
+    type: String,
+    default: '',
+  },
 });
 
 const emit = defineEmits(['update:modelValue', 'change']);
 
 const tabButtonRefs = ref([]);
+
+const resolvedStorageMode = computed(() => {
+  if (!props.storageKey) return STORAGE_MODES.NONE;
+  return normalizeStorageMode(props.storage, STORAGE_MODES.SS);
+});
+
+const isStorageEnabled = computed(
+  () => Boolean(props.storageKey) && resolvedStorageMode.value !== STORAGE_MODES.NONE
+);
+
+const resolvedStorageKey = computed(() => {
+  if (!props.storageKey) return '';
+  return tabsStorageCtrl.resolveKey(props.storageKey, {
+    appPrefix: props.appPrefix || undefined,
+  });
+});
 
 const normalizedItems = computed(() => {
   const source = Array.isArray(props.items) && props.items.length > 0 ? props.items : (props.tabs || []);
@@ -80,13 +127,66 @@ const resolvedCountFormat = computed(() => {
   return props.variant === 'docked' ? 'parens' : 'badge';
 });
 
+const saveActiveTab = (tabId) => {
+  if (!isStorageEnabled.value) return;
+  tabsStorageCtrl.set(
+    props.storageKey,
+    { activeTab: tabId },
+    {
+      mode: resolvedStorageMode.value,
+      appPrefix: props.appPrefix || undefined,
+    }
+  );
+};
+
+const loadSavedTab = () => {
+  if (!isStorageEnabled.value) return;
+  const saved = tabsStorageCtrl.get(props.storageKey, null, {
+    mode: resolvedStorageMode.value,
+    appPrefix: props.appPrefix || undefined,
+  });
+  const candidateId =
+    saved && typeof saved === 'object' && saved.activeTab !== undefined
+      ? saved.activeTab
+      : typeof saved === 'string' || typeof saved === 'number'
+        ? saved
+        : null;
+
+  if (candidateId === null || candidateId === undefined) return;
+  const matched = normalizedItems.value.find(
+    (item) => !item.disabled && String(item.id) === String(candidateId)
+  );
+  if (matched && matched.id !== props.modelValue) {
+    emit('update:modelValue', matched.id);
+  }
+};
+
 const selectTab = (item) => {
   if (!item || item.disabled) return;
+  saveActiveTab(item.id);
   if (item.id !== props.modelValue) {
     emit('update:modelValue', item.id);
     emit('change', item.id, item);
   }
 };
+
+onMounted(() => {
+  loadSavedTab();
+});
+
+watch(
+  () => [props.storageKey, props.storage, props.appPrefix],
+  () => {
+    loadSavedTab();
+  }
+);
+
+defineExpose({
+  resolvedStorageKey,
+  resolvedStorageMode,
+  loadSavedTab,
+  saveActiveTab,
+});
 
 const handleKeydown = (e, index) => {
   const list = normalizedItems.value;
