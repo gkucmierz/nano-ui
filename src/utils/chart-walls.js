@@ -445,21 +445,31 @@ export const aggregateThresholdData = ({
   const total = rawData.reduce((sum, item) => sum + (item.value || 0), 0)
 
   if (!aggregateOthers) {
-    return rawData.map(item => {
+    return rawData.map((item, idx) => {
       const val = item.value || 0
       const pct = total > 0 ? Math.round((val / total) * 100) : 0
+      const resolvedId = item.id !== undefined && item.id !== null ? item.id : (item.name || item.label || `slice-${idx}`)
+      const resolvedName = item.name || item.label || String(resolvedId)
       return {
         ...item,
+        id: resolvedId,
+        name: resolvedName,
         percentage: pct,
       }
     })
   }
 
   if (total === 0) {
-    return rawData.map(item => ({
-      ...item,
-      percentage: 0,
-    }))
+    return rawData.map((item, idx) => {
+      const resolvedId = item.id !== undefined && item.id !== null ? item.id : (item.name || item.label || `slice-${idx}`)
+      const resolvedName = item.name || item.label || String(resolvedId)
+      return {
+        ...item,
+        id: resolvedId,
+        name: resolvedName,
+        percentage: 0,
+      }
+    })
   }
 
   const thresholdVal = total * othersThreshold
