@@ -57,6 +57,27 @@ export default defineConfig({
     })
   ]
 });`;
+
+const storageThemeLocaleCode = `// main.js — Hierarchical @gkucmierz/storage-controller persistence (DA_NU_theme, DA_NU_lang)
+import { initNanoTheme, useTheme, initNanoLang, setLang } from '@gkucmierz/nano-ui';
+
+// 1. Initialize Zero-FOUC theme ('ls' | 'ss' | 'none') -> resolves to 'DA_NU_theme'
+initNanoTheme({
+  appPrefix: 'dashboard-app',
+  storage: 'ls',
+  storageKey: 'theme',
+  defaultTheme: 'dark',
+});
+
+// 2. Or inside <script setup> via composable:
+const { theme, toggleTheme, resolvedStorageKey } = useTheme({
+  appPrefix: 'dashboard-app',
+  storage: 'ls',
+});
+
+// 3. Initialize & toggle UI language ('pl' | 'en') -> resolves to 'DA_NU_lang'
+initNanoLang({ appPrefix: 'dashboard-app', storage: 'ls', storageKey: 'lang' });
+setLang('pl', { appPrefix: 'dashboard-app', storage: 'ls' });`;
 </script>
 
 <template>
@@ -130,6 +151,17 @@ export default defineConfig({
         : 'To ensure the Vue compiler preserves newlines and indentation inside <NanoCodeBlock>, import nanoCompilerOptions in vite.config.js:' }}
     </p>
     <NanoCodeBlock title="vite.config.js" lang="javascript" :code="viteConfigCode" />
+
+    <!-- Storage Front-Controller for Theme & Locales -->
+    <h3 class="section-title">
+      {{ currentLang === 'pl' ? '4. Persystencja Motywu i Języka (@gkucmierz/storage-controller)' : '4. Theme & Locale Persistence (@gkucmierz/storage-controller)' }}
+    </h3>
+    <p class="section-desc">
+      {{ currentLang === 'pl'
+        ? 'Silnik motywów (initNanoTheme / useTheme) oraz i18n (initNanoLang / setLang) korzystają z hierarchicznego kompresora skrótów <APP>_NU_<key> (np. DA_NU_theme, DA_NU_lang) z wyborem trybu storage ("ls" | "ss" | "none"):'
+        : 'The Zero-FOUC theme engine (initNanoTheme / useTheme) and i18n helper (initNanoLang / setLang) use the hierarchical <APP>_NU_<key> acronym compressor (e.g. DA_NU_theme, DA_NU_lang) with selectable storage backend ("ls" | "ss" | "none"):' }}
+    </p>
+    <NanoCodeBlock title="main.js" lang="javascript" :code="storageThemeLocaleCode" />
   </div>
 </template>
 
