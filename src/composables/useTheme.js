@@ -1,10 +1,21 @@
 import { ref } from 'vue';
 import { initTheme as coreInitTheme } from '../theme.js';
+import {
+  getScopedStorageController,
+  normalizeStorageMode,
+  STORAGE_MODES,
+} from '../utils/storage-controller.js';
 
 const isDark = ref(true);
+const themeStorageCtrl = getScopedStorageController('nano-ui');
 
-export const useTheme = ({ storageKey = 'nano-ui-theme', defaultTheme = 'dark' } = {}) => {
-  const applyTheme = dark => {
+export const useTheme = ({
+  storageKey = 'theme',
+  storage = 'ls',
+  appPrefix = '',
+  defaultTheme = 'dark',
+} = {}) => {
+  const applyTheme = (dark) => {
     isDark.value = dark;
     const theme = dark ? 'dark' : 'light';
     if (typeof document !== 'undefined') {
@@ -19,10 +30,22 @@ export const useTheme = ({ storageKey = 'nano-ui-theme', defaultTheme = 'dark' }
         document.documentElement.classList.remove('theme-switching');
       }, 60);
     }
-    if (typeof localStorage !== 'undefined') {
-      try {
-        localStorage.setItem(storageKey, theme);
-      } catch {}
+
+    const mode = normalizeStorageMode(storage, STORAGE_MODES.LS);
+    if (mode !== STORAGE_MODES.NONE) {
+      themeStorageCtrl.set(storageKey, theme, {
+        mode,
+        appPrefix,
+        raw: true,
+      });
+      if (mode === STORAGE_MODES.LS && typeof localStorage !== 'undefined') {
+        try {
+          localStorage.setItem('nano-ui-theme', theme);
+          if (storageKey && storageKey !== 'theme') {
+            localStorage.setItem(storageKey, theme);
+          }
+        } catch {}
+      }
     }
   };
 
@@ -31,7 +54,7 @@ export const useTheme = ({ storageKey = 'nano-ui-theme', defaultTheme = 'dark' }
   };
 
   const initTheme = () => {
-    const active = coreInitTheme({ storageKey, defaultTheme });
+    const active = coreInitTheme({ storageKey, storage, appPrefix, defaultTheme });
     isDark.value = active !== 'light';
     if (typeof document !== 'undefined') {
       setTimeout(() => {
@@ -41,10 +64,15 @@ export const useTheme = ({ storageKey = 'nano-ui-theme', defaultTheme = 'dark' }
     return active;
   };
 
+  const resolvedStorageKey = () =>
+    themeStorageCtrl.resolveKey(storageKey, { appPrefix });
+
   return {
     isDark,
     toggleTheme,
     initTheme,
+    applyTheme,
+    resolvedStorageKey,
   };
 };
 

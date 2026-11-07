@@ -1,37 +1,63 @@
 import { ref } from 'vue';
 import enDict from './locales/en.json';
 import plDict from './locales/pl.json';
+import {
+  getScopedStorageController,
+  normalizeStorageMode,
+  STORAGE_MODES,
+} from './utils/storage-controller.js';
 
-const STORAGE_KEY = 'nano_ui_lang';
+const LEGACY_STORAGE_KEY = 'nano_ui_lang';
+const SCOPED_LANG_KEY = 'lang';
+const localeStorageCtrl = getScopedStorageController('nano-ui');
 
 // Deterministic initial language matching SSR baseline
 export const currentLang = ref('en');
 
-export const initSavedLang = () => {
-  try {
-    if (typeof localStorage !== 'undefined') {
-      const saved = localStorage.getItem(STORAGE_KEY);
-      if (saved && (saved === 'en' || saved === 'pl')) {
-        currentLang.value = saved;
-        if (typeof document !== 'undefined') {
-          document.documentElement.setAttribute('lang', saved);
-        }
-      }
-    }
-  } catch (e) {}
+const normalizeLangValue = (val) => {
+  if (!val) return null;
+  const clean = String(val).replace(/^"|"$/g, '').trim();
+  return clean === 'en' || clean === 'pl' ? clean : null;
 };
 
-export const setLang = (lang) => {
+export const initSavedLang = ({ storage = 'ls', appPrefix = '', storageKey = SCOPED_LANG_KEY } = {}) => {
+  try {
+    const mode = normalizeStorageMode(storage, STORAGE_MODES.LS);
+    if (mode === STORAGE_MODES.NONE) return currentLang.value;
+
+    let saved = normalizeLangValue(
+      localeStorageCtrl.get(storageKey, null, { mode, appPrefix, raw: true })
+    );
+
+    if (!saved && mode === STORAGE_MODES.LS && typeof localStorage !== 'undefined') {
+      saved = normalizeLangValue(localStorage.getItem(LEGACY_STORAGE_KEY));
+    }
+
+    if (saved) {
+      currentLang.value = saved;
+      if (typeof document !== 'undefined') {
+        document.documentElement.setAttribute('lang', saved);
+      }
+    }
+  } catch {}
+  return currentLang.value;
+};
+
+export const setLang = (lang, { storage = 'ls', appPrefix = '', storageKey = SCOPED_LANG_KEY } = {}) => {
   if (['en', 'pl'].includes(lang)) {
     currentLang.value = lang;
     try {
-      if (typeof localStorage !== 'undefined') {
-        localStorage.setItem(STORAGE_KEY, lang);
+      const mode = normalizeStorageMode(storage, STORAGE_MODES.LS);
+      if (mode !== STORAGE_MODES.NONE) {
+        localeStorageCtrl.set(storageKey, lang, { mode, appPrefix, raw: true });
+        if (mode === STORAGE_MODES.LS && typeof localStorage !== 'undefined') {
+          localStorage.setItem(LEGACY_STORAGE_KEY, lang);
+        }
       }
       if (typeof document !== 'undefined') {
         document.documentElement.setAttribute('lang', lang);
       }
-    } catch (e) {}
+    } catch {}
   }
 };
 
