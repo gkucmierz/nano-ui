@@ -1,9 +1,5 @@
-<script>
-let selectUidSeq = 0;
-</script>
-
 <script setup>
-import { ref, computed, watch, nextTick, onMounted, onUnmounted } from 'vue';
+import { ref, computed, watch, nextTick, onMounted, onUnmounted, useId } from 'vue';
 import NanoIcon from './NanoIcon.vue';
 import { currentLang } from '../locales.js';
 import {
@@ -182,7 +178,7 @@ const props = defineProps({
 
 const emit = defineEmits(['update:modelValue', 'change', 'open', 'close', 'search', 'clear']);
 
-const autoSelectId = `nano-select-${++selectUidSeq}`;
+const autoSelectId = `nano-select-${useId()}`;
 const resolvedSearchId = computed(() => `${props.id || autoSelectId}-search`);
 
 const isOpen = ref(false);
