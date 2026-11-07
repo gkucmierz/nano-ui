@@ -1,3 +1,7 @@
+<script>
+let switchUidSeq = 0;
+</script>
+
 <script setup>
 import { ref, computed, watch } from 'vue';
 import { resolveNanoColor } from '../utils/colors.js';
@@ -37,8 +41,6 @@ const props = defineProps({
     default: ''
   }
 });
-
-let switchUidSeq = 0;
 
 const emit = defineEmits(['update:modelValue', 'update:indeterminate', 'change']);
 
