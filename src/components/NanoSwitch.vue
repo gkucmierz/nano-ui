@@ -1,9 +1,5 @@
-<script>
-let switchUidSeq = 0;
-</script>
-
 <script setup>
-import { ref, computed, watch } from 'vue';
+import { ref, computed, watch, useId } from 'vue';
 import { resolveNanoColor } from '../utils/colors.js';
 
 const props = defineProps({
@@ -44,7 +40,7 @@ const props = defineProps({
 
 const emit = defineEmits(['update:modelValue', 'update:indeterminate', 'change']);
 
-const autoId = `nano-switch-${++switchUidSeq}`;
+const autoId = `nano-switch-${useId()}`;
 const resolvedId = computed(() => props.id || autoId);
 const resolvedName = computed(() => props.name || resolvedId.value);
 
