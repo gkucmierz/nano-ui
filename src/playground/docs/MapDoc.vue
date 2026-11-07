@@ -10,7 +10,7 @@ import {
   evaluatePolylineCursor
 } from '../../utils/map-engine.js';
 import { createDocTabs } from '../docSnippets.js';
-import { t } from '../../locales.js';
+import { t, currentLang } from '../../locales.js';
 
 const activeLayer = ref('osm-dark');
 const mapZoom = ref(13);
@@ -19,6 +19,206 @@ const mapCenter = ref([50.292, 18.785]);
 const routeProgressPct = ref(42);
 const followGps = ref(false);
 const isSimulating = ref(false);
+
+// Dedicated 2nd Map Demo: Shaded Polygons & IETF RFC 7946 GeoJSON Zones
+const polyMapLayer = ref('osm-dark');
+const polyMapZoom = ref(13.2);
+const polyMapBearing = ref(0);
+const polyMapCenter = ref([50.2855, 19.0915]);
+const showPolyDistrict = ref(true);
+const showPolyPark = ref(true);
+const showPolyLogistics = ref(true);
+const polyDashedStroke = ref(false);
+const polyFillOpacity = ref(0.24);
+const polyStrokeWidth = ref(2.5);
+const selectedPolyZone = ref({
+  id: 'metro-core-district',
+  name: '1. Metropolitan Core District (~440 ha)',
+  standard: 'RFC 7946 GeoJSON [lon, lat]',
+  vertices: 9,
+  color: '#38bdf8',
+});
+
+const polyGeoJsonFeatureCollection = computed(() => {
+  const features = [];
+  if (showPolyDistrict.value) {
+    features.push({
+      type: 'Feature',
+      properties: {
+        id: 'metro-core-district',
+        name: '1. Metropolitan Core District (~440 ha)',
+        standard: 'RFC 7946 GeoJSON [lon, lat]',
+        color: '#38bdf8',
+        fillColor: '#38bdf8',
+        fillOpacity: polyFillOpacity.value,
+        strokeWidth: polyStrokeWidth.value,
+        dashed: polyDashedStroke.value,
+      },
+      geometry: {
+        type: 'Polygon',
+        coordinates: [
+          [
+            [19.0735, 50.2898],
+            [19.0842, 50.2962],
+            [19.0995, 50.2954],
+            [19.1088, 50.2895],
+            [19.1072, 50.2798],
+            [19.0958, 50.2738],
+            [19.0815, 50.2752],
+            [19.0748, 50.2818],
+            [19.0735, 50.2898],
+          ],
+        ],
+      },
+    });
+  }
+  if (showPolyPark.value) {
+    features.push({
+      type: 'Feature',
+      properties: {
+        id: 'park-tysiaclecia',
+        name: '2. Park Tysiąclecia Green Corridor (~110 ha)',
+        standard: 'RFC 7946 GeoJSON [lon, lat]',
+        color: '#10b981',
+        fillColor: '#10b981',
+        fillOpacity: Math.min(0.65, polyFillOpacity.value + 0.06),
+        strokeWidth: polyStrokeWidth.value,
+        dashed: polyDashedStroke.value,
+      },
+      geometry: {
+        type: 'Polygon',
+        coordinates: [
+          [
+            [19.0912, 50.2942],
+            [19.1065, 50.2938],
+            [19.1075, 50.2835],
+            [19.0935, 50.2825],
+            [19.0895, 50.2882],
+            [19.0912, 50.2942],
+          ],
+        ],
+      },
+    });
+  }
+  return {
+    type: 'FeatureCollection',
+    features,
+  };
+});
+
+const polyTupleZones = computed(() => {
+  if (!showPolyLogistics.value) return [];
+  return [
+    {
+      id: 's86-logistics-hub',
+      name: '3. S86 Class-A Logistics & Industrial Hub (~136 ha)',
+      color: '#f59e0b',
+      fillColor: '#f59e0b',
+      fillOpacity: polyFillOpacity.value,
+      strokeWidth: polyStrokeWidth.value,
+      dashed: polyDashedStroke.value,
+      // Direct [latitude, longitude] tuple ring via :polygons prop
+      points: [
+        [50.2848, 19.0755],
+        [50.2892, 19.0875],
+        [50.2812, 19.0928],
+        [50.2755, 19.0825],
+        [50.2788, 19.0752],
+      ],
+    },
+  ];
+});
+
+const polyZoneMarkers = computed(() => {
+  const list = [];
+  if (showPolyDistrict.value) {
+    list.push({
+      id: 'mk-district',
+      lat: 50.2858,
+      lon: 19.0914,
+      label: 'Metropolitan Core (~440 ha)',
+      color: '#38bdf8',
+      radius: 5.5,
+    });
+  }
+  if (showPolyPark.value) {
+    list.push({
+      id: 'mk-park',
+      lat: 50.2892,
+      lon: 19.0992,
+      label: 'Park Tysiąclecia (~110 ha)',
+      color: '#10b981',
+      radius: 5.0,
+    });
+  }
+  if (showPolyLogistics.value) {
+    list.push({
+      id: 'mk-logistics',
+      lat: 50.2818,
+      lon: 19.0835,
+      label: 'Hub Logistyczny S86 (~136 ha)',
+      color: '#f59e0b',
+      radius: 5.0,
+    });
+  }
+  return list;
+});
+
+function focusPolygonZone(zoneId) {
+  if (zoneId === 'metro-core-district') {
+    showPolyDistrict.value = true;
+    polyMapCenter.value = [50.2855, 19.0915];
+    polyMapZoom.value = 13.3;
+    selectedPolyZone.value = {
+      id: 'metro-core-district',
+      name: '1. Metropolitan Core District (~440 ha)',
+      standard: 'RFC 7946 GeoJSON [lon, lat]',
+      vertices: 9,
+      color: '#38bdf8',
+    };
+  } else if (zoneId === 'park-tysiaclecia') {
+    showPolyPark.value = true;
+    polyMapCenter.value = [50.2888, 19.0985];
+    polyMapZoom.value = 14.1;
+    selectedPolyZone.value = {
+      id: 'park-tysiaclecia',
+      name: '2. Park Tysiąclecia Green Corridor (~110 ha)',
+      standard: 'RFC 7946 GeoJSON [lon, lat]',
+      vertices: 6,
+      color: '#10b981',
+    };
+  } else if (zoneId === 's86-logistics-hub') {
+    showPolyLogistics.value = true;
+    polyMapCenter.value = [50.2822, 19.0838];
+    polyMapZoom.value = 14.1;
+    selectedPolyZone.value = {
+      id: 's86-logistics-hub',
+      name: '3. S86 Class-A Logistics & Industrial Hub (~136 ha)',
+      standard: ':polygons Tuple [lat, lon]',
+      vertices: 5,
+      color: '#f59e0b',
+    };
+  }
+}
+
+function handleDemoPolygonClick(poly) {
+  if (!poly) return;
+  const ringPts = Array.isArray(poly.rings?.[0])
+    ? poly.rings[0].length
+    : Array.isArray(poly.points)
+      ? poly.points.length
+      : 0;
+  selectedPolyZone.value = {
+    id: poly.id,
+    name: poly.name || poly.id,
+    standard:
+      poly.id === 's86-logistics-hub'
+        ? ':polygons Tuple [lat, lon]'
+        : 'RFC 7946 GeoJSON [lon, lat]',
+    vertices: ringPts,
+    color: poly.color || '#38bdf8',
+  };
+}
 
 // Configurable HUD Layer Toggles (pure map element)
 const showLayerPicker = ref(true);
@@ -427,6 +627,180 @@ const codeTabs = createDocTabs({
       </div>
     </div>
 
+    <!-- =================================================================== -->
+    <!-- DEDICATED ELEMENT 2: Shaded Polygons & IETF RFC 7946 GeoJSON Zones  -->
+    <!-- =================================================================== -->
+    <div class="doc-header poly-section-header">
+      <h3>
+        {{
+          currentLang === 'pl'
+            ? 'Poligony Powierzchniowe & Strefy GeoJSON IETF RFC 7946 (:polygons & :geojson)'
+            : 'Shaded Area Polygons & IETF RFC 7946 GeoJSON Zones (:polygons & :geojson)'
+        }}
+      </h3>
+      <p>
+        {{
+          currentLang === 'pl'
+            ? 'Niezależna warstwa wektorowa obsługująca jednocześnie standard IETF RFC 7946 GeoJSON ([lon, lat] FeatureCollection / Polygon / MultiPolygon przez prop :geojson) oraz tablice krotek [lat, lon] (przez prop :polygons). Kliknij dowolną strefę na mapie, aby odczytać jej metadane.'
+            : 'Dedicated vector surface layer supporting both standard IETF RFC 7946 GeoJSON ([lon, lat] FeatureCollection / Polygon / MultiPolygon via :geojson) and [lat, lon] coordinate rings (via :polygons). Click any shaded zone on the map to inspect its metadata.'
+        }}
+      </p>
+    </div>
+
+    <div class="map-demo-grid">
+      <div class="map-stage-col">
+        <NanoMap
+          v-model:center="polyMapCenter"
+          v-model:zoom="polyMapZoom"
+          v-model:bearing="polyMapBearing"
+          v-model:layer="polyMapLayer"
+          :height="380"
+          :layers="DEFAULT_MAP_LAYERS"
+          :geojson="polyGeoJsonFeatureCollection"
+          :polygons="polyTupleZones"
+          :markers="polyZoneMarkers"
+          :show-layer-picker="true"
+          :show-zoom-controls="true"
+          :show-scale-bar="true"
+          :show-compass="true"
+          :show-locate-control="true"
+          :enable-layer-hotkeys="false"
+          @polygon-click="handleDemoPolygonClick"
+        />
+      </div>
+
+      <div class="nano-card map-controls-card">
+        <div class="controls-header">
+          <div class="controls-title-row">
+            <NanoIcon name="layers" :size="16" />
+            <h3>
+              {{
+                currentLang === 'pl'
+                  ? 'Warstwy Poligonów & RFC 7946 GeoJSON'
+                  : 'Polygon & RFC 7946 GeoJSON Controls'
+              }}
+            </h3>
+          </div>
+        </div>
+
+        <div class="switches-grid">
+          <NanoSwitch
+            id="poly-sw-district"
+            v-model="showPolyDistrict"
+            size="compact"
+            :label="
+              currentLang === 'pl'
+                ? 'Obrys Dzielnicy (GeoJSON)'
+                : 'District Boundary (GeoJSON)'
+            "
+          />
+          <NanoSwitch
+            id="poly-sw-park"
+            v-model="showPolyPark"
+            size="compact"
+            :label="
+              currentLang === 'pl'
+                ? 'Strefa Zieleni (GeoJSON)'
+                : 'Green Park Zone (GeoJSON)'
+            "
+          />
+          <NanoSwitch
+            id="poly-sw-logistics"
+            v-model="showPolyLogistics"
+            size="compact"
+            :label="
+              currentLang === 'pl'
+                ? 'Hub S86 (:polygons [lat,lon])'
+                : 'S86 Hub (:polygons [lat,lon])'
+            "
+          />
+          <NanoSwitch
+            id="poly-sw-dashed"
+            v-model="polyDashedStroke"
+            size="compact"
+            :label="
+              currentLang === 'pl'
+                ? 'Przerywany obrys granic'
+                : 'Dashed perimeter stroke'
+            "
+          />
+        </div>
+
+        <div class="track-selector-block">
+          <span class="track-selector-label">
+            {{
+              currentLang === 'pl'
+                ? 'Skocz do strefy (lub kliknij poligon na mapie)'
+                : 'Focus Zone (or click polygon on map)'
+            }}
+          </span>
+          <div class="poly-pills-row">
+            <button
+              type="button"
+              class="track-pill-btn"
+              :class="{ active: selectedPolyZone.id === 'metro-core-district' }"
+              @click="focusPolygonZone('metro-core-district')"
+            >
+              <span class="track-dot" style="background: #38bdf8"></span>
+              <span>1. Core District (440 ha)</span>
+            </button>
+            <button
+              type="button"
+              class="track-pill-btn"
+              :class="{ active: selectedPolyZone.id === 'park-tysiaclecia' }"
+              @click="focusPolygonZone('park-tysiaclecia')"
+            >
+              <span class="track-dot" style="background: #10b981"></span>
+              <span>2. Park (110 ha)</span>
+            </button>
+            <button
+              type="button"
+              class="track-pill-btn"
+              :class="{ active: selectedPolyZone.id === 's86-logistics-hub' }"
+              @click="focusPolygonZone('s86-logistics-hub')"
+            >
+              <span class="track-dot" style="background: #f59e0b"></span>
+              <span>3. Hub S86 (136 ha)</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Clicked Polygon Telemetry Readout -->
+        <div class="poly-inspector-box">
+          <div class="poly-inspector-head">
+            <span class="track-dot" :style="{ background: selectedPolyZone.color }"></span>
+            <strong>{{ selectedPolyZone.name }}</strong>
+          </div>
+          <div class="poly-inspector-meta">
+            <span>{{ selectedPolyZone.standard }}</span>
+            <span>{{ selectedPolyZone.vertices }} vertices</span>
+          </div>
+        </div>
+
+        <div class="sliders-stack">
+          <NanoSlider
+            v-model="polyFillOpacity"
+            :min="0.05"
+            :max="0.55"
+            :step="0.05"
+            size="sm"
+            :label="currentLang === 'pl' ? 'Krycie wypełnienia (fillOpacity)' : 'Polygon Fill Opacity'"
+            :format-value="(v) => `${Math.round(v * 100)}%`"
+          />
+
+          <NanoSlider
+            v-model="polyStrokeWidth"
+            :min="1"
+            :max="5"
+            :step="0.5"
+            size="sm"
+            :label="currentLang === 'pl' ? 'Grubość obrysu (strokeWidth)' : 'Perimeter Stroke Width'"
+            :format-value="(v) => `${v.toFixed(1)}px`"
+          />
+        </div>
+      </div>
+    </div>
+
     <!-- Standardized 3-Tab API Reference, Usage & Granular Import Block -->
     <NanoCodeBlock :tabs="codeTabs" />
   </div>
@@ -586,5 +960,49 @@ const codeTabs = createDocTabs({
   gap: 0.8rem;
   padding-top: 0.55rem;
   border-top: 1px solid var(--nano-border);
+}
+
+.poly-section-header {
+  margin-top: 0.75rem;
+  padding-top: 1.25rem;
+  border-top: 1px solid var(--nano-border-subtle, rgba(148, 163, 184, 0.16));
+}
+
+.poly-section-header h3 {
+  margin: 0 0 0.35rem;
+  font-size: 1.28rem;
+  font-weight: 700;
+}
+
+.poly-pills-row {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.45rem;
+}
+
+.poly-inspector-box {
+  padding: 0.6rem 0.75rem;
+  border-radius: 8px;
+  border: 1px solid var(--nano-border-card, rgba(255, 255, 255, 0.14));
+  background: var(--nano-bg-muted, rgba(255, 255, 255, 0.04));
+  display: flex;
+  flex-direction: column;
+  gap: 0.28rem;
+}
+
+.poly-inspector-head {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-size: 0.78rem;
+}
+
+.poly-inspector-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 0.72rem;
+  color: var(--nano-text-muted);
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
 }
 </style>
