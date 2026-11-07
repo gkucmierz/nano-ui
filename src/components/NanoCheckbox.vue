@@ -1,8 +1,6 @@
 <script setup>
-import { computed } from 'vue';
+import { computed, useId } from 'vue';
 import { resolveNanoColor } from '../utils/colors.js';
-
-let nanoCheckboxSeq = 0;
 
 const props = defineProps({
   id: {
@@ -68,7 +66,7 @@ const resolvedColor = computed(() => {
 
 const isIndeterminate = computed(() => props.indeterminate || props.modelValue === null);
 const isChecked = computed(() => !isIndeterminate.value && Boolean(props.modelValue));
-const fallbackId = `nano-checkbox-${++nanoCheckboxSeq}`;
+const fallbackId = `nano-checkbox-${useId()}`;
 const resolvedId = computed(() => props.id || fallbackId);
 const resolvedName = computed(() => props.name || resolvedId.value);
 
