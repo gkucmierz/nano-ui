@@ -2,6 +2,9 @@
 import { ref, watch, onMounted, onUnmounted, nextTick, computed, useSlots, getCurrentInstance } from 'vue';
 import NanoIcon from './NanoIcon.vue';
 import vRipple from '../directives/ripple.js';
+import { getScopedStorageController, normalizeStorageMode } from '../utils/storage-controller.js';
+
+const nanoStorage = getScopedStorageController('nano-ui');
 
 const isMounted = ref(false);
 const slots = useSlots();
@@ -35,12 +38,14 @@ const props = defineProps({
   draggable: { type: Boolean, default: false },
   resizable: { type: Boolean, default: false },
   storageKey: { type: String, default: '' },
+  storage: { type: [String, Boolean], default: 'ls' },
+  appPrefix: { type: String, default: '' },
 
   minWidth: { type: Number, default: 300 },
   minHeight: { type: Number, default: 200 }
 });
 
-const emit = defineEmits(['close', 'ok', 'cancel', 'update:modelValue', 'update:visible', 'update:show']);
+const emit = defineEmits(['close', 'ok', 'cancel', 'update:modelValue', 'update:visible', 'update:show', 'geometry-change']);
 
 const isVisible = computed(() => {
   if (props.modelValue !== undefined) return props.modelValue;
@@ -81,15 +86,24 @@ const initialTitleSlug = String(props.title || '')
   .replace(/[^a-z0-9]+/g, '_')
   .replace(/^_+|_+$/g, '');
 
-const effectiveStorageKey = computed(() => {
+const resolvedStorageMode = computed(() => normalizeStorageMode(props.storage, 'ls'));
+
+const baseStorageKey = computed(() => {
   if (props.storageKey) return props.storageKey;
   if (!props.draggable && !props.resizable) return '';
   const slug = initialTitleSlug || 'modal';
-  return `nano_modal_geom_${parentComponentName}_${props.width}x${props.height}_${slug}`;
+  return `modal_geom_${parentComponentName}_${props.width}x${props.height}_${slug}`;
 });
 
-const preFullscreenStorageKey = computed(() =>
-  effectiveStorageKey.value ? `${effectiveStorageKey.value}__pre_fullscreen` : ''
+const effectiveStorageKey = computed(() => {
+  if (!baseStorageKey.value) return '';
+  return nanoStorage.resolveKey(baseStorageKey.value, {
+    appPrefix: props.appPrefix,
+  });
+});
+
+const preFullscreenBaseKey = computed(() =>
+  baseStorageKey.value ? `${baseStorageKey.value}__pre_fullscreen` : ''
 );
 
 let dragStartX = 0;
@@ -287,23 +301,31 @@ function clampScalarBox(box) {
 }
 
 function persistGeometry() {
-  const key = effectiveStorageKey.value;
-  if (!key || typeof window === 'undefined') return;
-  try {
-    const payload = {
-      x: posX.value !== null ? Math.round(posX.value) : null,
-      y: posY.value !== null ? Math.round(posY.value) : null,
-      width: curWidth.value !== null ? Math.round(curWidth.value) : null,
-      height: curHeight.value !== null ? Math.round(curHeight.value) : null,
-      isMaximized: Boolean(isMaximized.value)
-    };
-    window.localStorage.setItem(key, JSON.stringify(payload));
-  } catch {}
+  const key = baseStorageKey.value;
+  const mode = resolvedStorageMode.value;
+  const payload = {
+    x: posX.value !== null ? Math.round(posX.value) : null,
+    y: posY.value !== null ? Math.round(posY.value) : null,
+    width: curWidth.value !== null ? Math.round(curWidth.value) : null,
+    height: curHeight.value !== null ? Math.round(curHeight.value) : null,
+    isMaximized: Boolean(isMaximized.value)
+  };
+  emit('geometry-change', {
+    ...payload,
+    mode,
+    storageKey: effectiveStorageKey.value,
+  });
+  if (!key || mode === 'none') return;
+  nanoStorage.set(key, payload, {
+    mode,
+    appPrefix: props.appPrefix,
+  });
 }
 
 function restoreGeometry() {
-  const key = effectiveStorageKey.value;
-  if (!key || typeof window === 'undefined') {
+  const key = baseStorageKey.value;
+  const mode = resolvedStorageMode.value;
+  if (!key || mode === 'none') {
     posX.value = null;
     posY.value = null;
     curWidth.value = null;
@@ -311,42 +333,37 @@ function restoreGeometry() {
     isMaximized.value = false;
     return;
   }
-  try {
-    const raw = window.localStorage.getItem(key);
-    if (!raw) {
-      posX.value = null;
-      posY.value = null;
-      curWidth.value = null;
-      curHeight.value = null;
-      isMaximized.value = false;
-      return;
-    }
-    const parsed = JSON.parse(raw);
-    const clamped = clampScalarBox(parsed);
-    curWidth.value = clamped.width;
-    curHeight.value = clamped.height;
-    posX.value = clamped.x;
-    posY.value = clamped.y;
-    isMaximized.value = Boolean(parsed?.isMaximized && props.resizable);
-  } catch {
+  const parsed = nanoStorage.get(key, null, {
+    mode,
+    appPrefix: props.appPrefix,
+  });
+  if (!parsed) {
     posX.value = null;
     posY.value = null;
     curWidth.value = null;
     curHeight.value = null;
     isMaximized.value = false;
+    return;
   }
+  const clamped = clampScalarBox(parsed);
+  curWidth.value = clamped.width;
+  curHeight.value = clamped.height;
+  posX.value = clamped.x;
+  posY.value = clamped.y;
+  isMaximized.value = Boolean(parsed?.isMaximized && props.resizable);
 }
 
 function handleHeaderDblClick(e) {
   if (!props.draggable && !props.resizable) return;
   if (e?.target?.tagName === 'BUTTON' || e?.target?.closest?.('button')) return;
 
-  // For resizable windows: toggle between Fullscreen and saved localStorage geometry
+  // For resizable windows: toggle between Fullscreen and saved storage geometry
   if (props.resizable) {
-    const preKey = preFullscreenStorageKey.value;
+    const preKey = preFullscreenBaseKey.value;
+    const mode = resolvedStorageMode.value;
 
     if (!isMaximized.value) {
-      // 1. Not fullscreen -> dump current position & size scalars to localStorage, then enter fullscreen
+      // 1. Not fullscreen -> dump current position & size scalars to active storage, then enter fullscreen
       const rect = modalWindow.value?.getBoundingClientRect?.();
       const snapshot = {
         x: posX.value !== null ? Math.round(posX.value) : (rect ? Math.round(rect.left) : null),
@@ -355,24 +372,29 @@ function handleHeaderDblClick(e) {
         height: curHeight.value !== null ? Math.round(curHeight.value) : (rect ? Math.round(rect.height) : null)
       };
       restoreSnapshot.value = snapshot;
-      if (preKey && typeof window !== 'undefined') {
-        try {
-          window.localStorage.setItem(preKey, JSON.stringify(snapshot));
-        } catch {}
+      if (preKey && mode !== 'none') {
+        nanoStorage.set(preKey, snapshot, {
+          mode,
+          appPrefix: props.appPrefix,
+        });
       }
       isMaximized.value = true;
       persistGeometry();
     } else {
-      // 2. Fullscreen -> restore size & position from localStorage, then remove pre-fullscreen key
+      // 2. Fullscreen -> restore size & position from active storage, then remove pre-fullscreen key
       let saved = restoreSnapshot.value;
-      if (preKey && typeof window !== 'undefined') {
-        try {
-          const rawPre = window.localStorage.getItem(preKey);
-          if (rawPre) {
-            saved = JSON.parse(rawPre);
-          }
-          window.localStorage.removeItem(preKey);
-        } catch {}
+      if (preKey && mode !== 'none') {
+        const storedPre = nanoStorage.get(preKey, null, {
+          mode,
+          appPrefix: props.appPrefix,
+        });
+        if (storedPre) {
+          saved = storedPre;
+        }
+        nanoStorage.remove(preKey, {
+          mode,
+          appPrefix: props.appPrefix,
+        });
       }
       isMaximized.value = false;
       if (saved) {
@@ -398,10 +420,11 @@ function handleHeaderDblClick(e) {
   posY.value = null;
   curWidth.value = null;
   curHeight.value = null;
-  if (effectiveStorageKey.value && typeof window !== 'undefined') {
-    try {
-      window.localStorage.removeItem(effectiveStorageKey.value);
-    } catch {}
+  if (baseStorageKey.value && resolvedStorageMode.value !== 'none') {
+    nanoStorage.remove(baseStorageKey.value, {
+      mode: resolvedStorageMode.value,
+      appPrefix: props.appPrefix,
+    });
   }
 }
 
@@ -475,11 +498,21 @@ const resetGeometry = () => {
   curWidth.value = null;
   curHeight.value = null;
   isMaximized.value = false;
-  if (effectiveStorageKey.value && typeof window !== 'undefined') {
-    try {
-      window.localStorage.removeItem(effectiveStorageKey.value);
-    } catch {}
+  if (baseStorageKey.value && resolvedStorageMode.value !== 'none') {
+    nanoStorage.remove(baseStorageKey.value, {
+      mode: resolvedStorageMode.value,
+      appPrefix: props.appPrefix,
+    });
   }
+  emit('geometry-change', {
+    x: null,
+    y: null,
+    width: null,
+    height: null,
+    isMaximized: false,
+    mode: resolvedStorageMode.value,
+    storageKey: effectiveStorageKey.value,
+  });
 };
 const handleBackdropClick = () => { if (props.closeOnBackdrop) closeModal(); };
 const handleOk = () => emit('ok');
@@ -490,6 +523,10 @@ defineExpose({
   close: closeModal,
   toggleMaximize: () => handleHeaderDblClick({}),
   resetGeometry,
+  persistGeometry,
+  restoreGeometry,
+  effectiveStorageKey,
+  resolvedStorageMode,
   isVisible,
   isMaximized,
   isDragging,
