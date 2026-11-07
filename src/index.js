@@ -1,6 +1,6 @@
 import pkg from '../package.json';
 import { initTheme, getZeroFoucScript, getZeroFoucStyle, getZeroFoucHtml } from './theme.js';
-import { useTheme } from './composables/useTheme.js';
+import { useTheme, getNextTheme } from './composables/useTheme.js';
 import Ripple from './directives/ripple.js';
 import { tooltipDirective } from './directives/tooltip.js';
 import { showTooltip, hideTooltip, tooltipState } from './composables/useTooltip.js';
@@ -220,7 +220,9 @@ import {
 import { detectRenderedGridColumns } from './utils/grid.js';
 import {
   findSafeSelectMount,
+  findSafeAncestorMount,
   computeSelectDropdownLayout,
+  computeAdaptiveCardExpansion,
   getPositionedReferenceEl,
 } from './utils/selectPositioning.js';
 import {
@@ -242,6 +244,14 @@ import {
   buildSphericalVariableWidthLinePolygon,
 } from './utils/globe-geometry.js';
 import { transitions, durations, easings, transitionVariables } from './config/transitions.js';
+import {
+  MUTATING_HEADER_META_KEY,
+  MUTATING_HEADER_SPREAD_PRESETS,
+  normalizeHeaderSpread,
+  parseFloatingVerticalMargins,
+  computeHeaderCompressionMeta,
+  useMutatingHeaderMeta,
+} from './utils/mutatingHeader.js';
 import {
   STORAGE_MODES,
   normalizeStorageMode,
@@ -280,6 +290,12 @@ export {
   PrecisionScrubber,
   TopologyRadar,
   MutatingHeader,
+  MUTATING_HEADER_META_KEY,
+  MUTATING_HEADER_SPREAD_PRESETS,
+  normalizeHeaderSpread,
+  parseFloatingVerticalMargins,
+  computeHeaderCompressionMeta,
+  useMutatingHeaderMeta,
   NanoSwitch,
   NanoSlider,
   KineticRotator,
@@ -457,7 +473,9 @@ export {
   parseUnifiedDiff,
   detectRenderedGridColumns,
   findSafeSelectMount,
+  findSafeAncestorMount,
   computeSelectDropdownLayout,
+  computeAdaptiveCardExpansion,
   getPositionedReferenceEl,
   easeInOutCubic,
   computeSphericalLabelOpacity,
@@ -477,6 +495,7 @@ export {
   buildSphericalVariableWidthLinePolygon,
   initTheme,
   useTheme,
+  getNextTheme,
   getZeroFoucScript,
   getZeroFoucStyle,
   getZeroFoucHtml,
