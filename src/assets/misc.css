@@ -95,6 +95,10 @@ html {
   color-scheme: dark;
 }
 
+body {
+  margin: 0;
+}
+
 html[data-theme="light"] {
   background-color: #f8fafc;
   color-scheme: light;
