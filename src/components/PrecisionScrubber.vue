@@ -1,12 +1,10 @@
-<script>
-export default {
-  inheritAttrs: false
-}
-</script>
-
 <script setup>
 import { ref, computed, onMounted, onUnmounted } from 'vue';
 import { clamp, countStepDecimals, quantizeStepValue } from '../utils/math.js';
+
+defineOptions({
+  inheritAttrs: false
+});
 
 const isMounted = ref(false);
 
