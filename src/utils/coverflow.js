@@ -49,7 +49,7 @@ export function computeCoverFlowItemTransform(
     centerGapPx = 170,
     stackSpacingPx = 54,
     depthOffsetPx = 140,
-    stackDepthStepPx = 28,
+    stackDepthStepPx = 68,
     maxVisibleSide = 6,
   } = {}
 ) {
@@ -62,7 +62,7 @@ export function computeCoverFlowItemTransform(
   const gap = Number(centerGapPx) || 170;
   const spacing = Number(stackSpacingPx) || 54;
   const baseDepth = Number(depthOffsetPx) || 140;
-  const depthStep = Number(stackDepthStepPx) || 28;
+  const depthStep = Number(stackDepthStepPx) || 68;
   const maxVis = Math.max(1, Number(maxVisibleSide) || 6);
 
   // Smooth interpolation within [-1, 1] around the center stage
@@ -86,11 +86,15 @@ export function computeCoverFlowItemTransform(
   const rotateY = isVertical ? 0 : Number(angleDeg.toFixed(2));
 
   const scale = Number(Math.max(0.72, 1 - centralBlend * 0.08 - shelfSteps * 0.03).toFixed(3));
-  const zIndex = Math.max(1, 100 - Math.round(absOffset * 10));
+  const zIndex = Math.max(1, 200 - Math.round(absOffset * 20));
+  // Keep side cards on the shelf opaque (opacity = 1) so rear cards never bleed through front cards;
+  // depth dimming is handled by the opaque .nano-cf-shade curtain overlay.
   const opacity =
     absOffset > maxVis
       ? 0
-      : Number(Math.max(0.22, 1 - centralBlend * 0.18 - shelfSteps * 0.14).toFixed(3));
+      : absOffset > maxVis - 0.75
+        ? Number(Math.max(0, (maxVis - absOffset) / 0.75).toFixed(3))
+        : 1;
 
   const transform = isVertical
     ? `translate3d(0px, ${translateY}px, ${translateZ}px) rotateX(${rotateX}deg) scale(${scale})`
@@ -113,5 +117,49 @@ export function computeCoverFlowItemTransform(
     opacity,
     pointerEvents: absOffset > maxVis ? 'none' : 'auto',
     transform,
+  };
+}
+
+/**
+ * Steps a 1D critically-damped kinetic spring (`position`, `velocity`) toward `target`.
+ * Supports rapid multi-click impulse accumulation (`2, 3, 5+` rapid arrow clicks or card jumps)
+ * without resetting transitions or snapping.
+ */
+export function stepCoverFlowKineticSpring(
+  state,
+  target,
+  dtSec = 1 / 60,
+  { stiffness = 280, damping = 30, restDelta = 0.002, restSpeed = 0.015 } = {}
+) {
+  const dt = Math.min(0.05, Math.max(0.001, Number(dtSec) || 1 / 60));
+  const pos = Number(state?.position) || 0;
+  const vel = Number(state?.velocity) || 0;
+  const tgt = Number(target) || 0;
+
+  const displacement = pos - tgt;
+  const springForce = -stiffness * displacement;
+  const dampingForce = -damping * vel;
+  const acceleration = springForce + dampingForce;
+
+  const nextVel = vel + acceleration * dt;
+  const nextPos = pos + nextVel * dt;
+
+  // Prevent overshooting past target if we crossed it at low speed or critically damped
+  const crossedTarget = (pos - tgt) * (nextPos - tgt) < 0 && Math.abs(nextVel) < 1.2;
+  if (
+    crossedTarget ||
+    (Math.abs(nextPos - tgt) <= restDelta && Math.abs(nextVel) <= restSpeed)
+  ) {
+    return {
+      position: tgt,
+      velocity: 0,
+      settled: true,
+    };
+  }
+
+  return {
+    position: nextPos,
+    velocity: nextVel,
+    settled: false,
   };
 }
