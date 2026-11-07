@@ -56,6 +56,16 @@ export const PLAYGROUND_NAV_ITEMS = [
     keywords: 'install setup start konfiguracja quickstart vite css zero-fouc theme ssg',
   },
   {
+    id: '/docs/ecosystem',
+    to: '/docs/ecosystem',
+    sectionKey: 'nav.gettingStarted',
+    navKey: 'nav.ecosystem',
+    docFile: 'EcosystemDoc.vue',
+    localeKeys: [],
+    componentTag: '@gkucmierz/storage-controller',
+    keywords: 'ecosystem deps dependencies 1st-party storage-controller key-controller nano-sound dport utils acronym DA_NU localStorage sessionStorage',
+  },
+  {
     id: '/docs/typography',
     to: '/docs/typography',
     sectionKey: 'nav.gettingStarted',
@@ -377,6 +387,16 @@ export const PLAYGROUND_NAV_ITEMS = [
     localeKeys: ['mutatingHeader'],
     componentTag: 'MutatingHeader',
     keywords: 'header naglowek navbar sticky dock floating glassmorphism scroll hysteresis',
+  },
+  {
+    id: '/docs/coverflow',
+    to: '/docs/coverflow',
+    sectionKey: 'nav.advanced3dViz',
+    navKey: 'nav.coverFlow',
+    docFile: 'CoverFlowDoc.vue',
+    localeKeys: [],
+    componentTag: 'NanoCoverFlow',
+    keywords: 'coverflow 3d shelf polka ksiazka kurtyna teatr carousel karuzela karty osx finder',
   },
   // Directives
   {
