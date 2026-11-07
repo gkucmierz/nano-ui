@@ -13,42 +13,43 @@ const sideAngle = ref(74);
 const centerGap = ref(185);
 const stackSpacing = ref(56);
 const loopEnabled = ref(true);
+const animatedEnabled = ref(true);
 
 const sampleCards = [
   {
     id: 'cf-1',
     badge: '01 · macOS CoverFlow',
-    title: '1. Full Domain Acquisition (Cesja 100%)',
+    title: '1. Perspective 3D Shelf Stage',
     description:
-      'Complete ownership transfer with AuthInfo & Escrow settlement. Side cards fold at 70°–85° like books on a library shelf or stage curtains.',
+      'Active center card faces the viewer at 0° while side cards fold smoothly at 70°–85° like books on a library shelf or stage curtains.',
   },
   {
     id: 'cf-2',
-    badge: '02 · Bookshelf 3D',
-    title: '2. Long-Term Lease / Lease-to-Own',
+    badge: '02 · Kinetic Physics',
+    title: '2. C¹ Hermite Velocity Chaining',
     description:
-      'Flexible 12–36 month campaign lease with predictable monthly billing and guaranteed buyout option at any point.',
+      'Rapid multi-step clicks, wheel ticks, or keyboard arrows chain continuously mid-flight without resetting angular velocity.',
   },
   {
     id: 'cf-3',
     badge: '03 · Stage Curtain',
-    title: '3. Dedicated Subdomain *.milowice.pl',
+    title: '3. Horizontal & Vertical Orientation',
     description:
-      'Instant DNS delegation (apartamenty.milowice.pl, logistyka.milowice.pl) with automated SSL/TLS provisioning.',
+      'Switch seamlessly between a 1-row horizontal macOS CoverFlow carousel and a 1-column vertical 3D bookshelf stack.',
   },
   {
     id: 'cf-4',
-    badge: '04 · Turnkey Portal',
-    title: '4. Domain + Turnkey Investment Website',
+    badge: '04 · Adaptive Height',
+    title: '4. Recursive Ancestor Clipping Guard',
     description:
-      'End-to-end engineering of a high-converting real-estate or logistics portal with interactive 3D maps and CRM webhooks.',
+      'Automatically inspects parent scroll and overflow boundaries to expand overflowing active cards symmetrically without clipping.',
   },
   {
     id: 'cf-5',
-    badge: '05 · GeoJSON Atlas',
-    title: '5. Interactive RFC 7946 District Polygons',
+    badge: '05 · Storage SSoT',
+    title: '5. Persistent Selection & Slots',
     description:
-      'Vector boundary overlays, 9 keyless slippy tile layers, and real-time GPS telemetry inside NanoMap.',
+      'Supports v-model, custom #item templates, inner vertical content scrolling, and optional state persistence via storageKey.',
   },
 ];
 
@@ -123,8 +124,18 @@ const codeTabs = createDocTabs({
       </p>
     </div>
 
-    <div class="nano-card" style="margin-bottom: 1.5rem">
-      <div style="display: flex; flex-wrap: wrap; gap: 1.25rem; align-items: center; margin-bottom: 1rem">
+    <div class="nano-card" style="margin-bottom: 1.5rem; padding: 1.35rem 1.5rem">
+      <div
+        style="
+          display: flex;
+          flex-wrap: wrap;
+          gap: 1.25rem 1.5rem;
+          align-items: center;
+          margin-bottom: 1.25rem;
+          padding-bottom: 1rem;
+          border-bottom: 1px solid var(--nano-border-subtle);
+        "
+      >
         <NanoSwitch
           :model-value="orientation === 'vertical'"
           size="compact"
@@ -136,37 +147,48 @@ const codeTabs = createDocTabs({
           size="compact"
           :label="currentLang === 'pl' ? 'Pętla nieskończona (loop)' : 'Infinite loop'"
         />
-        <div style="width: 200px">
+        <NanoSwitch
+          v-model="animatedEnabled"
+          size="compact"
+          :label="currentLang === 'pl' ? 'Animacje kinetyczne (C¹)' : 'Kinetic animations (C¹)'"
+        />
+        <div style="width: 190px">
+          <div style="display: flex; justify-content: space-between; font-size: 0.75rem; color: var(--nano-text-muted); margin-bottom: 4px">
+            <span>{{ currentLang === 'pl' ? 'Kąt obrotu kart' : 'Side fold angle' }}</span>
+            <strong style="color: var(--nano-text-main)">{{ sideAngle }}°</strong>
+          </div>
           <NanoSlider
             v-model="sideAngle"
             :min="35"
             :max="86"
             :step="1"
             size="sm"
-            :label="currentLang === 'pl' ? 'Kąt obrotu kart' : 'Side fold angle'"
-            :format-value="(v) => `${v}°`"
           />
         </div>
-        <div style="width: 200px">
+        <div style="width: 190px">
+          <div style="display: flex; justify-content: space-between; font-size: 0.75rem; color: var(--nano-text-muted); margin-bottom: 4px">
+            <span>{{ currentLang === 'pl' ? 'Odstęp sceny' : 'Center stage gap' }}</span>
+            <strong style="color: var(--nano-text-main)">{{ centerGap }}px</strong>
+          </div>
           <NanoSlider
             v-model="centerGap"
             :min="110"
             :max="260"
             :step="5"
             size="sm"
-            :label="currentLang === 'pl' ? 'Odstęp sceny' : 'Center stage gap'"
-            :format-value="(v) => `${v}px`"
           />
         </div>
-        <div style="width: 200px">
+        <div style="width: 190px">
+          <div style="display: flex; justify-content: space-between; font-size: 0.75rem; color: var(--nano-text-muted); margin-bottom: 4px">
+            <span>{{ currentLang === 'pl' ? 'Gęstość półki' : 'Shelf stack spacing' }}</span>
+            <strong style="color: var(--nano-text-main)">{{ stackSpacing }}px</strong>
+          </div>
           <NanoSlider
             v-model="stackSpacing"
             :min="28"
             :max="95"
             :step="2"
             size="sm"
-            :label="currentLang === 'pl' ? 'Gęstość półki' : 'Shelf stack spacing'"
-            :format-value="(v) => `${v}px`"
           />
         </div>
       </div>
@@ -180,6 +202,7 @@ const codeTabs = createDocTabs({
         :stack-spacing="stackSpacing"
         :stage-height="orientation === 'vertical' ? 420 : 320"
         :loop="loopEnabled"
+        :animated="animatedEnabled"
         storage-key="coverflow_demo"
       />
     </div>

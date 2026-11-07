@@ -1,11 +1,13 @@
 <script setup>
-import { ref, computed, watch } from 'vue';
+import { ref, computed, watch, nextTick, onMounted, onBeforeUnmount } from 'vue';
 import NanoIcon from './NanoIcon.vue';
 import {
   clampCoverFlowIndex,
   stepCoverFlowIndex,
   computeCoverFlowItemTransform,
 } from '../utils/coverflow.js';
+import { computeAdaptiveCardExpansion } from '../utils/selectPositioning.js';
+import { createKineticTransition } from '../utils/kinetics.js';
 import { getScopedStorageController } from '../utils/storage-controller.js';
 
 const props = defineProps({
@@ -37,6 +39,10 @@ const props = defineProps({
   depthOffset: {
     type: Number,
     default: 150,
+  },
+  stackDepthStep: {
+    type: Number,
+    default: 68,
   },
   cardWidth: {
     type: Number,
@@ -70,6 +76,55 @@ const props = defineProps({
     type: Boolean,
     default: true,
   },
+  /**
+   * Prevents wheel/trackpad scroll events over the CoverFlow viewport from bubbling up
+   * and scrolling the parent page (default: true).
+   */
+  wheelPreventScroll: {
+    type: Boolean,
+    default: true,
+  },
+  /**
+   * Enables keyboard navigation (ArrowLeft / ArrowRight in horizontal mode,
+   * ArrowUp / ArrowDown in vertical mode) even when focus is on a nearby toggle or page body.
+   */
+  keyboardNavigation: {
+    type: Boolean,
+    default: true,
+  },
+  /**
+   * Enables fast kinetic Hermite velocity-chaining animations (`createKineticTransition`)
+   * when clicking arrows, indicator dots, or side cards — supporting rapid 2/3/5+ clicks mid-flight.
+   */
+  animated: {
+    type: Boolean,
+    default: true,
+  },
+  /**
+   * Base kinetic animation duration in milliseconds (Nano-UI fast standard: 260ms).
+   */
+  animationDuration: {
+    type: Number,
+    default: 260,
+  },
+  /**
+   * Automatically measures the active card's natural content height (`scrollHeight`) and
+   * expands the active card symmetrically up and down using recursive `parentNode` ancestor
+   * bounds (`computeAdaptiveCardExpansion` from `selectPositioning.js`).
+   */
+  autoExpandActive: {
+    type: Boolean,
+    default: true,
+  },
+  /**
+   * In horizontal mode (`orientation === 'horizontal'`), allows vertical wheel/trackpad scrolling
+   * to scroll the active card's inner content (`overflow-y: auto`) when its text exceeds `cardHeight`
+   * (e.g. when `:auto-expand-active="false"` or when content exceeds the viewport clamp).
+   */
+  innerContentScroll: {
+    type: Boolean,
+    default: true,
+  },
   storageKey: {
     type: String,
     default: '',
@@ -96,12 +151,88 @@ const initialIdx = (() => {
   return clampCoverFlowIndex(props.modelValue, props.items.length || 1);
 })();
 
+const rootRef = ref(null);
 const internalIndex = ref(initialIdx);
+const kineticPosition = ref(initialIdx);
+const isKineticMoving = ref(false);
 const dragDeltaCards = ref(0);
 const isDragging = ref(false);
+const measuredActiveScrollHeight = ref(0);
+let pointerDownActive = false;
+let hasDraggedBeyondThreshold = false;
 let dragStartCoord = 0;
 let activePointerId = null;
 let lastWheelTs = 0;
+
+function measureActiveCardHeight() {
+  if (!rootRef.value || typeof rootRef.value.querySelector !== 'function') return;
+  const activeSurface = rootRef.value.querySelector('.nano-cf-item.is-active .nano-cf-card-surface');
+  if (!activeSurface) return;
+  const firstChild = activeSurface.firstElementChild;
+  const naturalH = Math.max(
+    activeSurface.scrollHeight || 0,
+    firstChild ? (firstChild.scrollHeight || 0) : 0
+  );
+  measuredActiveScrollHeight.value = naturalH;
+}
+
+const expansionState = computed(() => {
+  if (!props.autoExpandActive) {
+    return {
+      activeCardHeight: props.cardHeight,
+      effectiveStageHeight: props.stageHeight,
+      isExpanded: false,
+      needsInnerScroll: measuredActiveScrollHeight.value > props.cardHeight + 2,
+    };
+  }
+  return computeAdaptiveCardExpansion({
+    rootEl: rootRef.value,
+    baseCardHeight: props.cardHeight,
+    baseStageHeight: props.stageHeight,
+    contentScrollHeight: measuredActiveScrollHeight.value,
+  });
+});
+
+function getItemCardHeight(entry) {
+  if (props.autoExpandActive && entry.state.isActive) {
+    return expansionState.value.activeCardHeight;
+  }
+  return props.cardHeight;
+}
+
+const hasRaf = typeof window !== 'undefined' && typeof window.requestAnimationFrame === 'function';
+
+const kineticCtrl = createKineticTransition({
+  initialValue: initialIdx,
+  duration: props.animationDuration,
+  timingMode: 'fixed',
+  modular: false,
+  onUpdate: ({ value, isMoving }) => {
+    kineticPosition.value = value;
+    isKineticMoving.value = isMoving;
+  },
+  onSettled: ({ value }) => {
+    kineticPosition.value = value;
+    isKineticMoving.value = false;
+  },
+});
+
+watch(
+  () => props.animationDuration,
+  (dur) => {
+    kineticCtrl.setConfig({ duration: Math.max(80, Number(dur) || 260) });
+  }
+);
+
+function driveToIndex(targetIdx, immediate = false) {
+  if (!props.animated || immediate || !hasRaf) {
+    kineticCtrl.setTarget(targetIdx, { immediate: true });
+    kineticPosition.value = targetIdx;
+    isKineticMoving.value = false;
+  } else {
+    kineticCtrl.setTarget(targetIdx, { immediate: false });
+  }
+}
 
 watch(
   () => props.modelValue,
@@ -109,6 +240,7 @@ watch(
     const clamped = clampCoverFlowIndex(val, props.items.length);
     if (clamped !== internalIndex.value) {
       internalIndex.value = clamped;
+      driveToIndex(clamped);
     }
   }
 );
@@ -123,10 +255,76 @@ watch(
   }
 );
 
+function onKeydown(e) {
+  if (!props.keyboardNavigation) return;
+  if (e.defaultPrevented || e.metaKey || e.ctrlKey || e.altKey) return;
+  const target = e.target;
+  if (target && typeof target === 'object') {
+    const tag = String(target.tagName || '').toUpperCase();
+    if (tag === 'TEXTAREA' || tag === 'SELECT' || target.isContentEditable) return;
+    if (tag === 'INPUT') {
+      const type = String(target.type || 'text').toLowerCase();
+      if (type !== 'checkbox' && type !== 'radio' && type !== 'button') return;
+    }
+  }
+  if (rootRef.value && typeof rootRef.value.getBoundingClientRect === 'function') {
+    const rect = rootRef.value.getBoundingClientRect();
+    if (rect.width === 0 && rect.height === 0) return;
+    if (typeof window !== 'undefined' && (rect.bottom < 0 || rect.top > window.innerHeight)) return;
+  }
+
+  if (props.orientation === 'vertical') {
+    if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      goPrev();
+    } else if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      goNext();
+    }
+  } else {
+    if (e.key === 'ArrowLeft') {
+      e.preventDefault();
+      goPrev();
+    } else if (e.key === 'ArrowRight') {
+      e.preventDefault();
+      goNext();
+    }
+  }
+}
+
+onMounted(() => {
+  if (typeof window !== 'undefined') {
+    window.addEventListener('keydown', onKeydown);
+  }
+  nextTick(() => {
+    measureActiveCardHeight();
+  });
+});
+
+watch(
+  [internalIndex, () => props.items.length, () => props.autoExpandActive, () => props.cardHeight],
+  () => {
+    nextTick(() => {
+      measureActiveCardHeight();
+    });
+  }
+);
+
+onBeforeUnmount(() => {
+  if (typeof window !== 'undefined') {
+    window.removeEventListener('keydown', onKeydown);
+  }
+  kineticCtrl.destroy();
+});
+
 const effectiveActiveFloat = computed(() => {
-  const raw = internalIndex.value + dragDeltaCards.value;
+  const base = isDragging.value
+    ? internalIndex.value + dragDeltaCards.value
+    : props.animated && hasRaf
+      ? kineticPosition.value
+      : internalIndex.value;
   const maxIdx = Math.max(0, props.items.length - 1);
-  return Math.max(-0.35, Math.min(maxIdx + 0.35, raw));
+  return Math.max(-0.35, Math.min(maxIdx + 0.35, base));
 });
 
 const decoratedItems = computed(() => {
@@ -137,6 +335,7 @@ const decoratedItems = computed(() => {
       centerGapPx: props.centerGap,
       stackSpacingPx: props.stackSpacing,
       depthOffsetPx: props.depthOffset,
+      stackDepthStepPx: props.stackDepthStep,
     });
     return {
       raw: item,
@@ -147,9 +346,10 @@ const decoratedItems = computed(() => {
   });
 });
 
-function setActiveIndex(nextIdx) {
+function setActiveIndex(nextIdx, { immediate = false } = {}) {
   const clamped = clampCoverFlowIndex(nextIdx, props.items.length);
   internalIndex.value = clamped;
+  driveToIndex(clamped, immediate);
   if (storageCtrl.value.enabled) {
     storageCtrl.value.save('index', clamped);
   }
@@ -171,7 +371,7 @@ function goNext() {
 }
 
 function handleCardClick(idx, item) {
-  if (Math.abs(dragDeltaCards.value) > 0.08) return;
+  if (hasDraggedBeyondThreshold || Math.abs(dragDeltaCards.value) > 0.08) return;
   setActiveIndex(idx);
   emit('select', { index: idx, item });
 }
@@ -179,40 +379,95 @@ function handleCardClick(idx, item) {
 function onPointerDown(e) {
   if (e.button !== 0 && e.pointerType === 'mouse') return;
   if (e.target.closest('.nano-cf-control-btn') || e.target.closest('.nano-cf-dot')) return;
-  isDragging.value = true;
+  pointerDownActive = true;
+  hasDraggedBeyondThreshold = false;
   activePointerId = e.pointerId;
   dragStartCoord = props.orientation === 'vertical' ? e.clientY : e.clientX;
   dragDeltaCards.value = 0;
-  e.currentTarget.setPointerCapture?.(e.pointerId);
 }
 
 function onPointerMove(e) {
-  if (!isDragging.value || e.pointerId !== activePointerId) return;
+  if (!pointerDownActive || e.pointerId !== activePointerId) return;
   const currentCoord = props.orientation === 'vertical' ? e.clientY : e.clientX;
   const deltaPx = currentCoord - dragStartCoord;
+  if (!hasDraggedBeyondThreshold) {
+    if (Math.abs(deltaPx) < 6) return;
+    hasDraggedBeyondThreshold = true;
+    isDragging.value = true;
+    // Sync internalIndex to current kinetic position if dragged mid-animation
+    if (isKineticMoving.value) {
+      internalIndex.value = clampCoverFlowIndex(Math.round(kineticPosition.value), props.items.length);
+      kineticCtrl.stop();
+      isKineticMoving.value = false;
+    }
+    e.currentTarget.setPointerCapture?.(e.pointerId);
+  }
   const sensitivityPx = props.orientation === 'vertical' ? 140 : 160;
   dragDeltaCards.value = -deltaPx / sensitivityPx;
 }
 
 function onPointerUp(e) {
-  if (!isDragging.value || e.pointerId !== activePointerId) return;
+  if (!pointerDownActive || e.pointerId !== activePointerId) return;
+  pointerDownActive = false;
+  activePointerId = null;
+  if (!isDragging.value) {
+    dragDeltaCards.value = 0;
+    return;
+  }
   const finalFloat = internalIndex.value + dragDeltaCards.value;
   isDragging.value = false;
-  activePointerId = null;
-  if (Math.abs(dragDeltaCards.value) > 0.18) {
-    setActiveIndex(Math.round(finalFloat));
-  }
+  const delta = dragDeltaCards.value;
   dragDeltaCards.value = 0;
+  // Hand off drag position to kinetic controller so it settles smoothly from dragged offset
+  kineticCtrl.setTarget(finalFloat, { immediate: true });
+  kineticPosition.value = finalFloat;
+  if (Math.abs(delta) > 0.16) {
+    setActiveIndex(Math.round(finalFloat));
+  } else {
+    driveToIndex(internalIndex.value);
+  }
 }
 
 function onWheel(e) {
   if (!props.wheelNavigation) return;
+
+  // In horizontal mode, if the active card's inner content overflows vertically and the user
+  // scrolls vertically, scroll the active card's content first before switching cards.
+  if (
+    props.innerContentScroll &&
+    props.orientation === 'horizontal' &&
+    Math.abs(e.deltaY) > Math.abs(e.deltaX) &&
+    !e.shiftKey &&
+    rootRef.value &&
+    typeof rootRef.value.querySelector === 'function'
+  ) {
+    const activeSurface = rootRef.value.querySelector('.nano-cf-item.is-active .nano-cf-card-surface');
+    if (activeSurface && activeSurface.scrollHeight > activeSurface.clientHeight + 2) {
+      const canScrollDown =
+        e.deltaY > 0 &&
+        activeSurface.scrollTop + activeSurface.clientHeight < activeSurface.scrollHeight - 2;
+      const canScrollUp = e.deltaY < 0 && activeSurface.scrollTop > 1;
+      if (canScrollDown || canScrollUp) {
+        e.preventDefault();
+        e.stopPropagation();
+        activeSurface.scrollTop += e.deltaY;
+        return;
+      }
+    }
+  }
+
+  if (props.wheelPreventScroll) {
+    e.preventDefault();
+    e.stopPropagation();
+  }
   const primaryDelta =
     Math.abs(e.deltaX) > Math.abs(e.deltaY) ? e.deltaX : e.deltaY;
   if (Math.abs(primaryDelta) < 8) return;
-  e.preventDefault();
+  if (!props.wheelPreventScroll) {
+    e.preventDefault();
+  }
   const now = Date.now();
-  if (now - lastWheelTs < 150) return;
+  if (now - lastWheelTs < 120) return;
   lastWheelTs = now;
   if (primaryDelta > 0) {
     goNext();
@@ -221,39 +476,26 @@ function onWheel(e) {
   }
 }
 
-function onKeydown(e) {
-  if (props.orientation === 'vertical') {
-    if (e.key === 'ArrowUp') {
-      e.preventDefault();
-      goPrev();
-    } else if (e.key === 'ArrowDown') {
-      e.preventDefault();
-      goNext();
-    }
-  } else {
-    if (e.key === 'ArrowLeft') {
-      e.preventDefault();
-      goPrev();
-    } else if (e.key === 'ArrowRight') {
-      e.preventDefault();
-      goNext();
-    }
-  }
-}
-
 defineExpose({
   goPrev,
   goNext,
   setActiveIndex,
+  measureActiveCardHeight,
 });
 </script>
 
 <template>
   <div
+    ref="rootRef"
     class="nano-coverflow"
     :class="[
       `is-${orientation}`,
-      { 'is-dragging': isDragging, 'has-reflection': reflection }
+      {
+        'is-dragging': isDragging,
+        'is-kinetic-moving': isKineticMoving,
+        'is-static': !animated,
+        'has-reflection': reflection,
+      }
     ]"
     tabindex="0"
     role="region"
@@ -262,7 +504,7 @@ defineExpose({
   >
     <div
       class="nano-cf-viewport"
-      :style="{ height: `${stageHeight}px` }"
+      :style="{ height: `${expansionState.effectiveStageHeight}px` }"
       @pointerdown="onPointerDown"
       @pointermove="onPointerMove"
       @pointerup="onPointerUp"
@@ -281,9 +523,9 @@ defineExpose({
           }"
           :style="{
             width: `${cardWidth}px`,
-            height: `${cardHeight}px`,
+            height: `${getItemCardHeight(entry)}px`,
             marginLeft: `${-cardWidth / 2}px`,
-            marginTop: `${-cardHeight / 2}px`,
+            marginTop: `${-getItemCardHeight(entry) / 2}px`,
             transform: entry.state.transform,
             zIndex: entry.state.zIndex,
             opacity: entry.state.opacity,
@@ -291,7 +533,15 @@ defineExpose({
           }"
           @click="handleCardClick(entry.index, entry.raw)"
         >
-          <div class="nano-cf-card-surface">
+          <div
+            class="nano-cf-card-surface"
+            :class="{
+              'is-scrollable':
+                innerContentScroll &&
+                entry.state.isActive &&
+                orientation === 'horizontal',
+            }"
+          >
             <slot
               name="item"
               :item="entry.raw"
@@ -391,10 +641,12 @@ defineExpose({
   position: relative;
   width: 100%;
   overflow: hidden;
+  overscroll-behavior: contain;
   perspective: 1150px;
   cursor: grab;
   touch-action: pan-y;
   border-radius: 14px;
+  transition: height 0.24s cubic-bezier(0.22, 1, 0.36, 1);
   background: radial-gradient(
     ellipse at 50% 55%,
     rgba(56, 189, 248, 0.08),
@@ -423,13 +675,19 @@ defineExpose({
   transform-style: preserve-3d;
   transition:
     transform 0.44s cubic-bezier(0.22, 1, 0.36, 1),
+    height 0.24s cubic-bezier(0.22, 1, 0.36, 1),
+    margin-top 0.24s cubic-bezier(0.22, 1, 0.36, 1),
     opacity 0.36s ease;
   cursor: pointer;
   will-change: transform, opacity;
 }
 
-.nano-coverflow.is-dragging .nano-cf-item {
-  transition: none;
+.nano-coverflow.is-dragging .nano-cf-item,
+.nano-coverflow.is-kinetic-moving .nano-cf-item,
+.nano-coverflow.is-static .nano-cf-item {
+  transition:
+    height 0.24s cubic-bezier(0.22, 1, 0.36, 1),
+    margin-top 0.24s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 .nano-cf-card-surface {
@@ -438,17 +696,23 @@ defineExpose({
   height: 100%;
   border-radius: 14px;
   overflow: hidden;
-  background: var(--nano-bg-surface, rgba(15, 23, 42, 0.92));
-  border: 1px solid var(--nano-border, rgba(148, 163, 184, 0.22));
-  box-shadow: 0 18px 42px rgba(0, 0, 0, 0.42);
+  background: var(--nano-bg-card, #18181b);
+  border: 1px solid var(--nano-border-subtle, rgba(148, 163, 184, 0.22));
+  box-shadow: var(--nano-shadow-card, 0 18px 42px rgba(0, 0, 0, 0.45));
   box-sizing: border-box;
-  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease;
+}
+
+.nano-cf-card-surface.is-scrollable {
+  overflow-y: auto;
+  overflow-x: hidden;
+  scrollbar-width: thin;
 }
 
 .nano-cf-item.is-active .nano-cf-card-surface {
   border-color: var(--nano-primary, #38bdf8);
   box-shadow:
-    0 22px 50px rgba(0, 0, 0, 0.5),
+    var(--nano-shadow-card, 0 22px 50px rgba(0, 0, 0, 0.5)),
     0 0 0 1px rgba(56, 189, 248, 0.35);
 }
 
@@ -528,9 +792,9 @@ defineExpose({
 .nano-cf-shade {
   position: absolute;
   inset: 0;
-  background: linear-gradient(135deg, rgba(2, 6, 23, 0.75), rgba(2, 6, 23, 0.35));
+  background: color-mix(in srgb, var(--nano-bg-main, #09090b) 65%, transparent);
   pointer-events: none;
-  transition: opacity 0.3s ease;
+  transition: opacity 0.25s ease;
 }
 
 .nano-cf-hud {
@@ -538,21 +802,23 @@ defineExpose({
   align-items: center;
   justify-content: center;
   gap: 0.85rem;
-  margin-top: 0.65rem;
+  margin-top: 0.75rem;
+  padding-bottom: 0.35rem;
 }
 
 .nano-cf-control-btn {
   width: 34px;
   height: 34px;
   border-radius: 8px;
-  border: 1px solid var(--nano-border, rgba(148, 163, 184, 0.24));
-  background: var(--nano-bg-surface, rgba(15, 23, 42, 0.8));
-  color: var(--nano-text-main, #f8fafc);
+  border: 1px solid var(--nano-border-subtle, rgba(148, 163, 184, 0.28));
+  background: var(--nano-bg-card, #ffffff);
+  color: var(--nano-text-main, #0f172a);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
   display: inline-flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  transition: border-color 0.15s ease, opacity 0.15s ease;
+  transition: border-color 0.15s ease, background-color 0.15s ease, color 0.15s ease, opacity 0.15s ease;
 }
 
 .nano-cf-control-btn:disabled {
@@ -561,7 +827,9 @@ defineExpose({
 }
 
 .nano-cf-control-btn:not(:disabled):hover {
-  border-color: var(--nano-primary, #38bdf8);
+  border-color: var(--nano-primary, #0284c7);
+  background: var(--nano-bg-hover, rgba(56, 189, 248, 0.08));
+  color: var(--nano-primary, #0284c7);
 }
 
 .nano-cf-dots {
@@ -576,7 +844,7 @@ defineExpose({
   padding: 0;
   border-radius: 999px;
   border: none;
-  background: rgba(148, 163, 184, 0.38);
+  background: color-mix(in srgb, var(--nano-text-muted, #64748b) 42%, transparent);
   cursor: pointer;
   transition: width 0.2s ease, background 0.2s ease;
 }
