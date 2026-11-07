@@ -7,6 +7,7 @@
   "nav": {
     "gettingStarted": "Wprowadzenie",
     "overview": "Start & Konfiguracja",
+    "ecosystem": "Paczki 1st-Party (Deps)",
     "typography": "Typografia & Siatka 8px",
     "primitives": "Prymitywy UI",
     "buttons": "Przyciski & Grupy",
@@ -46,6 +47,7 @@
     "datePicker": "Kalendarz (NanoDatePicker)",
     "secretPipe": "Tunel Haseł (NanoSecretPipe)",
     "tabs": "Nano Tabs (Dokowane & Segmenty)",
+    "coverFlow": "Nano CoverFlow (Karty 3D)",
     "ripple": "Dyrektywa v-ripple",
     "tooltip": "Dyrektywa v-tooltip"
   },
