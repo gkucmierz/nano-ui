@@ -1,3 +1,7 @@
+<script>
+let selectUidSeq = 0;
+</script>
+
 <script setup>
 import { ref, computed, watch, nextTick, onMounted, onUnmounted } from 'vue';
 import NanoIcon from './NanoIcon.vue';
@@ -135,11 +139,21 @@ const props = defineProps({
     default: '',
   },
   /**
-   * Maximum height of the scrollable options list in px
+   * Maximum height of the scrollable options list in px, or `'auto'` (default) to expand
+   * without a scrollbar up to the available browser viewport height minus `viewportMargin`.
    */
   maxDropdownHeight: {
-    type: Number,
-    default: 260,
+    type: [Number, String],
+    default: 'auto',
+  },
+  /**
+   * Automatically expand the dropdown list to fit all options without a scrollbar whenever
+   * viewport space permits (respecting `viewportMargin`). Set `:auto-height="false"` or pass
+   * a numeric `:max-dropdown-height="260"` to enforce a fixed pixel height cap.
+   */
+  autoHeight: {
+    type: Boolean,
+    default: true,
   },
   /**
    * Enable Smart DOM Ancestor Traversal (Option 2) & Adaptive 4-Mode Screen Clamping (Option 3)
@@ -165,8 +179,6 @@ const props = defineProps({
     default: '',
   },
 });
-
-let selectUidSeq = 0;
 
 const emit = defineEmits(['update:modelValue', 'change', 'open', 'close', 'search', 'clear']);
 
@@ -280,9 +292,13 @@ function updateDropdownPosition(measureActual = false) {
 
   if (!props.smartPositioning) {
     mountTarget.value = null;
+    const fallbackMaxH =
+      typeof props.maxDropdownHeight === 'number' && props.maxDropdownHeight > 0
+        ? props.maxDropdownHeight
+        : 480;
     dropdownLayout.value = {
       placement: 'bottom',
-      optionsMaxHeight: props.maxDropdownHeight,
+      optionsMaxHeight: fallbackMaxH,
       top: null,
       left: 0,
       minWidth: null,
@@ -295,9 +311,15 @@ function updateDropdownPosition(measureActual = false) {
     return;
   }
 
+  const naturalOptionsHeight = Math.max(46, filteredOptions.value.length * 42 + 12);
+  const numericCap =
+    typeof props.maxDropdownHeight === 'number' && props.maxDropdownHeight > 0
+      ? props.maxDropdownHeight
+      : props.autoHeight
+        ? naturalOptionsHeight
+        : 260;
   const desiredHeight =
-    (props.searchable ? 41 : 0) +
-    Math.min(props.maxDropdownHeight, Math.max(46, filteredOptions.value.length * 42 + 12));
+    (props.searchable ? 41 : 0) + Math.min(numericCap, naturalOptionsHeight);
 
   const { mountEl, viewportEl, escapedScrollers } = findSafeSelectMount(rootRef.value, desiredHeight);
   mountTarget.value = mountEl || null;
@@ -356,6 +378,7 @@ function updateDropdownPosition(measureActual = false) {
     searchable: props.searchable,
     optionsCount: Math.max(1, filteredOptions.value.length),
     maxDropdownHeight: props.maxDropdownHeight,
+    autoHeight: props.autoHeight && (props.maxDropdownHeight === 'auto' || !props.maxDropdownHeight),
     actualDropdownHeight,
     actualChromeHeight,
     optionsScrollHeight,
@@ -733,7 +756,7 @@ defineExpose({
           <div
             ref="optionsListRef"
             class="nano-select-options nano-scrollbar"
-            :style="{ maxHeight: `${dropdownLayout.optionsMaxHeight || maxDropdownHeight}px` }"
+            :style="{ maxHeight: `${dropdownLayout.optionsMaxHeight || (typeof maxDropdownHeight === 'number' ? maxDropdownHeight : 480)}px` }"
           >
             <button
               v-for="(opt, idx) in filteredOptions"
@@ -826,37 +849,31 @@ defineExpose({
 .nano-select.is-color-emerald,
 .nano-select-dropdown.is-color-emerald {
   --nano-accent-primary: #10b981;
-  --nano-bg-sidebar: #0a141d;
 }
 
 .nano-select.is-color-cyan,
 .nano-select-dropdown.is-color-cyan {
   --nano-accent-primary: #06b6d4;
-  --nano-bg-sidebar: #091520;
 }
 
 .nano-select.is-color-amber,
 .nano-select-dropdown.is-color-amber {
   --nano-accent-primary: #f59e0b;
-  --nano-bg-sidebar: #18130a;
 }
 
 .nano-select.is-color-rose,
 .nano-select-dropdown.is-color-rose {
   --nano-accent-primary: #f43f5e;
-  --nano-bg-sidebar: #1a0d12;
 }
 
 .nano-select.is-color-violet,
 .nano-select-dropdown.is-color-violet {
   --nano-accent-primary: #a855f7;
-  --nano-bg-sidebar: #150d21;
 }
 
 .nano-select.is-color-slate,
 .nano-select-dropdown.is-color-slate {
   --nano-accent-primary: #94a3b8;
-  --nano-bg-sidebar: #111827;
 }
 
 .nano-select-trigger {
@@ -1018,10 +1035,10 @@ defineExpose({
   width: max-content;
   max-width: min(360px, 90vw);
   z-index: 80;
-  background: var(--nano-bg-sidebar, #18181b);
+  background: color-mix(in srgb, var(--nano-accent-primary, #6366f1) 4%, var(--nano-bg-sidebar, #18181b));
   border: 1px solid var(--nano-accent-primary, #6366f1);
   border-radius: var(--nano-radius-md, 10px);
-  box-shadow: 0 14px 34px rgba(0, 0, 0, 0.42);
+  box-shadow: var(--nano-shadow-elevated, 0 14px 34px rgba(0, 0, 0, 0.42));
   overflow: hidden;
   box-sizing: border-box;
   user-select: none;
