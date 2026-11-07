@@ -134,6 +134,7 @@ export const computeSelectDropdownLayout = ({
   searchable = true,
   optionsCount = 5,
   maxDropdownHeight = 260,
+  autoHeight = false,
   actualDropdownHeight = null,
   actualChromeHeight = null,
   optionsScrollHeight = null,
@@ -166,8 +167,19 @@ export const computeSelectDropdownLayout = ({
   const estimatedOptionsHeight =
     typeof optionsScrollHeight === 'number' && optionsScrollHeight > 0
       ? optionsScrollHeight
-      : Math.max(46, optionsCount * 48 + chromePadding);
-  const idealOptionsHeight = Math.min(maxDropdownHeight, estimatedOptionsHeight);
+      : Math.max(46, optionsCount * 42 + chromePadding);
+
+  const isAutoMax =
+    autoHeight ||
+    maxDropdownHeight === 'auto' ||
+    maxDropdownHeight === null ||
+    maxDropdownHeight === undefined ||
+    !Number.isFinite(Number(maxDropdownHeight));
+  const resolvedMaxDropdownHeight = isAutoMax
+    ? Math.max(60, screenHeight - chromeHeight)
+    : Number(maxDropdownHeight);
+
+  const idealOptionsHeight = Math.min(resolvedMaxDropdownHeight, estimatedOptionsHeight);
   const idealTotalHeight = chromeHeight + idealOptionsHeight;
 
   const spaceBelow = safeScreen.bottom - (triggerRect.bottom + gap);
@@ -177,13 +189,15 @@ export const computeSelectDropdownLayout = ({
   const minSingleSideHeight = Math.min(idealTotalHeight, 175);
 
   let placement = 'bottom';
-  let optionsMaxHeight = maxDropdownHeight;
+  let optionsMaxHeight = resolvedMaxDropdownHeight;
   let screenTop = triggerRect.bottom + gap;
 
   if (spaceBelow >= idealTotalHeight) {
-    // 1. Fits cleanly below
+    // 1. Fits cleanly below without clipping
     placement = 'bottom';
-    optionsMaxHeight = maxDropdownHeight;
+    optionsMaxHeight = isAutoMax
+      ? Math.max(idealOptionsHeight, Math.min(resolvedMaxDropdownHeight, spaceBelow - chromeHeight))
+      : resolvedMaxDropdownHeight;
     screenTop = triggerRect.bottom + gap;
   } else if (
     spaceAbove >= idealTotalHeight ||
@@ -192,7 +206,7 @@ export const computeSelectDropdownLayout = ({
     // 2. Flip above the trigger (e.g. select near bottom of modal or screen)
     placement = 'top';
     const availableAbove = Math.max(88, Math.min(screenHeight, spaceAbove));
-    optionsMaxHeight = Math.max(60, Math.min(maxDropdownHeight, availableAbove - chromeHeight));
+    optionsMaxHeight = Math.max(60, Math.min(resolvedMaxDropdownHeight, availableAbove - chromeHeight));
     const renderedOptionsH = Math.min(estimatedOptionsHeight, optionsMaxHeight);
     const totalH = actualDropdownHeight
       ? Math.min(actualDropdownHeight, chromeHeight + optionsMaxHeight)
@@ -202,7 +216,7 @@ export const computeSelectDropdownLayout = ({
     // 3. Open below, but clamp height to the visible screen bottom
     placement = 'bottom-clamped';
     const availableBelow = Math.max(88, Math.min(screenHeight, spaceBelow));
-    optionsMaxHeight = Math.max(60, Math.min(maxDropdownHeight, availableBelow - chromeHeight));
+    optionsMaxHeight = Math.max(60, Math.min(resolvedMaxDropdownHeight, availableBelow - chromeHeight));
     screenTop = triggerRect.bottom + gap;
   } else {
     // 4. Tight vertical viewport: open simultaneously above AND below the trigger ('overlap'),
@@ -210,7 +224,7 @@ export const computeSelectDropdownLayout = ({
     //    with strictly symmetrical top and bottom margins (margin === topMargin === bottomMargin)!
     placement = 'overlap';
     const maxScreenOptionsH = Math.max(60, screenHeight - chromeHeight);
-    const targetOptionsH = Math.max(maxDropdownHeight, estimatedOptionsHeight);
+    const targetOptionsH = Math.max(resolvedMaxDropdownHeight, estimatedOptionsHeight);
     optionsMaxHeight = Math.min(maxScreenOptionsH, targetOptionsH);
 
     const renderedOptionsH = Math.min(estimatedOptionsHeight, optionsMaxHeight);
@@ -246,7 +260,7 @@ export const computeSelectDropdownLayout = ({
     optionsMaxHeight: Math.round(optionsMaxHeight),
     top: localTop,
     left: localLeft,
-    minWidth: Math.round(Math.min(triggerRect.width, screenWidth)),
+    minWidth: Math.round(triggerRect.width ? Math.min(triggerRect.width, screenWidth) : 220),
     maxWidth: Math.round(Math.min(360, screenWidth)),
     spaceBelow: Math.round(spaceBelow),
     spaceAbove: Math.round(spaceAbove),
@@ -254,5 +268,73 @@ export const computeSelectDropdownLayout = ({
     edgeMargin: Math.round(margin),
     topMarginPx,
     bottomMarginPx,
+  };
+};
+
+/**
+ * Shared alias for `findSafeSelectMount` so any component in `@gkucmierz/nano-ui`
+ * (`<NanoSelect>`, `<NanoCoverFlow>`, `<NanoDatePicker>`) can walk up `parentNode`
+ * to locate clipping/scrolling ancestors and safe viewport boundaries.
+ */
+export const findSafeAncestorMount = findSafeSelectMount;
+
+/**
+ * Uses recursive `parentNode` ancestor traversal (`findSafeAncestorMount`) to compute
+ * symmetrical vertical expansion (up & down from center) for an active 3D card (`<NanoCoverFlow>`)
+ * when its inner content `scrollHeight` exceeds the base `cardHeight`.
+ */
+export const computeAdaptiveCardExpansion = ({
+  rootEl = null,
+  baseCardHeight = 230,
+  baseStageHeight = 330,
+  contentScrollHeight = 0,
+  extraPadding = 16,
+  viewportMargin = 24,
+} = {}) => {
+  const baseCard = Math.max(120, Number(baseCardHeight) || 230);
+  const baseStage = Math.max(baseCard + 40, Number(baseStageHeight) || 330);
+  const naturalContentH = Math.max(0, Number(contentScrollHeight) || 0);
+
+  if (naturalContentH <= baseCard + 2) {
+    return {
+      activeCardHeight: baseCard,
+      effectiveStageHeight: baseStage,
+      isExpanded: false,
+      needsInnerScroll: false,
+      escapedScrollers: 0,
+    };
+  }
+
+  let maxViewportHeight = 760;
+  let escapedScrollers = 0;
+
+  if (rootEl && typeof window !== 'undefined') {
+    const desiredH = naturalContentH + extraPadding;
+    const ancestorInfo = findSafeAncestorMount(rootEl, desiredH);
+    escapedScrollers = ancestorInfo.escapedScrollers || 0;
+    const vpEl = ancestorInfo.viewportEl;
+    if (vpEl && typeof vpEl.getBoundingClientRect === 'function') {
+      const vpRect = vpEl.getBoundingClientRect();
+      maxViewportHeight = Math.max(baseCard, vpRect.height - viewportMargin * 2 - 56);
+    } else if (typeof window.innerHeight === 'number' && window.innerHeight > 0) {
+      maxViewportHeight = Math.max(baseCard, window.innerHeight - viewportMargin * 2 - 64);
+    }
+  }
+
+  const desiredCardHeight = naturalContentH + extraPadding;
+  const activeCardHeight = Math.round(
+    Math.max(baseCard, Math.min(desiredCardHeight, maxViewportHeight))
+  );
+  const stagePadding = Math.max(44, baseStage - baseCard);
+  const effectiveStageHeight = Math.round(
+    Math.max(baseStage, activeCardHeight + stagePadding)
+  );
+
+  return {
+    activeCardHeight,
+    effectiveStageHeight,
+    isExpanded: activeCardHeight > baseCard,
+    needsInnerScroll: desiredCardHeight > activeCardHeight + 2,
+    escapedScrollers,
   };
 };
