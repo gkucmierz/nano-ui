@@ -97,6 +97,7 @@ export function clampLatitude(lat) {
 export function normalizeLongitude(lon) {
   const n = Number(lon);
   if (!Number.isFinite(n)) return 0;
+  if (n >= -180 && n <= 180) return n;
   return ((((n + 180) % 360) + 360) % 360) - 180;
 }
 
@@ -522,4 +523,133 @@ export function evaluatePolylineCursor(points = [], progressRatio = 0) {
     headingDeg,
     prefixPoints
   };
+}
+
+/**
+ * Normalizes custom polygon arrays and standard RFC 7946 GeoJSON objects
+ * (`FeatureCollection`, `Feature`, `Polygon`, `MultiPolygon`) into a unified list of
+ * `{ id, name, color, fillColor, fillOpacity, strokeWidth, dashed, rings: Array<Array<[lat, lon]>> }`.
+ *
+ * Note on coordinate order:
+ * - RFC 7946 GeoJSON uses `[longitude, latitude]` (`[lon, lat]`).
+ * - Custom `:polygons` prop uses `[latitude, longitude]` (`[lat, lon]`) or `{ lat, lon }`.
+ */
+export function normalizeMapPolygons(polygons = [], geojson = null) {
+  const result = [];
+
+  // 1. Standardize custom `:polygons` items (`[lat, lon]` order)
+  if (Array.isArray(polygons)) {
+    polygons.forEach((poly, idx) => {
+      if (!poly) return;
+      const rawPoints = Array.isArray(poly.points)
+        ? poly.points
+        : Array.isArray(poly.coordinates)
+          ? poly.coordinates
+          : Array.isArray(poly)
+            ? poly
+            : [];
+      const ring = rawPoints.map(normalizeCoordPair).filter(Boolean);
+      if (ring.length < 3) return;
+      const strokeColor = poly.color || poly.stroke || '#38bdf8';
+      result.push({
+        id: poly.id || `poly-${idx + 1}`,
+        name: poly.name || poly.label || poly.title || '',
+        color: strokeColor,
+        fillColor: poly.fillColor || poly.fill || strokeColor,
+        fillOpacity: Number.isFinite(Number(poly.fillOpacity)) ? Number(poly.fillOpacity) : 0.2,
+        strokeOpacity: Number.isFinite(Number(poly.strokeOpacity)) ? Number(poly.strokeOpacity) : 0.9,
+        strokeWidth: Number(poly.strokeWidth || poly.width) || 2.2,
+        dashed: Boolean(poly.dashed),
+        rings: [ring]
+      });
+    });
+  }
+
+  // 2. Standardize RFC 7946 GeoJSON (`[lon, lat]` coordinate order)
+  const convertGeoJsonRing = (coords = []) => {
+    if (!Array.isArray(coords)) return [];
+    const pts = [];
+    for (const pt of coords) {
+      if (Array.isArray(pt) && pt.length >= 2) {
+        const lon = Number(pt[0]);
+        const lat = Number(pt[1]);
+        if (Number.isFinite(lat) && Number.isFinite(lon)) {
+          pts.push([clampLatitude(lat), normalizeLongitude(lon)]);
+        }
+      }
+    }
+    return pts;
+  };
+
+  const pushGeoJsonGeometry = (geom, props = {}, fallbackId = 'geojson') => {
+    if (!geom || typeof geom !== 'object') return;
+    const strokeColor = props.stroke || props.color || '#38bdf8';
+    const fillColor = props.fill || props.fillColor || strokeColor;
+    const fillOpacity = Number.isFinite(Number(props['fill-opacity'] ?? props.fillOpacity))
+      ? Number(props['fill-opacity'] ?? props.fillOpacity)
+      : 0.22;
+    const strokeOpacity = Number.isFinite(Number(props['stroke-opacity'] ?? props.strokeOpacity))
+      ? Number(props['stroke-opacity'] ?? props.strokeOpacity)
+      : 0.92;
+    const strokeWidth = Number(props['stroke-width'] ?? props.strokeWidth ?? props.width) || 2.2;
+    const name = props.name || props.label || props.title || '';
+
+    if (geom.type === 'Polygon' && Array.isArray(geom.coordinates)) {
+      const rings = geom.coordinates.map(convertGeoJsonRing).filter((r) => r.length >= 3);
+      if (rings.length > 0) {
+        result.push({
+          id: props.id || fallbackId,
+          name,
+          color: strokeColor,
+          fillColor,
+          fillOpacity,
+          strokeOpacity,
+          strokeWidth,
+          dashed: Boolean(props.dashed),
+          rings,
+          properties: props
+        });
+      }
+    } else if (geom.type === 'MultiPolygon' && Array.isArray(geom.coordinates)) {
+      geom.coordinates.forEach((polyCoords, pIdx) => {
+        if (!Array.isArray(polyCoords)) return;
+        const rings = polyCoords.map(convertGeoJsonRing).filter((r) => r.length >= 3);
+        if (rings.length > 0) {
+          result.push({
+            id: `${props.id || fallbackId}-${pIdx + 1}`,
+            name,
+            color: strokeColor,
+            fillColor,
+            fillOpacity,
+            strokeOpacity,
+            strokeWidth,
+            dashed: Boolean(props.dashed),
+            rings,
+            properties: props
+          });
+        }
+      });
+    }
+  };
+
+  const walkGeoJson = (node, idx = 0) => {
+    if (!node || typeof node !== 'object') return;
+    if (Array.isArray(node)) {
+      node.forEach((item, i) => walkGeoJson(item, i));
+      return;
+    }
+    if (node.type === 'FeatureCollection' && Array.isArray(node.features)) {
+      node.features.forEach((f, i) => walkGeoJson(f, i));
+    } else if (node.type === 'Feature' && node.geometry) {
+      pushGeoJsonGeometry(node.geometry, node.properties || {}, node.id || `feature-${idx + 1}`);
+    } else if (node.type === 'Polygon' || node.type === 'MultiPolygon') {
+      pushGeoJsonGeometry(node, node.properties || {}, `geom-${idx + 1}`);
+    }
+  };
+
+  if (geojson) {
+    walkGeoJson(geojson);
+  }
+
+  return result;
 }
