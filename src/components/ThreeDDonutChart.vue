@@ -1209,6 +1209,8 @@ const uniqueSlices = computed(() => {
 
 const sliceExtrusions = ref({})
 const extrusionTransitions = new Map()
+const sliceDimLevels = ref({})
+const dimTransitions = new Map()
 
 const getExtrusionTransition = (sliceId) => {
   if (!extrusionTransitions.has(sliceId)) {
@@ -1239,23 +1241,78 @@ const getExtrusionTransition = (sliceId) => {
   return extrusionTransitions.get(sliceId)
 }
 
+const getDimTransition = (sliceId) => {
+  if (!dimTransitions.has(sliceId)) {
+    const transition = createKineticTransition({
+      initialValue: 0,
+      duration: Math.min(200, Math.max(120, Math.round((props.animationDuration ?? 250) * 0.65))),
+      timingMode: 'fixed',
+      modular: false,
+      onUpdate: ({ value }) => {
+        sliceDimLevels.value = {
+          ...sliceDimLevels.value,
+          [sliceId]: value
+        }
+      },
+      onSettled: ({ value }) => {
+        if (value <= 0.001) {
+          const next = { ...sliceDimLevels.value }
+          delete next[sliceId]
+          sliceDimLevels.value = next
+        } else {
+          sliceDimLevels.value = {
+            ...sliceDimLevels.value,
+            [sliceId]: value
+          }
+        }
+      }
+    })
+    dimTransitions.set(sliceId, transition)
+  }
+  return dimTransitions.get(sliceId)
+}
+
+const getSliceDimProgress = (sliceId) => {
+  if (sliceDimLevels.value[sliceId] !== undefined) {
+    return sliceDimLevels.value[sliceId]
+  }
+  if (props.immediate || props.currentLowFxMode) {
+    return effectiveActiveId.value !== null && effectiveActiveId.value !== sliceId ? 1 : 0
+  }
+  return 0
+}
+
 const transitioningSliceId = ref(null)
 
 const isHoverTransitioning = computed(() => {
-  return Object.values(sliceExtrusions.value).some(v => v > 0.001) || transitioningSliceId.value !== null
+  return (
+    Object.values(sliceExtrusions.value).some(v => v > 0.001) ||
+    Object.values(sliceDimLevels.value).some(v => v > 0.001 && v < 0.999) ||
+    transitioningSliceId.value !== null
+  )
 })
 
 watch(effectiveActiveId, (newId, oldId) => {
+  const isImmediate = props.immediate || props.currentLowFxMode
   if (oldId && oldId !== newId) {
     transitioningSliceId.value = oldId
     const trans = getExtrusionTransition(oldId)
-    trans.setTarget(0, { immediate: props.immediate })
+    trans.setTarget(0, { immediate: isImmediate })
   }
   if (newId) {
     transitioningSliceId.value = null
     const trans = getExtrusionTransition(newId)
-    trans.setTarget(1, { immediate: props.immediate })
+    trans.setTarget(1, { immediate: isImmediate })
   }
+
+  const allIds = new Set([
+    ...animatedItems.value.map(item => item.id),
+    ...Object.keys(sliceDimLevels.value)
+  ])
+  allIds.forEach((id) => {
+    const targetDim = newId !== null && newId !== undefined && id !== newId ? 1 : 0
+    getDimTransition(id).setTarget(targetDim, { immediate: isImmediate })
+  })
 }, { immediate: true })
 
 const activeOrTransitioningId = computed(() => {
@@ -1272,8 +1329,8 @@ const neighborSliceIds = computed(() => {
 })
 
 const shouldRenderStartCut = (slice) => {
-  const isDimmed = effectiveActiveId.value !== null && effectiveActiveId.value !== slice.item.id
-  const sliceOpacity = isDimmed ? 0.35 : 1
+  const dimProg = getSliceDimProgress(slice.item.id)
+  const sliceOpacity = 1 - 0.65 * dimProg
   return resolvePartitionCutVisibility({
     sliceItemId: slice.item.id,
     isStartEdge: slice.isStartEdge,
@@ -1288,8 +1345,8 @@ const shouldRenderStartCut = (slice) => {
 }
 
 const shouldRenderEndCut = (slice) => {
-  const isDimmed = effectiveActiveId.value !== null && effectiveActiveId.value !== slice.item.id
-  const sliceOpacity = isDimmed ? 0.35 : 1
+  const dimProg = getSliceDimProgress(slice.item.id)
+  const sliceOpacity = 1 - 0.65 * dimProg
   return resolvePartitionCutVisibility({
     sliceItemId: slice.item.id,
     isStartEdge: slice.isStartEdge,
@@ -1392,25 +1449,38 @@ const getSliceStyle = (slice) => {
   const p = sliceExtrusions.value[slice.item.id] !== undefined
     ? sliceExtrusions.value[slice.item.id]
     : (effectiveActiveId.value === slice.item.id ? 1 : 0)
+  const dimProg = getSliceDimProgress(slice.item.id)
+  const sliceOpacity = 1 - 0.65 * dimProg
+  const style = {}
 
   if (p > 0.0001) {
     const dist = HOVER_EXTRUSION_DISTANCE * p
     const effSlope = props.is3D ? animSlopeRatio.value : 1.0
     const tx = dist * Math.cos(slice.originalMidAngle)
     const ty = dist * Math.sin(slice.originalMidAngle) * effSlope
-    return {
-      transform: `translate(${tx}px, ${ty}px)`
-    }
+    style.transform = `translate(${tx}px, ${ty}px)`
   }
-  return {}
+  if (dimProg > 0.0001 || effectiveActiveId.value !== null) {
+    style.opacity = Number(sliceOpacity.toFixed(4))
+  }
+  return style
 }
 
 const getLabelTextStyle = () => {
   return ''
 }
 
-const getLabelGroupStyle = () => {
-  return { cursor: (props.selectable && !isSingleSlice.value) ? 'pointer' : 'default' }
+const getLabelGroupStyle = (label) => {
+  const style = {
+    cursor: (props.selectable && !isSingleSlice.value) ? 'pointer' : 'default'
+  }
+  if (label && label.item) {
+    const dimProg = getSliceDimProgress(label.item.id)
+    if (dimProg > 0.0001 || effectiveActiveId.value !== null) {
+      style.opacity = Number((1 - 0.75 * dimProg).toFixed(4))
+    }
+  }
+  return style
 }
 
 const computedLabels = computed(() => {
@@ -1834,6 +1904,10 @@ watch(() => props.animationDuration, (newDur) => {
   extrusionTransitions.forEach((trans) => {
     trans.setConfig({ duration: newDur ?? 250 })
   })
+  const dimDur = Math.min(200, Math.max(120, Math.round((newDur ?? 250) * 0.65)))
+  dimTransitions.forEach((trans) => {
+    trans.setConfig({ duration: dimDur })
+  })
   slopeKinetic.setConfig({ duration: newDur ?? 350 })
   thicknessKinetic.setConfig({ duration: newDur ?? 350 })
 })
@@ -1855,6 +1929,8 @@ onUnmounted(() => {
   thicknessKinetic.destroy()
   extrusionTransitions.forEach((trans) => trans.destroy())
   extrusionTransitions.clear()
+  dimTransitions.forEach((trans) => trans.destroy())
+  dimTransitions.clear()
 })
 
 defineExpose({
@@ -2414,28 +2490,23 @@ defineExpose({
   stroke: none !important;
 }
 
-/* Beautiful Interactive 3D hover effects */
+/* Beautiful Interactive 3D hover effects (opacity driven kinetically via createKineticTransition) */
 .slice-group-3d {
   cursor: pointer;
-  transition: opacity var(--nano-transition-interactive);
 }
 
-.slice-group-3d.is-dimmed {
+.no-transitions .slice-group-3d.is-dimmed {
   opacity: 0.35;
 }
 
 /* Hover highlights for leader lines and text */
-.label-group {
-  transition: opacity var(--nano-transition-interactive);
-}
-
 .label-group path {
   pointer-events: none;
-  transition: stroke-width var(--nano-transition-interactive), opacity var(--nano-transition-interactive);
+  transition: stroke-width 150ms ease;
 }
 
 .label-group text {
-  transition: font-weight var(--nano-transition-interactive), opacity var(--nano-transition-interactive);
+  transition: font-weight 150ms ease;
 }
 
 .label-group.is-hovered path {
@@ -2446,7 +2517,7 @@ defineExpose({
   font-weight: 700;
 }
 
-.label-group.is-dimmed {
+.no-transitions .label-group.is-dimmed {
   opacity: 0.25;
 }
 
