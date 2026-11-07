@@ -68,6 +68,20 @@ describe('NanoSelect Smart Positioning (Options 2 + 3)', () => {
     assert.ok(layout.optionsMaxHeight >= 140);
   });
 
+  test('computeSelectDropdownLayout expands optionsMaxHeight without scrollbar when autoHeight is enabled and viewport has room', () => {
+    const layout = computeSelectDropdownLayout({
+      triggerRect: { top: 80, bottom: 116, left: 40, width: 240, height: 36 },
+      screenRect: { top: 0, bottom: 768, left: 0, right: 1024 },
+      searchable: false,
+      optionsCount: 8,
+      maxDropdownHeight: 'auto',
+      autoHeight: true,
+    });
+
+    assert.equal(layout.placement, 'bottom');
+    assert.ok(layout.optionsMaxHeight >= 348, `Expected optionsMaxHeight >= 348 without scrollbar, got ${layout.optionsMaxHeight}`);
+  });
+
   test('findSafeSelectMount walks up parentNode past tight overflow containers to [data-nano-viewport] or .nano-modal-overlay', () => {
     const origWindow = globalThis.window;
     const origDocument = globalThis.document;

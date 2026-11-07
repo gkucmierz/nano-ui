@@ -149,8 +149,8 @@ describe('NanoMap & map-engine utilities', () => {
         {
           type: 'Feature',
           properties: {
-            id: 'milowice-district',
-            name: 'Sosnowiec-Milowice',
+            id: 'metro-core-district',
+            name: 'Metropolitan Core District',
             color: '#f59e0b',
             fillOpacity: 0.25
           },
@@ -187,8 +187,8 @@ describe('NanoMap & map-engine utilities', () => {
     assert.equal(normalized.length, 2);
     assert.equal(normalized[0].id, 'custom-zone');
     assert.equal(normalized[0].rings[0].length, 3);
-    assert.equal(normalized[1].id, 'milowice-district');
-    assert.equal(normalized[1].name, 'Sosnowiec-Milowice');
+    assert.equal(normalized[1].id, 'metro-core-district');
+    assert.equal(normalized[1].name, 'Metropolitan Core District');
     assert.equal(normalized[1].fillOpacity, 0.25);
     // Verify RFC 7946 [lon, lat] was converted to internal [lat, lon]
     assert.deepEqual(normalized[1].rings[0][0], [50.292, 19.085]);
