@@ -117,14 +117,21 @@ const normalizedItems = computed(() => {
 });
 
 const isFullWidth = computed(() =>
-  props.fullWidth !== undefined ? props.fullWidth : props.variant === 'docked'
+  props.fullWidth !== undefined ? props.fullWidth : resolvedVariant.value === 'docked'
 );
+
+const resolvedVariant = computed(() => {
+  if (props.variant === 'pills' || props.variant === 'segmented') {
+    return 'segmented';
+  }
+  return 'docked';
+});
 
 const resolvedCountFormat = computed(() => {
   if (props.countFormat === 'parens' || props.countFormat === 'badge') {
     return props.countFormat;
   }
-  return props.variant === 'docked' ? 'parens' : 'badge';
+  return resolvedVariant.value === 'docked' ? 'parens' : 'badge';
 });
 
 const saveActiveTab = (tabId) => {
@@ -227,7 +234,7 @@ const handleKeydown = (e, index) => {
   <div
     class="nano-tabs"
     :class="[
-      `nano-tabs--${variant}`,
+      `nano-tabs--${resolvedVariant}`,
       `nano-tabs--${size}`,
       { 'nano-tabs--full': isFullWidth }
     ]"
@@ -282,14 +289,18 @@ const handleKeydown = (e, index) => {
 <style scoped>
 .nano-tabs {
   display: inline-flex;
+  flex-wrap: wrap;
   align-items: center;
+  max-width: 100%;
   user-select: none;
   box-sizing: border-box;
 }
 
 .nano-tabs--full {
   display: flex;
+  flex-wrap: wrap;
   width: 100%;
+  max-width: 100%;
 }
 
 /* ========================================================================== */
@@ -362,7 +373,8 @@ const handleKeydown = (e, index) => {
 }
 
 .nano-tabs--segmented.nano-tabs--full .nano-tab-btn {
-  flex: 1;
+  flex: 1 1 auto;
+  min-width: max-content;
 }
 
 .nano-tabs--segmented .nano-tab-btn:hover:not(.is-disabled):not(.is-active) {
