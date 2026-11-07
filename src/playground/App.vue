@@ -317,6 +317,13 @@ onUnmounted(() => {
               <span class="nav-label">3D Showoff (/showoff)</span>
             </span>
           </router-link>
+          <router-link v-show="isRouteVisible('/docs/ecosystem')" to="/docs/ecosystem" class="nav-link" :class="{ 'kbd-selected': isKeyboardSelected('/docs/ecosystem') }" active-class="active" v-tooltip="isNarrow ? t('nav.ecosystem') : undefined">
+            <NanoIcon name="layers" class="nav-icon" :size="18" />
+            <span class="nav-label-group">
+              <span class="nav-label">{{ t('nav.ecosystem') }}</span>
+              <span v-if="searchQuery.trim()" class="nav-match-tag">{{ getComponentTag('/docs/ecosystem') }}</span>
+            </span>
+          </router-link>
           <router-link v-show="isRouteVisible('/docs/typography')" to="/docs/typography" class="nav-link" :class="{ 'kbd-selected': isKeyboardSelected('/docs/typography') }" active-class="active" v-tooltip="isNarrow ? t('nav.typography') : undefined">
             <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <polyline points="4 7 4 4 20 4 20 7"/>
@@ -663,6 +670,13 @@ onUnmounted(() => {
             <span class="nav-label-group">
               <span class="nav-label">{{ t('nav.mutatingHeader') }}</span>
               <span v-if="searchQuery.trim()" class="nav-match-tag">{{ getComponentTag('/docs/mutating-header') }}</span>
+            </span>
+          </router-link>
+          <router-link v-show="isRouteVisible('/docs/coverflow')" to="/docs/coverflow" class="nav-link" :class="{ 'kbd-selected': isKeyboardSelected('/docs/coverflow') }" active-class="active" v-tooltip="isNarrow ? t('nav.coverFlow') : undefined">
+            <NanoIcon name="layers" class="nav-icon" :size="18" />
+            <span class="nav-label-group">
+              <span class="nav-label">{{ t('nav.coverFlow') }}</span>
+              <span v-if="searchQuery.trim()" class="nav-match-tag">{{ getComponentTag('/docs/coverflow') }}</span>
             </span>
           </router-link>
         </div>

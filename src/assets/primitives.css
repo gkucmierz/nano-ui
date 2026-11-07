@@ -273,6 +273,15 @@
   font-variant-numeric: tabular-nums;
 }
 
+/* Textareas: Strictly forbid horizontal resizing that breaks card/grid layouts */
+textarea.nano-input,
+.nano-textarea {
+  resize: vertical;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
 /* Sizing Modifiers */
 .nano-input-sm {
   padding: 3px 8px;
