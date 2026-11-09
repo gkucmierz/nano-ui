@@ -338,3 +338,121 @@ export const computeAdaptiveCardExpansion = ({
     escapedScrollers,
   };
 };
+
+/**
+ * Pure 2D bounding-box clamp that keeps a floating card / HUD element of size
+ * `(2 * halfWidth, 2 * halfHeight)` centered at `(x, y)` strictly within `bounds`
+ * (`{ minX, maxX, minY, maxY }`) with an inner `padding` margin.
+ */
+export const clampFloatingBox2D = ({
+  x = 0,
+  y = 0,
+  halfWidth = 0,
+  halfHeight = 0,
+  bounds = { minX: -21, maxX: 53, minY: -6, maxY: 38 },
+  padding = 0.65,
+} = {}) => {
+  const pad = Math.max(0, Number(padding) || 0);
+  const hw = Math.max(0, Number(halfWidth) || 0);
+  const hh = Math.max(0, Number(halfHeight) || 0);
+
+  const rawMinX = Number.isFinite(bounds?.minX) ? bounds.minX : -21;
+  const rawMaxX = Number.isFinite(bounds?.maxX) ? bounds.maxX : 53;
+  const rawMinY = Number.isFinite(bounds?.minY) ? bounds.minY : -6;
+  const rawMaxY = Number.isFinite(bounds?.maxY) ? bounds.maxY : 38;
+
+  const safeMinX = rawMinX + pad + hw;
+  const safeMaxX = rawMaxX - pad - hw;
+  const safeMinY = rawMinY + pad + hh;
+  const safeMaxY = rawMaxY - pad - hh;
+
+  const clampedX =
+    safeMinX <= safeMaxX
+      ? Math.max(safeMinX, Math.min(safeMaxX, Number(x) || 0))
+      : (rawMinX + rawMaxX) * 0.5;
+  const clampedY =
+    safeMinY <= safeMaxY
+      ? Math.max(safeMinY, Math.min(safeMaxY, Number(y) || 0))
+      : (rawMinY + rawMaxY) * 0.5;
+
+  return {
+    x: Number(clampedX.toFixed(3)),
+    y: Number(clampedY.toFixed(3)),
+    clampedX: Math.abs(clampedX - (Number(x) || 0)) > 1e-3,
+    clampedY: Math.abs(clampedY - (Number(y) || 0)) > 1e-3,
+  };
+};
+
+/**
+ * Walks up `parentNode` from `stageEl` (just like `findSafeSelectMount` in `<NanoSelect>`),
+ * intersecting all clipping ancestors (`overflow: hidden | clip | auto | scroll`) and mapping
+ * the resulting visible pixel rectangle back into the SVG / stage coordinate space
+ * (`viewBox = { minX, minY, width, height }`).
+ */
+export const measureSafeStageBounds = (
+  stageEl,
+  viewBox = { minX: -22, minY: -7, width: 76, height: 46 },
+  outerStageBounds = { minX: -25.5, maxX: 57.5, minY: -10.5, maxY: 42.5 }
+) => {
+  const fallback = { ...outerStageBounds, clippedByAncestors: 0 };
+  if (!stageEl || typeof window === 'undefined' || typeof stageEl.getBoundingClientRect !== 'function') {
+    return fallback;
+  }
+
+  const stageRect = stageEl.getBoundingClientRect();
+  if (!stageRect || stageRect.width <= 0 || stageRect.height <= 0) {
+    return fallback;
+  }
+
+  // Start with the unclipped viewport / outer ancestor space so SVG elements with overflow:visible
+  // can break out beyond stageRect (beyond the inner violet backdrop [-21..53, -6..38]),
+  // clamping ONLY when an ancestor in the .parentNode chain has clipping overflow.
+  let visLeft = typeof window.innerWidth === 'number' ? 0 : stageRect.left - stageRect.width;
+  let visRight = typeof window.innerWidth === 'number' ? window.innerWidth : stageRect.right + stageRect.width;
+  let visTop = typeof window.innerHeight === 'number' ? 0 : stageRect.top - stageRect.height;
+  let visBottom = typeof window.innerHeight === 'number' ? window.innerHeight : stageRect.bottom + stageRect.height;
+  let clippedByAncestors = 0;
+
+  let curr = stageEl.parentNode;
+  while (curr && curr !== document.body && curr !== document.documentElement && curr.nodeType === 1) {
+    const style = window.getComputedStyle ? window.getComputedStyle(curr) : null;
+    if (style) {
+      const ovY = style.overflowY || style.overflow || '';
+      const ovX = style.overflowX || style.overflow || '';
+      if (CLIPPING_OVERFLOW_RE.test(ovY) || CLIPPING_OVERFLOW_RE.test(ovX)) {
+        const r = curr.getBoundingClientRect();
+        if (r.width > 0 && r.height > 0) {
+          if (r.left > visLeft || r.right < visRight || r.top > visTop || r.bottom < visBottom) {
+            clippedByAncestors++;
+          }
+          visLeft = Math.max(visLeft, r.left);
+          visRight = Math.min(visRight, r.right);
+          visTop = Math.max(visTop, r.top);
+          visBottom = Math.min(visBottom, r.bottom);
+        }
+      }
+    }
+    curr = curr.parentNode;
+  }
+
+  const vbMinX = Number(viewBox?.minX ?? -22);
+  const vbMinY = Number(viewBox?.minY ?? -7);
+  const vbW = Math.max(1, Number(viewBox?.width ?? 76));
+  const vbH = Math.max(1, Number(viewBox?.height ?? 46));
+
+  const scaleX = vbW / stageRect.width;
+  const scaleY = vbH / stageRect.height;
+
+  const ancestorMinX = vbMinX + (visLeft - stageRect.left) * scaleX;
+  const ancestorMaxX = vbMinX + vbW - (stageRect.right - visRight) * scaleX;
+  const ancestorMinY = vbMinY + (visTop - stageRect.top) * scaleY;
+  const ancestorMaxY = vbMinY + vbH - (stageRect.bottom - visBottom) * scaleY;
+
+  return {
+    minX: Number(Math.max(outerStageBounds.minX, ancestorMinX).toFixed(2)),
+    maxX: Number(Math.min(outerStageBounds.maxX, ancestorMaxX).toFixed(2)),
+    minY: Number(Math.max(outerStageBounds.minY, ancestorMinY).toFixed(2)),
+    maxY: Number(Math.min(outerStageBounds.maxY, ancestorMaxY).toFixed(2)),
+    clippedByAncestors,
+  };
+};
