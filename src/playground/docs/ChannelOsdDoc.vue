@@ -1,19 +1,28 @@
 <script setup>
 import { ref } from 'vue';
 import NanoChannelOsd from '../../components/NanoChannelOsd.vue';
+import NanoWelcomeHud from '../../components/NanoWelcomeHud.vue';
 import NanoSlider from '../../components/NanoSlider.vue';
 import NanoCodeBlock from '../../components/NanoCodeBlock.vue';
 import { createDocTabs } from '../docSnippets.js';
 
 const osdRef = ref(null);
+const welcomeHudRef = ref(null);
 const activeChannel = ref(12);
 const maxChannel = ref(13);
 const hudSize = ref(140);
 const timeoutMs = ref(550);
+const welcomeActivatedCount = ref(0);
 
 const triggerDigit = (d) => {
   if (osdRef.value) {
     osdRef.value.pushDigit(String(d));
+  }
+};
+
+const replayWelcomeHud = () => {
+  if (welcomeHudRef.value && typeof welcomeHudRef.value.showHud === 'function') {
+    welcomeHudRef.value.showHud();
   }
 };
 
@@ -125,6 +134,34 @@ const codeTabs = createDocTabs({
             </div>
             <NanoSlider v-model="timeoutMs" :min="250" :max="1500" :step="50" size="sm" aria-label="Fade Timeout" />
           </div>
+        </div>
+      </div>
+
+      <div class="osd-controls-card">
+        <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;">
+          <div>
+            <h3 class="controls-title" style="margin-bottom: 4px;">NanoWelcomeHud (First-Visit Audio &amp; Shortcut Prompt)</h3>
+            <p class="desc" style="font-size: 0.85rem; margin: 0;">
+              Non-blocking glassmorphic welcome banner with animated countdown progress bar (Activations: <strong>{{ welcomeActivatedCount }}</strong>).
+            </p>
+          </div>
+          <button type="button" class="keypad-btn" style="width: auto; padding: 0 14px;" @click="replayWelcomeHud">
+            Replay NanoWelcomeHud
+          </button>
+        </div>
+        <div style="margin-top: 14px; display: flex; justify-content: center;">
+          <NanoWelcomeHud
+            ref="welcomeHudRef"
+            storage-key="nano_ui_playground_welcome_demo"
+            :only-first-visit="false"
+            :force-show="true"
+            :duration="6000"
+            icon="💓"
+            title="Włącz dźwięk"
+            subtitle="Kliknij tutaj lub naciśnij [M], aby odblokować syntezę WebAudio"
+            shortcut-key="M"
+            @activate="welcomeActivatedCount++"
+          />
         </div>
       </div>
     </div>
