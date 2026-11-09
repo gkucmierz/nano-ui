@@ -16,6 +16,10 @@ const orientation = ref('horizontal');
 const lockable = ref(true);
 const isLocked = ref(false);
 const showGrip = ref(false);
+const collapsibleDemo = ref(true);
+const collapsedPaneDemo = ref(null);
+const collapsedSizeDemo = ref(38);
+const collapseThresholdDemo = ref(24);
 const gapPx = ref(12);
 const storageMode = ref('ls');
 const hostAppPrefix = ref('dashboard-app');
@@ -177,6 +181,43 @@ const codeTabs = createDocTabs({
           <span>{{ t('splitter.showGrip') }}</span>
         </label>
 
+        <label class="ctrl-item">
+          <NanoSwitch v-model="collapsibleDemo" size="compact" color="cyan" />
+          <span>Magnetic Auto-Collapse (<code>collapsible</code>)</span>
+        </label>
+
+        <div v-if="collapsibleDemo" class="ctrl-slider">
+          <span class="ctrl-label">Próg przyciągania ({{ collapseThresholdDemo }}px):</span>
+          <NanoSlider v-model="collapseThresholdDemo" :min="12" :max="64" :step="4" size="sm" />
+        </div>
+
+        <div v-if="collapsibleDemo" class="seg-orient">
+          <button
+            type="button"
+            class="orient-btn"
+            :class="{ active: collapsedPaneDemo === 'first' }"
+            @click="collapsedPaneDemo = collapsedPaneDemo === 'first' ? null : 'first'"
+          >
+            Zwiń A
+          </button>
+          <button
+            type="button"
+            class="orient-btn"
+            :class="{ active: collapsedPaneDemo === null }"
+            @click="collapsedPaneDemo = null"
+          >
+            Oba otwarte
+          </button>
+          <button
+            type="button"
+            class="orient-btn"
+            :class="{ active: collapsedPaneDemo === 'second' }"
+            @click="collapsedPaneDemo = collapsedPaneDemo === 'second' ? null : 'second'"
+          >
+            Zwiń B
+          </button>
+        </div>
+
         <div class="ctrl-slider">
           <span class="ctrl-label">{{ t('splitter.gap') }} ({{ gapPx }}px):</span>
           <NanoSlider v-model="gapPx" :min="0" :max="28" :step="2" size="sm" />
@@ -209,6 +250,7 @@ const codeTabs = createDocTabs({
         <NanoSplitter
           v-model="splitRatio"
           v-model:locked="isLocked"
+          v-model:collapsed-pane="collapsedPaneDemo"
           :orientation="orientation"
           unit="ratio"
           :default-size="0.38"
@@ -217,6 +259,13 @@ const codeTabs = createDocTabs({
           :gap="gapPx"
           :lockable="lockable"
           :show-grip="showGrip"
+          :collapsible="collapsibleDemo"
+          :collapsed-size="collapsedSizeDemo"
+          :collapse-threshold="collapseThresholdDemo"
+          first-title="📦 PANE A (First)"
+          :first-badge="`${(splitRatio * 100).toFixed(0)}%`"
+          second-title="🔍 PANE B (Second)"
+          :second-badge="`${((1 - splitRatio) * 100).toFixed(0)}%`"
           :storage="storageMode"
           :app-prefix="hostAppPrefix"
           :storage-key="splitterStorageKey"
@@ -258,6 +307,9 @@ const codeTabs = createDocTabs({
           :max="520"
           :gap="12"
           lockable
+          collapsible
+          first-title="📁 Changed Files (5)"
+          second-title="📝 Diff &amp; Scratchpad"
         >
           <template #first>
             <NanoFileList
@@ -279,6 +331,9 @@ const codeTabs = createDocTabs({
               :max="0.78"
               :gap="12"
               lockable
+              collapsible
+              :first-title="`📄 ${selectedFile}`"
+              second-title="⚡ scratchpad/splitMetrics.js"
             >
               <template #first>
                 <NanoCodeEditor
