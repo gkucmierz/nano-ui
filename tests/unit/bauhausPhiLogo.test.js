@@ -1,5 +1,8 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import {
   PHI,
   INV_PHI,
@@ -7,14 +10,24 @@ import {
   INV_PHI3,
   BAUHAUS_PHI_EXACT_TARGETS,
   BAUHAUS_PHI_2D_SPEC,
+  NANO_UI_SONIC_LOGO_NSD,
   MATH_FORMULA_SWEEP_BANK,
   projectOrthographic3D,
+  buildExtrudedSolid3D,
   computeLogoPerfectionScalar,
   computeFloating3DArtifacts,
   computeGoldenFlowAndCursorField,
   computeBauhausPhiScene3D,
+  auditScene3DOcclusionInvariants,
   sampleMonteCarloNShadow,
 } from '../../src/utils/bauhausPhiLogo.js';
+import { measureSafeStageBounds } from '../../src/utils/selectPositioning.js';
+import {
+  createKeyController,
+  stepWrappedIndex,
+} from '../../src/utils/key-controller.js';
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 describe('Bauhaus Φ Tri-Primitive (□ + △ + ○) & Perfection Scalar L(Φ): 1 -> 0 <= 1e-9', () => {
   it('satisfies exact Golden Ratio algebraic identities (φ^-1 + φ^-2 = 1, φ^-3 + 2·φ^-2 = 1)', () => {
@@ -167,5 +180,265 @@ describe('Bauhaus Φ Tri-Primitive (□ + △ + ○) & Perfection Scalar L(Φ): 
     assert.ok(sceneWithCursor.primitiveCenters.pillar);
     assert.ok(sceneWithCursor.primitiveCenters.wedge);
     assert.ok(sceneWithCursor.primitiveCenters.sphere);
+  });
+
+  it('allows 3D cards to break out beyond the violet backdrop via .parentNode overflow:visible while preventing same-wing vertical overlap', () => {
+    const extremeArtifacts = computeFloating3DArtifacts(65, 45, 0, 0, -1, -1);
+    for (const art of extremeArtifacts) {
+      const cardHalfW = 29 * art.scale * 0.34;
+      const cardHalfH = 12.5 * art.scale * 0.34;
+      assert.ok(
+        art.y - cardHalfH >= -10.51,
+        `Card ${art.id} top edge (${art.y - cardHalfH}) must stay within .parentNode outer top (-10.5)`
+      );
+      assert.ok(
+        art.y + cardHalfH <= 42.51,
+        `Card ${art.id} bottom edge (${art.y + cardHalfH}) must stay within .parentNode outer bottom (42.5)`
+      );
+      assert.ok(
+        art.x - cardHalfW >= -25.51,
+        `Card ${art.id} left edge (${art.x - cardHalfW}) must stay within .parentNode outer left (-25.5)`
+      );
+      assert.ok(
+        art.x + cardHalfW <= 57.51,
+        `Card ${art.id} right edge (${art.x + cardHalfW}) must stay within .parentNode outer right (57.5)`
+      );
+      assert.ok(typeof art.exprFontSize === 'number' && art.exprFontSize >= 1.45 && art.exprFontSize <= 2.7);
+      const estW = art.expr.length * art.exprFontSize * 0.615;
+      assert.ok(
+        estW <= 51.5,
+        `Formula "${art.expr}" width (${estW}) at font-size ${art.exprFontSize} must fit inside 51.5`
+      );
+    }
+
+    // Verify top card (Φ SWEEP) breaks out above the inner violet backdrop top edge (y = -6) at positive pitch
+    const topBreakout = computeFloating3DArtifacts(-45, 42, -1.5, 0.2, 0, -1);
+    const phiCard = topBreakout.find((a) => a.id === 'art-phi');
+    assert.ok(
+      phiCard.y - phiCard.cardHalfH < -6,
+      `Expected Φ SWEEP top edge (${phiCard.y - phiCard.cardHalfH}) to break out above inner violet frame (y = -6)`
+    );
+
+    // Verify same-wing top and bottom cards never overlap vertically across steep pitch angles
+    for (const pitch of [-45, -25, 0, 25, 45]) {
+      const cards = computeFloating3DArtifacts(35, pitch, 1.2, 0.25);
+      for (const wing of ['left', 'right']) {
+        const topC = cards.find((c) => c.wing === wing && c.wingSlot === 'top');
+        const botC = cards.find((c) => c.wing === wing && c.wingSlot === 'bottom');
+        const verticalClearance = (botC.y - botC.cardHalfH) - (topC.y + topC.cardHalfH);
+        assert.ok(
+          verticalClearance >= 1.0,
+          `Expected non-overlapping vertical gap >= 1.0 on ${wing} wing at pitch=${pitch}°, got ${verticalClearance}`
+        );
+      }
+    }
+  });
+
+  it('preserves canonical 2D/3D Bauhaus Φ geometry, backface culling, and safe stage bounds across aspect ratios', () => {
+    // 1. Canonical 2D/3D specification invariants
+    const { rect, triangle, circle } = BAUHAUS_PHI_2D_SPEC;
+    assert.equal(rect.x, 7);
+    assert.equal(rect.y, 7);
+    assert.equal(rect.width, 4.25);
+    assert.equal(rect.height, 18);
+    assert.equal(rect.zHalfThickness, 1.65);
+    assert.equal(triangle.svgPoints, '11.85,7 25,25 25,15.85');
+    assert.equal(triangle.zCenter, 0);
+    assert.equal(triangle.zHalfThickness, 1.65);
+    assert.equal(circle.cx, 22.55);
+    assert.equal(circle.cy, 9.45);
+    assert.equal(circle.r, 2.45);
+    assert.ok(rect.zCenter < triangle.zCenter && triangle.zCenter < circle.zCenter);
+
+    // 2. Strict 3D separating plane x = 11.55 between Pillar (x <= 11.25) and Wedge (x >= 11.85)
+    const maxPillarX = rect.x + rect.width;
+    const minWedgeX = Math.min(...triangle.points.map(([x]) => x));
+    assert.equal(maxPillarX, 11.25);
+    assert.equal(minWedgeX, 11.85);
+    assert.ok(maxPillarX < 11.55 && 11.55 < minWedgeX);
+
+    // 3. At (0°, 0°) orthographic lock, all extruded side walls are edge-on (0 visible sides)
+    const lockedSolid = buildExtrudedSolid3D(triangle.points, 0, 1.65, 0, 0);
+    assert.equal(lockedSolid.visibleSides.length, 0);
+
+    // 4. Winding order normalization (CW vs CCW input produces identical frontVertices set)
+    const reversedSolid = buildExtrudedSolid3D([...triangle.points].reverse(), 0, 1.65, 28, -12);
+    const forwardSolid = buildExtrudedSolid3D(triangle.points, 0, 1.65, 28, -12);
+    assert.equal(reversedSolid.visibleSides.length, forwardSolid.visibleSides.length);
+    for (const side of forwardSolid.visibleSides) {
+      assert.ok(side.normalZ > 1e-4);
+      assert.ok(side.shade >= 0.32 && side.shade <= 0.92);
+    }
+
+    // 5. Safe stage bounds fallback (.parentNode unclipped outer space beyond [-21..53, -6..38]) & sonic DSL invariants
+    const unclippedStage = {
+      getBoundingClientRect: () => ({ left: 0, right: 760, top: 0, bottom: 460, width: 760, height: 460 }),
+    };
+    const safeBounds = measureSafeStageBounds(unclippedStage);
+    assert.equal(safeBounds.minX, -25.5);
+    assert.equal(safeBounds.maxX, 57.5);
+    assert.equal(safeBounds.minY, -10.5);
+    assert.equal(safeBounds.maxY, 42.5);
+    assert.ok(NANO_UI_SONIC_LOGO_NSD.includes('432Hz'));
+    assert.ok(NANO_UI_SONIC_LOGO_NSD.includes('699Hz'));
+    assert.ok(NANO_UI_SONIC_LOGO_NSD.includes('1131Hz'));
+  });
+
+  it('orders 3D SVG scene elements via D3-3D Unified Painter’s Algorithm & 3D Ray-Cast Z-Buffer Oracle (Sphere OVER Wedge and Pillar, Pillar UNDER Wedge for ψ ≤ 35.93°, pitch-aware Floor over/under N-legs)', () => {
+    // 1. Critical Angle 1 (ψ = -17.1°, θ = -13.9°):
+    // Purple Pillar (□, z ∈ [-4.122, -0.822]) renders UNDERNEATH Cyan Wedge (△, z ∈ [-1.65, +1.65]),
+    // and Quantum Sphere (○, z ∈ [+0.022, +4.922]) renders ON TOP OF both Wedge and Pillar.
+    const auditCrit1 = auditScene3DOcclusionInvariants(-17.1, -13.9);
+    assert.equal(auditCrit1.ok, true);
+    assert.equal(auditCrit1.overlaps.pillarWedge, true);
+    assert.deepEqual(auditCrit1.sceneRenderOrder, ['floor', 'pillar', 'wedge', 'sphere']);
+
+    // 2. Critical Angle 2 (ψ = -24.2°, θ = -13.9°):
+    // Quantum Sphere (○) overlaps Cyan Wedge (△) and renders ON TOP OF both Cyan Wedge and Purple Pillar (□).
+    const auditCrit2 = auditScene3DOcclusionInvariants(-24.2, -13.9);
+    assert.equal(auditCrit2.ok, true);
+    assert.equal(auditCrit2.overlaps.wedgeSphere, true);
+    assert.deepEqual(auditCrit2.sceneRenderOrder, ['floor', 'pillar', 'wedge', 'sphere']);
+
+    // 2b. Triple-Overlap Angle (ψ = -50°, θ = -0.4°):
+    // Quantum Sphere (○) simultaneously overlaps BOTH Cyan Wedge (△) and Purple Pillar (□)
+    // and renders ON TOP OF both Wedge and Pillar (while Pillar stays UNDERNEATH Wedge).
+    const sceneTripleOverlap = computeBauhausPhiScene3D(-50, -0.4);
+    assert.equal(sceneTripleOverlap.sphereInFrontOfWedge, true);
+    assert.equal(sceneTripleOverlap.sphereInFrontOfPillar, true);
+    assert.equal(sceneTripleOverlap.wedgeInFrontOfPillar, true);
+    assert.deepEqual(sceneTripleOverlap.primitiveDrawOrder, ['pillar', 'wedge', 'sphere']);
+    assert.deepEqual(sceneTripleOverlap.sceneRenderOrder, ['floor', 'pillar', 'wedge', 'sphere']);
+
+    const auditTriple = auditScene3DOcclusionInvariants(-50, -0.4);
+    assert.equal(auditTriple.ok, true);
+    assert.equal(auditTriple.overlaps.wedgeSphere, true);
+    assert.equal(auditTriple.overlaps.pillarSphere, true);
+    assert.equal(auditTriple.overlaps.pillarWedge, true);
+
+    // 3. Critical Angles 3a & 3b (ψ = -17.1°, θ = +8.0° and ψ = -17.1°, θ = +18.3°):
+    // Viewing from below (θ > 0°): Floor renders ON TOP OF N-legs, Pillar renders UNDER Wedge, and Sphere renders OVER Wedge & Pillar.
+    const scenePitchPos = computeBauhausPhiScene3D(-17.1, 8.0);
+    assert.equal(scenePitchPos.wedgeInFrontOfPillar, true);
+    assert.equal(scenePitchPos.pillarOccludesWedge, false);
+    assert.equal(scenePitchPos.sphereInFrontOfWedge, true);
+    assert.equal(scenePitchPos.sphereInFrontOfPillar, true);
+    assert.equal(scenePitchPos.wedgeOccludesSphere, false);
+    assert.equal(scenePitchPos.floorOccludesSolids, true);
+    assert.deepEqual(scenePitchPos.primitiveDrawOrder, ['pillar', 'wedge', 'sphere']);
+    assert.deepEqual(scenePitchPos.sceneRenderOrder, ['pillar', 'wedge', 'sphere', 'floor']);
+
+    const auditA = auditScene3DOcclusionInvariants(-17.1, 8.0);
+    assert.equal(auditA.ok, true);
+    assert.equal(auditA.overlaps.pillarWedge, true);
+    assert.equal(auditA.overlaps.floorPillar, true);
+    assert.equal(auditA.overlaps.floorWedge, true);
+
+    const auditB = auditScene3DOcclusionInvariants(-17.1, 18.3);
+    assert.equal(auditB.ok, true);
+    assert.equal(auditB.overlaps.floorPillar, true);
+    assert.equal(auditB.overlaps.floorWedge, true);
+    assert.deepEqual(auditB.sceneRenderOrder, ['pillar', 'wedge', 'sphere', 'floor']);
+
+    // 4. User Screenshot Case C (ψ = -24.2°, θ = -11.4°):
+    // - Quantum Sphere (○) renders ON TOP OF Cyan Wedge (△) and ON TOP OF Purple Pillar (□).
+    // - Cyan Wedge (△) renders ON TOP OF Purple Pillar (□).
+    // - Because θ = -11.4° <= 0 (viewing from above the floor plane downward),
+    //   the 3D Stage Floor renders UNDERNEATH the N-sculpture solids!
+    const scenePitchNeg = computeBauhausPhiScene3D(-24.2, -11.4);
+    assert.equal(scenePitchNeg.wedgeInFrontOfPillar, true);
+    assert.equal(scenePitchNeg.pillarOccludesWedge, false);
+    assert.equal(scenePitchNeg.sphereInFrontOfWedge, true);
+    assert.equal(scenePitchNeg.sphereInFrontOfPillar, true);
+    assert.equal(scenePitchNeg.wedgeOccludesSphere, false);
+    assert.equal(scenePitchNeg.floorOccludesSolids, false);
+    assert.deepEqual(scenePitchNeg.primitiveDrawOrder, ['pillar', 'wedge', 'sphere']);
+    assert.deepEqual(scenePitchNeg.sceneRenderOrder, ['floor', 'pillar', 'wedge', 'sphere']);
+
+    const auditC = auditScene3DOcclusionInvariants(-24.2, -11.4);
+    assert.equal(auditC.ok, true);
+    assert.equal(auditC.overlaps.wedgeSphere, true);
+
+    // 4b. Steep positive yaw (ψ = +50°, θ = -13.9°): Pillar's front-right edge (z = -0.822) rotates in front of Wedge's back-left edge (z = -1.65), while Sphere remains in front
+    const sceneSteepPos = computeBauhausPhiScene3D(50, -13.9);
+    assert.equal(sceneSteepPos.pillarOccludesWedge, true);
+    assert.equal(sceneSteepPos.sphereInFrontOfWedge, true);
+    assert.deepEqual(sceneSteepPos.sceneRenderOrder, ['floor', 'wedge', 'pillar', 'sphere']);
+
+    // 5. Exhaustive 165-point 2D Angle Matrix Audit across (ψ, θ) ∈ [-65°, +65°] × [-55°, +55°]
+    const yaws = [-65, -50, -36.4, -24.2, -17.1, -8, -1, 0, 1, 8, 13.9, 24.2, 35.3, 50, 65];
+    const pitches = [-55, -30, -13.9, -11.4, -2, 0, 2, 4.9, 8.0, 18.3, 55];
+    for (const yaw of yaws) {
+      for (const pitch of pitches) {
+        const report = auditScene3DOcclusionInvariants(yaw, pitch);
+        assert.equal(
+          report.ok,
+          true,
+          `Occlusion audit failed at (ψ=${yaw}°, θ=${pitch}°): ${report.violations.join('; ')}`
+        );
+      }
+    }
+
+    // 6. Verify LogoConceptsLab.vue renders the unified 3D scene in scene3D.sceneRenderOrder,
+    // wires ArrowLeft/ArrowRight with % wrap via key-controller, and centers .concept-badge / .active-pill text
+    const labVuePath = path.resolve(__dirname, '../../src/playground/LogoConceptsLab.vue');
+    const labVueSrc = fs.readFileSync(labVuePath, 'utf8');
+    assert.ok(
+      labVueSrc.includes('v-for="primId in scene3D.sceneRenderOrder"'),
+      'LogoConceptsLab.vue must render the 3D scene in scene3D.sceneRenderOrder'
+    );
+    assert.ok(
+      labVueSrc.includes('stepWrappedIndex') && labVueSrc.includes('getGlobalKeyController'),
+      'LogoConceptsLab.vue must wire ArrowLeft/ArrowRight with stepWrappedIndex and getGlobalKeyController'
+    );
+    assert.equal(stepWrappedIndex(0, -1, 3), 2);
+    assert.equal(stepWrappedIndex(2, 1, 3), 0);
+    assert.equal(stepWrappedIndex(0, 1, 3), 1);
+
+    const kc = createKeyController({ target: null });
+    let idx = 0;
+    kc.bindAll({
+      ArrowLeft: () => { idx = stepWrappedIndex(idx, -1, 3); },
+      ArrowRight: () => { idx = stepWrappedIndex(idx, 1, 3); },
+    });
+    kc.handleKeyDown({ key: 'ArrowLeft', target: { tagName: 'DIV' } });
+    assert.equal(idx, 2);
+    kc.handleKeyDown({ key: 'ArrowRight', target: { tagName: 'DIV' } });
+    assert.equal(idx, 0);
+  });
+
+  it('splits floating card equations into 3 locked sections (left | = | right) and prevents sub-second Δ order-of-magnitude jumps', () => {
+    const sampleA = computeFloating3DArtifacts(24, 12, 1.0, 0.18);
+    const sampleB = computeFloating3DArtifacts(24, 12, 1.15, 0.18);
+
+    for (let i = 0; i < sampleA.length; i++) {
+      const a = sampleA[i];
+      const b = sampleB[i];
+
+      // 1. Verify 3-section structure [left, '=', right] and invariant anchor X positions
+      assert.equal(a.deltaParts.eq, '=');
+      assert.equal(a.readoutParts.eq, '=');
+      assert.ok(a.deltaParts.left.length >= 1);
+      assert.ok(a.deltaParts.right.length >= 3);
+      assert.equal(a.deltaParts.leftX, b.deltaParts.leftX);
+      assert.equal(a.deltaParts.eqX, b.deltaParts.eqX);
+      assert.equal(a.deltaParts.rightX, b.deltaParts.rightX);
+      assert.ok(a.deltaParts.leftX < a.deltaParts.eqX && a.deltaParts.eqX < a.deltaParts.rightX);
+      assert.ok(a.readoutParts.leftX < a.readoutParts.eqX && a.readoutParts.eqX < a.readoutParts.rightX);
+
+      // 2. While not converged (perfectionScalar = 0.18), Δ must never jump to 0.0e+0 or 2.2e-16
+      assert.notEqual(a.deltaParts.right, '0.0e+0');
+      assert.notEqual(a.deltaParts.right, '2.2e-16');
+      assert.notEqual(b.deltaParts.right, '0.0e+0');
+      assert.notEqual(b.deltaParts.right, '2.2e-16');
+    }
+
+    // When converged at (0°, 0°), Δ cleanly reaches 0.0e+0 while preserving identical leftX/eqX/rightX anchors
+    const locked = computeFloating3DArtifacts(0, 0, 1.0, 0);
+    for (const card of locked) {
+      assert.equal(card.deltaParts.eq, '=');
+      assert.equal(card.deltaParts.right, '0.0e+0');
+      assert.equal(card.deltaParts.eqX, 15.2);
+    }
   });
 });

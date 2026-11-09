@@ -5,6 +5,9 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
   MUTATING_HEADER_SPREAD_PRESETS,
+  DEFAULT_HEADER_TIER_WIDTHS,
+  resolveOptimalHeaderTier,
+  pickAdaptiveHeaderLabel,
   normalizeHeaderSpread,
   parseFloatingVerticalMargins,
   computeHeaderCompressionMeta,
@@ -77,7 +80,33 @@ describe('MutatingHeader — Symmetric Centering, Inner Spread & Priority+ Compr
     assert.equal(critical.compressionLevel, 3);
     assert.equal(critical.densityTier, 'critical');
     assert.equal(critical.overflowPx, 20);
+    assert.equal(critical.isUtilityMenuFolded, true);
     assert.equal(critical.isActionsCompact, true);
+  });
+
+  test('resolveOptimalHeaderTier and pickAdaptiveHeaderLabel should use naturalSearch to select non-overlapping tiers', () => {
+    assert.deepEqual(DEFAULT_HEADER_TIER_WIDTHS, [1040, 860, 680, 520]);
+
+    const t0 = resolveOptimalHeaderTier({ containerWidth: 1120 });
+    assert.equal(t0.tierIndex, 0);
+    assert.equal(t0.fits, true);
+
+    const t1 = resolveOptimalHeaderTier({ containerWidth: 920 });
+    assert.equal(t1.tierIndex, 1);
+    assert.equal(t1.fits, true);
+
+    const t2 = resolveOptimalHeaderTier({ containerWidth: 740 });
+    assert.equal(t2.tierIndex, 2);
+    assert.equal(t2.fits, true);
+
+    const t3 = resolveOptimalHeaderTier({ containerWidth: 560 });
+    assert.equal(t3.tierIndex, 3);
+    assert.equal(t3.fits, true);
+
+    const ctaCandidates = ['Domena na sprzedaż / wynajem', 'Oferta domeny', 'Oferta'];
+    assert.equal(pickAdaptiveHeaderLabel(ctaCandidates, 260).label, 'Domena na sprzedaż / wynajem');
+    assert.equal(pickAdaptiveHeaderLabel(ctaCandidates, 150).label, 'Oferta domeny');
+    assert.equal(pickAdaptiveHeaderLabel(ctaCandidates, 90).label, 'Oferta');
   });
 
   test('MutatingHeader.vue should preserve margin-left: auto and margin-right: auto in both floating and is-stuck states', () => {
