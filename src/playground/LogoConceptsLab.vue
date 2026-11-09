@@ -12,6 +12,7 @@ import {
   NANO_UI_SONIC_LOGO_NSD,
   projectOrthographic3D,
   computeGoldenFlowAndCursorField,
+  reanchorGoldenFlowAngle,
   computeBauhausPhiScene3D,
   sampleMonteCarloNShadow,
 } from '../utils/bauhausPhiLogo.js';
@@ -82,11 +83,38 @@ const cursorTrail = ref([]);
 let timers = [];
 let transitionRafId = null;
 let orbitRafId = null;
-let orbitStartTime = 0;
+let orbitElapsedSec = 0;
+let lastOrbitFrameNow = 0;
 let dragStartX = 0;
 let dragStartY = 0;
 let dragBaseYaw = 0;
 let dragBasePitch = 0;
+
+const cachedSafeStageBounds = ref({ minX: -25.5, maxX: 57.5, minY: -10.5, maxY: 42.5 });
+
+const refreshSafeStageBounds = () => {
+  cachedSafeStageBounds.value = measureSafeStageBounds(
+    stage3DSvgRef.value || stage3DBoxRef.value,
+    { minX: -22, minY: -7, width: 76, height: 46 },
+    { minX: -25.5, maxX: 57.5, minY: -10.5, maxY: 42.5 }
+  );
+};
+
+const reanchorAtCurrentFlowTime = (targetYaw, targetPitch) => {
+  const reanchored = reanchorGoldenFlowAngle({
+    targetYawDeg: targetYaw,
+    targetPitchDeg: targetPitch,
+    timeSec: orbitElapsedSec,
+    cursorNormX: smoothCursorX,
+    cursorNormY: smoothCursorY,
+    cursorEnergy: smoothCursorEnergy,
+    cursorPresence: smoothCursorPresence,
+  });
+  anchorYawDeg.value = reanchored.anchorYawDeg;
+  anchorPitchDeg.value = reanchored.anchorPitchDeg;
+  yawDeg.value = reanchored.yawDeg;
+  pitchDeg.value = reanchored.pitchDeg;
+};
 
 // Smooth spring-damped cursor tracking variables
 let cursorTargetX = 0;
@@ -232,6 +260,9 @@ const animateToAngles = (targetYaw, targetPitch, targetPert = 0, durationMs = 78
       calibrationPerturbation.value = targetPert;
       if (targetYaw === 0 && targetPitch === 0 && targetPert === 0) {
         stopInteractive3DAudio();
+      } else {
+        reanchorAtCurrentFlowTime(targetYaw, targetPitch);
+        startAutoOrbitLoop(false);
       }
     }
   };
@@ -313,17 +344,22 @@ const startAutoOrbitLoop = (withAudioGesture = false) => {
     hasUserInteractedAudio.value = true;
   }
   if (typeof window === 'undefined' || typeof window.requestAnimationFrame !== 'function') {
+    isAutoOrbiting.value = true;
     return;
   }
-  stopOrbitAnimation();
   stopTransitionLoop();
   isConverging.value = false;
+  if (isAutoOrbiting.value && orbitRafId) {
+    return;
+  }
   isAutoOrbiting.value = true;
-  orbitStartTime = performance.now();
+  lastOrbitFrameNow = performance.now();
 
   const stepOrbit = (now) => {
     if (!isAutoOrbiting.value) return;
-    const elapsedSec = (now - orbitStartTime) * 0.001;
+    const dtSec = Math.max(0, Math.min(0.1, (now - lastOrbitFrameNow) * 0.001));
+    lastOrbitFrameNow = now;
+    orbitElapsedSec += dtSec;
 
     // Exponential spring smoothing for liquid-smooth cursor parallax & kinetic energy decay
     smoothCursorX += (cursorTargetX - smoothCursorX) * 0.085;
@@ -333,7 +369,7 @@ const startAutoOrbitLoop = (withAudioGesture = false) => {
     smoothCursorPresence += (cursorTargetPresence - smoothCursorPresence) * 0.08;
 
     const flow = computeGoldenFlowAndCursorField({
-      timeSec: elapsedSec,
+      timeSec: orbitElapsedSec,
       cursorNormX: smoothCursorX,
       cursorNormY: smoothCursorY,
       cursorEnergy: smoothCursorEnergy,
@@ -342,9 +378,11 @@ const startAutoOrbitLoop = (withAudioGesture = false) => {
       anchorPitchDeg: anchorPitchDeg.value,
     });
 
-    yawDeg.value = flow.yawDeg;
-    pitchDeg.value = flow.pitchDeg;
-    calibrationPerturbation.value = flow.calibrationPerturbation;
+    if (!isPointerDragging.value) {
+      yawDeg.value = flow.yawDeg;
+      pitchDeg.value = flow.pitchDeg;
+      calibrationPerturbation.value = flow.calibrationPerturbation;
+    }
     holoPhaseRad.value = flow.holoPhaseRad;
 
     cursorField.value = {
@@ -470,8 +508,8 @@ const onStagePointerDown = (e) => {
   isPointerDragging.value = true;
   dragStartX = e.clientX;
   dragStartY = e.clientY;
-  dragBaseYaw = anchorYawDeg.value;
-  dragBasePitch = anchorPitchDeg.value;
+  dragBaseYaw = yawDeg.value;
+  dragBasePitch = pitchDeg.value;
   if (e.currentTarget && typeof e.currentTarget.setPointerCapture === 'function') {
     try {
       e.currentTarget.setPointerCapture(e.pointerId);
@@ -486,12 +524,9 @@ const onStagePointerMove = (e) => {
   if (!isPointerDragging.value) return;
   const dx = e.clientX - dragStartX;
   const dy = e.clientY - dragStartY;
-  const nextYaw = Math.max(-65, Math.min(65, Number((dragBaseYaw + dx * 0.45).toFixed(2))));
-  const nextPitch = Math.max(-45, Math.min(45, Number((dragBasePitch - dy * 0.35).toFixed(2))));
-  anchorYawDeg.value = nextYaw;
-  anchorPitchDeg.value = nextPitch;
-  yawDeg.value = nextYaw;
-  pitchDeg.value = nextPitch;
+  const nextYaw = Math.max(-65, Math.min(65, Number((dragBaseYaw + dx * 0.45).toFixed(3))));
+  const nextPitch = Math.max(-45, Math.min(45, Number((dragBasePitch - dy * 0.35).toFixed(3))));
+  reanchorAtCurrentFlowTime(nextYaw, nextPitch);
   holoPhaseRad.value = Number((holoPhaseRad.value + 0.08).toFixed(3));
   updateInteractive3DAudio(nextYaw, nextPitch, scene3D.value.perfection.scalar);
 };
@@ -502,46 +537,46 @@ const onStagePointerUp = () => {
   if (Math.abs(yawDeg.value) < 3.5 && Math.abs(pitchDeg.value) < 3.5) {
     animateToAngles(0, 0, 0, 420);
     triggerConceptDemo('PHI');
+  } else {
+    reanchorAtCurrentFlowTime(yawDeg.value, pitchDeg.value);
+    if (!isAutoOrbiting.value) {
+      startAutoOrbitLoop(false);
+    }
   }
 };
 
 const onSliderYaw = (v) => {
   hasUserInteractedAudio.value = true;
-  stopOrbitAnimation();
   stopTransitionLoop();
   isConverging.value = false;
-  anchorYawDeg.value = v;
-  yawDeg.value = v;
-  holoPhaseRad.value = Number((holoPhaseRad.value + 0.06).toFixed(3));
+  reanchorAtCurrentFlowTime(v, pitchDeg.value);
+  if (!isAutoOrbiting.value) {
+    startAutoOrbitLoop(false);
+  }
   updateInteractive3DAudio(yawDeg.value, pitchDeg.value, scene3D.value.perfection.scalar);
 };
 
 const onSliderPitch = (v) => {
   hasUserInteractedAudio.value = true;
-  stopOrbitAnimation();
   stopTransitionLoop();
   isConverging.value = false;
-  anchorPitchDeg.value = v;
-  pitchDeg.value = v;
-  holoPhaseRad.value = Number((holoPhaseRad.value + 0.06).toFixed(3));
+  reanchorAtCurrentFlowTime(yawDeg.value, v);
+  if (!isAutoOrbiting.value) {
+    startAutoOrbitLoop(false);
+  }
   updateInteractive3DAudio(yawDeg.value, pitchDeg.value, scene3D.value.perfection.scalar);
 };
 
-const scene3D = computed(() => {
-  const safeBounds = measureSafeStageBounds(
-    stage3DSvgRef.value || stage3DBoxRef.value,
-    { minX: -22, minY: -7, width: 76, height: 46 },
-    { minX: -25.5, maxX: 57.5, minY: -10.5, maxY: 42.5 }
-  );
-  return computeBauhausPhiScene3D(
+const scene3D = computed(() =>
+  computeBauhausPhiScene3D(
     yawDeg.value,
     pitchDeg.value,
     calibrationPerturbation.value,
     holoPhaseRad.value,
     cursorField.value,
-    safeBounds
-  );
-});
+    cachedSafeStageBounds.value
+  )
+);
 
 const monteCarloState = computed(() =>
   sampleMonteCarloNShadow(
@@ -716,6 +751,7 @@ onMounted(() => {
   isMountedClient.value = true;
   if (typeof window !== 'undefined') {
     window.addEventListener('keydown', onGlobalKeydown);
+    window.addEventListener('resize', refreshSafeStageBounds);
     document.addEventListener('fullscreenchange', onFullscreenChange);
     // Walk up parentNode from the 3D SVG stage so floating 3D windows never get clipped by intermediate wrappers
     let parentEl = (stage3DSvgRef.value || stage3DBoxRef.value)?.parentNode;
@@ -727,6 +763,7 @@ onMounted(() => {
       parentEl = parentEl.parentNode;
       depth++;
     }
+    refreshSafeStageBounds();
     const keys = getGlobalKeyController();
     offKeyController = keys.bindAll(
       {
@@ -756,6 +793,7 @@ onUnmounted(() => {
   }
   if (typeof window !== 'undefined') {
     window.removeEventListener('keydown', onGlobalKeydown);
+    window.removeEventListener('resize', refreshSafeStageBounds);
     document.removeEventListener('fullscreenchange', onFullscreenChange);
   }
 });
