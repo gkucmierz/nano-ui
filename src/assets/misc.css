@@ -45,7 +45,11 @@ textarea,
 code,
 pre,
 kbd,
-samp {
+samp,
+.nce-code-col,
+.nano-syntax-code,
+.nce-hunk-cell,
+.nce-filepath {
   -webkit-user-select: text !important;
   user-select: text !important;
 }
