@@ -253,7 +253,21 @@ const measureHeaderGeometry = () => {
   let activeSlotCount = 0;
   for (const el of [leftElRef.value, centerElRef.value, rightElRef.value]) {
     if (el) {
-      const w = Math.max(el.scrollWidth || 0, Math.round(el.getBoundingClientRect().width || 0));
+      const children = Array.from(el.children || []);
+      let w = 0;
+      if (children.length > 0) {
+        for (const child of children) {
+          w += Math.max(
+            child.scrollWidth || 0,
+            Math.round(child.getBoundingClientRect?.().width || 0)
+          );
+        }
+        if (children.length > 1) {
+          w += (children.length - 1) * 10;
+        }
+      } else {
+        w = Math.max(el.scrollWidth || 0, Math.round(el.getBoundingClientRect().width || 0));
+      }
       if (w > 0) {
         sumW += w;
         activeSlotCount += 1;
