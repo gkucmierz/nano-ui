@@ -169,6 +169,13 @@ const props = defineProps({
     type: Boolean,
     default: false,
   },
+  /**
+   * Show native macOS external editor launcher buttons (Sublime Text / CotEditor / System Default)
+   */
+  openInEditor: {
+    type: Boolean,
+    default: false,
+  },
 });
 
 let editorUidSeq = 0;
@@ -182,6 +189,7 @@ const emit = defineEmits([
   'change',
   'copied',
   'downloaded',
+  'open-in-editor',
   'run',
 ]);
 
@@ -540,6 +548,23 @@ const downloadContent = () => {
   emit('downloaded', { filename, content: text });
 };
 
+const openedEditorId = ref('');
+let openedEditorTimer = null;
+
+const triggerOpenInEditor = (editorId = 'subl') => {
+  if (!props.filePath) return;
+  openedEditorId.value = editorId;
+  emit('open-in-editor', {
+    filePath: props.filePath,
+    line: activeLine.value || 1,
+    editor: editorId,
+  });
+  if (openedEditorTimer) clearTimeout(openedEditorTimer);
+  openedEditorTimer = setTimeout(() => {
+    openedEditorId.value = '';
+  }, 1500);
+};
+
 const focus = () => {
   textareaRef.value?.focus?.();
 };
@@ -563,6 +588,10 @@ onUnmounted(() => {
   if (copyTimer) {
     clearTimeout(copyTimer);
     copyTimer = null;
+  }
+  if (openedEditorTimer) {
+    clearTimeout(openedEditorTimer);
+    openedEditorTimer = null;
   }
 });
 
@@ -656,6 +685,37 @@ defineExpose({
             @click="setDiffStyle('split')"
           >
             Split
+          </button>
+        </div>
+
+        <!-- Optional External macOS Editor Launcher (Sublime Text / CotEditor / Finder) -->
+        <div v-if="openInEditor && filePath" class="nce-seg-group nce-editor-launch-group">
+          <button
+            type="button"
+            class="nce-seg-btn"
+            :class="{ active: openedEditorId === 'subl' }"
+            v-tooltip="`Open ${filePath}:${activeLine || 1} in Sublime Text`"
+            @click="triggerOpenInEditor('subl')"
+          >
+            {{ openedEditorId === 'subl' ? '✓ Subl' : 'Subl' }}
+          </button>
+          <button
+            type="button"
+            class="nce-seg-btn"
+            :class="{ active: openedEditorId === 'cot' }"
+            v-tooltip="`Open ${filePath}:${activeLine || 1} in CotEditor`"
+            @click="triggerOpenInEditor('cot')"
+          >
+            {{ openedEditorId === 'cot' ? '✓ Cot' : 'Cot' }}
+          </button>
+          <button
+            type="button"
+            class="nce-seg-btn"
+            :class="{ active: openedEditorId === 'finder' }"
+            v-tooltip="`Reveal ${filePath} in macOS Finder`"
+            @click="triggerOpenInEditor('finder')"
+          >
+            {{ openedEditorId === 'finder' ? '✓ Finder' : 'Finder' }}
           </button>
         </div>
 
@@ -1098,6 +1158,18 @@ defineExpose({
   padding: 0 12px 0 6px;
   white-space: pre;
   vertical-align: top;
+  -webkit-user-select: text !important;
+  user-select: text !important;
+  cursor: text;
+}
+
+.nce-code-col :deep(*),
+.nano-syntax-code,
+.nce-hunk-cell,
+.nce-filepath {
+  -webkit-user-select: text !important;
+  user-select: text !important;
+  cursor: text;
 }
 
 .nano-code-editor.is-wrapped .nce-code-col {
