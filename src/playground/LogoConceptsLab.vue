@@ -1026,7 +1026,13 @@ const concepts = [
                       :transform="`translate(${tok.x}, ${tok.y}) scale(${tok.scale})`"
                       :opacity="tok.opacity"
                     >
-                      <circle r="0.38" :fill="tok.color" />
+                      <polygon
+                        :points="tok.polygonPoints"
+                        :fill="tok.color"
+                        stroke="rgba(255, 255, 255, 0.55)"
+                        stroke-width="0.08"
+                        stroke-linejoin="round"
+                      />
                       <text
                         v-if="deviceViewport !== 'mobile'"
                         x="0.7"
@@ -1279,23 +1285,44 @@ const concepts = [
                       />
                     </g>
 
-                    <!-- 3. [○] 3D Volumetric Quantum Sphere (z = +4*phi^-1) -->
+                    <!-- 3. [○] 3D Volumetric Quantum Sphere (z = +4*phi^-1) with Depth-Split Orbital Ring & Rotating Polygon Planetoids -->
                     <g
                       v-else-if="primId === 'sphere'"
                       :class="{ 'vec-pulse': activePulseConcept === 'PHI' && activePulseStep === 3 }"
                     >
-                      <!-- Subtle 3D Equatorial Orbital Ring around the Sphere -->
-                      <ellipse
+                      <!-- 3a. BACK ARC OF ORBITAL RING (z < sphere.z — Occluded behind the upper half of the Sphere) -->
+                      <polyline
                         v-if="!scene3D.isOrthographicLock"
-                        :cx="scene3D.sphere.x"
-                        :cy="scene3D.sphere.y"
-                        :rx="scene3D.sphere.r * 1.32"
-                        :ry="scene3D.sphere.r * 0.46"
-                        :transform="`rotate(${(yawDeg * 0.35).toFixed(1)} ${scene3D.sphere.x} ${scene3D.sphere.y})`"
+                        :points="scene3D.sphere.backRingPoints"
                         fill="none"
-                        stroke="rgba(103, 232, 249, 0.45)"
+                        stroke="rgba(103, 232, 249, 0.34)"
                         stroke-width="0.2"
+                        stroke-linecap="round"
                       />
+
+                      <!-- 3b. BACK PLANETOIDS (z < sphere.z — Irregular rotating polygons passing behind the Sphere) -->
+                      <template v-if="!scene3D.isOrthographicLock">
+                        <g
+                          v-for="pl in scene3D.sphere.backPlanetoids"
+                          :key="pl.id"
+                          :opacity="pl.opacity"
+                        >
+                          <polygon
+                            :points="pl.outerPoints"
+                            :fill="silhouetteMode ? '#d4d4d8' : pl.color"
+                            stroke="rgba(15, 23, 42, 0.65)"
+                            stroke-width="0.07"
+                            stroke-linejoin="round"
+                          />
+                          <polygon
+                            :points="pl.facetPoints"
+                            :fill="silhouetteMode ? '#ffffff' : pl.highlight"
+                            opacity="0.72"
+                          />
+                        </g>
+                      </template>
+
+                      <!-- 3c. THE QUANTUM SPHERE BODY (z = sphere.z) -->
                       <circle
                         :cx="scene3D.sphere.x"
                         :cy="scene3D.sphere.y"
@@ -1304,6 +1331,38 @@ const concepts = [
                         stroke="rgba(165, 243, 252, 0.65)"
                         stroke-width="0.2"
                       />
+
+                      <!-- 3d. FRONT/LOWER ARC OF ORBITAL RING (z >= sphere.z — Wraps IN FRONT OF the Sphere!) -->
+                      <polyline
+                        v-if="!scene3D.isOrthographicLock"
+                        :points="scene3D.sphere.frontRingPoints"
+                        fill="none"
+                        stroke="rgba(165, 243, 252, 0.78)"
+                        stroke-width="0.24"
+                        stroke-linecap="round"
+                      />
+
+                      <!-- 3e. FRONT PLANETOIDS (z >= sphere.z — Irregular rotating polygons transiting IN FRONT OF the Sphere!) -->
+                      <template v-if="!scene3D.isOrthographicLock">
+                        <g
+                          v-for="pl in scene3D.sphere.frontPlanetoids"
+                          :key="pl.id"
+                          :opacity="pl.opacity"
+                        >
+                          <polygon
+                            :points="pl.outerPoints"
+                            :fill="silhouetteMode ? '#ffffff' : pl.color"
+                            stroke="rgba(236, 254, 255, 0.85)"
+                            stroke-width="0.09"
+                            stroke-linejoin="round"
+                          />
+                          <polygon
+                            :points="pl.facetPoints"
+                            :fill="silhouetteMode ? '#f4f4f5' : pl.highlight"
+                            opacity="0.9"
+                          />
+                        </g>
+                      </template>
                     </g>
                   </template>
 
@@ -1416,7 +1475,13 @@ const concepts = [
                       :transform="`translate(${tok.x}, ${tok.y}) scale(${tok.scale})`"
                       :opacity="tok.opacity"
                     >
-                      <circle r="0.38" :fill="tok.color" />
+                      <polygon
+                        :points="tok.polygonPoints"
+                        :fill="tok.color"
+                        stroke="rgba(255, 255, 255, 0.72)"
+                        stroke-width="0.09"
+                        stroke-linejoin="round"
+                      />
                       <text
                         v-if="deviceViewport !== 'mobile'"
                         x="0.75"
