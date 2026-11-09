@@ -700,6 +700,14 @@ const animFontSizeLabel = computed(() => {
   return minFs + (maxFs - minFs) * clampedRatio
 })
 
+const centerValueOffsetY = computed(() => {
+  return -(animFontSizeValue.value * 0.36)
+})
+
+const centerLabelOffsetY = computed(() => {
+  return animFontSizeValue.value * 0.56 + animFontSizeLabel.value * 0.52
+})
+
 const drawCenterYComputed = computed(() => {
   return animCy.value - animDepth.value / 2
 })
@@ -2257,7 +2265,7 @@ defineExpose({
           >
             <text
               x="0"
-              y="-3"
+              :y="centerValueOffsetY"
               class="center-text-value"
               :font-size="animFontSizeValue"
               font-weight="bold"
@@ -2269,7 +2277,7 @@ defineExpose({
             </text>
             <text
               x="0"
-              y="10"
+              :y="centerLabelOffsetY"
               class="center-text-label"
               :font-size="animFontSizeLabel"
               font-family="system-ui, -apple-system, sans-serif"
@@ -2317,7 +2325,7 @@ defineExpose({
           <g v-if="props.showCenterText" :transform="`translate(${animCx}, ${animCy})`" class="center-text-group">
             <text 
               x="0" 
-              y="-3" 
+              :y="centerValueOffsetY" 
               class="center-text-value"
               :font-size="animFontSizeValue" 
               font-weight="bold" 
@@ -2329,7 +2337,7 @@ defineExpose({
             </text>
             <text 
               x="0" 
-              y="10" 
+              :y="centerLabelOffsetY" 
               class="center-text-label"
               :font-size="animFontSizeLabel" 
               font-family="system-ui, -apple-system, sans-serif" 
