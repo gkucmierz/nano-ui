@@ -3,8 +3,10 @@ import { ref, watch, onMounted, onUnmounted, nextTick, computed, useSlots, getCu
 import NanoIcon from './NanoIcon.vue';
 import vRipple from '../directives/ripple.js';
 import { getScopedStorageController, normalizeStorageMode } from '../utils/storage-controller.js';
+import { lockModalBackgroundScroll, unlockModalBackgroundScroll } from '../utils/modalScrollLock.js';
 
 const nanoStorage = getScopedStorageController('nano-ui');
+const modalScrollLockToken = Symbol('nano-modal-scroll-lock');
 
 const isMounted = ref(false);
 const slots = useSlots();
@@ -452,9 +454,7 @@ watch(isVisible, async (newVal) => {
     // Restore saved geometry from localStorage (if storageKey provided) or reset to centered default
     restoreGeometry();
 
-    if (typeof document !== 'undefined') {
-      document.body.style.overflow = 'hidden';
-    }
+    lockModalBackgroundScroll(modalScrollLockToken);
     if (typeof window !== 'undefined') {
       window.addEventListener('keydown', onGlobalKeyDown, { capture: true });
     }
@@ -463,9 +463,7 @@ watch(isVisible, async (newVal) => {
       modalOverlay.value.focus();
     }
   } else {
-    if (typeof document !== 'undefined') {
-      document.body.style.overflow = '';
-    }
+    unlockModalBackgroundScroll(modalScrollLockToken);
     if (typeof window !== 'undefined') {
       window.removeEventListener('keydown', onGlobalKeyDown, { capture: true });
     }
@@ -475,8 +473,10 @@ watch(isVisible, async (newVal) => {
 }, { immediate: true });
 
 onUnmounted(() => {
-  document.body.style.overflow = '';
-  window.removeEventListener('keydown', onGlobalKeyDown, { capture: true });
+  unlockModalBackgroundScroll(modalScrollLockToken);
+  if (typeof window !== 'undefined') {
+    window.removeEventListener('keydown', onGlobalKeyDown, { capture: true });
+  }
   stopDrag();
   stopResize();
 });
@@ -607,6 +607,7 @@ defineExpose({
   padding: 20px;
   box-sizing: border-box;
   outline: none;
+  overscroll-behavior: contain;
 }
 
 .nano-modal-overlay.nano-glass {
@@ -695,6 +696,7 @@ defineExpose({
 .nano-modal-body {
   padding: 24px;
   overflow-y: auto;
+  overscroll-behavior: contain;
   flex: 1;
   min-height: 0;
   display: flex;
