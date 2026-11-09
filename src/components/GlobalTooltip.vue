@@ -124,7 +124,7 @@ onUnmounted(() => {
   font-size: 0.85rem;
   font-weight: 500;
   width: max-content;
-  max-width: min(40vw, 420px, calc(100vw - var(--nano-space-xl, 32px)));
+  max-width: min(var(--nano-tooltip-max-width, 420px), calc(100vw - var(--nano-space-lg, 24px)));
   text-align: center;
   line-height: 1.4;
   white-space: normal;
