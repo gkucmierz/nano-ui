@@ -696,8 +696,11 @@ defineExpose({
   height: 100%;
   border-radius: 14px;
   overflow: hidden;
-  background: var(--nano-bg-card, #18181b);
-  border: 1px solid var(--nano-border-subtle, rgba(148, 163, 184, 0.22));
+  background: var(
+    --nano-coverflow-card-bg,
+    color-mix(in srgb, var(--nano-bg-sidebar, #18181b) 95%, var(--nano-text-main, #f8fafc) 5%)
+  );
+  border: 1px solid var(--nano-border-card, rgba(148, 163, 184, 0.24));
   box-shadow: var(--nano-shadow-card, 0 18px 42px rgba(0, 0, 0, 0.45));
   box-sizing: border-box;
   transition: border-color 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease;
@@ -710,9 +713,13 @@ defineExpose({
 }
 
 .nano-cf-item.is-active .nano-cf-card-surface {
+  background: var(
+    --nano-coverflow-active-card-bg,
+    color-mix(in srgb, var(--nano-bg-sidebar, #18181b) 94%, var(--nano-primary, #38bdf8) 6%)
+  );
   border-color: var(--nano-primary, #38bdf8);
   box-shadow:
-    var(--nano-shadow-card, 0 22px 50px rgba(0, 0, 0, 0.5)),
+    0 22px 50px rgba(0, 0, 0, 0.52),
     0 0 0 1px rgba(56, 189, 248, 0.35);
 }
 
