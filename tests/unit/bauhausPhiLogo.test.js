@@ -441,4 +441,34 @@ describe('Bauhaus Φ Tri-Primitive (□ + △ + ○) & Perfection Scalar L(Φ): 
       assert.equal(card.deltaParts.eqX, 15.2);
     }
   });
+
+  it('splits the Quantum Sphere orbital ring into back/front 3D arcs and orbits 7 irregular rotating polygon planetoids', () => {
+    const scene0 = computeBauhausPhiScene3D(13.9, 4.9, 0.18, 0.4);
+    const scene1 = computeBauhausPhiScene3D(13.9, 4.9, 0.18, 1.2);
+
+    assert.ok(scene0.sphere.backRingPoints.length > 20, 'backRingPoints must be populated');
+    assert.ok(scene0.sphere.frontRingPoints.length > 20, 'frontRingPoints must be populated');
+    assert.equal(scene0.sphere.planetoids.length, 7);
+    assert.equal(
+      scene0.sphere.backPlanetoids.length + scene0.sphere.frontPlanetoids.length,
+      7
+    );
+
+    // Every backPlanetoid must have z <= sphere.z, and every frontPlanetoid must have z >= sphere.z
+    for (const bp of scene0.sphere.backPlanetoids) {
+      assert.ok(bp.z <= scene0.sphere.z + 1e-6);
+      assert.ok(bp.outerPoints.split(' ').length >= 6);
+    }
+    for (const fp of scene0.sphere.frontPlanetoids) {
+      assert.ok(fp.z >= scene0.sphere.z - 1e-6);
+      assert.ok(fp.outerPoints.split(' ').length >= 6);
+    }
+
+    // Advancing phaseRad must both orbit planetoid positions and rotate their irregular polygon vertices
+    assert.notEqual(scene0.sphere.planetoids[0].x, scene1.sphere.planetoids[0].x);
+    assert.notEqual(
+      scene0.sphere.planetoids[0].outerPoints,
+      scene1.sphere.planetoids[0].outerPoints
+    );
+  });
 });
