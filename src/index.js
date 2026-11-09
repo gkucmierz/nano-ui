@@ -36,6 +36,7 @@ import NanoKnob from './components/NanoKnob.vue';
 import NanoSelect from './components/NanoSelect.vue';
 import NanoTrendChart from './components/NanoTrendChart.vue';
 import NanoChannelOsd from './components/NanoChannelOsd.vue';
+import NanoWelcomeHud from './components/NanoWelcomeHud.vue';
 import NanoNumberStepper from './components/NanoNumberStepper.vue';
 import NanoTabs from './components/NanoTabs.vue';
 import NanoCheckbox from './components/NanoCheckbox.vue';
@@ -43,6 +44,46 @@ import NanoSortableList from './components/NanoSortableList.vue';
 import NanoDatePicker from './components/NanoDatePicker.vue';
 import NanoSecretPipe from './components/NanoSecretPipe.vue';
 import NanoCoverFlow from './components/NanoCoverFlow.vue';
+import NanoCollapsible from './components/NanoCollapsible.vue';
+import {
+  shouldPreventModalBackgroundScroll,
+  lockModalBackgroundScroll,
+  unlockModalBackgroundScroll,
+  getActiveModalScrollLockCount,
+  resetModalScrollLocks,
+} from './utils/modalScrollLock.js';
+import {
+  computeBoundedCenterScroll,
+  computeCenteredScrollLeft,
+  computeCenteredScrollTop,
+  computeBoundedCenterScroll2D,
+  measureChildRelativeScrollGeometry,
+  scrollElementToBoundedCenter,
+  cancelBoundedCenterScroll,
+} from './utils/boundedCenterScroll.js';
+import {
+  computeAvailableFillHeight,
+  resolveFillHeightBoundary,
+  measureElementFillHeight,
+  useFillHeight,
+  fillHeightDirective,
+} from './utils/fillHeight.js';
+import {
+  DEFAULT_REARM_MOVE_THRESHOLD_PX,
+  createCoupledSelectionMachine,
+  useCoupledSelection,
+} from './utils/coupledSelection.js';
+import {
+  saveElementScrollPosition,
+  readElementScrollPosition,
+  restoreElementScroll,
+  scrollPersistDirective,
+} from './utils/scrollPersist.js';
+import {
+  resolveCollapsibleConfig,
+  evaluateSplitterSnapCollapse,
+  computeVirtualCollapsedPaneStyles,
+} from './utils/splitterCollapse.js';
 import {
   COVERFLOW_ORIENTATIONS,
   clampCoverFlowIndex,
@@ -224,7 +265,16 @@ import {
   computeSelectDropdownLayout,
   computeAdaptiveCardExpansion,
   getPositionedReferenceEl,
+  clampFloatingBox2D,
+  measureSafeStageBounds,
 } from './utils/selectPositioning.js';
+import {
+  naturalSearch,
+  computeMonospaceFittedFontSize,
+  fitSvgTextSize,
+  fitHtmlTextSize,
+  fitTextDirective,
+} from './utils/fitText.js';
 import {
   easeInOutCubic,
   computeSphericalLabelOpacity,
@@ -247,6 +297,9 @@ import { transitions, durations, easings, transitionVariables } from './config/t
 import {
   MUTATING_HEADER_META_KEY,
   MUTATING_HEADER_SPREAD_PRESETS,
+  DEFAULT_HEADER_TIER_WIDTHS,
+  resolveOptimalHeaderTier,
+  pickAdaptiveHeaderLabel,
   normalizeHeaderSpread,
   parseFloatingVerticalMargins,
   computeHeaderCompressionMeta,
@@ -292,6 +345,9 @@ export {
   MutatingHeader,
   MUTATING_HEADER_META_KEY,
   MUTATING_HEADER_SPREAD_PRESETS,
+  DEFAULT_HEADER_TIER_WIDTHS,
+  resolveOptimalHeaderTier,
+  pickAdaptiveHeaderLabel,
   normalizeHeaderSpread,
   parseFloatingVerticalMargins,
   computeHeaderCompressionMeta,
@@ -314,6 +370,8 @@ export {
   NanoTrendChart,
   NanoChannelOsd,
   NanoChannelOsd as ChannelOsd,
+  NanoWelcomeHud,
+  NanoWelcomeHud as WelcomeHud,
   NanoNumberStepper,
   NanoNumberStepper as NanoStepper,
   NanoTabs,
@@ -325,6 +383,37 @@ export {
   NanoSecretPipe as NanoPasswordTunnel,
   NanoCoverFlow,
   NanoCoverFlow as CoverFlow,
+  NanoCollapsible,
+  NanoCollapsible as NanoAccordion,
+  shouldPreventModalBackgroundScroll,
+  lockModalBackgroundScroll,
+  unlockModalBackgroundScroll,
+  getActiveModalScrollLockCount,
+  resetModalScrollLocks,
+  computeBoundedCenterScroll,
+  computeCenteredScrollLeft,
+  computeCenteredScrollTop,
+  computeBoundedCenterScroll2D,
+  measureChildRelativeScrollGeometry,
+  scrollElementToBoundedCenter,
+  cancelBoundedCenterScroll,
+  computeAvailableFillHeight,
+  resolveFillHeightBoundary,
+  measureElementFillHeight,
+  useFillHeight,
+  fillHeightDirective,
+  fillHeightDirective as vFillHeight,
+  DEFAULT_REARM_MOVE_THRESHOLD_PX,
+  createCoupledSelectionMachine,
+  useCoupledSelection,
+  saveElementScrollPosition,
+  readElementScrollPosition,
+  restoreElementScroll,
+  scrollPersistDirective,
+  scrollPersistDirective as vScrollPersist,
+  resolveCollapsibleConfig,
+  evaluateSplitterSnapCollapse,
+  computeVirtualCollapsedPaneStyles,
   COVERFLOW_ORIENTATIONS,
   clampCoverFlowIndex,
   stepCoverFlowIndex,
@@ -477,6 +566,14 @@ export {
   computeSelectDropdownLayout,
   computeAdaptiveCardExpansion,
   getPositionedReferenceEl,
+  clampFloatingBox2D,
+  measureSafeStageBounds,
+  naturalSearch,
+  computeMonospaceFittedFontSize,
+  fitSvgTextSize,
+  fitHtmlTextSize,
+  fitTextDirective,
+  fitTextDirective as vFitText,
   easeInOutCubic,
   computeSphericalLabelOpacity,
   computeSolarCosZenith,
@@ -536,6 +633,9 @@ export default {
     app.directive(`${dp}ripple`, Ripple);
     app.directive(`${dp}tooltip`, tooltipDirective);
     app.directive(`${dp}secret-pipe`, secretPipeDirective);
+    app.directive(`${dp}fill-height`, fillHeightDirective);
+    app.directive(`${dp}fit-text`, fitTextDirective);
+    app.directive(`${dp}scroll-persist`, scrollPersistDirective);
 
     app.component(`${cp}GlobalTooltip`, GlobalTooltip);
     app.component(`${cp}NanoModal`, NanoModal);
@@ -562,6 +662,8 @@ export default {
     app.component(`${cp}NanoTrendChart`, NanoTrendChart);
     app.component(`${cp}NanoChannelOsd`, NanoChannelOsd);
     app.component(`${cp}ChannelOsd`, NanoChannelOsd);
+    app.component(`${cp}NanoWelcomeHud`, NanoWelcomeHud);
+    app.component(`${cp}WelcomeHud`, NanoWelcomeHud);
     app.component(`${cp}NanoNumberStepper`, NanoNumberStepper);
     app.component(`${cp}NanoStepper`, NanoNumberStepper);
     app.component(`${cp}NanoTabs`, NanoTabs);
@@ -573,5 +675,7 @@ export default {
     app.component(`${cp}NanoPasswordTunnel`, NanoSecretPipe);
     app.component(`${cp}NanoCoverFlow`, NanoCoverFlow);
     app.component(`${cp}CoverFlow`, NanoCoverFlow);
+    app.component(`${cp}NanoCollapsible`, NanoCollapsible);
+    app.component(`${cp}NanoAccordion`, NanoCollapsible);
   },
 };
