@@ -448,6 +448,17 @@ describe('Bauhaus Φ Tri-Primitive (□ + △ + ○) & Perfection Scalar L(Φ): 
 
     assert.ok(scene0.sphere.backRingPoints.length > 20, 'backRingPoints must be populated');
     assert.ok(scene0.sphere.frontRingPoints.length > 20, 'frontRingPoints must be populated');
+    assert.ok(
+      Number.isFinite(scene0.sphere.ringGrad?.x1) &&
+        Number.isFinite(scene0.sphere.ringGrad?.y1) &&
+        Number.isFinite(scene0.sphere.ringGrad?.x2) &&
+        Number.isFinite(scene0.sphere.ringGrad?.y2),
+      'ringGrad minor-axis userSpaceOnUse coordinates must be finite'
+    );
+    assert.ok(
+      scene0.sphere.ringGrad.y2 > scene0.sphere.ringGrad.y1,
+      'ringGrad must point from back/upper rim toward front/lower rim'
+    );
     assert.equal(scene0.sphere.planetoids.length, 7);
     assert.equal(
       scene0.sphere.backPlanetoids.length + scene0.sphere.frontPlanetoids.length,
@@ -458,10 +469,14 @@ describe('Bauhaus Φ Tri-Primitive (□ + △ + ○) & Perfection Scalar L(Φ): 
     for (const bp of scene0.sphere.backPlanetoids) {
       assert.ok(bp.z <= scene0.sphere.z + 1e-6);
       assert.ok(bp.outerPoints.split(' ').length >= 6);
+      assert.ok(bp.rimStroke.startsWith('rgba('));
+      assert.ok(bp.facetOpacity >= 0.66 && bp.facetOpacity <= 0.94);
     }
     for (const fp of scene0.sphere.frontPlanetoids) {
       assert.ok(fp.z >= scene0.sphere.z - 1e-6);
       assert.ok(fp.outerPoints.split(' ').length >= 6);
+      assert.ok(fp.rimStroke.startsWith('rgba('));
+      assert.ok(fp.facetOpacity >= 0.66 && fp.facetOpacity <= 0.94);
     }
 
     // Advancing phaseRad must both orbit planetoid positions and rotate their irregular polygon vertices
