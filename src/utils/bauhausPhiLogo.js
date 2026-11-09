@@ -694,16 +694,226 @@ export function computeOrbitingMathTokens3D(
         bounds: stageBounds,
         padding: 0.5,
       });
+      // Irregular rotating polygonal asteroid shape for each outer satellite token
+      const spin = phaseRad * (1.6 + idx * 0.28) + idx * PHI;
+      const radialProfile = [1.18, 0.76, 1.12, 0.72, 1.06, 0.82];
+      const baseR = 0.44;
+      const polyPts = radialProfile.map((mult, vIdx) => {
+        const va = spin + (vIdx / radialProfile.length) * Math.PI * 2;
+        const vx = Number((Math.cos(va) * baseR * mult).toFixed(3));
+        const vy = Number((Math.sin(va) * baseR * mult * 0.86).toFixed(3));
+        return `${vx},${vy}`;
+      });
       return {
         ...t,
         x: clampedPos.x,
         y: clampedPos.y,
         z: p.z,
         scale,
+        polygonPoints: polyPts.join(' '),
         opacity: Number((0.45 + (normZ + 1) * 0.26).toFixed(2)),
       };
     })
     .sort((a, b) => a.z - b.z);
+}
+
+/**
+ * Computes the 3D depth-split Equatorial Orbital Ring (`backRingPoints` behind sphere, `frontRingPoints` in front of sphere)
+ * and a belt of 7 orbiting & self-rotating irregular polygonal planetoids (`backPlanetoids` for z < sphere.z,
+ * `frontPlanetoids` for z >= sphere.z) around the Quantum Sphere (○).
+ */
+export function computeSpherePlanetoidBelt3D(
+  sphereCenter,
+  sphereRadius = 2.45,
+  yawDeg = 0,
+  pitchDeg = 0,
+  phaseRad = 0
+) {
+  const sx = Number(sphereCenter?.x ?? 22.55);
+  const sy = Number(sphereCenter?.y ?? 9.45);
+  const sz = Number(sphereCenter?.exactZ ?? sphereCenter?.z ?? 2.472);
+
+  const rx = sphereRadius * 1.34;
+  const ry = sphereRadius * 0.46;
+  const rz = sphereRadius * 1.25;
+  const tiltDeg = Number(yawDeg) * 0.35 - Number(pitchDeg) * 0.15;
+  const tiltRad = (tiltDeg * Math.PI) / 180;
+  const cosT = Math.cos(tiltRad);
+  const sinT = Math.sin(tiltRad);
+
+  const projectRingAlpha = (alpha, radialScale = 1) => {
+    const u = rx * radialScale * Math.cos(alpha);
+    const v = ry * radialScale * Math.sin(alpha);
+    const x = sx + u * cosT - v * sinT;
+    const y = sy + u * sinT + v * cosT;
+    const z = sz + rz * radialScale * Math.sin(alpha);
+    return {
+      x: Number(x.toFixed(3)),
+      y: Number(y.toFixed(3)),
+      z: Number(z.toFixed(3)),
+      sinAlpha: Math.sin(alpha),
+    };
+  };
+
+  // 1. Upper/Back Half of Orbital Ring: alpha ∈ [π, 2π] -> sin(alpha) <= 0 -> z <= sz (behind the sphere)
+  const backRingPts = [];
+  const segments = 28;
+  for (let i = 0; i <= segments; i++) {
+    const alpha = Math.PI + (i / segments) * Math.PI;
+    const pt = projectRingAlpha(alpha, 1);
+    backRingPts.push(`${pt.x},${pt.y}`);
+  }
+
+  // 2. Lower/Front Half of Orbital Ring: alpha ∈ [0, π] -> sin(alpha) >= 0 -> z >= sz (in front of the sphere!)
+  const frontRingPts = [];
+  for (let i = 0; i <= segments; i++) {
+    const alpha = (i / segments) * Math.PI;
+    const pt = projectRingAlpha(alpha, 1);
+    frontRingPts.push(`${pt.x},${pt.y}`);
+  }
+
+  // 3. Belt of 7 Irregular Polygonal Planetoids orbiting and tumbling around the Sphere
+  const PLANETOID_SPECS = [
+    {
+      id: 'pl-0',
+      orbitOffset: 0.15,
+      orbitSpeed: 0.92,
+      spinSpeed: 2.6,
+      radialBand: 1.0,
+      baseR: 0.34,
+      color: '#67e8f9',
+      highlight: '#ecfeff',
+      radii: [1.22, 0.74, 1.1, 0.68, 1.15, 0.78, 0.92],
+    },
+    {
+      id: 'pl-1',
+      orbitOffset: 1.08,
+      orbitSpeed: 0.84,
+      spinSpeed: -3.1,
+      radialBand: 1.07,
+      baseR: 0.27,
+      color: '#38bdf8',
+      highlight: '#bae6fd',
+      radii: [1.16, 0.72, 1.18, 0.76, 1.04, 0.8],
+    },
+    {
+      id: 'pl-2',
+      orbitOffset: 1.98,
+      orbitSpeed: 0.96,
+      spinSpeed: 2.2,
+      radialBand: 0.94,
+      baseR: 0.31,
+      color: '#a78bfa',
+      highlight: '#ede9fe',
+      radii: [1.24, 0.78, 1.05, 0.66, 1.14, 0.74, 0.9],
+    },
+    {
+      id: 'pl-3',
+      orbitOffset: 2.88,
+      orbitSpeed: 0.88,
+      spinSpeed: -2.4,
+      radialBand: 1.03,
+      baseR: 0.25,
+      color: '#2dd4bf',
+      highlight: '#ccfbf1',
+      radii: [1.18, 0.7, 1.12, 0.78, 1.08, 0.74],
+    },
+    {
+      id: 'pl-4',
+      orbitOffset: 3.78,
+      orbitSpeed: 0.94,
+      spinSpeed: 2.9,
+      radialBand: 0.97,
+      baseR: 0.33,
+      color: '#67e8f9',
+      highlight: '#cffafe',
+      radii: [1.2, 0.72, 1.15, 0.69, 1.1, 0.82, 0.88],
+    },
+    {
+      id: 'pl-5',
+      orbitOffset: 4.68,
+      orbitSpeed: 0.86,
+      spinSpeed: -2.7,
+      radialBand: 1.06,
+      baseR: 0.24,
+      color: '#818cf8',
+      highlight: '#e0e7ff',
+      radii: [1.15, 0.76, 1.2, 0.71, 1.05, 0.79],
+    },
+    {
+      id: 'pl-6',
+      orbitOffset: 5.58,
+      orbitSpeed: 0.91,
+      spinSpeed: 3.3,
+      radialBand: 0.99,
+      baseR: 0.29,
+      color: '#34d399',
+      highlight: '#d1fae5',
+      radii: [1.21, 0.73, 1.09, 0.67, 1.16, 0.77, 0.91],
+    },
+  ];
+
+  const allPlanetoids = PLANETOID_SPECS.map((spec, idx) => {
+    const rawAlpha = spec.orbitOffset + phaseRad * spec.orbitSpeed;
+    const alpha = ((rawAlpha % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2);
+    const pos = projectRingAlpha(alpha, spec.radialBand);
+    const isFront = pos.z >= sz;
+    const depthNorm = Math.max(-1, Math.min(1, pos.sinAlpha)); // -1 at back, +1 at front
+    const scale = Number((0.82 + (depthNorm + 1) * 0.18).toFixed(3));
+    const opacity = Number((isFront ? 0.88 + depthNorm * 0.12 : 0.48 + (depthNorm + 1) * 0.22).toFixed(2));
+
+    // Self-rotation (tumbling) around the planetoid's own centroid
+    const spin = phaseRad * spec.spinSpeed + idx * PHI;
+    const aspectSquash = 0.8 + 0.2 * Math.cos(spin * 0.65);
+    const verts = spec.radii.map((mult, vIdx) => {
+      const va = spin + (vIdx / spec.radii.length) * Math.PI * 2;
+      const rLocal = spec.baseR * mult * scale;
+      const lx = Math.cos(va) * rLocal;
+      const ly = Math.sin(va) * rLocal * aspectSquash;
+      return {
+        x: Number((pos.x + lx).toFixed(3)),
+        y: Number((pos.y + ly).toFixed(3)),
+      };
+    });
+
+    const outerPoints = verts.map((v) => `${v.x},${v.y}`).join(' ');
+    // Sunlit crystal/rock facet using the first 3 vertices + centroid offset
+    const facetPoints = [
+      `${verts[0].x},${verts[0].y}`,
+      `${verts[1].x},${verts[1].y}`,
+      `${Number((pos.x + (verts[2].x - pos.x) * 0.35).toFixed(3))},${Number((pos.y + (verts[2].y - pos.y) * 0.35).toFixed(3))}`,
+    ].join(' ');
+
+    return {
+      id: spec.id,
+      x: pos.x,
+      y: pos.y,
+      z: pos.z,
+      isFront,
+      scale,
+      opacity,
+      color: spec.color,
+      highlight: spec.highlight,
+      outerPoints,
+      facetPoints,
+    };
+  });
+
+  const backPlanetoids = allPlanetoids
+    .filter((p) => !p.isFront)
+    .sort((a, b) => a.z - b.z);
+  const frontPlanetoids = allPlanetoids
+    .filter((p) => p.isFront)
+    .sort((a, b) => a.z - b.z);
+
+  return {
+    tiltDeg: Number(tiltDeg.toFixed(2)),
+    backRingPoints: backRingPts.join(' '),
+    frontRingPoints: frontRingPts.join(' '),
+    planetoids: allPlanetoids,
+    backPlanetoids,
+    frontPlanetoids,
+  };
 }
 
 /**
@@ -832,6 +1042,14 @@ export function computeBauhausPhiScene3D(
     pitchDeg
   );
 
+  const sphereBelt = computeSpherePlanetoidBelt3D(
+    sphereCenter,
+    circle.r,
+    yawDeg,
+    pitchDeg,
+    phaseRad
+  );
+
   const shadowCenter = projectOrthographic3D(circle.cx, circle.cy, 0, 0, 0);
 
   const perfection = computeLogoPerfectionScalar({
@@ -921,6 +1139,12 @@ export function computeBauhausPhiScene3D(
       r: circle.r,
       shadowCx: shadowCenter.x,
       shadowCy: shadowCenter.y,
+      tiltDeg: sphereBelt.tiltDeg,
+      backRingPoints: sphereBelt.backRingPoints,
+      frontRingPoints: sphereBelt.frontRingPoints,
+      planetoids: sphereBelt.planetoids,
+      backPlanetoids: sphereBelt.backPlanetoids,
+      frontPlanetoids: sphereBelt.frontPlanetoids,
     },
     floor: {
       points: floorPoints,
@@ -1218,6 +1442,16 @@ export function auditScene3DOcclusionInvariants(yawDeg = 0, pitchDeg = 0) {
   for (const fArt of scene.frontArtifacts) {
     if (!(fArt.z >= 0)) {
       violations.push(`frontArtifact ${fArt.id} has z=${fArt.z} < 0`);
+    }
+  }
+  for (const bPl of scene.sphere.backPlanetoids || []) {
+    if (!(bPl.z < scene.sphere.z + 1e-6)) {
+      violations.push(`backPlanetoid ${bPl.id} has z=${bPl.z} >= sphere.z=${scene.sphere.z}`);
+    }
+  }
+  for (const fPl of scene.sphere.frontPlanetoids || []) {
+    if (!(fPl.z >= scene.sphere.z - 1e-6)) {
+      violations.push(`frontPlanetoid ${fPl.id} has z=${fPl.z} < sphere.z=${scene.sphere.z}`);
     }
   }
 
