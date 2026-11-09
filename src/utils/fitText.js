@@ -238,13 +238,19 @@ const FIT_STATE_SYM = Symbol('nanoFitTextState');
  */
 export const fitTextDirective = {
   mounted(el, binding) {
-    const runFit = () => {
+    const runFit = (force = false) => {
+      const currentText = (el.textContent || '').trim();
       const opts =
         binding && typeof binding.value === 'object' && binding.value !== null
           ? binding.value
           : typeof binding?.value === 'number'
             ? { maxWidth: binding.value }
             : {};
+      const optsKey = `${opts.maxWidth ?? ''}:${opts.maxHeight ?? ''}:${opts.minSize ?? opts.minPx ?? ''}:${opts.maxSize ?? opts.maxPx ?? ''}:${opts.step ?? opts.stepPx ?? ''}:${opts.mode ?? ''}`;
+      const st = el[FIT_STATE_SYM];
+      if (!force && st && st.lastText === currentText && st.lastOptsKey === optsKey) {
+        return;
+      }
       const isSvg =
         el.namespaceURI === 'http://www.w3.org/2000/svg' ||
         String(el.tagName || '').toLowerCase() === 'text';
@@ -253,22 +259,25 @@ export const fitTextDirective = {
       } else {
         fitHtmlTextSize(el, opts);
       }
+      if (st) {
+        st.lastText = currentText;
+        st.lastOptsKey = optsKey;
+      }
     };
 
-    runFit();
+    el[FIT_STATE_SYM] = { runFit, ro: null, lastText: '', lastOptsKey: '' };
+    runFit(true);
 
-    let ro = null;
     if (typeof ResizeObserver !== 'undefined' && el.parentElement) {
-      ro = new ResizeObserver(() => runFit());
+      const ro = new ResizeObserver(() => runFit(true));
       ro.observe(el.parentElement);
+      el[FIT_STATE_SYM].ro = ro;
     }
-
-    el[FIT_STATE_SYM] = { runFit, ro };
   },
   updated(el, binding) {
     const st = el[FIT_STATE_SYM];
     if (st && typeof st.runFit === 'function') {
-      st.runFit();
+      st.runFit(false);
     } else {
       fitTextDirective.mounted(el, binding);
     }
