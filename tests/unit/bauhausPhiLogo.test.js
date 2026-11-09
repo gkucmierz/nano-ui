@@ -15,8 +15,11 @@ import {
   projectOrthographic3D,
   buildExtrudedSolid3D,
   computeLogoPerfectionScalar,
+  evaluateMiniChartWavePoint,
+  buildMiniChartData,
   computeFloating3DArtifacts,
   computeGoldenFlowAndCursorField,
+  reanchorGoldenFlowAngle,
   computeBauhausPhiScene3D,
   auditScene3DOcclusionInvariants,
   sampleMonteCarloNShadow,
@@ -485,5 +488,77 @@ describe('Bauhaus Φ Tri-Primitive (□ + △ + ○) & Perfection Scalar L(Φ): 
       scene0.sphere.planetoids[0].outerPoints,
       scene1.sphere.planetoids[0].outerPoints
     );
+  });
+
+  it('re-anchors autonomous Golden Flow smoothly on slider/preset interaction without freezing isAutoOrbiting', () => {
+    const t0 = 4.25;
+    const reanchored = reanchorGoldenFlowAngle({
+      targetYawDeg: 25.3,
+      targetPitchDeg: -11.4,
+      timeSec: t0,
+      cursorNormX: 0.2,
+      cursorNormY: -0.1,
+      cursorEnergy: 0.3,
+      cursorPresence: 0.8,
+    });
+
+    // 1. At exact re-anchor instant t0, computeGoldenFlowAndCursorField must reproduce (25.3°, -11.4°) with zero jump
+    const flowAtT0 = computeGoldenFlowAndCursorField({
+      timeSec: t0,
+      cursorNormX: 0.2,
+      cursorNormY: -0.1,
+      cursorEnergy: 0.3,
+      cursorPresence: 0.8,
+      anchorYawDeg: reanchored.anchorYawDeg,
+      anchorPitchDeg: reanchored.anchorPitchDeg,
+    });
+    assert.ok(Math.abs(flowAtT0.yawDeg - 25.3) <= 0.005);
+    assert.ok(Math.abs(flowAtT0.pitchDeg - -11.4) <= 0.005);
+
+    // 2. One frame later (t0 + 0.1s), autonomous motion continues evolving smoothly from (25.3°, -11.4°)
+    const flowNext = computeGoldenFlowAndCursorField({
+      timeSec: t0 + 0.1,
+      cursorNormX: 0.2,
+      cursorNormY: -0.1,
+      cursorEnergy: 0.3,
+      cursorPresence: 0.8,
+      anchorYawDeg: reanchored.anchorYawDeg,
+      anchorPitchDeg: reanchored.anchorPitchDeg,
+    });
+    assert.notEqual(flowNext.yawDeg, flowAtT0.yawDeg);
+    assert.notEqual(flowNext.pitchDeg, flowAtT0.pitchDeg);
+
+    // 3. Verify LogoConceptsLab.vue never calls stopOrbitAnimation() inside onSliderYaw / onSliderPitch
+    const labVuePath = path.resolve(__dirname, '../../src/playground/LogoConceptsLab.vue');
+    const labVueSrc = fs.readFileSync(labVuePath, 'utf8');
+    const sliderYawMatch = labVueSrc.match(/const onSliderYaw = [\s\S]*?const onSliderPitch =/);
+    const sliderPitchMatch = labVueSrc.match(/const onSliderPitch = [\s\S]*?const scene3D =/);
+    assert.ok(sliderYawMatch && !sliderYawMatch[0].includes('stopOrbitAnimation()'));
+    assert.ok(sliderPitchMatch && !sliderPitchMatch[0].includes('stopOrbitAnimation()'));
+    assert.ok(sliderYawMatch[0].includes('reanchorAtCurrentFlowTime'));
+    assert.ok(sliderPitchMatch[0].includes('reanchorAtCurrentFlowTime'));
+  });
+
+  it('renders 10x mini-chart curve granularity (180 segments) and continuous analytical playhead cursor motion', () => {
+    const chart0 = buildMiniChartData('harmonic-wave', 0.5, 0.18);
+    assert.equal(chart0.steps, 180);
+    assert.equal(chart0.sparklinePoints.split(' ').length, 181);
+    assert.equal(chart0.secondaryPoints.split(' ').length, 181);
+
+    // Verify fine sub-step phase increments (ΔphaseRad = 0.015) produce distinct continuous cursorPoint coordinates
+    // (previously quantized to 19 discrete integer buckets via Math.floor(u * 18))
+    const xs = new Set();
+    const ys = new Set();
+    for (let k = 0; k < 12; k++) {
+      const phase = 0.2 + k * 0.015;
+      const c = buildMiniChartData('harmonic-wave', phase, 0.18);
+      xs.add(c.cursorPoint.x);
+      ys.add(c.cursorPoint.y);
+      const exact = evaluateMiniChartWavePoint('harmonic-wave', c.cursorPoint.u, phase, 0.18);
+      assert.ok(Math.abs(c.cursorPoint.x - exact.x) <= 0.01);
+      assert.ok(Math.abs(c.cursorPoint.y - exact.y) <= 0.01);
+    }
+    assert.equal(xs.size, 12, 'Expected 12 distinct playhead X positions across 12 fine phase steps');
+    assert.equal(ys.size, 12, 'Expected 12 distinct playhead Y positions across 12 fine phase steps');
   });
 });
