@@ -757,7 +757,7 @@ export function computeSpherePlanetoidBelt3D(
 
   // 1. Upper/Back Half of Orbital Ring: alpha ∈ [π, 2π] -> sin(alpha) <= 0 -> z <= sz (behind the sphere)
   const backRingPts = [];
-  const segments = 28;
+  const segments = 48;
   for (let i = 0; i <= segments; i++) {
     const alpha = Math.PI + (i / segments) * Math.PI;
     const pt = projectRingAlpha(alpha, 1);
@@ -771,6 +771,16 @@ export function computeSpherePlanetoidBelt3D(
     const pt = projectRingAlpha(alpha, 1);
     frontRingPts.push(`${pt.x},${pt.y}`);
   }
+
+  // Exact minor-axis endpoints (alpha = -π/2 back -> alpha = +π/2 front) for continuous userSpaceOnUse SVG gradient
+  const gradBackPt = projectRingAlpha(-Math.PI / 2, 1);
+  const gradFrontPt = projectRingAlpha(Math.PI / 2, 1);
+  const ringGrad = {
+    x1: gradBackPt.x,
+    y1: gradBackPt.y,
+    x2: gradFrontPt.x,
+    y2: gradFrontPt.y,
+  };
 
   // 3. Belt of 7 Irregular Polygonal Planetoids orbiting and tumbling around the Sphere
   const PLANETOID_SPECS = [
@@ -859,8 +869,11 @@ export function computeSpherePlanetoidBelt3D(
     const pos = projectRingAlpha(alpha, spec.radialBand);
     const isFront = pos.z >= sz;
     const depthNorm = Math.max(-1, Math.min(1, pos.sinAlpha)); // -1 at back, +1 at front
-    const scale = Number((0.82 + (depthNorm + 1) * 0.18).toFixed(3));
-    const opacity = Number((isFront ? 0.88 + depthNorm * 0.12 : 0.48 + (depthNorm + 1) * 0.22).toFixed(2));
+    const depthUnit = (depthNorm + 1) * 0.5; // 0 at far back, 0.5 at left/right tips, 1 at near front
+    const scale = Number((0.82 + depthUnit * 0.36).toFixed(3));
+    const opacity = Number((0.46 + depthUnit * 0.54).toFixed(3));
+    const rimStroke = `rgba(224, 242, 254, ${(0.32 + depthUnit * 0.56).toFixed(2)})`;
+    const facetOpacity = Number((0.66 + depthUnit * 0.28).toFixed(2));
 
     // Self-rotation (tumbling) around the planetoid's own centroid
     const spin = phaseRad * spec.spinSpeed + idx * PHI;
@@ -892,6 +905,8 @@ export function computeSpherePlanetoidBelt3D(
       isFront,
       scale,
       opacity,
+      rimStroke,
+      facetOpacity,
       color: spec.color,
       highlight: spec.highlight,
       outerPoints,
@@ -908,6 +923,7 @@ export function computeSpherePlanetoidBelt3D(
 
   return {
     tiltDeg: Number(tiltDeg.toFixed(2)),
+    ringGrad,
     backRingPoints: backRingPts.join(' '),
     frontRingPoints: frontRingPts.join(' '),
     planetoids: allPlanetoids,
@@ -1140,6 +1156,7 @@ export function computeBauhausPhiScene3D(
       shadowCx: shadowCenter.x,
       shadowCy: shadowCenter.y,
       tiltDeg: sphereBelt.tiltDeg,
+      ringGrad: sphereBelt.ringGrad,
       backRingPoints: sphereBelt.backRingPoints,
       frontRingPoints: sphereBelt.frontRingPoints,
       planetoids: sphereBelt.planetoids,
