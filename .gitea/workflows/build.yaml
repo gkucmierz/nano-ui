@@ -79,9 +79,18 @@ jobs:
             exit 0
           fi
           TMP_NPMRC=$(mktemp)
-          trap 'rm -f "$TMP_NPMRC"' EXIT
+          cp package.json package.json.bak
+          trap 'mv -f package.json.bak package.json 2>/dev/null || true; rm -f "$TMP_NPMRC"' EXIT
           printf "@gkucmierz:registry=https://registry.npmjs.org/\nregistry=https://registry.npmjs.org/\n//registry.npmjs.org/:_authToken=%s\n" "$NODE_AUTH_TOKEN" > "$TMP_NPMRC"
-          NPM_CONFIG_USERCONFIG="$TMP_NPMRC" npm publish --registry="https://registry.npmjs.org/" --access public || echo "⚠️ Public npmjs.org publish skipped."
+          NPM_CONFIG_USERCONFIG="$TMP_NPMRC" npm publish --registry="https://registry.npmjs.org/" --access public || echo "⚠️ Public npmjs.org publish (@gkucmierz/nano-ui) skipped."
+          node -e '
+            const fs = require("fs");
+            const pkg = JSON.parse(fs.readFileSync("package.json.bak", "utf8"));
+            pkg.name = "nano-ui";
+            fs.writeFileSync("package.json", JSON.stringify(pkg, null, 2) + "\n");
+          '
+          NPM_CONFIG_USERCONFIG="$TMP_NPMRC" npm publish --registry="https://registry.npmjs.org/" --access public --ignore-scripts || echo "⚠️ Unscoped public npmjs.org mirror (nano-ui) skipped or blocked by similarity filter."
+          mv -f package.json.bak package.json
 
   deploy-playground:
     needs: publish
