@@ -1536,23 +1536,33 @@ onUnmounted(() => {
 
     <!-- Optional Interactive Controls Bar -->
     <div v-if="showControls" class="nano-globe-controls">
-      <button
-        type="button"
-        class="nano-globe-btn"
-        :class="{ active: localShowGraticule }"
-        @click="toggleGraticuleBtn"
-      >
-        🌐 Siatka (Graticule)
-      </button>
-      <button
-        type="button"
-        class="nano-globe-btn"
-        :class="{ active: localShowHealpix }"
-        @click="toggleHealpixBtn"
-      >
-        ❖ HEALPix ({{ 12 * (1 << (2 * localHealpixOrder)) }} px)
-      </button>
-      <div v-if="localShowHealpix" class="nano-globe-order-pills">
+      <div class="nano-globe-order-pills" role="group" aria-label="Spherical Layers">
+        <button
+          type="button"
+          class="nano-globe-btn"
+          :class="{ active: localShowGraticule }"
+          @click="toggleGraticuleBtn"
+        >
+          🌐 Siatka (Graticule)
+        </button>
+        <button
+          type="button"
+          class="nano-globe-btn"
+          :class="{ active: localShowHealpix }"
+          @click="toggleHealpixBtn"
+        >
+          ❖ HEALPix ({{ 12 * (1 << (2 * localHealpixOrder)) }} px)
+        </button>
+        <button
+          type="button"
+          class="nano-globe-btn"
+          :class="{ active: localShowTimezones }"
+          @click="toggleTimezonesBtn"
+        >
+          🕒 Strefy (UTC)
+        </button>
+      </div>
+      <div v-if="localShowHealpix" class="nano-globe-order-pills" role="group" aria-label="HEALPix Resolution">
         <button
           v-for="o in [0, 1, 2]"
           :key="o"
@@ -1564,15 +1574,7 @@ onUnmounted(() => {
           Nside={{ 1 << o }}
         </button>
       </div>
-      <button
-        type="button"
-        class="nano-globe-btn"
-        :class="{ active: localShowTimezones }"
-        @click="toggleTimezonesBtn"
-      >
-        🕒 Strefy (UTC)
-      </button>
-      <div v-if="localShowTimezones" class="nano-globe-order-pills">
+      <div v-if="localShowTimezones" class="nano-globe-order-pills" role="group" aria-label="Timezone Vector Mode">
         <button
           type="button"
           class="nano-globe-pill"
@@ -1590,7 +1592,7 @@ onUnmounted(() => {
           🧩 Complicated (IANA)
         </button>
       </div>
-      <div class="nano-globe-order-pills">
+      <div class="nano-globe-order-pills" role="group" aria-label="Globe Color Preset">
         <button
           v-for="pKey in ['teal-coral', 'nano-dark', 'nano-light', 'cyber-amber']"
           :key="pKey"
@@ -1676,20 +1678,23 @@ onUnmounted(() => {
 
 .nano-globe-btn,
 .nano-globe-pill {
+  position: relative;
   height: 28px;
-  padding: 0 0.65rem;
-  border-radius: 7px;
+  padding: 0 0.68rem;
+  border-radius: 0;
   border: 1px solid var(--nano-border-card, rgba(148, 163, 184, 0.3));
   background: var(--nano-bg-card, rgba(15, 23, 42, 0.75));
   color: var(--nano-text-secondary, #cbd5e1);
   font-size: 0.73rem;
   font-weight: 700;
   cursor: pointer;
+  background-clip: padding-box;
   transition: border-color 140ms ease, background 140ms ease, color 140ms ease;
 }
 
 .nano-globe-btn:hover,
 .nano-globe-pill:hover {
+  z-index: 1;
   border-color: var(--nano-border-hover, rgba(148, 163, 184, 0.5));
   background: var(--nano-bg-hover, rgba(255, 255, 255, 0.08));
   color: var(--nano-text-main, #f8fafc);
@@ -1697,6 +1702,7 @@ onUnmounted(() => {
 
 .nano-globe-btn.active,
 .nano-globe-pill.active {
+  z-index: 2;
   border-color: var(--nano-preset-emerald, #10b981);
   color: var(--nano-preset-emerald, #10b981);
   background: color-mix(in srgb, var(--nano-preset-emerald, #10b981) 14%, var(--nano-bg-card, transparent));
@@ -1704,7 +1710,22 @@ onUnmounted(() => {
 
 .nano-globe-order-pills {
   display: inline-flex;
-  align-items: center;
-  gap: 0.25rem;
+  align-items: stretch;
+  gap: 0;
+  isolation: isolate;
+}
+
+.nano-globe-order-pills > :first-child {
+  border-top-left-radius: 7px;
+  border-bottom-left-radius: 7px;
+}
+
+.nano-globe-order-pills > :last-child {
+  border-top-right-radius: 7px;
+  border-bottom-right-radius: 7px;
+}
+
+.nano-globe-order-pills > :not(:first-child) {
+  margin-left: -1px;
 }
 </style>
