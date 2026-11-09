@@ -993,6 +993,22 @@ const concepts = [
                       <stop offset="55%" stop-color="rgba(129, 140, 248, 0.14)" />
                       <stop offset="100%" stop-color="rgba(15, 23, 42, 0)" />
                     </radialGradient>
+
+                    <!-- Continuous 3D Depth-Luminance Gradient across the Planetoid Orbital Ring (sin α = -1 back -> 0 tips -> +1 front) -->
+                    <linearGradient
+                      id="sphereOrbitRingGrad"
+                      gradientUnits="userSpaceOnUse"
+                      :x1="scene3D.sphere.ringGrad.x1"
+                      :y1="scene3D.sphere.ringGrad.y1"
+                      :x2="scene3D.sphere.ringGrad.x2"
+                      :y2="scene3D.sphere.ringGrad.y2"
+                    >
+                      <stop offset="0%" stop-color="#38bdf8" stop-opacity="0.20" />
+                      <stop offset="30%" stop-color="#67e8f9" stop-opacity="0.36" />
+                      <stop offset="50%" stop-color="#7dd3fc" stop-opacity="0.54" />
+                      <stop offset="75%" stop-color="#a5f3fc" stop-opacity="0.72" />
+                      <stop offset="100%" stop-color="#e0f2fe" stop-opacity="0.88" />
+                    </linearGradient>
                   </defs>
 
                   <!-- Outer Holographic Space Backdrop -->
@@ -1290,14 +1306,15 @@ const concepts = [
                       v-else-if="primId === 'sphere'"
                       :class="{ 'vec-pulse': activePulseConcept === 'PHI' && activePulseStep === 3 }"
                     >
-                      <!-- 3a. BACK ARC OF ORBITAL RING (z < sphere.z — Occluded behind the upper half of the Sphere) -->
+                      <!-- 3a. BACK ARC OF ORBITAL RING (z < sphere.z — Occluded behind the upper half of the Sphere, smooth C1 gradient) -->
                       <polyline
                         v-if="!scene3D.isOrthographicLock"
                         :points="scene3D.sphere.backRingPoints"
                         fill="none"
-                        stroke="rgba(103, 232, 249, 0.34)"
-                        stroke-width="0.2"
-                        stroke-linecap="round"
+                        stroke="url(#sphereOrbitRingGrad)"
+                        stroke-width="0.22"
+                        stroke-linecap="butt"
+                        stroke-linejoin="round"
                       />
 
                       <!-- 3b. BACK PLANETOIDS (z < sphere.z — Irregular rotating polygons passing behind the Sphere) -->
@@ -1310,14 +1327,14 @@ const concepts = [
                           <polygon
                             :points="pl.outerPoints"
                             :fill="silhouetteMode ? '#d4d4d8' : pl.color"
-                            stroke="rgba(15, 23, 42, 0.65)"
-                            stroke-width="0.07"
+                            :stroke="pl.rimStroke"
+                            stroke-width="0.08"
                             stroke-linejoin="round"
                           />
                           <polygon
                             :points="pl.facetPoints"
                             :fill="silhouetteMode ? '#ffffff' : pl.highlight"
-                            opacity="0.72"
+                            :opacity="pl.facetOpacity"
                           />
                         </g>
                       </template>
@@ -1332,14 +1349,15 @@ const concepts = [
                         stroke-width="0.2"
                       />
 
-                      <!-- 3d. FRONT/LOWER ARC OF ORBITAL RING (z >= sphere.z — Wraps IN FRONT OF the Sphere!) -->
+                      <!-- 3d. FRONT/LOWER ARC OF ORBITAL RING (z >= sphere.z — Wraps IN FRONT OF the Sphere, seamless C1 gradient join) -->
                       <polyline
                         v-if="!scene3D.isOrthographicLock"
                         :points="scene3D.sphere.frontRingPoints"
                         fill="none"
-                        stroke="rgba(165, 243, 252, 0.78)"
-                        stroke-width="0.24"
-                        stroke-linecap="round"
+                        stroke="url(#sphereOrbitRingGrad)"
+                        stroke-width="0.22"
+                        stroke-linecap="butt"
+                        stroke-linejoin="round"
                       />
 
                       <!-- 3e. FRONT PLANETOIDS (z >= sphere.z — Irregular rotating polygons transiting IN FRONT OF the Sphere!) -->
@@ -1352,14 +1370,14 @@ const concepts = [
                           <polygon
                             :points="pl.outerPoints"
                             :fill="silhouetteMode ? '#ffffff' : pl.color"
-                            stroke="rgba(236, 254, 255, 0.85)"
-                            stroke-width="0.09"
+                            :stroke="pl.rimStroke"
+                            stroke-width="0.08"
                             stroke-linejoin="round"
                           />
                           <polygon
                             :points="pl.facetPoints"
                             :fill="silhouetteMode ? '#f4f4f5' : pl.highlight"
-                            opacity="0.9"
+                            :opacity="pl.facetOpacity"
                           />
                         </g>
                       </template>
@@ -1878,11 +1896,11 @@ const concepts = [
             <div class="sliders-row">
               <div class="slider-item">
                 <span class="mono">Obrót Yaw (ψ): {{ yawDeg.toFixed(1) }}°</span>
-                <NanoSlider :model-value="Math.round(yawDeg)" :min="-65" :max="65" :step="1" size="sm" @update:model-value="onSliderYaw" />
+                <NanoSlider :model-value="yawDeg" :min="-65" :max="65" :step="0.1" size="sm" @update:model-value="onSliderYaw" />
               </div>
               <div class="slider-item">
                 <span class="mono">Nachylenie Pitch (θ): {{ pitchDeg.toFixed(1) }}°</span>
-                <NanoSlider :model-value="Math.round(pitchDeg)" :min="-45" :max="45" :step="1" size="sm" @update:model-value="onSliderPitch" />
+                <NanoSlider :model-value="pitchDeg" :min="-45" :max="45" :step="0.1" size="sm" @update:model-value="onSliderPitch" />
               </div>
             </div>
           </div>
