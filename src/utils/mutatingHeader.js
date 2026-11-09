@@ -1,8 +1,112 @@
 import { inject, computed } from 'vue';
+import { naturalSearch } from './fitText.js';
 
 export const MUTATING_HEADER_META_KEY = Symbol.for('nano-ui:mutating-header-meta');
 
 export const MUTATING_HEADER_SPREAD_PRESETS = Object.freeze([0, 25, 33, 50, 66, 75, 100]);
+
+export const DEFAULT_HEADER_TIER_WIDTHS = Object.freeze([1040, 860, 680, 520]);
+
+/**
+ * Uses `naturalSearch` (exponential galloping + binary bisection) over monotonically
+ * decreasing tier width budgets `tierRequiredWidths` to find the lowest compression tier
+ * `k` in `0..K` whose natural content width fits inside `containerWidth - safetyGapPx`
+ * with zero DOM flex-shrink oscillation.
+ *
+ * @param {Object} params
+ * @param {number} [params.containerWidth=1200] Available inner header width in px
+ * @param {number[]} [params.tierRequiredWidths=[1040, 860, 680, 520]] Natural width required by each tier
+ * @param {number} [params.safetyGapPx=24] Minimum breathing gap between #left, #center, #right
+ * @returns {{ tierIndex: number, requiredWidthPx: number, fits: boolean }}
+ */
+export function resolveOptimalHeaderTier({
+  containerWidth = 1200,
+  tierRequiredWidths = DEFAULT_HEADER_TIER_WIDTHS,
+  safetyGapPx = 24,
+} = {}) {
+  const safeW = Math.max(0, Number(containerWidth) || 0);
+  const gap = Math.max(0, Number(safetyGapPx) || 0);
+  const budgets =
+    Array.isArray(tierRequiredWidths) && tierRequiredWidths.length > 0
+      ? tierRequiredWidths.map((v) => Math.max(0, Number(v) || 0))
+      : DEFAULT_HEADER_TIER_WIDTHS;
+
+  const maxTierIdx = budgets.length - 1;
+  if (safeW >= budgets[0] + gap) {
+    return { tierIndex: 0, requiredWidthPx: budgets[0], fits: true };
+  }
+
+  // `naturalSearch` operates on 1-based naturals n >= 1; map n -> tierIdx = n - 1
+  const firstFittingStep = naturalSearch(
+    (n) => {
+      const idx = Math.min(maxTierIdx, n - 1);
+      if (n > maxTierIdx + 1) return true;
+      return budgets[idx] + gap <= safeW;
+    },
+    true,
+    maxTierIdx + 2
+  );
+
+  const resolvedIdx = Math.max(0, Math.min(maxTierIdx, firstFittingStep - 1));
+  const reqW = budgets[resolvedIdx];
+  return {
+    tierIndex: resolvedIdx,
+    requiredWidthPx: reqW,
+    fits: reqW + gap <= safeW,
+  };
+}
+
+/**
+ * Picks the richest (longest) label variant from `candidates` (ordered from longest
+ * to shortest, e.g. `['Domena na sprzedaż / wynajem', 'Oferta domeny', 'Oferta']`)
+ * that fits inside `availableWidthPx` using `naturalSearch`.
+ *
+ * @param {string[]} candidates Ordered from full label (index 0) to shortest fallback
+ * @param {number} availableWidthPx Available horizontal budget for the button/pill in px
+ * @param {Object} [options]
+ * @param {number} [options.charWidthPx=7.4] Average character width in px
+ * @param {number} [options.horizontalChromePx=34] Dot + icon + horizontal padding in px
+ * @returns {{ label: string, tierIndex: number, estimatedWidthPx: number }}
+ */
+export function pickAdaptiveHeaderLabel(
+  candidates = [],
+  availableWidthPx = 320,
+  { charWidthPx = 7.4, horizontalChromePx = 34 } = {}
+) {
+  if (!Array.isArray(candidates) || candidates.length === 0) {
+    return { label: '', tierIndex: 0, estimatedWidthPx: 0 };
+  }
+  const availW = Math.max(0, Number(availableWidthPx) || 0);
+  const cw = Math.max(4, Number(charWidthPx) || 7.4);
+  const chrome = Math.max(0, Number(horizontalChromePx) || 34);
+  const maxIdx = candidates.length - 1;
+
+  const estimateW = (idx) => {
+    const str = String(candidates[idx] ?? '');
+    return Math.round(str.length * cw + chrome);
+  };
+
+  if (estimateW(0) <= availW) {
+    return { label: String(candidates[0]), tierIndex: 0, estimatedWidthPx: estimateW(0) };
+  }
+
+  const step = naturalSearch(
+    (n) => {
+      const idx = Math.min(maxIdx, n - 1);
+      if (n > maxIdx + 1) return true;
+      return estimateW(idx) <= availW;
+    },
+    true,
+    maxIdx + 2
+  );
+
+  const chosenIdx = Math.max(0, Math.min(maxIdx, step - 1));
+  return {
+    label: String(candidates[chosenIdx]),
+    tierIndex: chosenIdx,
+    estimatedWidthPx: estimateW(chosenIdx),
+  };
+}
 
 /**
  * Normalizes a spread value into a percentage in [0, 100] and a ratio in [0, 1].
@@ -117,8 +221,10 @@ export function computeHeaderCompressionMeta({
     utilizationRatio,
     densityTier,
     compressionLevel,
+    ctaLabelTier: compressionLevel,
     isSubtitleFolded: compressionLevel >= 1,
     isSecondaryNavFolded: compressionLevel >= 2,
+    isUtilityMenuFolded: compressionLevel >= 2,
     isActionsCompact: compressionLevel >= 3,
   };
 }
