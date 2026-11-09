@@ -334,42 +334,67 @@ export function computeLogoPerfectionScalar({
 }
 
 /**
- * Generates rich mini SVG chart primitives (sparkline, secondary wave, shaded area, bars, cursor)
+ * Evaluates the exact continuous (x, y) and secondary (x, sy) wave coordinates
+ * at normalized horizontal parameter u ∈ [0, 1] for a 3D floating card mini-chart.
+ */
+export function evaluateMiniChartWavePoint(
+  kind,
+  u = 0,
+  phaseRad = 0,
+  scalar = 0,
+  W = 44,
+  H = 13
+) {
+  const clampedU = Math.max(0, Math.min(1, Number(u) || 0));
+  const x = Number((clampedU * W).toFixed(3));
+  let yNorm = 0.5;
+  let secNorm = 0.5;
+
+  if (kind === 'harmonic-wave') {
+    const freq = 2.4 + (1 - scalar) * PHI;
+    yNorm =
+      0.5 -
+      0.42 * Math.sin(clampedU * Math.PI * freq + phaseRad) * Math.exp(-clampedU * 0.35);
+    secNorm = 0.5 - 0.28 * Math.cos(clampedU * Math.PI * freq * PHI - phaseRad * 0.8);
+  } else if (kind === 'loss-decay') {
+    yNorm = 0.88 - 0.76 * Math.exp(-clampedU * 3.8 * (1.2 - scalar * 0.5));
+    secNorm = 0.88 - 0.76 * (1 - clampedU);
+  } else if (kind === 'lissajous-phi') {
+    yNorm =
+      0.5 -
+      0.42 *
+        Math.sin(clampedU * Math.PI * 2 * PHI + phaseRad * 0.9) *
+        Math.cos(clampedU * Math.PI);
+    secNorm = 0.5 + 0.32 * Math.cos(clampedU * Math.PI * PHI - phaseRad * 0.6);
+  } else if (kind === 'step-converge') {
+    const damped =
+      Math.cos(clampedU * Math.PI * 3.2 + phaseRad * 0.7) * Math.exp(-clampedU * 2.4);
+    yNorm = 0.5 - 0.42 * damped;
+    secNorm = 0.5 - 0.42 * Math.exp(-clampedU * 2.4);
+  }
+
+  const y = Number(Math.max(1, Math.min(H - 1, yNorm * H)).toFixed(3));
+  const sy = Number(Math.max(1, Math.min(H - 1, secNorm * H)).toFixed(3));
+  return { x, y, sy, u: Number(clampedU.toFixed(4)) };
+}
+
+/**
+ * Generates high-resolution (10x granularity: 180 segments) mini SVG chart primitives
+ * (sparkline, secondary wave, shaded area, bars, continuous analytical playhead cursor)
  * for each 3D floating holographic card.
  */
-function buildMiniChartData(kind, phaseRad = 0, scalar = 0) {
+export function buildMiniChartData(kind, phaseRad = 0, scalar = 0, steps = 180) {
   const pts = [];
   const secPts = [];
   const W = 44;
   const H = 13;
-  const steps = 18;
+  const resolvedSteps = Math.max(18, Math.floor(Number(steps) || 180));
 
-  for (let i = 0; i <= steps; i++) {
-    const u = i / steps;
-    const x = Number((u * W).toFixed(1));
-    let yNorm = 0.5;
-    let secNorm = 0.5;
-
-    if (kind === 'harmonic-wave') {
-      const freq = 2.4 + (1 - scalar) * PHI;
-      yNorm = 0.5 - 0.42 * Math.sin(u * Math.PI * freq + phaseRad) * Math.exp(-u * 0.35);
-      secNorm = 0.5 - 0.28 * Math.cos(u * Math.PI * freq * PHI - phaseRad * 0.8);
-    } else if (kind === 'loss-decay') {
-      yNorm = 0.88 - 0.76 * Math.exp(-u * 3.8 * (1.2 - scalar * 0.5));
-      secNorm = 0.88 - 0.76 * (1 - u);
-    } else if (kind === 'lissajous-phi') {
-      yNorm = 0.5 - 0.42 * Math.sin(u * Math.PI * 2 * PHI + phaseRad * 0.9) * Math.cos(u * Math.PI);
-      secNorm = 0.5 + 0.32 * Math.cos(u * Math.PI * PHI - phaseRad * 0.6);
-    } else if (kind === 'step-converge') {
-      const damped = Math.cos(u * Math.PI * 3.2 + phaseRad * 0.7) * Math.exp(-u * 2.4);
-      yNorm = 0.5 - 0.42 * damped;
-      secNorm = 0.5 - 0.42 * Math.exp(-u * 2.4);
-    }
-
-    const y = Number(Math.max(1, Math.min(H - 1, yNorm * H)).toFixed(1));
-    const sy = Number(Math.max(1, Math.min(H - 1, secNorm * H)).toFixed(1));
-    pts.push({ x, y });
-    secPts.push({ x, y: sy });
+  for (let i = 0; i <= resolvedSteps; i++) {
+    const u = i / resolvedSteps;
+    const pt = evaluateMiniChartWavePoint(kind, u, phaseRad, scalar, W, H);
+    pts.push({ x: pt.x, y: pt.y });
+    secPts.push({ x: pt.x, y: pt.sy });
   }
 
   const sparklinePoints = pts.map((p) => `${p.x},${p.y}`).join(' ');
@@ -385,19 +410,22 @@ function buildMiniChartData(kind, phaseRad = 0, scalar = 0) {
       kind === 'step-converge'
         ? Math.exp(-bu * 2.2) * (0.35 + 0.65 * Math.abs(Math.sin(phaseRad * 0.8 + b)))
         : 0.25 + 0.7 * Math.abs(Math.sin(phaseRad + b * INV_PHI));
-    const bh = Number(Math.max(1.5, mag * (H - 2.5)).toFixed(1));
-    const by = Number((H - 0.8 - bh).toFixed(1));
+    const bh = Number(Math.max(1.5, mag * (H - 2.5)).toFixed(2));
+    const by = Number((H - 0.8 - bh).toFixed(2));
     bars.push({ x: bx, y: by, w: 4.2, h: bh });
   }
 
-  // Animated playhead cursor along the primary curve
-  const cursorIdx = Math.min(
-    pts.length - 1,
-    Math.max(0, Math.floor(((Math.sin(phaseRad * 0.9) + 1) * 0.5) * (pts.length - 1)))
-  );
-  const cursorPoint = pts[cursorIdx] || { x: W / 2, y: H / 2 };
+  // Continuous analytical playhead cursor along the primary curve at exact same speed (phaseRad * 0.9)
+  const cursorU = (Math.sin(phaseRad * 0.9) + 1) * 0.5;
+  const exactCursor = evaluateMiniChartWavePoint(kind, cursorU, phaseRad, scalar, W, H);
+  const cursorPoint = {
+    x: exactCursor.x,
+    y: exactCursor.y,
+    u: exactCursor.u,
+  };
 
   return {
+    steps: resolvedSteps,
     sparklinePoints,
     secondaryPoints,
     areaPoints,
@@ -964,10 +992,10 @@ export function computeGoldenFlowAndCursorField({
   const cursorPitchDelta = -cy * 12.5 * presence;
 
   const yawDeg = Number(
-    Math.max(-65, Math.min(65, anchorYawDeg + autoYawDelta + cursorYawDelta)).toFixed(2)
+    Math.max(-65, Math.min(65, anchorYawDeg + autoYawDelta + cursorYawDelta)).toFixed(3)
   );
   const pitchDeg = Number(
-    Math.max(-45, Math.min(45, anchorPitchDeg + autoPitchDelta + cursorPitchDelta)).toFixed(2)
+    Math.max(-45, Math.min(45, anchorPitchDeg + autoPitchDelta + cursorPitchDelta)).toFixed(3)
   );
   const calibrationPerturbation = Number(
     Math.max(
@@ -987,10 +1015,10 @@ export function computeGoldenFlowAndCursorField({
   return {
     yawDeg,
     pitchDeg,
-    autoYawDelta: Number(autoYawDelta.toFixed(2)),
-    autoPitchDelta: Number(autoPitchDelta.toFixed(2)),
-    cursorYawDelta: Number(cursorYawDelta.toFixed(2)),
-    cursorPitchDelta: Number(cursorPitchDelta.toFixed(2)),
+    autoYawDelta: Number(autoYawDelta.toFixed(3)),
+    autoPitchDelta: Number(autoPitchDelta.toFixed(3)),
+    cursorYawDelta: Number(cursorYawDelta.toFixed(3)),
+    cursorPitchDelta: Number(cursorPitchDelta.toFixed(3)),
     calibrationPerturbation,
     holoPhaseRad,
     cursorSvg: {
@@ -1004,6 +1032,49 @@ export function computeGoldenFlowAndCursorField({
       rPhi,
       rPhi2,
     },
+  };
+}
+
+/**
+ * Computes the phase-continuous anchor angles `(anchorYawDeg, anchorPitchDeg)` so that
+ * when a user drags a slider, drags the 3D stage, or selects a 3D preset angle
+ * `(targetYawDeg, targetPitchDeg)` at `timeSec`, the autonomous Golden Flow continues
+ * seamlessly from that exact angle without any jump or freeze.
+ */
+export function reanchorGoldenFlowAngle({
+  targetYawDeg = 13.9,
+  targetPitchDeg = 4.9,
+  timeSec = 0,
+  cursorNormX = 0,
+  cursorNormY = 0,
+  cursorEnergy = 0,
+  cursorPresence = 0,
+} = {}) {
+  const zeroAnchorFlow = computeGoldenFlowAndCursorField({
+    timeSec,
+    cursorNormX,
+    cursorNormY,
+    cursorEnergy,
+    cursorPresence,
+    anchorYawDeg: 0,
+    anchorPitchDeg: 0,
+  });
+
+  const clampedYaw = Math.max(-65, Math.min(65, Number(targetYawDeg) || 0));
+  const clampedPitch = Math.max(-45, Math.min(45, Number(targetPitchDeg) || 0));
+
+  const anchorYawDeg = Number(
+    (clampedYaw - zeroAnchorFlow.autoYawDelta - zeroAnchorFlow.cursorYawDelta).toFixed(3)
+  );
+  const anchorPitchDeg = Number(
+    (clampedPitch - zeroAnchorFlow.autoPitchDelta - zeroAnchorFlow.cursorPitchDelta).toFixed(3)
+  );
+
+  return {
+    anchorYawDeg,
+    anchorPitchDeg,
+    yawDeg: Number(clampedYaw.toFixed(3)),
+    pitchDeg: Number(clampedPitch.toFixed(3)),
   };
 }
 
