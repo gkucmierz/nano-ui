@@ -15,6 +15,9 @@ import {
   computeBauhausPhiScene3D,
   sampleMonteCarloNShadow,
 } from '../utils/bauhausPhiLogo.js';
+import { measureSafeStageBounds } from '../utils/selectPositioning.js';
+import { fitTextDirective as vFitText } from '../utils/fitText.js';
+import { getGlobalKeyController, stepWrappedIndex } from '../utils/key-controller.js';
 import {
   sharedBrandConcept,
   interactiveSoundEnabled,
@@ -55,6 +58,10 @@ const convergenceProgress = ref(0);
 const isPointerDragging = ref(false);
 const hasUserInteractedAudio = ref(false);
 const stage3DBoxRef = ref(null);
+const stage3DSvgRef = ref(null);
+const conceptsGridRef = ref(null);
+const conceptCardRefs = ref([]);
+const isConceptsFocused = ref(false);
 
 // Interactive Cursor Parallax & Holographic Field State (No Dragging Required!)
 const cursorField = ref({
@@ -520,15 +527,21 @@ const onSliderPitch = (v) => {
   updateInteractive3DAudio(yawDeg.value, pitchDeg.value, scene3D.value.perfection.scalar);
 };
 
-const scene3D = computed(() =>
-  computeBauhausPhiScene3D(
+const scene3D = computed(() => {
+  const safeBounds = measureSafeStageBounds(
+    stage3DSvgRef.value || stage3DBoxRef.value,
+    { minX: -22, minY: -7, width: 76, height: 46 },
+    { minX: -25.5, maxX: 57.5, minY: -10.5, maxY: 42.5 }
+  );
+  return computeBauhausPhiScene3D(
     yawDeg.value,
     pitchDeg.value,
     calibrationPerturbation.value,
     holoPhaseRad.value,
-    cursorField.value
-  )
-);
+    cursorField.value,
+    safeBounds
+  );
+});
 
 const monteCarloState = computed(() =>
   sampleMonteCarloNShadow(
@@ -586,11 +599,11 @@ const nSculpture3D = computed(() => {
   const sphereAxisA = projectOrthographic3D(22.55, 9.45, 0, y, p);
   const sphereAxisB = projectOrthographic3D(22.55, 9.45, 4 * INV_PHI, y, p);
 
-  // Subtle 3D architectural stage floor at y = 26.8, x ∈ [5, 27], z ∈ [-5, 5]
-  const f1 = projectOrthographic3D(5.5, 26.6, -4.5, y, p);
-  const f2 = projectOrthographic3D(26.5, 26.6, -4.5, y, p);
-  const f3 = projectOrthographic3D(26.5, 26.6, 4.5, y, p);
-  const f4 = projectOrthographic3D(5.5, 26.6, 4.5, y, p);
+  // Subtle 3D architectural stage floor at y = 25.4 (base of N-legs), x ∈ [5.5, 26.5], z ∈ [-4.5, 4.5]
+  const f1 = projectOrthographic3D(5.5, 25.4, -4.5, y, p);
+  const f2 = projectOrthographic3D(26.5, 25.4, -4.5, y, p);
+  const f3 = projectOrthographic3D(26.5, 25.4, 4.5, y, p);
+  const f4 = projectOrthographic3D(5.5, 25.4, 4.5, y, p);
 
   // Dynamic specular highlight offset on the 3D sphere following both 3D angle and user cursor!
   const specCx = Number(Math.max(12, Math.min(78, 34 - y * 0.22 + cx * 14)).toFixed(1));
@@ -656,11 +669,74 @@ const triggerConceptDemo = (conceptId) => {
   );
 };
 
+let offKeyController = null;
+
+const isConceptCardFocusActive = () => {
+  if (isFullscreenPresentation.value) return false;
+  if (isConceptsFocused.value) return true;
+  if (typeof document !== 'undefined' && conceptsGridRef.value) {
+    return conceptsGridRef.value.contains(document.activeElement);
+  }
+  return false;
+};
+
+const stepConceptByDelta = (delta) => {
+  const curIdx = Math.max(
+    0,
+    concepts.findIndex((c) => c.id === sharedBrandConcept.value)
+  );
+  const nextIdx = stepWrappedIndex(curIdx, delta, concepts.length);
+  const nextItem = concepts[nextIdx];
+  if (!nextItem) return;
+  triggerConceptDemo(nextItem.id);
+  const cardEl = conceptCardRefs.value?.[nextIdx];
+  if (cardEl && typeof cardEl.focus === 'function') {
+    cardEl.focus({ preventScroll: true });
+  }
+};
+
+const onConceptCardClick = (item, idx, ev) => {
+  isConceptsFocused.value = true;
+  triggerConceptDemo(item.id);
+  const el = ev?.currentTarget || conceptCardRefs.value?.[idx];
+  if (el && typeof el.focus === 'function') {
+    el.focus({ preventScroll: true });
+  }
+};
+
+const onConceptsGridFocusOut = (ev) => {
+  const nextTarget = ev?.relatedTarget;
+  if (conceptsGridRef.value && nextTarget && conceptsGridRef.value.contains(nextTarget)) {
+    return;
+  }
+  isConceptsFocused.value = false;
+};
+
 onMounted(() => {
   isMountedClient.value = true;
   if (typeof window !== 'undefined') {
     window.addEventListener('keydown', onGlobalKeydown);
     document.addEventListener('fullscreenchange', onFullscreenChange);
+    // Walk up parentNode from the 3D SVG stage so floating 3D windows never get clipped by intermediate wrappers
+    let parentEl = (stage3DSvgRef.value || stage3DBoxRef.value)?.parentNode;
+    let depth = 0;
+    while (parentEl && parentEl !== document.body && parentEl.nodeType === 1 && depth < 6) {
+      if (!parentEl.classList?.contains('is-fullscreen-deck')) {
+        parentEl.style.overflow = 'visible';
+      }
+      parentEl = parentEl.parentNode;
+      depth++;
+    }
+    const keys = getGlobalKeyController();
+    offKeyController = keys.bindAll(
+      {
+        ArrowLeft: () => stepConceptByDelta(-1),
+        ArrowRight: () => stepConceptByDelta(1),
+      },
+      {
+        enabled: isConceptCardFocusActive,
+      }
+    );
   }
   // Start gentle 3D holographic orbit automatically on mount
   startAutoOrbitLoop(false);
@@ -674,6 +750,10 @@ onUnmounted(() => {
   stopInteractive3DAudio();
   stopAmbientBackgroundMusic();
   syncBodyScrollLock(false);
+  if (offKeyController) {
+    offKeyController();
+    offKeyController = null;
+  }
   if (typeof window !== 'undefined') {
     window.removeEventListener('keydown', onGlobalKeydown);
     document.removeEventListener('fullscreenchange', onFullscreenChange);
@@ -858,6 +938,8 @@ const concepts = [
 
               <div class="stage-3d-canvas-wrap">
                 <svg
+                  ref="stage3DSvgRef"
+                  overflow="visible"
                   :viewBox="deviceViewport === 'mobile' ? '-2 -2 36 36' : '-22 -7 76 46'"
                   :width="deviceViewport === 'mobile' ? 320 : 450"
                   :height="deviceViewport === 'mobile' ? 320 : 272"
@@ -997,22 +1079,28 @@ const concepts = [
                         >
                           {{ art.tag }}
                         </text>
-                        <text
-                          x="26"
-                          y="-7.2"
-                          text-anchor="end"
+                        <g
                           :fill="art.isLocked ? '#10b981' : '#94a3b8'"
                           font-size="2.7"
                           font-weight="700"
                           font-family="ui-monospace, SFMono-Regular, monospace"
                         >
-                          {{ art.delta }}
-                        </text>
+                          <text :x="art.deltaParts.leftX" y="-7.2" text-anchor="end">
+                            {{ art.deltaParts.left }}
+                          </text>
+                          <text :x="art.deltaParts.eqX" y="-7.2" text-anchor="middle">
+                            {{ art.deltaParts.eq }}
+                          </text>
+                          <text :x="art.deltaParts.rightX" y="-7.2" text-anchor="start">
+                            {{ art.deltaParts.right }}
+                          </text>
+                        </g>
                         <text
                           x="-26"
                           y="-2.4"
                           fill="#e2e8f0"
-                          font-size="2.7"
+                          :font-size="art.exprFontSize || 2.7"
+                          v-fit-text="{ maxWidth: 51.2, minSize: 1.5, maxSize: 2.7, step: 0.05 }"
                           font-weight="700"
                           font-family="ui-monospace, SFMono-Regular, monospace"
                         >
@@ -1070,17 +1158,22 @@ const concepts = [
                             />
                           </g>
                         </g>
-                        <text
-                          x="26"
-                          y="6.8"
-                          text-anchor="end"
+                        <g
                           :fill="art.isLocked ? '#10b981' : '#f8fafc'"
-                          font-size="2.8"
+                          font-size="2.7"
                           font-weight="800"
                           font-family="ui-monospace, SFMono-Regular, monospace"
                         >
-                          {{ art.readout }}
-                        </text>
+                          <text :x="art.readoutParts.leftX" y="6.8" text-anchor="end">
+                            {{ art.readoutParts.left }}
+                          </text>
+                          <text :x="art.readoutParts.eqX" y="6.8" text-anchor="middle">
+                            {{ art.readoutParts.eq }}
+                          </text>
+                          <text :x="art.readoutParts.rightX" y="6.8" text-anchor="start">
+                            {{ art.readoutParts.right }}
+                          </text>
+                        </g>
                       </g>
                     </g>
                   </g>
@@ -1095,16 +1188,6 @@ const concepts = [
                     :fill="silhouetteMode ? '#09090b' : 'rgba(15, 23, 42, 0.88)'"
                     stroke="rgba(148, 163, 184, 0.32)"
                     stroke-width="0.45"
-                  />
-
-                  <!-- 3D Architectural Stage Platform Floor (Visible when rotated in 3D) -->
-                  <polygon
-                    v-if="!scene3D.isOrthographicLock"
-                    :points="nSculpture3D.floorPoints"
-                    fill="rgba(56, 189, 248, 0.05)"
-                    stroke="rgba(99, 102, 241, 0.24)"
-                    stroke-width="0.22"
-                    stroke-dasharray="0.6 0.4"
                   />
 
                   <!-- Orthographic Laser Rays from 3D Solids to 2D Shadow Plane + N-Bridge Axis -->
@@ -1138,69 +1221,91 @@ const concepts = [
                     />
                   </g>
 
-                  <!-- 1. [□] Solid Watertight 3D Golden Pillar (z = -4*phi^-1, Backface-Culled Opaque Sides) -->
-                  <g :class="{ 'vec-pulse': activePulseConcept === 'PHI' && activePulseStep === 1 }">
+                  <!-- D3-3D Unified Scene-Graph Painter's Algorithm: Depth-Sorted [Floor, ○ Sphere, △ Wedge, □ Pillar] -->
+                  <template v-for="primId in scene3D.sceneRenderOrder" :key="primId">
+                    <!-- 0. [Floor] 3D Architectural Stage Platform Floor (Underneath for θ <= 0°, On Top of N-legs for θ > 0°) -->
                     <polygon
-                      v-for="(s, idx) in scene3D.prismBox.visibleSides"
-                      :key="`p-vis-${idx}`"
-                      :points="s.points"
-                      :fill="getPillarSideFill(s.shade)"
-                      :stroke=" getPillarSideFill(Math.min(0.95, s.shade + 0.12))"
-                      stroke-width="0.18"
-                      stroke-linejoin="round"
+                      v-if="primId === 'floor' && !scene3D.isOrthographicLock"
+                      :points="nSculpture3D.floorPoints"
+                      :fill="scene3D.floorOccludesSolids ? 'rgba(15, 23, 42, 0.76)' : 'rgba(56, 189, 248, 0.05)'"
+                      :stroke="scene3D.floorOccludesSolids ? 'rgba(129, 140, 248, 0.68)' : 'rgba(99, 102, 241, 0.24)'"
+                      :stroke-width="scene3D.floorOccludesSolids ? '0.28' : '0.22'"
+                      stroke-dasharray="0.6 0.4"
                     />
-                    <polygon
-                      :points="scene3D.prismBox.frontPoints"
-                      :fill="silhouetteMode ? '#ffffff' : 'url(#pillarFront3D)'"
-                      stroke="rgba(199, 210, 254, 0.5)"
-                      stroke-width="0.22"
-                      stroke-linejoin="round"
-                    />
-                  </g>
 
-                  <!-- 2. [△] Solid Watertight 3D Golden Wedge Triangle (z = 0, Backface-Culled Opaque Sides) -->
-                  <g :class="{ 'vec-pulse': activePulseConcept === 'PHI' && activePulseStep === 2 }">
-                    <polygon
-                      v-for="(s, idx) in scene3D.wedgeTri.visibleSides"
-                      :key="`t-vis-${idx}`"
-                      :points="s.points"
-                      :fill="getWedgeSideFill(s.shade)"
-                      :stroke="getWedgeSideFill(Math.min(0.95, s.shade + 0.12))"
-                      stroke-width="0.18"
-                      stroke-linejoin="round"
-                    />
-                    <polygon
-                      :points="scene3D.wedgeTri.frontPoints"
-                      :fill="silhouetteMode ? '#ffffff' : 'url(#wedgeFront3D)'"
-                      stroke="rgba(165, 243, 252, 0.55)"
-                      stroke-width="0.22"
-                      stroke-linejoin="round"
-                    />
-                  </g>
+                    <!-- 1. [□] Solid Watertight 3D Golden Pillar (z = -4*phi^-1, Backface-Culled Opaque Sides) -->
+                    <g
+                      v-else-if="primId === 'pillar'"
+                      :class="{ 'vec-pulse': activePulseConcept === 'PHI' && activePulseStep === 1 }"
+                    >
+                      <polygon
+                        v-for="(s, idx) in scene3D.prismBox.visibleSides"
+                        :key="`p-vis-${idx}`"
+                        :points="s.points"
+                        :fill="getPillarSideFill(s.shade)"
+                        :stroke="getPillarSideFill(Math.min(0.95, s.shade + 0.12))"
+                        stroke-width="0.18"
+                        stroke-linejoin="round"
+                      />
+                      <polygon
+                        :points="scene3D.prismBox.frontPoints"
+                        :fill="silhouetteMode ? '#ffffff' : 'url(#pillarFront3D)'"
+                        stroke="rgba(199, 210, 254, 0.5)"
+                        stroke-width="0.22"
+                        stroke-linejoin="round"
+                      />
+                    </g>
 
-                  <!-- 3. [○] 3D Volumetric Quantum Sphere (z = +4*phi^-1) -->
-                  <g :class="{ 'vec-pulse': activePulseConcept === 'PHI' && activePulseStep === 3 }">
-                    <!-- Subtle 3D Equatorial Orbital Ring around the Sphere -->
-                    <ellipse
-                      v-if="!scene3D.isOrthographicLock"
-                      :cx="scene3D.sphere.x"
-                      :cy="scene3D.sphere.y"
-                      :rx="scene3D.sphere.r * 1.32"
-                      :ry="scene3D.sphere.r * 0.46"
-                      :transform="`rotate(${(yawDeg * 0.35).toFixed(1)} ${scene3D.sphere.x} ${scene3D.sphere.y})`"
-                      fill="none"
-                      stroke="rgba(103, 232, 249, 0.45)"
-                      stroke-width="0.2"
-                    />
-                    <circle
-                      :cx="scene3D.sphere.x"
-                      :cy="scene3D.sphere.y"
-                      :r="scene3D.sphere.r"
-                      :fill="silhouetteMode ? '#ffffff' : 'url(#labSphere3D)'"
-                      stroke="rgba(165, 243, 252, 0.65)"
-                      stroke-width="0.2"
-                    />
-                  </g>
+                    <!-- 2. [△] Solid Watertight 3D Golden Wedge Triangle (z = 0, Backface-Culled Opaque Sides) -->
+                    <g
+                      v-else-if="primId === 'wedge'"
+                      :class="{ 'vec-pulse': activePulseConcept === 'PHI' && activePulseStep === 2 }"
+                    >
+                      <polygon
+                        v-for="(s, idx) in scene3D.wedgeTri.visibleSides"
+                        :key="`t-vis-${idx}`"
+                        :points="s.points"
+                        :fill="getWedgeSideFill(s.shade)"
+                        :stroke="getWedgeSideFill(Math.min(0.95, s.shade + 0.12))"
+                        stroke-width="0.18"
+                        stroke-linejoin="round"
+                      />
+                      <polygon
+                        :points="scene3D.wedgeTri.frontPoints"
+                        :fill="silhouetteMode ? '#ffffff' : 'url(#wedgeFront3D)'"
+                        stroke="rgba(165, 243, 252, 0.55)"
+                        stroke-width="0.22"
+                        stroke-linejoin="round"
+                      />
+                    </g>
+
+                    <!-- 3. [○] 3D Volumetric Quantum Sphere (z = +4*phi^-1) -->
+                    <g
+                      v-else-if="primId === 'sphere'"
+                      :class="{ 'vec-pulse': activePulseConcept === 'PHI' && activePulseStep === 3 }"
+                    >
+                      <!-- Subtle 3D Equatorial Orbital Ring around the Sphere -->
+                      <ellipse
+                        v-if="!scene3D.isOrthographicLock"
+                        :cx="scene3D.sphere.x"
+                        :cy="scene3D.sphere.y"
+                        :rx="scene3D.sphere.r * 1.32"
+                        :ry="scene3D.sphere.r * 0.46"
+                        :transform="`rotate(${(yawDeg * 0.35).toFixed(1)} ${scene3D.sphere.x} ${scene3D.sphere.y})`"
+                        fill="none"
+                        stroke="rgba(103, 232, 249, 0.45)"
+                        stroke-width="0.2"
+                      />
+                      <circle
+                        :cx="scene3D.sphere.x"
+                        :cy="scene3D.sphere.y"
+                        :r="scene3D.sphere.r"
+                        :fill="silhouetteMode ? '#ffffff' : 'url(#labSphere3D)'"
+                        stroke="rgba(165, 243, 252, 0.65)"
+                        stroke-width="0.2"
+                      />
+                    </g>
+                  </template>
 
                   <!-- INTERACTIVE CURSOR HOLOGRAPHIC FIELD (No Dragging Needed — Responds to Mouse Hover/Move!) -->
                   <g
@@ -1369,22 +1474,28 @@ const concepts = [
                           >
                             {{ art.tag }}
                           </text>
-                          <text
-                            x="26"
-                            y="-7.2"
-                            text-anchor="end"
+                          <g
                             :fill="art.isLocked ? '#10b981' : '#94a3b8'"
                             font-size="2.7"
                             font-weight="700"
                             font-family="ui-monospace, SFMono-Regular, monospace"
                           >
-                            {{ art.delta }}
-                          </text>
+                            <text :x="art.deltaParts.leftX" y="-7.2" text-anchor="end">
+                              {{ art.deltaParts.left }}
+                            </text>
+                            <text :x="art.deltaParts.eqX" y="-7.2" text-anchor="middle">
+                              {{ art.deltaParts.eq }}
+                            </text>
+                            <text :x="art.deltaParts.rightX" y="-7.2" text-anchor="start">
+                              {{ art.deltaParts.right }}
+                            </text>
+                          </g>
                           <text
                             x="-26"
                             y="-2.4"
                             fill="#f8fafc"
-                            font-size="2.75"
+                            :font-size="art.exprFontSize || 2.75"
+                            v-fit-text="{ maxWidth: 51.2, minSize: 1.5, maxSize: 2.75, step: 0.05 }"
                             font-weight="700"
                             font-family="ui-monospace, SFMono-Regular, monospace"
                           >
@@ -1444,17 +1555,22 @@ const concepts = [
                             </g>
                           </g>
 
-                          <text
-                            x="26"
-                            y="6.8"
-                            text-anchor="end"
+                          <g
                             :fill="art.isLocked ? '#10b981' : '#f8fafc'"
-                            font-size="2.8"
+                            font-size="2.7"
                             font-weight="800"
                             font-family="ui-monospace, SFMono-Regular, monospace"
                           >
-                            {{ art.readout }}
-                          </text>
+                            <text :x="art.readoutParts.leftX" y="6.8" text-anchor="end">
+                              {{ art.readoutParts.left }}
+                            </text>
+                            <text :x="art.readoutParts.eqX" y="6.8" text-anchor="middle">
+                              {{ art.readoutParts.eq }}
+                            </text>
+                            <text :x="art.readoutParts.rightX" y="6.8" text-anchor="start">
+                              {{ art.readoutParts.right }}
+                            </text>
+                          </g>
                         </g>
                       </g>
                     </g>
@@ -1709,16 +1825,29 @@ const concepts = [
       </div>
 
       <!-- Multi-Scale Preview + Alternatives (Hidden in Fullscreen Presentation for 100dvh Zero-Scroll) -->
-      <div v-if="!isFullscreenPresentation" class="concepts-grid">
+      <div
+        v-if="!isFullscreenPresentation"
+        ref="conceptsGridRef"
+        class="concepts-grid"
+        role="radiogroup"
+        aria-label="Warianty koncepcji logo (użyj strzałek lewo/prawo z zapętleniem %)"
+        @focusin="isConceptsFocused = true"
+        @focusout="onConceptsGridFocusOut"
+      >
         <div
-          v-for="item in concepts"
+          v-for="(item, idx) in concepts"
           :key="item.id"
+          :ref="(el) => { if (el) conceptCardRefs[idx] = el; }"
+          tabindex="0"
+          role="radio"
+          :aria-checked="sharedBrandConcept === item.id"
           class="concept-card"
           :class="{
             'is-selected': sharedBrandConcept === item.id,
             'is-mono': silhouetteMode
           }"
-          @click="triggerConceptDemo(item.id)"
+          @focus="isConceptsFocused = true"
+          @click="onConceptCardClick(item, idx, $event)"
         >
           <div class="concept-top">
             <span class="concept-badge">{{ item.badge }}</span>
@@ -2214,6 +2343,7 @@ const concepts = [
   align-items: center;
   justify-content: space-between;
   gap: 10px;
+  overflow: visible;
   transition: border-color 0.2s ease, box-shadow 0.2s ease;
 }
 
@@ -2225,10 +2355,12 @@ const concepts = [
 .stage-3d-canvas-wrap,
 .stage-2d-canvas-wrap {
   position: relative;
+  z-index: 30;
   width: 100%;
   display: flex;
   justify-content: center;
   align-items: center;
+  overflow: visible !important;
 }
 
 .mobile-pip-shadow {
@@ -2333,6 +2465,8 @@ const concepts = [
 }
 
 .stage-box-head {
+  position: relative;
+  z-index: 1;
   width: 100%;
   display: flex;
   justify-content: space-between;
@@ -2485,6 +2619,12 @@ const concepts = [
   transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
 
+.concept-card:focus-visible {
+  outline: none;
+  border-color: var(--nano-accent-primary, #6366f1);
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.34);
+}
+
 .concept-card.is-selected {
   border-color: var(--nano-accent-primary, #6366f1);
   box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.22);
@@ -2498,9 +2638,14 @@ const concepts = [
 }
 
 .concept-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  line-height: 1.25;
   font-size: 0.72rem;
   font-weight: 700;
-  padding: 2px 8px;
+  padding: 4px 10px;
   border-radius: 999px;
   background: var(--nano-bg-muted);
   border: 1px solid var(--nano-border-card);
@@ -2508,9 +2653,14 @@ const concepts = [
 }
 
 .active-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  line-height: 1.25;
   font-size: 0.7rem;
   font-weight: 700;
-  padding: 2px 8px;
+  padding: 4px 10px;
   border-radius: 999px;
   background: rgba(16, 185, 129, 0.16);
   color: #10b981;
@@ -2560,8 +2710,11 @@ const concepts = [
 }
 
 .stage-svg {
+  position: relative;
+  z-index: 30;
   max-width: 100%;
   height: auto;
+  overflow: visible !important;
 }
 
 .mono {
