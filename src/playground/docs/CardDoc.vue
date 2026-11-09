@@ -3,6 +3,7 @@ import { ref, computed } from 'vue';
 import NanoCodeBlock from '../../components/NanoCodeBlock.vue';
 import NanoSwitch from '../../components/NanoSwitch.vue';
 import NanoSortableList from '../../components/NanoSortableList.vue';
+import NanoCollapsible from '../../components/NanoCollapsible.vue';
 import { t } from '../../locales.js';
 
 const sortableCards = ref([
@@ -275,6 +276,23 @@ const cssApiDoc = `/* Nano UI Card & Panel Primitives */
         </div>
       </template>
     </NanoSortableList>
+
+    <h3 class="section-title">Collapsible Telemetry Sections (NanoCollapsible)</h3>
+    <p class="desc">
+      Expandable and collapsible section container with persistent localStorage state, inline collapsed preview slot, and accessible keyboard trigger.
+    </p>
+    <NanoCollapsible
+      title="Active Telemetry & Repository Audit Strip"
+      badge="52 repos"
+      :default-open="true"
+    >
+      <template #summary-collapsed>
+        <span class="nano-badge nano-badge-ok">1 WORKING</span>
+      </template>
+      <p style="margin: 0; font-size: 0.88rem; color: var(--nano-text-muted);">
+        Collapsible body content with automatic state persistence via <code>storage-key</code>.
+      </p>
+    </NanoCollapsible>
 
     <h3 class="section-title">CSS Class Reference</h3>
     <NanoCodeBlock :code="cssApiDoc" lang="css" title="primitives.css Reference" />
