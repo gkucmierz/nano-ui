@@ -384,18 +384,18 @@ export const clampFloatingBox2D = ({
 };
 
 /**
- * Walks up `parentNode` from `stageEl` (just like `findSafeSelectMount` in `<NanoSelect>`),
- * intersecting all clipping ancestors (`overflow: hidden | clip | auto | scroll`) and mapping
- * the resulting visible pixel rectangle back into the SVG / stage coordinate space
- * (`viewBox = { minX, minY, width, height }`).
+ * Walks up `parentNode` from `stageEl`, intersecting only explicit `[data-nano-stage-clip]`
+ * boundary containers (never clamping internal 3D SVG coordinates to `window.innerHeight` scroll
+ * position or document scroll containers, which would squish floating 3D cards when the SVG
+ * starts partially below the fold on initial page load).
  */
 export const measureSafeStageBounds = (
   stageEl,
-  viewBox = { minX: -22, minY: -7, width: 76, height: 46 },
+  viewBox = { minX: -26, minY: -11, width: 84, height: 54 },
   outerStageBounds = { minX: -25.5, maxX: 57.5, minY: -10.5, maxY: 42.5 }
 ) => {
   const fallback = { ...outerStageBounds, clippedByAncestors: 0 };
-  if (!stageEl || typeof window === 'undefined' || typeof stageEl.getBoundingClientRect !== 'function') {
+  if (!stageEl || typeof stageEl.getBoundingClientRect !== 'function') {
     return fallback;
   }
 
@@ -404,35 +404,31 @@ export const measureSafeStageBounds = (
     return fallback;
   }
 
-  // Start with the unclipped viewport / outer ancestor space so SVG elements with overflow:visible
-  // can break out beyond stageRect (beyond the inner violet backdrop [-21..53, -6..38]),
-  // clamping ONLY when an ancestor in the .parentNode chain has clipping overflow.
-  let visLeft = typeof window.innerWidth === 'number' ? 0 : stageRect.left - stageRect.width;
-  let visRight = typeof window.innerWidth === 'number' ? window.innerWidth : stageRect.right + stageRect.width;
-  let visTop = typeof window.innerHeight === 'number' ? 0 : stageRect.top - stageRect.height;
-  let visBottom = typeof window.innerHeight === 'number' ? window.innerHeight : stageRect.bottom + stageRect.height;
+  let visLeft = -Infinity;
+  let visRight = Infinity;
+  let visTop = -Infinity;
+  let visBottom = Infinity;
   let clippedByAncestors = 0;
 
+  const docBody = typeof document !== 'undefined' ? document.body : null;
+  const docEl = typeof document !== 'undefined' ? document.documentElement : null;
   let curr = stageEl.parentNode;
-  while (curr && curr !== document.body && curr !== document.documentElement && curr.nodeType === 1) {
-    const style = window.getComputedStyle ? window.getComputedStyle(curr) : null;
-    if (style) {
-      const ovY = style.overflowY || style.overflow || '';
-      const ovX = style.overflowX || style.overflow || '';
-      if (CLIPPING_OVERFLOW_RE.test(ovY) || CLIPPING_OVERFLOW_RE.test(ovX)) {
-        const r = curr.getBoundingClientRect();
-        if (r.width > 0 && r.height > 0) {
-          if (r.left > visLeft || r.right < visRight || r.top > visTop || r.bottom < visBottom) {
-            clippedByAncestors++;
-          }
-          visLeft = Math.max(visLeft, r.left);
-          visRight = Math.min(visRight, r.right);
-          visTop = Math.max(visTop, r.top);
-          visBottom = Math.min(visBottom, r.bottom);
-        }
+  while (curr && curr !== docBody && curr !== docEl && curr.nodeType === 1) {
+    if (curr.hasAttribute && curr.hasAttribute('data-nano-stage-clip')) {
+      const r = curr.getBoundingClientRect();
+      if (r.width > 0 && r.height > 0) {
+        clippedByAncestors++;
+        visLeft = Math.max(visLeft, r.left);
+        visRight = Math.min(visRight, r.right);
+        visTop = Math.max(visTop, r.top);
+        visBottom = Math.min(visBottom, r.bottom);
       }
     }
     curr = curr.parentNode;
+  }
+
+  if (clippedByAncestors === 0) {
+    return fallback;
   }
 
   const vbMinX = Number(viewBox?.minX ?? -22);
