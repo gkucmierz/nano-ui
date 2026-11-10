@@ -288,7 +288,7 @@ export const computeAdaptiveCardExpansion = ({
   baseCardHeight = 230,
   baseStageHeight = 330,
   contentScrollHeight = 0,
-  extraPadding = 16,
+  extraPadding = 4,
   viewportMargin = 24,
 } = {}) => {
   const baseCard = Math.max(120, Number(baseCardHeight) || 230);
