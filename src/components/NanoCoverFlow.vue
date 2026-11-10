@@ -7,6 +7,7 @@ import {
   computeCoverFlowItemTransform,
 } from '../utils/coverflow.js';
 import { computeAdaptiveCardExpansion } from '../utils/selectPositioning.js';
+import { fitCardContentToHeight } from '../utils/fitText.js';
 import { createKineticTransition } from '../utils/kinetics.js';
 import { getScopedStorageController } from '../utils/storage-controller.js';
 
@@ -64,6 +65,19 @@ const props = defineProps({
     type: Boolean,
     default: true,
   },
+  /**
+   * Side-card depth attenuation mode:
+   * - `'color'` (default): cards stay 100% opaque (`opacity: 1`, preventing rear cards from bleeding
+   *   through front cards and avoiding GPU offscreen alpha-group compositing) while `.nano-cf-shade`
+   *   fades side cards toward the theme background (`#09090b` in dark mode, `#f8fafc` in light mode).
+   * - `'opacity'`: disables `.nano-cf-shade` color overlay and fades side cards via `opacity` + edge
+   *   `mask-image` alpha gradient — ideal over mixed/animated backdrops (e.g. `@gkucmierz/trianglify`).
+   */
+  fadeMode: {
+    type: String,
+    default: 'color',
+    validator: (v) => ['color', 'opacity'].includes(v),
+  },
   showControls: {
     type: Boolean,
     default: true,
@@ -114,16 +128,24 @@ const props = defineProps({
    */
   autoExpandActive: {
     type: Boolean,
+    default: false,
+  },
+  /**
+   * Automatically fits each card's inner typography and spacing using `naturalSearch`
+   * (`fitCardContentToHeight` from `fitText.js`) so cards never require an internal vertical scrollbar.
+   */
+  autoFitContent: {
+    type: Boolean,
     default: true,
   },
   /**
    * In horizontal mode (`orientation === 'horizontal'`), allows vertical wheel/trackpad scrolling
-   * to scroll the active card's inner content (`overflow-y: auto`) when its text exceeds `cardHeight`
-   * (e.g. when `:auto-expand-active="false"` or when content exceeds the viewport clamp).
+   * to scroll the active card's inner content (`overflow-y: auto`) when explicitly enabled and
+   * content still exceeds the expanded card height. Defaults to `false` to prevent vertical scrollbars inside cards.
    */
   innerContentScroll: {
     type: Boolean,
-    default: true,
+    default: false,
   },
   storageKey: {
     type: String,
@@ -152,6 +174,7 @@ const initialIdx = (() => {
 })();
 
 const rootRef = ref(null);
+const containerWidth = ref(0);
 const internalIndex = ref(initialIdx);
 const kineticPosition = ref(initialIdx);
 const isKineticMoving = ref(false);
@@ -163,17 +186,87 @@ let hasDraggedBeyondThreshold = false;
 let dragStartCoord = 0;
 let activePointerId = null;
 let lastWheelTs = 0;
+let containerResizeObserver = null;
+
+function updateContainerWidth() {
+  if (!rootRef.value) return;
+  const w = Number(rootRef.value.clientWidth) || 0;
+  if (w > 0 && w !== containerWidth.value) {
+    containerWidth.value = w;
+  }
+}
+
+const effectiveCardWidth = computed(() => {
+  const baseW = Number(props.cardWidth) || 340;
+  if (containerWidth.value > 0 && containerWidth.value < baseW + 20) {
+    return Math.max(250, containerWidth.value - 20);
+  }
+  return baseW;
+});
 
 function measureActiveCardHeight() {
   if (!rootRef.value || typeof rootRef.value.querySelector !== 'function') return;
-  const activeSurface = rootRef.value.querySelector('.nano-cf-item.is-active .nano-cf-card-surface');
+  const allItems =
+    typeof rootRef.value.querySelectorAll === 'function'
+      ? rootRef.value.querySelectorAll('.nano-cf-item')
+      : [];
+  const activeItem =
+    allItems[internalIndex.value] || rootRef.value.querySelector('.nano-cf-item.is-active');
+  const activeSurface =
+    activeItem?.querySelector?.('.nano-cf-card-surface') ||
+    rootRef.value.querySelector('.nano-cf-item.is-active .nano-cf-card-surface');
   if (!activeSurface) return;
   const firstChild = activeSurface.firstElementChild;
+
+  // Reset active card scale to 1.0 first so we measure its true unscaled natural height
+  if (props.autoFitContent) {
+    fitCardContentToHeight(activeSurface, {
+      targetHeight: 9999,
+      minScale: 1,
+      maxScale: 1,
+    });
+  }
+
+  const prevItemH = activeItem && activeItem.style ? activeItem.style.height : '';
+  const prevSurfaceH = activeSurface.style ? activeSurface.style.height : '';
+  const prevChildH = firstChild && firstChild.style ? firstChild.style.height : '';
+  const prevChildMinH = firstChild && firstChild.style ? firstChild.style.minHeight : '';
+
+  if (activeItem && activeItem.style) activeItem.style.height = 'auto';
+  if (activeSurface.style) activeSurface.style.height = 'auto';
+  if (firstChild && firstChild.style) {
+    firstChild.style.height = 'auto';
+    firstChild.style.minHeight = '0px';
+  }
+
   const naturalH = Math.max(
     activeSurface.scrollHeight || 0,
-    firstChild ? (firstChild.scrollHeight || 0) : 0
+    firstChild ? firstChild.scrollHeight || 0 : 0
   );
+
+  if (firstChild && firstChild.style) {
+    firstChild.style.height = prevChildH;
+    firstChild.style.minHeight = prevChildMinH;
+  }
+  if (activeSurface.style) activeSurface.style.height = prevSurfaceH;
+  if (activeItem && activeItem.style) activeItem.style.height = prevItemH;
+
   measuredActiveScrollHeight.value = naturalH;
+
+  if (props.autoFitContent && typeof rootRef.value.querySelectorAll === 'function') {
+    const allItems = rootRef.value.querySelectorAll('.nano-cf-item');
+    const activeTargetH = props.autoExpandActive
+      ? Math.max(props.cardHeight, expansionState.value.activeCardHeight)
+      : props.cardHeight;
+    for (const itemEl of allItems) {
+      const surfaceEl = itemEl.querySelector?.('.nano-cf-card-surface');
+      if (!surfaceEl) continue;
+      const isAct = itemEl.classList?.contains('is-active');
+      fitCardContentToHeight(surfaceEl, {
+        targetHeight: isAct ? activeTargetH : props.cardHeight,
+      });
+    }
+  }
 }
 
 const expansionState = computed(() => {
@@ -214,6 +307,9 @@ const kineticCtrl = createKineticTransition({
   onSettled: ({ value }) => {
     kineticPosition.value = value;
     isKineticMoving.value = false;
+    nextTick(() => {
+      measureActiveCardHeight();
+    });
   },
 });
 
@@ -295,14 +391,30 @@ function onKeydown(e) {
 onMounted(() => {
   if (typeof window !== 'undefined') {
     window.addEventListener('keydown', onKeydown);
+    window.addEventListener('resize', updateContainerWidth, { passive: true });
+  }
+  updateContainerWidth();
+  if (typeof ResizeObserver !== 'undefined' && rootRef.value) {
+    containerResizeObserver = new ResizeObserver(() => {
+      updateContainerWidth();
+      measureActiveCardHeight();
+    });
+    containerResizeObserver.observe(rootRef.value);
   }
   nextTick(() => {
+    updateContainerWidth();
     measureActiveCardHeight();
   });
 });
 
 watch(
-  [internalIndex, () => props.items.length, () => props.autoExpandActive, () => props.cardHeight],
+  [
+    internalIndex,
+    () => props.items.length,
+    () => props.autoExpandActive,
+    () => props.cardHeight,
+    effectiveCardWidth,
+  ],
   () => {
     nextTick(() => {
       measureActiveCardHeight();
@@ -313,6 +425,11 @@ watch(
 onBeforeUnmount(() => {
   if (typeof window !== 'undefined') {
     window.removeEventListener('keydown', onKeydown);
+    window.removeEventListener('resize', updateContainerWidth);
+  }
+  if (containerResizeObserver) {
+    containerResizeObserver.disconnect();
+    containerResizeObserver = null;
   }
   kineticCtrl.destroy();
 });
@@ -336,6 +453,7 @@ const decoratedItems = computed(() => {
       stackSpacingPx: props.stackSpacing,
       depthOffsetPx: props.depthOffset,
       stackDepthStepPx: props.stackDepthStep,
+      fadeMode: props.fadeMode,
     });
     return {
       raw: item,
@@ -490,6 +608,7 @@ defineExpose({
     class="nano-coverflow"
     :class="[
       `is-${orientation}`,
+      `is-fade-${fadeMode}`,
       {
         'is-dragging': isDragging,
         'is-kinetic-moving': isKineticMoving,
@@ -522,9 +641,9 @@ defineExpose({
             'is-right': entry.state.isRightOrBottom,
           }"
           :style="{
-            width: `${cardWidth}px`,
+            width: `${effectiveCardWidth}px`,
             height: `${getItemCardHeight(entry)}px`,
-            marginLeft: `${-cardWidth / 2}px`,
+            marginLeft: `${-effectiveCardWidth / 2}px`,
             marginTop: `${-getItemCardHeight(entry) / 2}px`,
             transform: entry.state.transform,
             zIndex: entry.state.zIndex,
@@ -538,6 +657,8 @@ defineExpose({
             :class="{
               'is-scrollable':
                 innerContentScroll &&
+                !autoFitContent &&
+                expansionState.needsInnerScroll &&
                 entry.state.isActive &&
                 orientation === 'horizontal',
             }"
@@ -575,11 +696,12 @@ defineExpose({
               </div>
             </slot>
 
-            <!-- Side-curtain shading overlay for 3D depth -->
+            <!-- Side-curtain shading overlay for 3D depth (active in 'color' fadeMode) -->
             <div
+              v-if="fadeMode !== 'opacity'"
               class="nano-cf-shade"
               :style="{
-                opacity: Math.min(0.55, entry.state.absOffset * 0.22),
+                opacity: Math.min(0.62, entry.state.absOffset * 0.2),
               }"
             />
           </div>
@@ -654,6 +776,22 @@ defineExpose({
   );
 }
 
+[data-theme="light"] .nano-cf-viewport,
+.light .nano-cf-viewport,
+.theme-light .nano-cf-viewport {
+  background: transparent;
+}
+
+.nano-coverflow.is-fade-opacity.is-horizontal .nano-cf-viewport {
+  -webkit-mask-image: linear-gradient(90deg, transparent 0%, #000 7%, #000 93%, transparent 100%);
+  mask-image: linear-gradient(90deg, transparent 0%, #000 7%, #000 93%, transparent 100%);
+}
+
+.nano-coverflow.is-fade-opacity.is-vertical .nano-cf-viewport {
+  -webkit-mask-image: linear-gradient(180deg, transparent 0%, #000 8%, #000 92%, transparent 100%);
+  mask-image: linear-gradient(180deg, transparent 0%, #000 8%, #000 92%, transparent 100%);
+}
+
 .nano-coverflow.is-vertical .nano-cf-viewport {
   touch-action: none;
 }
@@ -701,9 +839,21 @@ defineExpose({
     color-mix(in srgb, var(--nano-bg-sidebar, #18181b) 95%, var(--nano-text-main, #f8fafc) 5%)
   );
   border: 1px solid var(--nano-border-card, rgba(148, 163, 184, 0.24));
-  box-shadow: var(--nano-shadow-card, 0 18px 42px rgba(0, 0, 0, 0.45));
+  box-shadow: var(--nano-shadow-card, 0 8px 20px -6px rgba(0, 0, 0, 0.38));
   box-sizing: border-box;
   transition: border-color 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease;
+}
+
+[data-theme="light"] .nano-cf-card-surface,
+.light .nano-cf-card-surface,
+.theme-light .nano-cf-card-surface {
+  background: var(--nano-coverflow-card-bg, #ffffff);
+  border-color: var(--nano-border-card, rgba(15, 23, 42, 0.12));
+  box-shadow: var(
+    --nano-shadow-card,
+    0 6px 16px -6px rgba(15, 23, 42, 0.06),
+    0 2px 6px -2px rgba(15, 23, 42, 0.03)
+  );
 }
 
 .nano-cf-card-surface.is-scrollable {
@@ -719,8 +869,19 @@ defineExpose({
   );
   border-color: var(--nano-primary, #38bdf8);
   box-shadow:
-    0 22px 50px rgba(0, 0, 0, 0.52),
+    0 10px 24px -6px rgba(0, 0, 0, 0.44),
     0 0 0 1px rgba(56, 189, 248, 0.35);
+}
+
+[data-theme="light"] .nano-cf-item.is-active .nano-cf-card-surface,
+.light .nano-cf-item.is-active .nano-cf-card-surface,
+.theme-light .nano-cf-item.is-active .nano-cf-card-surface {
+  background: var(--nano-coverflow-active-card-bg, #ffffff);
+  border-color: var(--nano-primary, #0284c7);
+  box-shadow:
+    0 8px 20px -6px rgba(2, 132, 199, 0.12),
+    0 3px 8px -3px rgba(15, 23, 42, 0.05),
+    0 0 0 1px rgba(2, 132, 199, 0.28);
 }
 
 .nano-cf-default-card {
@@ -799,9 +960,21 @@ defineExpose({
 .nano-cf-shade {
   position: absolute;
   inset: 0;
-  background: color-mix(in srgb, var(--nano-bg-main, #09090b) 65%, transparent);
+  background: var(
+    --nano-coverflow-shade-bg,
+    color-mix(in srgb, var(--nano-bg-main, #09090b) 65%, transparent)
+  );
   pointer-events: none;
   transition: opacity 0.25s ease;
+}
+
+[data-theme="light"] .nano-cf-shade,
+.light .nano-cf-shade,
+.theme-light .nano-cf-shade {
+  background: var(
+    --nano-coverflow-shade-bg,
+    color-mix(in srgb, var(--nano-bg-main, #f8fafc) 84%, #e2e8f0 16%)
+  );
 }
 
 .nano-cf-hud {
