@@ -1,6 +1,10 @@
 <script setup>
-import { ref, computed, watch } from 'vue';
+import { ref, computed, watch, onMounted, onUnmounted } from 'vue';
 import { clamp, countStepDecimals, quantizeStepValue } from '../utils/math.js';
+import {
+  getSliderThumbOverhangPx,
+  resolveSliderSafeInsets,
+} from '../utils/sliderPositioning.js';
 
 const props = defineProps({
   modelValue: {
@@ -47,10 +51,40 @@ const props = defineProps({
 
 const emit = defineEmits(['update:modelValue', 'change']);
 
+const sliderRootRef = ref(null);
 const trackRef = ref(null);
 const isDragging = ref(false);
 const activeThumbIndex = ref(0);
 const pendingOverlapResolve = ref(false);
+
+const safeLeftPx = ref(getSliderThumbOverhangPx(props.size));
+const safeRightPx = ref(getSliderThumbOverhangPx(props.size));
+
+function updateSafeInsetsFromAncestors() {
+  const res = resolveSliderSafeInsets(sliderRootRef.value, props.size);
+  safeLeftPx.value = res.safeLeftPx;
+  safeRightPx.value = res.safeRightPx;
+}
+
+watch(
+  () => props.size,
+  () => {
+    updateSafeInsetsFromAncestors();
+  }
+);
+
+onMounted(() => {
+  updateSafeInsetsFromAncestors();
+  if (typeof window !== 'undefined') {
+    window.addEventListener('resize', updateSafeInsetsFromAncestors, { passive: true });
+  }
+});
+
+onUnmounted(() => {
+  if (typeof window !== 'undefined') {
+    window.removeEventListener('resize', updateSafeInsetsFromAncestors);
+  }
+});
 
 const isRange = computed(() => Boolean(props.range || Array.isArray(props.modelValue)));
 
@@ -127,15 +161,16 @@ const minPercentage = computed(() => Math.min(thumb0Percentage.value, thumb1Perc
 const maxPercentage = computed(() => Math.max(thumb0Percentage.value, thumb1Percentage.value));
 
 function rawValueFromClientX(clientX) {
-  if (!trackRef.value) return props.min;
-  const rect = trackRef.value.getBoundingClientRect();
+  const el = trackRef.value || sliderRootRef.value;
+  if (!el) return props.min;
+  const rect = el.getBoundingClientRect();
   if (rect.width <= 0) return props.min;
   const ratio = clamp((clientX - rect.left) / rect.width, 0, 1);
   return props.min + ratio * (props.max - props.min);
 }
 
 function updateFromClientX(clientX, pickNearestThumb = false) {
-  if (props.disabled || !trackRef.value) return;
+  if (props.disabled || (!trackRef.value && !sliderRootRef.value)) return;
   const rawValue = rawValueFromClientX(clientX);
   const next = quantizeValue(rawValue);
 
@@ -206,6 +241,7 @@ function updateFromClientX(clientX, pickNearestThumb = false) {
 
 function onPointerDown(e) {
   if (props.disabled) return;
+  updateSafeInsetsFromAncestors();
   isDragging.value = true;
   if (e.currentTarget?.setPointerCapture && e.pointerId !== undefined) {
     try {
@@ -328,12 +364,15 @@ defineExpose({
   rangeValues,
   isRange,
   isDragging,
+  safeLeftPx,
+  safeRightPx,
+  updateSafeInsetsFromAncestors,
 });
 </script>
 
 <template>
   <div
-    ref="trackRef"
+    ref="sliderRootRef"
     class="nano-slider"
     :class="[
       `nano-slider--${size}`,
@@ -343,6 +382,10 @@ defineExpose({
         'is-disabled': disabled
       }
     ]"
+    :style="{
+      '--_slider-safe-left': `${safeLeftPx}px`,
+      '--_slider-safe-right': `${safeRightPx}px`
+    }"
     role="slider"
     :tabindex="disabled ? -1 : 0"
     :aria-label="ariaLabel"
@@ -356,56 +399,58 @@ defineExpose({
     @pointercancel="onPointerUp"
     @keydown="onKeydown"
   >
-    <div class="nano-slider-track">
-      <!-- Gradient Fill (Single or Dual-Range) -->
+    <div ref="trackRef" class="nano-slider-rail">
+      <div class="nano-slider-track">
+        <!-- Gradient Fill (Single or Dual-Range) -->
+        <div
+          v-if="!isRange"
+          class="nano-slider-fill"
+          :style="{ width: `${percentage}%` }"
+        ></div>
+        <div
+          v-else
+          class="nano-slider-fill nano-slider-fill--range"
+          :style="{
+            left: `${minPercentage}%`,
+            width: `${Math.max(0, maxPercentage - minPercentage)}%`
+          }"
+        ></div>
+
+        <!-- Subtle Scale Ticks (25%, 50%, 75%) -->
+        <div v-if="showTicks" class="nano-slider-ticks" aria-hidden="true">
+          <span class="nano-slider-tick" style="left: 25%"></span>
+          <span class="nano-slider-tick" style="left: 50%"></span>
+          <span class="nano-slider-tick" style="left: 75%"></span>
+        </div>
+      </div>
+
+      <!-- Single Thumb Handle -->
       <div
         v-if="!isRange"
-        class="nano-slider-fill"
-        :style="{ width: `${percentage}%` }"
-      ></div>
-      <div
-        v-else
-        class="nano-slider-fill nano-slider-fill--range"
-        :style="{
-          left: `${minPercentage}%`,
-          width: `${Math.max(0, maxPercentage - minPercentage)}%`
-        }"
-      ></div>
-
-      <!-- Subtle Scale Ticks (25%, 50%, 75%) -->
-      <div v-if="showTicks" class="nano-slider-ticks" aria-hidden="true">
-        <span class="nano-slider-tick" style="left: 25%"></span>
-        <span class="nano-slider-tick" style="left: 50%"></span>
-        <span class="nano-slider-tick" style="left: 75%"></span>
-      </div>
-    </div>
-
-    <!-- Single Thumb Handle -->
-    <div
-      v-if="!isRange"
-      class="nano-slider-thumb"
-      :style="{ left: `${percentage}%` }"
-    >
-      <span class="nano-slider-thumb-core"></span>
-    </div>
-
-    <!-- Dual Range Thumb Handles -->
-    <template v-else>
-      <div
         class="nano-slider-thumb"
-        :class="{ 'is-active-thumb': activeThumbIndex === 0 }"
-        :style="{ left: `${thumb0Percentage}%` }"
+        :style="{ left: `${percentage}%` }"
       >
         <span class="nano-slider-thumb-core"></span>
       </div>
-      <div
-        class="nano-slider-thumb"
-        :class="{ 'is-active-thumb': activeThumbIndex === 1 }"
-        :style="{ left: `${thumb1Percentage}%` }"
-      >
-        <span class="nano-slider-thumb-core"></span>
-      </div>
-    </template>
+
+      <!-- Dual Range Thumb Handles -->
+      <template v-else>
+        <div
+          class="nano-slider-thumb"
+          :class="{ 'is-active-thumb': activeThumbIndex === 0 }"
+          :style="{ left: `${thumb0Percentage}%` }"
+        >
+          <span class="nano-slider-thumb-core"></span>
+        </div>
+        <div
+          class="nano-slider-thumb"
+          :class="{ 'is-active-thumb': activeThumbIndex === 1 }"
+          :style="{ left: `${thumb1Percentage}%` }"
+        >
+          <span class="nano-slider-thumb-core"></span>
+        </div>
+      </template>
+    </div>
   </div>
 </template>
 
@@ -439,6 +484,9 @@ defineExpose({
   position: relative;
   width: 100%;
   height: 38px;
+  padding-left: var(--_slider-safe-left, 16px);
+  padding-right: var(--_slider-safe-right, 16px);
+  box-sizing: border-box;
   display: flex;
   align-items: center;
   cursor: pointer;
@@ -449,10 +497,22 @@ defineExpose({
 
 .nano-slider--sm {
   height: 30px;
+  padding-left: var(--_slider-safe-left, 14px);
+  padding-right: var(--_slider-safe-right, 14px);
 }
 
 .nano-slider--lg {
   height: 44px;
+  padding-left: var(--_slider-safe-left, 18px);
+  padding-right: var(--_slider-safe-right, 18px);
+}
+
+.nano-slider-rail {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
 }
 
 .nano-slider.is-disabled {
