@@ -282,6 +282,32 @@ describe('Bauhaus Φ Tri-Primitive (□ + △ + ○) & Perfection Scalar L(Φ): 
     assert.equal(safeBounds.maxX, 57.5);
     assert.equal(safeBounds.minY, -10.5);
     assert.equal(safeBounds.maxY, 42.5);
+
+    // 5b. Below-the-fold initial page load regression check (top=660, bottom=932 on a 720px viewport inside a scroll container):
+    // Must NEVER crush maxY down to ~5.5 or cause top/bottom cards (FILAR+SONIC, SWEEP+KLIN) to collide at the top of the SVG!
+    const belowFoldStage = {
+      getBoundingClientRect: () => ({ left: 320, right: 800, top: 660, bottom: 968, width: 480, height: 308 }),
+      parentNode: {
+        nodeType: 1,
+        hasAttribute: () => false,
+        getBoundingClientRect: () => ({ left: 280, right: 1200, top: 0, bottom: 720, width: 920, height: 720 }),
+        parentNode: null,
+      },
+    };
+    const belowFoldBounds = measureSafeStageBounds(belowFoldStage);
+    assert.equal(belowFoldBounds.minY, -10.5);
+    assert.equal(belowFoldBounds.maxY, 42.5);
+    const belowFoldCards = computeFloating3DArtifacts(20.8, -20.8, 1.2, 0.1, 0, 0, belowFoldBounds);
+    for (const wing of ['left', 'right']) {
+      const topC = belowFoldCards.find((c) => c.wing === wing && c.wingSlot === 'top');
+      const botC = belowFoldCards.find((c) => c.wing === wing && c.wingSlot === 'bottom');
+      const gapY = (botC.y - botC.cardHalfH) - (topC.y + topC.cardHalfH);
+      assert.ok(
+        gapY >= 8.0,
+        `Expected generous vertical separation (>= 8.0) between ${topC.tag} and ${botC.tag} at initial load, got ${gapY}`
+      );
+    }
+
     assert.ok(NANO_UI_SONIC_LOGO_NSD.includes('432Hz'));
     assert.ok(NANO_UI_SONIC_LOGO_NSD.includes('699Hz'));
     assert.ok(NANO_UI_SONIC_LOGO_NSD.includes('1131Hz'));

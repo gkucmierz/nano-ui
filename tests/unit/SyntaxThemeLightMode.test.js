@@ -246,4 +246,12 @@ seq(
     assert.match(html, /<span class="hljs-built_in">lpf<\/span>/);
     assert.match(html, /<span class="hljs-operator">\*<\/span>/);
   });
+
+  test('misc.css defers html/body canvas and text colors to VitePress --vp-c-* tokens when present so Light Mode blogs are never painted dark', () => {
+    const miscCss = fs.readFileSync(path.join(srcDir, 'assets', 'misc.css'), 'utf8');
+    assert.match(miscCss, /background-color:\s*var\(--vp-c-bg,\s*#09090b\)/);
+    assert.match(miscCss, /background-color:\s*var\(--vp-c-bg,\s*#f8fafc\)/);
+    assert.match(miscCss, /background-color:\s*var\(--vp-c-bg,\s*var\(--nano-bg-app\)\)/);
+    assert.match(miscCss, /color:\s*var\(--vp-c-text-1,\s*var\(--nano-text-main\)\)/);
+  });
 });
