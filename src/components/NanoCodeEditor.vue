@@ -6,8 +6,13 @@ import {
   registerParser,
   SYNTAX_THEMES,
 } from '../utils/syntax-highlighter.js';
-import { detectLangFromPath, parseUnifiedDiff } from '../utils/git-diff.js';
-import { NANOSOUND_COMPLETIONS } from '../parsers/index.js';
+import {
+  detectLangFromPath,
+  detectMediaTypeFromPath,
+  formatFileSizeBytes,
+  parseUnifiedDiff,
+} from '../utils/git-diff.js';
+import { NANOSOUND_COMPLETIONS, GLSL_COMPLETIONS } from '../parsers/index.js';
 import { tooltipDirective as vTooltip } from '../directives/tooltip.js';
 import {
   getScopedStorageController,
@@ -176,6 +181,27 @@ const props = defineProps({
     type: Boolean,
     default: false,
   },
+  /**
+   * Optional URL (or data URI) for previewing binary/media files (images, SVG, audio, video, PDF)
+   */
+  mediaUrl: {
+    type: String,
+    default: '',
+  },
+  /**
+   * Optional URL for previous version (e.g. HEAD / parent commit) to enable Before vs After media comparison
+   */
+  beforeMediaUrl: {
+    type: String,
+    default: '',
+  },
+  /**
+   * Optional metadata object for media asset: { sizeBytes, oldSizeBytes, mimeType, status }
+   */
+  mediaMeta: {
+    type: Object,
+    default: null,
+  },
 });
 
 let editorUidSeq = 0;
@@ -275,10 +301,283 @@ const resolvedLang = computed(() => {
   return detectLangFromPath(props.filePath, props.lang);
 });
 
+const resolvedMediaType = computed(() => {
+  if (resolvedLang.value === 'nanosound') return 'nsd';
+  return detectMediaTypeFromPath(props.filePath);
+});
+
 const currentCode = computed(() => {
   if (props.modelValue !== undefined) return props.modelValue;
   return props.code || '';
 });
+
+const svgInlineDataUrl = computed(() => {
+  const pathLower = String(props.filePath || '').toLowerCase();
+  if (!pathLower.endsWith('.svg')) return '';
+  let rawSvg = currentCode.value.trim();
+  if (!rawSvg && props.diff) {
+    const addedLines = props.diff
+      .split(/\r?\n/)
+      .filter((l) => l.startsWith('+') && !l.startsWith('+++'))
+      .map((l) => l.slice(1));
+    rawSvg = addedLines.join('\n').trim();
+  }
+  if (!rawSvg || !rawSvg.includes('<svg')) return '';
+  return `data:image/svg+xml;utf8,${encodeURIComponent(rawSvg)}`;
+});
+
+const effectiveMediaUrl = computed(() => {
+  return props.mediaUrl || svgInlineDataUrl.value || '';
+});
+
+const hasMediaPreview = computed(() => {
+  const mt = resolvedMediaType.value;
+  if (!mt) return false;
+  if (mt === 'nsd' || mt === '7uaudio' || mt === 'meme') {
+    return Boolean(currentCode.value.trim() || props.diff.trim() || effectiveMediaUrl.value);
+  }
+  return Boolean(effectiveMediaUrl.value || props.beforeMediaUrl);
+});
+
+const mediaBackdrop = ref('checker'); // 'checker' | 'dark' | 'light'
+const mediaZoom = ref(1);
+const mediaCompareMode = ref('after'); // 'after' | 'split' | 'before'
+const naturalImgWidth = ref(0);
+const naturalImgHeight = ref(0);
+const beforeImgWidth = ref(0);
+const beforeImgHeight = ref(0);
+const mediaDurationSec = ref(0);
+const isPlayingCustomFormat = ref(false);
+let customAudioCtx = null;
+let customPlaybackTimer = null;
+
+function resolveDefaultMode() {
+  if (props.mode && props.mode !== 'auto') return props.mode;
+  if (hasMediaPreview.value) {
+    const mt = resolvedMediaType.value;
+    if (mt === 'image' || mt === 'audio' || mt === 'video' || mt === 'pdf' || mt === '7uaudio' || mt === 'meme') {
+      return 'preview';
+    }
+  }
+  return props.diff ? 'diff' : 'code';
+}
+
+watch(
+  [() => props.filePath, () => props.mediaUrl, () => props.beforeMediaUrl, hasMediaPreview],
+  () => {
+    naturalImgWidth.value = 0;
+    naturalImgHeight.value = 0;
+    beforeImgWidth.value = 0;
+    beforeImgHeight.value = 0;
+    mediaDurationSec.value = 0;
+    mediaZoom.value = 1;
+    mediaCompareMode.value = props.beforeMediaUrl && effectiveMediaUrl.value ? 'split' : 'after';
+    if (props.mode === 'auto') {
+      internalMode.value = resolveDefaultMode();
+    }
+  },
+  { immediate: true }
+);
+
+function handleAfterImageLoad(e) {
+  const el = e?.target;
+  if (el) {
+    naturalImgWidth.value = el.naturalWidth || 0;
+    naturalImgHeight.value = el.naturalHeight || 0;
+  }
+}
+
+function handleBeforeImageLoad(e) {
+  const el = e?.target;
+  if (el) {
+    beforeImgWidth.value = el.naturalWidth || 0;
+    beforeImgHeight.value = el.naturalHeight || 0;
+  }
+}
+
+function handleMediaMetadataLoaded(e) {
+  const el = e?.target;
+  if (el) {
+    if (Number.isFinite(el.duration)) {
+      mediaDurationSec.value = Math.round(el.duration * 10) / 10;
+    }
+    if (el.videoWidth && el.videoHeight) {
+      naturalImgWidth.value = el.videoWidth;
+      naturalImgHeight.value = el.videoHeight;
+    }
+  }
+}
+
+function adjustMediaZoom(delta) {
+  const next = Math.max(0.25, Math.min(4, Math.round((mediaZoom.value + delta) * 100) / 100));
+  mediaZoom.value = next;
+}
+
+const formattedMediaSize = computed(() => {
+  const sz = props.mediaMeta?.sizeBytes;
+  if (!Number.isFinite(sz)) return '';
+  return formatFileSizeBytes(sz);
+});
+
+const formattedMediaDelta = computed(() => {
+  const sz = props.mediaMeta?.sizeBytes;
+  const oldSz = props.mediaMeta?.oldSizeBytes;
+  if (!Number.isFinite(sz) || !Number.isFinite(oldSz) || oldSz <= 0) return '';
+  const diffBytes = sz - oldSz;
+  if (diffBytes === 0) return '0 B';
+  const sign = diffBytes > 0 ? '+' : '−';
+  return `${sign}${formatFileSizeBytes(Math.abs(diffBytes))}`;
+});
+
+function extractTextForCustomFormat() {
+  if (currentCode.value && currentCode.value.trim()) return currentCode.value.trim();
+  if (props.diff) {
+    return props.diff
+      .split(/\r?\n/)
+      .filter((l) => (l.startsWith('+') || l.startsWith(' ')) && !l.startsWith('+++'))
+      .map((l) => l.slice(1))
+      .join('\n')
+      .trim();
+  }
+  return '';
+}
+
+const parsed7uAudio = computed(() => {
+  if (resolvedMediaType.value !== '7uaudio') return null;
+  try {
+    const raw = extractTextForCustomFormat();
+    if (!raw) return null;
+    const obj = JSON.parse(raw);
+    const seq = Array.isArray(obj.sequence) ? obj.sequence : [];
+    const notes = seq.slice(0, 160);
+    let minMidi = 108;
+    let maxMidi = 21;
+    let maxTime = 1;
+    for (const n of notes) {
+      const m = Number(n.midi) || 60;
+      const tEnd = (Number(n.time) || 0) + (Number(n.duration) || 0.25);
+      if (m < minMidi) minMidi = m;
+      if (m > maxMidi) maxMidi = m;
+      if (tEnd > maxTime) maxTime = tEnd;
+    }
+    return {
+      protocol: obj.protocol || '7uaudio',
+      version: obj.version || '1.0',
+      name: obj.metadata?.name || props.filePath || '7uAudio Sequence',
+      duration: Number(obj.metadata?.duration || maxTime).toFixed(1),
+      totalNotes: seq.length,
+      notes,
+      minMidi: Math.max(21, minMidi - 2),
+      maxMidi: Math.min(108, maxMidi + 2),
+      maxTime: Math.max(1, maxTime),
+    };
+  } catch {
+    return null;
+  }
+});
+
+const parsedMemeSpec = computed(() => {
+  if (resolvedMediaType.value !== 'meme') return null;
+  try {
+    const raw = extractTextForCustomFormat();
+    if (!raw) return null;
+    const obj = JSON.parse(raw);
+    return {
+      protocol: obj.protocol || '7u-meme',
+      version: obj.version || '1.0',
+      title: obj.title || obj.id || props.filePath || 'Meme Spec',
+      topCaption: obj.captions?.top || obj.topText || '',
+      bottomCaption: obj.captions?.bottom || obj.bottomText || '',
+      panels: Array.isArray(obj.panels) ? obj.panels : [],
+      imageUrl: obj.imageUrl || obj.background || '',
+      tags: Array.isArray(obj.tags) ? obj.tags : [],
+    };
+  } catch {
+    return null;
+  }
+});
+
+function stopCustomFormatPlayback() {
+  if (customPlaybackTimer) {
+    clearTimeout(customPlaybackTimer);
+    customPlaybackTimer = null;
+  }
+  if (customAudioCtx) {
+    try {
+      customAudioCtx.close();
+    } catch {}
+    customAudioCtx = null;
+  }
+  isPlayingCustomFormat.value = false;
+}
+
+function playCustomFormatPreview() {
+  if (isPlayingCustomFormat.value) {
+    stopCustomFormatPlayback();
+    return;
+  }
+  if (typeof window === 'undefined') return;
+  const AudioCtx = window.AudioContext || window.webkitAudioContext;
+  if (!AudioCtx) return;
+
+  stopCustomFormatPlayback();
+  customAudioCtx = new AudioCtx();
+  isPlayingCustomFormat.value = true;
+  const now = customAudioCtx.currentTime;
+
+  if (resolvedMediaType.value === '7uaudio' && parsed7uAudio.value) {
+    const previewNotes = parsed7uAudio.value.notes.slice(0, 48);
+    let latestEnd = 0.5;
+    for (const n of previewNotes) {
+      const start = Math.max(0, Number(n.time) || 0);
+      if (start > 12) continue;
+      const dur = Math.max(0.08, Math.min(2.5, Number(n.duration) || 0.3));
+      const midi = Number(n.midi) || 60;
+      const freq = 440 * Math.pow(2, (midi - 69) / 12);
+      const vel = Math.max(0.05, Math.min(1, Number(n.velocity) || 0.7)) * 0.18;
+
+      const osc = customAudioCtx.createOscillator();
+      const gain = customAudioCtx.createGain();
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(freq, now + start);
+      gain.gain.setValueAtTime(0.0001, now + start);
+      gain.gain.exponentialRampToValueAtTime(vel, now + start + 0.015);
+      gain.gain.exponentialRampToValueAtTime(0.0001, now + start + dur);
+      osc.connect(gain);
+      gain.connect(customAudioCtx.destination);
+      osc.start(now + start);
+      osc.stop(now + start + dur + 0.02);
+      if (start + dur > latestEnd) latestEnd = start + dur;
+    }
+    customPlaybackTimer = setTimeout(() => {
+      stopCustomFormatPlayback();
+    }, Math.min(12500, Math.round(latestEnd * 1000) + 150));
+    return;
+  }
+
+  // .nsd (NanoSound DSL) quick synth preview: parse frequencies / notes or play harmonic sweep
+  const rawNsd = extractTextForCustomFormat();
+  const freqMatches = [...rawNsd.matchAll(/(\d{3,4})\s*hz/gi)].map((m) => Number(m[1]));
+  const tones = freqMatches.length > 0 ? freqMatches.slice(0, 8) : [523.25, 659.25, 783.99, 1046.5];
+  tones.forEach((freq, idx) => {
+    const start = idx * 0.11;
+    const osc = customAudioCtx.createOscillator();
+    const gain = customAudioCtx.createGain();
+    osc.type = rawNsd.includes('saw') ? 'sawtooth' : rawNsd.includes('square') ? 'square' : 'sine';
+    osc.frequency.setValueAtTime(freq, now + start);
+    gain.gain.setValueAtTime(0.0001, now + start);
+    gain.gain.exponentialRampToValueAtTime(0.18, now + start + 0.015);
+    gain.gain.exponentialRampToValueAtTime(0.0001, now + start + 0.22);
+    osc.connect(gain);
+    gain.connect(customAudioCtx.destination);
+    osc.start(now + start);
+    osc.stop(now + start + 0.24);
+  });
+  emit('run', { type: 'nsd', code: rawNsd, filePath: props.filePath });
+  customPlaybackTimer = setTimeout(() => {
+    stopCustomFormatPlayback();
+  }, tones.length * 110 + 260);
+}
 
 const codeLines = computed(() => {
   // Touch parserVersion so dynamic parser registration re-evaluates highlights
@@ -393,10 +692,24 @@ const showCompletions = ref(false);
 const completionPrefix = ref('');
 const selectedCompletionIdx = ref(0);
 
+const GLSL_LANG_IDS = new Set([
+  'glsl',
+  'frag',
+  'vert',
+  'shader',
+  'wgsl',
+  'hlsl',
+  'fs',
+  'vs',
+]);
+
 const effectiveCompletions = computed(() => {
   if (Array.isArray(props.completions)) return props.completions;
   if (resolvedLang.value === 'nanosound' || resolvedLang.value === 'nsd' || resolvedLang.value === 'sound') {
     return NANOSOUND_COMPLETIONS;
+  }
+  if (GLSL_LANG_IDS.has(resolvedLang.value)) {
+    return GLSL_COMPLETIONS;
   }
   return [];
 });
@@ -585,6 +898,7 @@ watch(isWrapped, () => {
 });
 
 onUnmounted(() => {
+  stopCustomFormatPlayback();
   if (copyTimer) {
     clearTimeout(copyTimer);
     copyTimer = null;
@@ -617,6 +931,7 @@ defineExpose({
     :class="{
       'is-wrapped': isWrapped,
       'is-diff-mode': internalMode === 'diff',
+      'is-preview-mode': internalMode === 'preview',
       'is-editable': editable && internalMode === 'code',
     }"
   >
@@ -628,6 +943,22 @@ defineExpose({
 
         <span v-if="resolvedLang" class="nce-lang-badge">{{ resolvedLang }}</span>
 
+        <span v-if="formattedMediaSize" class="nce-media-meta-badge">
+          {{ formattedMediaSize }}
+          <span
+            v-if="formattedMediaDelta"
+            :class="formattedMediaDelta.startsWith('+') ? 'nce-stat-add' : formattedMediaDelta.startsWith('−') ? 'nce-stat-del' : ''"
+          >({{ formattedMediaDelta }})</span>
+        </span>
+
+        <span v-if="naturalImgWidth && naturalImgHeight" class="nce-media-meta-badge">
+          {{ naturalImgWidth }}×{{ naturalImgHeight }} px
+        </span>
+
+        <span v-if="mediaDurationSec > 0" class="nce-media-meta-badge">
+          {{ mediaDurationSec }}s
+        </span>
+
         <span v-if="internalMode === 'diff' && (parsedDiff.additions || parsedDiff.deletions)" class="nce-diff-stats">
           <span class="nce-stat-add">+{{ parsedDiff.additions }}</span>
           <span class="nce-stat-del">−{{ parsedDiff.deletions }}</span>
@@ -635,8 +966,19 @@ defineExpose({
       </div>
 
       <div class="nce-header-actions">
+        <!-- Quick WebAudio Synthesizer Trigger for .nsd & .7uaudio/.7jap -->
+        <button
+          v-if="resolvedMediaType === 'nsd' || resolvedMediaType === '7uaudio'"
+          type="button"
+          class="nce-seg-btn nce-synth-play-btn"
+          :class="{ active: isPlayingCustomFormat }"
+          @click="playCustomFormatPreview"
+        >
+          {{ isPlayingCustomFormat ? '⏹ Stop Audio' : `▶ Play .${resolvedMediaType === '7uaudio' ? '7uaudio' : 'nsd'}` }}
+        </button>
+
         <!-- Optional Syntax Color Profile Selector -->
-        <div v-if="showThemeSelector" class="nce-theme-select-wrap">
+        <div v-if="showThemeSelector && internalMode !== 'preview'" class="nce-theme-select-wrap">
           <NanoSelect
             :model-value="internalSyntaxTheme"
             :options="syntaxThemeOptions"
@@ -646,9 +988,19 @@ defineExpose({
           />
         </div>
 
-        <!-- Mode Toggle (Diff vs Code) ONLY when both diff and code are provided -->
-        <div v-if="hasBothDiffAndCode" class="nce-seg-group">
+        <!-- Mode Toggle (Preview / Diff / Code) -->
+        <div v-if="hasMediaPreview || hasBothDiffAndCode" class="nce-seg-group">
           <button
+            v-if="hasMediaPreview && resolvedMediaType !== 'nsd'"
+            type="button"
+            class="nce-seg-btn"
+            :class="{ active: internalMode === 'preview' }"
+            @click="setMode('preview')"
+          >
+            Preview
+          </button>
+          <button
+            v-if="diff"
             type="button"
             class="nce-seg-btn"
             :class="{ active: internalMode === 'diff' }"
@@ -657,6 +1009,7 @@ defineExpose({
             Diff
           </button>
           <button
+            v-if="code || modelValue !== undefined || !diff"
             type="button"
             class="nce-seg-btn"
             :class="{ active: internalMode === 'code' }"
@@ -770,9 +1123,250 @@ defineExpose({
       </div>
     </header>
 
+    <!-- 0. MEDIA & 7U RFC CUSTOM FORMAT PREVIEW MODE -->
+    <div
+      v-if="internalMode === 'preview' && hasMediaPreview"
+      class="nce-media-viewport nano-scrollbar"
+      :style="{ maxHeight: containerMaxHeight }"
+    >
+      <!-- IMAGE PREVIEW (PNG, JPG, WEBP, GIF, SVG, ICO, AVIF) -->
+      <template v-if="resolvedMediaType === 'image'">
+        <div class="nce-media-toolbar">
+          <div class="nce-media-toolbar-left">
+            <span class="nce-media-kind-pill">IMAGE</span>
+            <span v-if="naturalImgWidth && naturalImgHeight" class="nce-media-dim-label">
+              {{ naturalImgWidth }} × {{ naturalImgHeight }} px
+            </span>
+            <span v-if="formattedMediaSize" class="nce-media-dim-label">
+              · {{ formattedMediaSize }}
+            </span>
+          </div>
+
+          <div class="nce-media-toolbar-actions">
+            <div v-if="beforeMediaUrl && effectiveMediaUrl" class="nce-seg-group">
+              <button
+                type="button"
+                class="nce-seg-btn"
+                :class="{ active: mediaCompareMode === 'split' }"
+                @click="mediaCompareMode = 'split'"
+              >
+                Split (Before / After)
+              </button>
+              <button
+                type="button"
+                class="nce-seg-btn"
+                :class="{ active: mediaCompareMode === 'after' }"
+                @click="mediaCompareMode = 'after'"
+              >
+                After
+              </button>
+              <button
+                type="button"
+                class="nce-seg-btn"
+                :class="{ active: mediaCompareMode === 'before' }"
+                @click="mediaCompareMode = 'before'"
+              >
+                Before
+              </button>
+            </div>
+
+            <div class="nce-seg-group">
+              <button
+                type="button"
+                class="nce-seg-btn"
+                :class="{ active: mediaBgMode === 'checker' }"
+                @click="mediaBgMode = 'checker'"
+              >
+                Checker
+              </button>
+              <button
+                type="button"
+                class="nce-seg-btn"
+                :class="{ active: mediaBgMode === 'dark' }"
+                @click="mediaBgMode = 'dark'"
+              >
+                Dark
+              </button>
+              <button
+                type="button"
+                class="nce-seg-btn"
+                :class="{ active: mediaBgMode === 'light' }"
+                @click="mediaBgMode = 'light'"
+              >
+                Light
+              </button>
+            </div>
+
+            <div class="nce-seg-group">
+              <button type="button" class="nce-seg-btn" @click="adjustMediaZoom(-0.25)">−</button>
+              <button type="button" class="nce-seg-btn" @click="mediaZoom = 1">
+                {{ Math.round(mediaZoom * 100) }}%
+              </button>
+              <button type="button" class="nce-seg-btn" @click="adjustMediaZoom(0.25)">+</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="nce-media-stage" :class="`is-bg-${mediaBgMode}`">
+          <div v-if="mediaCompareMode === 'split' && beforeMediaUrl && effectiveMediaUrl" class="nce-media-split-grid">
+            <figure class="nce-media-figure">
+              <figcaption class="nce-media-caption is-before">
+                BEFORE
+                <span v-if="beforeImgWidth && beforeImgHeight">({{ beforeImgWidth }}×{{ beforeImgHeight }})</span>
+              </figcaption>
+              <img
+                :src="beforeMediaUrl"
+                :alt="`Before ${filePath}`"
+                class="nce-preview-img"
+                :style="{ transform: `scale(${mediaZoom})` }"
+                @load="handleBeforeImageLoad"
+              />
+            </figure>
+            <figure class="nce-media-figure">
+              <figcaption class="nce-media-caption is-after">
+                AFTER
+                <span v-if="naturalImgWidth && naturalImgHeight">({{ naturalImgWidth }}×{{ naturalImgHeight }})</span>
+              </figcaption>
+              <img
+                :src="effectiveMediaUrl"
+                :alt="filePath || 'Image preview'"
+                class="nce-preview-img"
+                :style="{ transform: `scale(${mediaZoom})` }"
+                @load="handleAfterImageLoad"
+              />
+            </figure>
+          </div>
+          <figure v-else class="nce-media-figure">
+            <img
+              :src="mediaCompareMode === 'before' && beforeMediaUrl ? beforeMediaUrl : effectiveMediaUrl"
+              :alt="filePath || 'Image preview'"
+              class="nce-preview-img"
+              :style="{ transform: `scale(${mediaZoom})` }"
+              @load="handleAfterImageLoad"
+            />
+          </figure>
+        </div>
+      </template>
+
+      <!-- AUDIO PREVIEW (MP3, WAV, OGG, M4A, FLAC, OPUS) -->
+      <template v-else-if="resolvedMediaType === 'audio'">
+        <div class="nce-media-stage is-bg-dark nce-audio-stage">
+          <div class="nce-audio-card">
+            <div class="nce-audio-card-head">
+              <span class="nce-media-kind-pill">AUDIO</span>
+              <span class="nce-audio-filename">{{ filePath || 'Audio Stream' }}</span>
+              <span v-if="mediaDurationSec > 0" class="nce-media-dim-label">{{ mediaDurationSec }}s</span>
+              <span v-if="formattedMediaSize" class="nce-media-dim-label">· {{ formattedMediaSize }}</span>
+            </div>
+            <audio
+              v-if="effectiveMediaUrl"
+              :src="effectiveMediaUrl"
+              controls
+              preload="metadata"
+              class="nce-audio-player"
+              @loadedmetadata="handleMediaMetadataLoaded"
+            ></audio>
+            <div v-if="beforeMediaUrl" class="nce-audio-before-wrap">
+              <span class="nce-media-caption is-before">Previous Revision (HEAD)</span>
+              <audio :src="beforeMediaUrl" controls preload="metadata" class="nce-audio-player"></audio>
+            </div>
+          </div>
+        </div>
+      </template>
+
+      <!-- VIDEO PREVIEW (MP4, WEBM, MOV, M4V) -->
+      <template v-else-if="resolvedMediaType === 'video'">
+        <div class="nce-media-stage is-bg-dark nce-video-stage">
+          <video
+            v-if="effectiveMediaUrl"
+            :src="effectiveMediaUrl"
+            controls
+            playsinline
+            preload="metadata"
+            class="nce-video-player"
+            @loadedmetadata="handleMediaMetadataLoaded"
+          ></video>
+        </div>
+      </template>
+
+      <!-- PDF PREVIEW -->
+      <template v-else-if="resolvedMediaType === 'pdf'">
+        <iframe
+          v-if="effectiveMediaUrl"
+          :src="effectiveMediaUrl"
+          :title="filePath || 'PDF Preview'"
+          class="nce-pdf-frame"
+        ></iframe>
+      </template>
+
+      <!-- RFC-7U-0002: .7uaudio / .7jap PIANO ROLL & SYNTHESIZER PREVIEW -->
+      <template v-else-if="resolvedMediaType === '7uaudio' && parsed7uAudio">
+        <div class="nce-rfc-stage">
+          <div class="nce-rfc-card">
+            <div class="nce-rfc-head">
+              <div>
+                <span class="nce-media-kind-pill">RFC-7U-0002 · {{ parsed7uAudio.protocol.toUpperCase() }} v{{ parsed7uAudio.version }}</span>
+                <h4 class="nce-rfc-title">{{ parsed7uAudio.name }}</h4>
+              </div>
+              <div class="nce-rfc-stats">
+                <span>{{ parsed7uAudio.totalNotes }} notes</span>
+                <span>· {{ parsed7uAudio.duration }}s</span>
+                <button
+                  type="button"
+                  class="nce-seg-btn nce-synth-play-btn"
+                  :class="{ active: isPlayingCustomFormat }"
+                  @click="playCustomFormatPreview"
+                >
+                  {{ isPlayingCustomFormat ? '⏹ Stop Synth' : '▶ Play WebAudio' }}
+                </button>
+              </div>
+            </div>
+
+            <svg class="nce-piano-roll-svg" viewBox="0 0 640 160" preserveAspectRatio="none">
+              <rect x="0" y="0" width="640" height="160" fill="rgba(15, 23, 42, 0.85)" rx="6" />
+              <line v-for="g in 7" :key="g" x1="0" :y1="g * 20" x2="640" :y2="g * 20" stroke="rgba(148, 163, 184, 0.12)" stroke-width="1" />
+              <rect
+                v-for="(note, nIdx) in parsed7uAudio.notes"
+                :key="nIdx"
+                :x="Math.max(2, ((Number(note.time) || 0) / parsed7uAudio.maxTime) * 628)"
+                :y="Math.max(4, 152 - (((Number(note.midi) || 60) - parsed7uAudio.minMidi) / Math.max(1, parsed7uAudio.maxMidi - parsed7uAudio.minMidi)) * 144)"
+                :width="Math.max(4, ((Number(note.duration) || 0.25) / parsed7uAudio.maxTime) * 628)"
+                height="6"
+                rx="2"
+                fill="#818cf8"
+                :fill-opacity="Math.max(0.45, Math.min(1, Number(note.velocity) || 0.8))"
+              />
+            </svg>
+          </div>
+        </div>
+      </template>
+
+      <!-- RFC-7U-0003: .meme DECLARATIVE MEME SPECIFICATION PREVIEW -->
+      <template v-else-if="resolvedMediaType === 'meme' && parsedMemeSpec">
+        <div class="nce-rfc-stage">
+          <div class="nce-rfc-card nce-meme-card">
+            <div class="nce-rfc-head">
+              <span class="nce-media-kind-pill">RFC-7U-0003 · {{ parsedMemeSpec.protocol.toUpperCase() }} v{{ parsedMemeSpec.version }}</span>
+              <span class="nce-rfc-title">{{ parsedMemeSpec.title }}</span>
+            </div>
+            <div class="nce-meme-canvas">
+              <div v-if="parsedMemeSpec.topCaption" class="nce-meme-caption is-top">{{ parsedMemeSpec.topCaption }}</div>
+              <div v-if="parsedMemeSpec.panels.length > 0" class="nce-meme-panels">
+                <div v-for="(panel, pIdx) in parsedMemeSpec.panels" :key="pIdx" class="nce-meme-panel">
+                  <span class="nce-meme-panel-idx">#{{ pIdx + 1 }}</span>
+                  <p class="nce-meme-panel-text">{{ panel.caption || panel.text || panel.prompt || JSON.stringify(panel) }}</p>
+                </div>
+              </div>
+              <div v-if="parsedMemeSpec.bottomCaption" class="nce-meme-caption is-bottom">{{ parsedMemeSpec.bottomCaption }}</div>
+            </div>
+          </div>
+        </div>
+      </template>
+    </div>
+
     <!-- 1. DIFF MODE: UNIFIED -->
     <div
-      v-if="internalMode === 'diff' && internalDiffStyle === 'unified'"
+      v-else-if="internalMode === 'diff' && internalDiffStyle === 'unified'"
       class="nce-diff-viewport nano-scrollbar"
       :style="{ maxHeight: containerMaxHeight }"
     >
@@ -1546,5 +2140,298 @@ td.is-empty {
 
 :deep(.hljs-params) {
   color: var(--hl-params, #e2e8f0);
+}
+
+/* Media & 7u RFC Previewer */
+.nce-media-meta-badge {
+  font-family: var(--nano-font-mono, 'JetBrains Mono', monospace);
+  font-size: 0.68rem;
+  font-weight: 600;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: rgba(148, 163, 184, 0.12);
+  color: var(--nano-text-muted, #94a3b8);
+  white-space: nowrap;
+}
+
+.nce-synth-play-btn {
+  border: 1px solid rgba(129, 140, 248, 0.35);
+  border-radius: 5px;
+  padding: 3px 9px;
+  background: rgba(99, 102, 241, 0.16);
+  color: #a5b4fc;
+}
+
+.nce-synth-play-btn.active {
+  background: rgba(244, 63, 94, 0.22);
+  border-color: rgba(244, 63, 94, 0.45);
+  color: #fda4af;
+}
+
+.nce-media-viewport {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  background: var(--nano-code-bg, #0b1120);
+}
+
+.nce-media-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 6px 12px;
+  background: rgba(15, 23, 42, 0.65);
+  border-bottom: 1px solid rgba(148, 163, 184, 0.12);
+  font-family: var(--nano-font-sans, sans-serif);
+}
+
+.nce-media-toolbar-left,
+.nce-media-toolbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.nce-media-kind-pill {
+  font-family: var(--nano-font-mono, monospace);
+  font-size: 0.64rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: rgba(16, 185, 129, 0.16);
+  color: #34d399;
+}
+
+.nce-media-dim-label {
+  font-family: var(--nano-font-mono, monospace);
+  font-size: 0.72rem;
+  color: var(--nano-text-muted, #94a3b8);
+}
+
+.nce-media-stage {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: 1;
+  min-height: 280px;
+  padding: 20px;
+  overflow: auto;
+  box-sizing: border-box;
+}
+
+.nce-media-stage.is-bg-checker {
+  background-color: #0f172a;
+  background-image:
+    linear-gradient(45deg, rgba(148, 163, 184, 0.1) 25%, transparent 25%),
+    linear-gradient(-45deg, rgba(148, 163, 184, 0.1) 25%, transparent 25%),
+    linear-gradient(45deg, transparent 75%, rgba(148, 163, 184, 0.1) 75%),
+    linear-gradient(-45deg, transparent 75%, rgba(148, 163, 184, 0.1) 75%);
+  background-size: 20px 20px;
+  background-position: 0 0, 0 10px, 10px -10px, -10px 0;
+}
+
+.nce-media-stage.is-bg-dark {
+  background: #090d16;
+}
+
+.nce-media-stage.is-bg-light {
+  background: #f1f5f9;
+}
+
+.nce-media-split-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 16px;
+  width: 100%;
+  align-items: center;
+}
+
+.nce-media-figure {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  max-width: 100%;
+}
+
+.nce-media-caption {
+  font-family: var(--nano-font-mono, monospace);
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 2px 8px;
+  border-radius: 4px;
+}
+
+.nce-media-caption.is-before {
+  background: rgba(244, 63, 94, 0.18);
+  color: #fda4af;
+}
+
+.nce-media-caption.is-after {
+  background: rgba(16, 185, 129, 0.18);
+  color: #6ee7b7;
+}
+
+.nce-preview-img {
+  max-width: 100%;
+  max-height: 62vh;
+  object-fit: contain;
+  border-radius: 6px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.45);
+  transition: transform 0.15s ease;
+  transform-origin: center center;
+}
+
+.nce-audio-card {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: min(560px, 100%);
+  padding: 18px 20px;
+  border-radius: 10px;
+  background: rgba(15, 23, 42, 0.85);
+  border: 1px solid rgba(148, 163, 184, 0.16);
+}
+
+.nce-audio-card-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.nce-audio-filename {
+  font-family: var(--nano-font-mono, monospace);
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #f8fafc;
+}
+
+.nce-audio-player {
+  width: 100%;
+}
+
+.nce-audio-before-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding-top: 8px;
+  border-top: 1px dashed rgba(148, 163, 184, 0.2);
+}
+
+.nce-video-player {
+  max-width: 100%;
+  max-height: 65vh;
+  border-radius: 8px;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.5);
+}
+
+.nce-pdf-frame {
+  width: 100%;
+  height: 100%;
+  min-height: 480px;
+  border: 0;
+}
+
+.nce-rfc-stage {
+  padding: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.nce-rfc-card {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px;
+  border-radius: 10px;
+  background: rgba(15, 23, 42, 0.75);
+  border: 1px solid rgba(129, 140, 248, 0.24);
+}
+
+.nce-rfc-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.nce-rfc-title {
+  margin: 4px 0 0;
+  font-size: 0.92rem;
+  font-weight: 700;
+  color: #f8fafc;
+}
+
+.nce-rfc-stats {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.76rem;
+  color: #94a3b8;
+}
+
+.nce-piano-roll-svg {
+  width: 100%;
+  height: 160px;
+  border-radius: 6px;
+  border: 1px solid rgba(148, 163, 184, 0.16);
+}
+
+.nce-meme-canvas {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 16px;
+  border-radius: 8px;
+  background: #090d16;
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  text-align: center;
+}
+
+.nce-meme-caption {
+  font-family: Impact, 'Arial Black', sans-serif;
+  font-size: 1.15rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #ffffff;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.85);
+}
+
+.nce-meme-panels {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 10px;
+}
+
+.nce-meme-panel {
+  padding: 12px;
+  border-radius: 6px;
+  background: rgba(30, 41, 59, 0.75);
+  border: 1px solid rgba(148, 163, 184, 0.18);
+  text-align: left;
+}
+
+.nce-meme-panel-idx {
+  font-size: 0.68rem;
+  font-weight: 700;
+  color: #818cf8;
+}
+
+.nce-meme-panel-text {
+  margin: 4px 0 0;
+  font-size: 0.8rem;
+  color: #e2e8f0;
 }
 </style>

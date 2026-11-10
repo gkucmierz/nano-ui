@@ -20,6 +20,8 @@ import {
   dockerfileParser,
   nanosoundParser,
   NANOSOUND_COMPLETIONS,
+  glslParser,
+  GLSL_COMPLETIONS,
 } from '../../parsers/index.js';
 import { t } from '../../locales.js';
 
@@ -54,6 +56,7 @@ const extraParsers = [
   goParser,
   dockerfileParser,
   nanosoundParser,
+  glslParser,
 ];
 
 const themeOptions = SYNTAX_THEMES.map((th) => ({
@@ -105,6 +108,28 @@ const demoCommits = [
 +  fill: #0f172a !important;
 +}`,
         code: `.mermaid-wrapper {\n  background: var(--vp-c-bg-soft);\n  border: 1px solid var(--vp-c-divider);\n  border-radius: 10px;\n  padding: 18px;\n}\n\nhtml:not(.dark) .mermaid-wrapper svg text {\n  fill: #0f172a !important;\n}`,
+      },
+      {
+        path: 'src/shaders/sdfCathedral.glsl',
+        status: 'A',
+        additions: 16,
+        deletions: 0,
+        diff: `@@ -0,0 +1,16 @@
++#version 300 es
++precision highp float;
++uniform vec4 iParams;
++uniform vec4 iAudio;
++
++vec2 c01_map(vec3 pos) {
++  float blendK = mix(0.14, 0.68, iParams.x) + 0.08 * iAudio.x;
++  vec3 rp = pos;
++  rp.z = mod(rp.z + 1.6, 3.2) - 1.6;
++  vec3 symP = vec3(abs(rp.x) - 1.55, rp.y, rp.z);
++  float pillar = length(symP.xz) - 0.27;
++  float plinth = sdRoundBox(symP - vec3(0.0, -1.0, 0.0), vec3(0.42, 0.25, 0.42), 0.06);
++  return vec2(smin(pillar, plinth, blendK), 1.0);
++}`,
+        code: `#version 300 es\nprecision highp float;\nuniform vec4 iParams;\nuniform vec4 iAudio;\n\nvec2 c01_map(vec3 pos) {\n  float blendK = mix(0.14, 0.68, iParams.x) + 0.08 * iAudio.x;\n  vec3 rp = pos;\n  rp.z = mod(rp.z + 1.6, 3.2) - 1.6;\n  vec3 symP = vec3(abs(rp.x) - 1.55, rp.y, rp.z);\n  float pillar = length(symP.xz) - 0.27;\n  float plinth = sdRoundBox(symP - vec3(0.0, -1.0, 0.0), vec3(0.42, 0.25, 0.42), 0.06);\n  return vec2(smin(pillar, plinth, blendK), 1.0);\n}`,
       },
       {
         path: '.agents/rules/90-pkg-blog-engine.md',
@@ -346,10 +371,42 @@ seq(
   65ms: 0.75 * sin(880Hz, fm:2.0*0.35) * cheby(3200Hz, ripple:1.5) * adsr(2ms, 28ms, 0.5, 90ms)
 )`,
   },
+  glsl: {
+    filePath: 'src/shaders/sdfCathedral.glsl',
+    badge: 'Core',
+    importPath: '@gkucmierz/nano-ui/parsers/glsl',
+    code: `#version 300 es
+precision highp float;
+
+// WebGL2 Raymarching SDF + 1:1 NanoSound (.nsd) Uniforms
+uniform vec3 iResolution;
+uniform float iTime;
+uniform vec4 iAudio;
+uniform vec4 iParams;
+out vec4 fragColor;
+
+vec2 c01_map(vec3 pos) {
+  float blendK = mix(0.14, 0.68, iParams.x) + 0.08 * iAudio.x;
+  float vaultH = mix(1.55, 2.55, iParams.y);
+  vec3 rp = pos;
+  rp.z = mod(rp.z + 1.6, 3.2) - 1.6;
+  vec3 symP = vec3(abs(rp.x) - 1.55, rp.y, rp.z);
+  float fluting = 0.028 * cos(8.0 * safeAtan(symP.z, symP.x));
+  float pillar = max(length(symP.xz) - (0.27 + fluting), symP.y - vaultH);
+  float plinth = sdRoundBox(symP - vec3(0.0, -1.0, 0.0), vec3(0.42, 0.25, 0.42), 0.06);
+  return vec2(smin(pillar, plinth, blendK), 1.0);
+}
+
+void main() {
+  vec2 uv = (gl_FragCoord.xy - 0.5 * iResolution.xy) / iResolution.y;
+  vec3 col = acesFilmic(vec3(0.92, 0.28, 0.54) * exp(-2.4 * length(uv)) + 0.25 * iAudio.z);
+  fragColor = vec4(col, 1.0);
+}`,
+  },
 };
 
-const selectedSampleLang = ref('rust');
-const liveCode = ref(languageSamples.rust.code);
+const selectedSampleLang = ref('glsl');
+const liveCode = ref(languageSamples.glsl.code);
 
 const languageOptions = Object.entries(languageSamples).map(([id, meta]) => ({
   value: id,
@@ -372,12 +429,13 @@ const registeredList = computed(() => {
 
 const modularImportSnippet = `// 1. Import only the specific language parsers your project needs:
 import { NanoCodeEditor, registerParser } from '@gkucmierz/nano-ui';
+import { glslParser, GLSL_COMPLETIONS } from '@gkucmierz/nano-ui/parsers/glsl';
 import { rustParser } from '@gkucmierz/nano-ui/parsers/rust';
 import { pythonParser } from '@gkucmierz/nano-ui/parsers/python';
 import { sqlParser } from '@gkucmierz/nano-ui/parsers/sql';
 
 // Option A: Register globally once at app startup
-registerParser([rustParser, pythonParser, sqlParser]);
+registerParser([glslParser, rustParser, pythonParser, sqlParser]);
 
 // Option B: Or pass :parsers and :syntax-theme directly to <NanoCodeEditor>
 // Supported syntaxTheme values:
@@ -596,7 +654,7 @@ const codeTabs = createDocTabs({
         :file-path="languageSamples[selectedSampleLang]?.filePath || 'snippet.js'"
         :lang="selectedSampleLang"
         :parsers="extraParsers"
-        :completions="selectedSampleLang === 'nanosound' ? NANOSOUND_COMPLETIONS : []"
+        :completions="selectedSampleLang === 'nanosound' ? NANOSOUND_COMPLETIONS : (selectedSampleLang === 'glsl' ? GLSL_COMPLETIONS : null)"
         :show-theme-selector="true"
         mode="code"
         :editable="true"
