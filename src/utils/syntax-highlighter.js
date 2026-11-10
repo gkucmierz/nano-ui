@@ -91,6 +91,7 @@ export const highlightJs = (code) => highlightCode(code, 'javascript');
 export const highlightCss = (code) => highlightCode(code, 'css');
 export const highlightHtml = (code) => highlightCode(code, 'html');
 export const highlightVue = (code) => highlightCode(code, 'vue');
+export const highlightGlsl = (code) => highlightCode(code, 'glsl');
 
 /**
  * Highlights a code snippet using highlight.js with safe fallback to escaped HTML.
