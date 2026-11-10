@@ -241,3 +241,70 @@ export function computeVirtualCollapsedPaneStyles(params = {}) {
     },
   };
 }
+
+/**
+ * Resolves the ergonomic capture band thickness (in px) for a splitter handle.
+ * Guarantees at least `minHitboxPx` (default `28px`, i.e. `±14px` around the splitter center axis)
+ * so thin `1px` visual dividers between interactive canvases (`svg` pan/zoom, scrollable lists)
+ * never lose pointer events to adjacent pane borders (Fitts's Law + 1D Voronoi capture band).
+ *
+ * @param {number} [gapPx=12]
+ * @param {number} [minHitboxPx=28]
+ * @returns {number}
+ */
+export function resolveSplitterHitboxSizePx(gapPx = 12, minHitboxPx = 28) {
+  const g = Number.isFinite(gapPx) ? Math.max(0, gapPx) : 12;
+  const m = Number.isFinite(minHitboxPx) ? Math.max(16, minHitboxPx) : 28;
+  return Math.max(g, m);
+}
+
+/**
+ * Computes the 1D Voronoi / Euclidean distance-field proximity response around a splitter axis.
+ * Used to pre-illuminate the splitter laser line and grip pill (`proximityRatio` in `0..1`)
+ * as the pointer enters the `proximityRadiusPx` halo (default `36px`) before physical click,
+ * and determines whether a pointer position belongs to the splitter's Voronoi capture cell.
+ *
+ * @param {object} params
+ * @param {number} params.pointerCoordPx - Pointer coordinate along the split axis (relative to container or viewport)
+ * @param {number} params.splitterCenterCoordPx - Splitter gutter center coordinate along the same axis
+ * @param {number} [params.hitboxSizePx=28] - Physical capture band thickness (`±hitboxSizePx/2`)
+ * @param {number} [params.proximityRadiusPx=36] - Outer magnetic pre-highlight halo radius in px
+ * @returns {{
+ *   distancePx: number,
+ *   inCaptureCell: boolean,
+ *   inProximityHalo: boolean,
+ *   proximityRatio: number
+ * }}
+ */
+export function computeSplitterProximityField(params = {}) {
+  const pointerCoordPx = Number(params.pointerCoordPx);
+  const splitterCenterCoordPx = Number(params.splitterCenterCoordPx);
+  const hitboxSizePx = resolveSplitterHitboxSizePx(0, params.hitboxSizePx ?? 28);
+  const proximityRadiusPx = Math.max(
+    hitboxSizePx / 2,
+    Number.isFinite(params.proximityRadiusPx) ? params.proximityRadiusPx : 36
+  );
+
+  if (!Number.isFinite(pointerCoordPx) || !Number.isFinite(splitterCenterCoordPx)) {
+    return {
+      distancePx: Infinity,
+      inCaptureCell: false,
+      inProximityHalo: false,
+      proximityRatio: 0,
+    };
+  }
+
+  const distancePx = Math.abs(pointerCoordPx - splitterCenterCoordPx);
+  const captureRadiusPx = hitboxSizePx / 2;
+  const inCaptureCell = distancePx <= captureRadiusPx;
+  const inProximityHalo = distancePx <= proximityRadiusPx;
+  const rawRatio = inProximityHalo ? 1 - distancePx / proximityRadiusPx : 0;
+  const proximityRatio = Math.max(0, Math.min(1, Number(rawRatio.toFixed(3))));
+
+  return {
+    distancePx,
+    inCaptureCell,
+    inProximityHalo,
+    proximityRatio,
+  };
+}
