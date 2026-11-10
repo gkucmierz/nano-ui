@@ -18,12 +18,14 @@
   /* --- Dark Theme (Default) --- */
   --nano-bg-app: #09090b;
   --nano-bg-sidebar: #18181b;
+  --nano-bg-surface: #121826;
   --nano-bg-card: rgba(255, 255, 255, var(--nano-alpha-subtle));
   --nano-bg-card-elevated: rgba(255, 255, 255, var(--nano-alpha-subtle));
   --nano-bg-muted: rgba(255, 255, 255, var(--nano-alpha-subtle));
   --nano-bg-code: #0f172a;
   --nano-bg-hover: rgba(255, 255, 255, var(--nano-alpha-muted));
 
+  --nano-text: #f8fafc;
   --nano-text-main: #f8fafc;
   --nano-text-secondary: #cbd5e1;
   --nano-text-muted: #94a3b8;
@@ -205,12 +207,14 @@ html[data-theme="light"],
   /* --- Light Theme (High Contrast, Deep Slate Text) --- */
   --nano-bg-app: #f8fafc;
   --nano-bg-sidebar: #ffffff;
+  --nano-bg-surface: #f8fafc;
   --nano-bg-card: #ffffff;
   --nano-bg-card-elevated: #ffffff;
   --nano-bg-muted: #f1f5f9;
   --nano-bg-code: #f8fafc;
   --nano-bg-hover: #f1f5f9;
 
+  --nano-text: #0f172a;
   --nano-text-main: #0f172a;
   --nano-text-secondary: #1e293b;
   --nano-text-muted: #475569;

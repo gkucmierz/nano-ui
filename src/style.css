@@ -1,2 +1,12 @@
 /* Nano UI - Central Stylesheet */
 @import './assets/nano-ui.css';
+
+/* Ecosystem Poka-Yoke Reset: Strip native browser double focus outlines on form controls */
+input:focus,
+input:focus-visible,
+textarea:focus,
+textarea:focus-visible,
+select:focus,
+select:focus-visible {
+  outline: none;
+}

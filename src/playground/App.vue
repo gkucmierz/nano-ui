@@ -5,6 +5,11 @@ import pkg from '../../package.json';
 import { currentLang, toggleLang, initSavedLang, t } from '../locales.js';
 import { usePlaygroundSearch, PLAYGROUND_NAV_ITEMS } from './usePlaygroundSearch.js';
 import { sharedBrandConcept, playConceptSonicLogo } from './brandLogoState.js';
+import {
+  getGlobalKeyController,
+  resolveInteractiveDomGroup,
+  stepInteractiveDomGroup,
+} from '../utils/key-controller.js';
 import './playground.css';
 
 const router = useRouter();
@@ -12,7 +17,10 @@ const version = pkg.version;
 const isDark = ref(true);
 const isNarrow = ref(false);
 const searchInputRef = ref(null);
+const mainContentRef = ref(null);
 const activeHighlightIdx = ref(0);
+let lastInteractedGroupEl = null;
+let offGlobalKeys = null;
 
 const {
   searchQuery,
@@ -29,6 +37,32 @@ const hasSectionMatches = (sectionKey) => {
     item => item.sectionKey === sectionKey && matchedIdSet.value.has(item.id)
   );
 };
+
+const SIDEBAR_SECTIONS_STORAGE_KEY = 'nano-ui-sidebar-sections';
+const collapsedSections = ref({
+  'nav.gettingStarted': false,
+  'nav.formControls': false,
+  'nav.layoutNavigation': false,
+  'nav.advanced3dViz': false,
+  'nav.directives': false,
+});
+
+const isSectionExpanded = (sectionKey) => {
+  if (searchQuery.value.trim()) return true;
+  return !collapsedSections.value[sectionKey];
+};
+
+const toggleSection = (sectionKey) => {
+  collapsedSections.value[sectionKey] = !collapsedSections.value[sectionKey];
+  try {
+    if (typeof localStorage !== 'undefined') {
+      localStorage.setItem(SIDEBAR_SECTIONS_STORAGE_KEY, JSON.stringify(collapsedSections.value));
+    }
+  } catch {}
+};
+
+const getSectionItemCount = (sectionKey) =>
+  PLAYGROUND_NAV_ITEMS.filter(item => item.sectionKey === sectionKey).length;
 
 const getComponentTag = (path) => {
   const item = PLAYGROUND_NAV_ITEMS.find(entry => entry.id === path);
@@ -114,66 +148,56 @@ const toggleTheme = () => {
   });
 };
 
-const NON_TEXT_INPUT_TYPES = new Set([
-  'checkbox',
-  'radio',
-  'range',
-  'button',
-  'submit',
-  'reset',
-  'image',
-  'color',
-  'file',
-  'hidden',
-]);
-
-const isEditableTextTarget = (target) => {
-  if (!target || typeof target !== 'object') return false;
-  if (target.isContentEditable || target.contentEditable === 'true') return true;
-  const tag = String(target.tagName || '').toUpperCase();
-  if (tag === 'TEXTAREA' || tag === 'SELECT') {
-    return !target.readOnly && !target.disabled;
+const onContentPointerEvent = (e) => {
+  if (!e || !e.target) return;
+  const group = resolveInteractiveDomGroup(e.target, mainContentRef.value);
+  if (group) {
+    lastInteractedGroupEl = group;
   }
-  if (tag === 'INPUT') {
-    const type = String(target.type || 'text').toLowerCase();
-    if (NON_TEXT_INPUT_TYPES.has(type)) return false;
-    return !target.readOnly && !target.disabled;
-  }
-  return false;
 };
 
-const handleKeyDown = (e) => {
-  if ((e.metaKey || e.ctrlKey) && (e.key === 'k' || e.key === 'K')) {
-    e.preventDefault();
-    searchInputRef.value?.focus();
-    searchInputRef.value?.select();
-    return;
-  }
-  if (isEditableTextTarget(e.target)) {
-    return;
-  }
-  if (e.metaKey || e.ctrlKey || e.altKey) {
-    return;
-  }
-  if (e.key === '/') {
-    e.preventDefault();
-    searchInputRef.value?.focus();
-    return;
-  }
-  if (e.key === 't' || e.key === 'T') {
-    e.preventDefault();
-    toggleTheme();
-  } else if (e.key === 'l' || e.key === 'L') {
-    e.preventDefault();
-    toggleLang();
-  }
+const focusSearchInput = () => {
+  searchInputRef.value?.focus();
+  searchInputRef.value?.select();
 };
 
 onMounted(() => {
   initSavedLang();
+  try {
+    if (typeof localStorage !== 'undefined') {
+      const savedSecs = localStorage.getItem(SIDEBAR_SECTIONS_STORAGE_KEY);
+      if (savedSecs) {
+        const parsed = JSON.parse(savedSecs);
+        if (parsed && typeof parsed === 'object') {
+          collapsedSections.value = { ...collapsedSections.value, ...parsed };
+        }
+      }
+    }
+  } catch {}
   updateViewport();
   window.addEventListener('resize', updateViewport, { passive: true });
-  window.addEventListener('keydown', handleKeyDown);
+  const keys = getGlobalKeyController();
+  offGlobalKeys = keys.bindAll({
+    '/': () => searchInputRef.value?.focus(),
+    'Ctrl+K': focusSearchInput,
+    'Meta+K': focusSearchInput,
+    t: toggleTheme,
+    l: toggleLang,
+    ArrowLeft: {
+      handler: () => {
+        const stepped = stepInteractiveDomGroup(mainContentRef.value, -1, lastInteractedGroupEl);
+        return stepped ? true : false;
+      },
+      allowRepeat: true,
+    },
+    ArrowRight: {
+      handler: () => {
+        const stepped = stepInteractiveDomGroup(mainContentRef.value, 1, lastInteractedGroupEl);
+        return stepped ? true : false;
+      },
+      allowRepeat: true,
+    },
+  });
   document.documentElement.classList.remove('preload');
   const savedTheme = localStorage.getItem('nano-ui-theme');
   if (savedTheme) {
@@ -196,7 +220,10 @@ onMounted(() => {
 
 onUnmounted(() => {
   window.removeEventListener('resize', updateViewport);
-  window.removeEventListener('keydown', handleKeyDown);
+  if (typeof offGlobalKeys === 'function') {
+    offGlobalKeys();
+    offGlobalKeys = null;
+  }
 });
 </script>
 
@@ -299,8 +326,22 @@ onUnmounted(() => {
           </button>
         </div>
 
-        <div v-show="hasSectionMatches('nav.gettingStarted')" class="nav-section">
-          <h3>{{ t('nav.gettingStarted') }}</h3>
+        <div v-show="hasSectionMatches('nav.gettingStarted')" class="nav-section" :class="{ 'is-collapsed': !isSectionExpanded('nav.gettingStarted') }">
+          <button
+            type="button"
+            class="nav-section-header"
+            :aria-expanded="isSectionExpanded('nav.gettingStarted') ? 'true' : 'false'"
+            @click="toggleSection('nav.gettingStarted')"
+          >
+            <span class="nav-section-title">{{ t('nav.gettingStarted') }}</span>
+            <span class="nav-section-meta">
+              <span class="nav-section-count">{{ getSectionItemCount('nav.gettingStarted') + 1 }}</span>
+              <svg class="nav-section-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <polyline points="6 9 12 15 18 9" />
+              </svg>
+            </span>
+          </button>
+          <div v-show="isSectionExpanded('nav.gettingStarted')" class="nav-section-body">
           <router-link v-show="isRouteVisible('/docs/overview')" to="/docs/overview" class="nav-link" :class="{ 'kbd-selected': isKeyboardSelected('/docs/overview') }" active-class="active" v-tooltip="isNarrow ? t('nav.overview') : undefined">
             <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/>
@@ -342,10 +383,25 @@ onUnmounted(() => {
               <span v-if="searchQuery.trim()" class="nav-match-tag">{{ getComponentTag('/docs/icons') }}</span>
             </span>
           </router-link>
+          </div>
         </div>
 
-        <div v-show="hasSectionMatches('nav.formControls')" class="nav-section">
-          <h3>{{ t('nav.formControls') }}</h3>
+        <div v-show="hasSectionMatches('nav.formControls')" class="nav-section" :class="{ 'is-collapsed': !isSectionExpanded('nav.formControls') }">
+          <button
+            type="button"
+            class="nav-section-header"
+            :aria-expanded="isSectionExpanded('nav.formControls') ? 'true' : 'false'"
+            @click="toggleSection('nav.formControls')"
+          >
+            <span class="nav-section-title">{{ t('nav.formControls') }}</span>
+            <span class="nav-section-meta">
+              <span class="nav-section-count">{{ getSectionItemCount('nav.formControls') }}</span>
+              <svg class="nav-section-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <polyline points="6 9 12 15 18 9" />
+              </svg>
+            </span>
+          </button>
+          <div v-show="isSectionExpanded('nav.formControls')" class="nav-section-body">
           <router-link v-show="isRouteVisible('/docs/buttons')" to="/docs/buttons" class="nav-link" :class="{ 'kbd-selected': isKeyboardSelected('/docs/buttons') }" active-class="active" v-tooltip="isNarrow ? t('nav.buttons') : undefined">
             <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <rect x="3" y="6" width="18" height="12" rx="3"/>
@@ -479,10 +535,36 @@ onUnmounted(() => {
               <span v-if="searchQuery.trim()" class="nav-match-tag">{{ getComponentTag('/docs/precision-scrubber') }}</span>
             </span>
           </router-link>
+          <router-link v-show="isRouteVisible('/docs/dropzone')" to="/docs/dropzone" class="nav-link" :class="{ 'kbd-selected': isKeyboardSelected('/docs/dropzone') }" active-class="active" v-tooltip="isNarrow ? t('nav.dropzone') : undefined">
+            <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+              <polyline points="17 8 12 3 7 8"/>
+              <line x1="12" y1="3" x2="12" y2="15"/>
+            </svg>
+            <span class="nav-label-group">
+              <span class="nav-label">{{ t('nav.dropzone') }}</span>
+              <span v-if="searchQuery.trim()" class="nav-match-tag">{{ getComponentTag('/docs/dropzone') }}</span>
+            </span>
+          </router-link>
+          </div>
         </div>
 
-        <div v-show="hasSectionMatches('nav.layoutNavigation')" class="nav-section">
-          <h3>{{ t('nav.layoutNavigation') }}</h3>
+        <div v-show="hasSectionMatches('nav.layoutNavigation')" class="nav-section" :class="{ 'is-collapsed': !isSectionExpanded('nav.layoutNavigation') }">
+          <button
+            type="button"
+            class="nav-section-header"
+            :aria-expanded="isSectionExpanded('nav.layoutNavigation') ? 'true' : 'false'"
+            @click="toggleSection('nav.layoutNavigation')"
+          >
+            <span class="nav-section-title">{{ t('nav.layoutNavigation') }}</span>
+            <span class="nav-section-meta">
+              <span class="nav-section-count">{{ getSectionItemCount('nav.layoutNavigation') }}</span>
+              <svg class="nav-section-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <polyline points="6 9 12 15 18 9" />
+              </svg>
+            </span>
+          </button>
+          <div v-show="isSectionExpanded('nav.layoutNavigation')" class="nav-section-body">
           <router-link v-show="isRouteVisible('/docs/tabs')" to="/docs/tabs" class="nav-link" :class="{ 'kbd-selected': isKeyboardSelected('/docs/tabs') }" active-class="active" v-tooltip="isNarrow ? t('nav.tabs') : undefined">
             <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <rect x="2" y="4" width="20" height="16" rx="3"/>
@@ -578,10 +660,25 @@ onUnmounted(() => {
               <span v-if="searchQuery.trim()" class="nav-match-tag">{{ getComponentTag('/docs/channel-osd') }}</span>
             </span>
           </router-link>
+          </div>
         </div>
 
-        <div v-show="hasSectionMatches('nav.advanced3dViz')" class="nav-section">
-          <h3>{{ t('nav.advanced3dViz') }}</h3>
+        <div v-show="hasSectionMatches('nav.advanced3dViz')" class="nav-section" :class="{ 'is-collapsed': !isSectionExpanded('nav.advanced3dViz') }">
+          <button
+            type="button"
+            class="nav-section-header"
+            :aria-expanded="isSectionExpanded('nav.advanced3dViz') ? 'true' : 'false'"
+            @click="toggleSection('nav.advanced3dViz')"
+          >
+            <span class="nav-section-title">{{ t('nav.advanced3dViz') }}</span>
+            <span class="nav-section-meta">
+              <span class="nav-section-count">{{ getSectionItemCount('nav.advanced3dViz') }}</span>
+              <svg class="nav-section-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <polyline points="6 9 12 15 18 9" />
+              </svg>
+            </span>
+          </button>
+          <div v-show="isSectionExpanded('nav.advanced3dViz')" class="nav-section-body">
           <router-link v-show="isRouteVisible('/docs/code-editor')" to="/docs/code-editor" class="nav-link" :class="{ 'kbd-selected': isKeyboardSelected('/docs/code-editor') }" active-class="active" v-tooltip="isNarrow ? t('nav.codeEditor') : undefined">
             <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <polyline points="16 18 22 12 16 6"/>
@@ -679,10 +776,25 @@ onUnmounted(() => {
               <span v-if="searchQuery.trim()" class="nav-match-tag">{{ getComponentTag('/docs/coverflow') }}</span>
             </span>
           </router-link>
+          </div>
         </div>
 
-        <div v-show="hasSectionMatches('nav.directives')" class="nav-section">
-          <h3>{{ t('nav.directives') }}</h3>
+        <div v-show="hasSectionMatches('nav.directives')" class="nav-section" :class="{ 'is-collapsed': !isSectionExpanded('nav.directives') }">
+          <button
+            type="button"
+            class="nav-section-header"
+            :aria-expanded="isSectionExpanded('nav.directives') ? 'true' : 'false'"
+            @click="toggleSection('nav.directives')"
+          >
+            <span class="nav-section-title">{{ t('nav.directives') }}</span>
+            <span class="nav-section-meta">
+              <span class="nav-section-count">{{ getSectionItemCount('nav.directives') }}</span>
+              <svg class="nav-section-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <polyline points="6 9 12 15 18 9" />
+              </svg>
+            </span>
+          </button>
+          <div v-show="isSectionExpanded('nav.directives')" class="nav-section-body">
           <router-link v-show="isRouteVisible('/docs/tooltip')" to="/docs/tooltip" class="nav-link" :class="{ 'kbd-selected': isKeyboardSelected('/docs/tooltip') }" active-class="active" v-tooltip="isNarrow ? t('nav.tooltip') : undefined">
             <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
@@ -703,6 +815,14 @@ onUnmounted(() => {
               <span v-if="searchQuery.trim()" class="nav-match-tag">{{ getComponentTag('/docs/ripple') }}</span>
             </span>
           </router-link>
+          <router-link v-show="isRouteVisible('/docs/layout-directives')" to="/docs/layout-directives" class="nav-link" :class="{ 'kbd-selected': isKeyboardSelected('/docs/layout-directives') }" active-class="active" v-tooltip="isNarrow ? t('nav.layoutDirectives') : undefined">
+            <NanoIcon name="layers" class="nav-icon" :size="18" />
+            <span class="nav-label-group">
+              <span class="nav-label">{{ t('nav.layoutDirectives') }}</span>
+              <span v-if="searchQuery.trim()" class="nav-match-tag">{{ getComponentTag('/docs/layout-directives') }}</span>
+            </span>
+          </router-link>
+          </div>
         </div>
       </nav>
 
@@ -729,7 +849,12 @@ onUnmounted(() => {
       </div>
     </aside>
     
-    <main class="content">
+    <main
+      ref="mainContentRef"
+      class="content"
+      @mouseover="onContentPointerEvent"
+      @click="onContentPointerEvent"
+    >
       <div class="content-header">
         <h1>Playground</h1>
         <p>{{ t('app.playgroundDesc') }}</p>

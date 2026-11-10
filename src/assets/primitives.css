@@ -1018,3 +1018,113 @@ textarea.nano-input,
 .nano-scrollbar::-webkit-scrollbar-thumb:hover {
   background: var(--nano-border-hover, rgba(255, 255, 255, 0.3));
 }
+
+/* ==========================================================================
+   10. Form Toggle Safety Primitives (.nano-switch, .nano-checkbox, .nano-radio)
+   Unscoped BEM structural fallback so native <input> never leaks as a raw
+   browser checkbox/radio if Vite .vite/deps cache and CSS hashes ever desync.
+   ========================================================================== */
+.nano-switch,
+.nano-checkbox,
+.nano-radio {
+  display: inline-flex;
+  align-items: center;
+  cursor: pointer;
+  user-select: none;
+  -webkit-user-select: none;
+  position: relative;
+  vertical-align: middle;
+}
+
+.nano-switch-input,
+.nano-checkbox-input,
+.nano-radio-input,
+.nano-switch > input[type="checkbox"],
+.nano-checkbox > input[type="checkbox"],
+.nano-radio > input[type="radio"] {
+  position: absolute;
+  opacity: 0;
+  width: 0;
+  height: 0;
+  pointer-events: none;
+  margin: 0;
+  outline: 0;
+}
+
+/* ==========================================================================
+   11. Tri-State Interactive Card Borders (.nano-tri-border-card)
+   Distinguishes 3 active visual states without layout shift (CLS = 0):
+   - .is-hovered:      Transient pointer exploration (Cyan #38bdf8)
+   - .is-selected:     Persistent locked selection SSoT (Amber #fbbf24)
+   - .is-hover-active: Selected card currently under pointer -> 2-color orbiting
+                       conic-gradient border combining Hover + Active colors
+   ========================================================================== */
+@property --nano-border-angle {
+  syntax: '<angle>';
+  initial-value: 0deg;
+  inherits: false;
+}
+
+@keyframes nano-dual-border-spin {
+  to {
+    --nano-border-angle: 360deg;
+  }
+}
+
+.nano-tri-border-card {
+  --nano-tri-bg: var(--bg-panel, var(--nano-bg-surface, #121826));
+  --nano-tri-idle-border: var(--border-color, var(--nano-border-card, rgba(56, 189, 248, 0.18)));
+  --nano-tri-hover-color: var(--accent-cyan, var(--nano-state-active, #38bdf8));
+  --nano-tri-active-color: var(--accent-amber, var(--nano-metric-amber, #fbbf24));
+  border: 1px solid var(--nano-tri-idle-border);
+  box-sizing: border-box;
+  transition:
+    border-color 0.16s ease,
+    box-shadow 0.18s ease,
+    transform 0.14s ease;
+}
+
+/* State 1: Hover Only (Transient Pointer Preview — Electric Cyan) */
+.nano-tri-border-card.is-hovered:not(.is-selected) {
+  border-color: var(--nano-tri-hover-color);
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, var(--nano-tri-hover-color) 28%, transparent),
+    0 6px 18px color-mix(in srgb, var(--nano-tri-hover-color) 14%, transparent);
+  transform: translateY(-1px);
+}
+
+/* State 2: Active / Selected Only (Persistent Locked Selection — Solar Amber) */
+.nano-tri-border-card.is-selected:not(.is-hover-active) {
+  border-color: var(--nano-tri-active-color);
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, var(--nano-tri-active-color) 32%, transparent),
+    0 6px 20px color-mix(in srgb, var(--nano-tri-active-color) 16%, transparent);
+}
+
+/* State 3: Hover + Active Simultaneously (2-Color Orbiting Conic-Gradient Border) */
+.nano-tri-border-card.is-hover-active {
+  border-color: transparent;
+  background:
+    linear-gradient(var(--nano-tri-bg), var(--nano-tri-bg)) padding-box,
+    conic-gradient(
+      from var(--nano-border-angle),
+      var(--nano-tri-hover-color) 0deg,
+      var(--nano-tri-active-color) 120deg,
+      var(--nano-tri-hover-color) 240deg,
+      var(--nano-tri-active-color) 320deg,
+      var(--nano-tri-hover-color) 360deg
+    ) border-box;
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, var(--nano-tri-active-color) 26%, var(--nano-tri-hover-color) 26%),
+    0 8px 24px color-mix(in srgb, var(--nano-tri-hover-color) 16%, transparent);
+  transform: translateY(-1px);
+  animation: nano-dual-border-spin 3.2s linear infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .nano-tri-border-card.is-hover-active {
+    animation: none;
+  }
+}
+
+
