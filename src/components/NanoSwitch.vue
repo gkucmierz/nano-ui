@@ -115,7 +115,7 @@ const toggle = (event) => {
   </label>
 </template>
 
-<style scoped>
+<style>
 .nano-switch,
 .nano-switch *,
 .nano-switch *::before,
@@ -192,22 +192,22 @@ const toggle = (event) => {
 }
 
 /* --- Size: Default (44x24, Inner: 42x22, Gap: 3px) --- */
-.size-default .nano-switch-slider {
+.nano-switch.size-default .nano-switch-slider {
   width: 44px;
   height: 24px;
   border-radius: 12px;
 }
-.size-default .nano-switch-slider::before {
+.nano-switch.size-default .nano-switch-slider::before {
   width: 16px;
   height: 16px;
   left: 3px;
   top: 3px;
 }
-.size-default.is-checked .nano-switch-slider::before {
+.nano-switch.size-default.is-checked .nano-switch-slider::before {
   transform: translateX(20px);
 }
 
-.size-default.is-indeterminate .nano-switch-slider::before {
+.nano-switch.size-default.is-indeterminate .nano-switch-slider::before {
   width: 24px;
   height: 12px;
   top: 5px;
@@ -216,21 +216,21 @@ const toggle = (event) => {
 }
 
 /* --- Size: Compact (38x20, Inner: 36x18, Gap: 2px) --- */
-.size-compact .nano-switch-slider {
+.nano-switch.size-compact .nano-switch-slider {
   width: 38px;
   height: 20px;
   border-radius: 10px;
 }
-.size-compact .nano-switch-slider::before {
+.nano-switch.size-compact .nano-switch-slider::before {
   width: 14px;
   height: 14px;
   left: 2px;
   top: 2px;
 }
-.size-compact.is-checked .nano-switch-slider::before {
+.nano-switch.size-compact.is-checked .nano-switch-slider::before {
   transform: translateX(18px);
 }
-.size-compact.is-indeterminate .nano-switch-slider::before {
+.nano-switch.size-compact.is-indeterminate .nano-switch-slider::before {
   width: 20px;
   height: 10px;
   top: 4px;
@@ -239,21 +239,21 @@ const toggle = (event) => {
 }
 
 /* --- Size: Mini (30x16, Inner: 28x14, Gap: 2px) --- */
-.size-mini .nano-switch-slider {
+.nano-switch.size-mini .nano-switch-slider {
   width: 30px;
   height: 16px;
   border-radius: 8px;
 }
-.size-mini .nano-switch-slider::before {
+.nano-switch.size-mini .nano-switch-slider::before {
   width: 10px;
   height: 10px;
   left: 2px;
   top: 2px;
 }
-.size-mini.is-checked .nano-switch-slider::before {
+.nano-switch.size-mini.is-checked .nano-switch-slider::before {
   transform: translateX(14px);
 }
-.size-mini.is-indeterminate .nano-switch-slider::before {
+.nano-switch.size-mini.is-indeterminate .nano-switch-slider::before {
   width: 16px;
   height: 8px;
   top: 3px;
@@ -269,8 +269,8 @@ const toggle = (event) => {
   --nano-switch-color-shadow: color-mix(in srgb, var(--nano-switch-color) 30%, transparent);
 }
 
-.color-primary,
-.color-cyan {
+.nano-switch.color-primary,
+.nano-switch.color-cyan {
   --nano-switch-color: var(--nano-switch-active-knob, #00f2fe);
   --nano-switch-color-bg: var(--nano-switch-active-bg, rgba(0, 242, 254, 0.2));
   --nano-switch-color-border: var(--nano-switch-active-border, rgba(0, 242, 254, 0.6));
