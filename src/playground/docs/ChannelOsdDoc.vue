@@ -1,22 +1,89 @@
 <script setup>
-import { ref } from 'vue';
+import { ref, computed } from 'vue';
 import NanoChannelOsd from '../../components/NanoChannelOsd.vue';
 import NanoWelcomeHud from '../../components/NanoWelcomeHud.vue';
 import NanoSlider from '../../components/NanoSlider.vue';
+import NanoSwitch from '../../components/NanoSwitch.vue';
 import NanoCodeBlock from '../../components/NanoCodeBlock.vue';
+import { resolveChannelOsdBox, resolveChannelOsdMaxDigits } from '../../utils/channelOsdLayout.js';
 import { createDocTabs } from '../docSnippets.js';
 
 const osdRef = ref(null);
 const welcomeHudRef = ref(null);
-const activeChannel = ref(12);
-const maxChannel = ref(13);
+const activeChannel = ref(16);
+const maxChannel = ref(128);
 const hudSize = ref(140);
-const timeoutMs = ref(550);
+const hudShape = ref('rect');
+const showSubtitle = ref(true);
+const stabilizeCapacity = ref(true);
+const timeoutMs = ref(780);
 const welcomeActivatedCount = ref(0);
+
+const subtitleText = computed(() =>
+  showSubtitle.value ? 'Relatywistyczna Kratownica' : ''
+);
+
+const effectiveDigits = computed(() =>
+  resolveChannelOsdMaxDigits({ max: maxChannel.value })
+);
+
+const formattedActive = computed(() =>
+  String(activeChannel.value).padStart(effectiveDigits.value, '0')
+);
+
+const liveBoxMetrics = computed(() =>
+  resolveChannelOsdBox({
+    size: hudSize.value,
+    displayText: formattedActive.value,
+    max: maxChannel.value,
+    subtitle: subtitleText.value,
+    shape: hudShape.value,
+    stabilizeCapacity: stabilizeCapacity.value,
+  })
+);
+
+const compareRectMetrics = computed(() =>
+  resolveChannelOsdBox({
+    size: hudSize.value,
+    displayText: formattedActive.value,
+    max: maxChannel.value,
+    subtitle: subtitleText.value,
+    shape: 'rect',
+    stabilizeCapacity: stabilizeCapacity.value,
+  })
+);
+
+const compareSquareMetrics = computed(() =>
+  resolveChannelOsdBox({
+    size: hudSize.value,
+    displayText: formattedActive.value,
+    max: maxChannel.value,
+    subtitle: subtitleText.value,
+    shape: 'square',
+    stabilizeCapacity: stabilizeCapacity.value,
+  })
+);
 
 const triggerDigit = (d) => {
   if (osdRef.value) {
     osdRef.value.pushDigit(String(d));
+  }
+};
+
+const previewChannelSample = (channelNum) => {
+  const clamped = Math.min(maxChannel.value, Math.max(1, channelNum));
+  activeChannel.value = clamped;
+  if (osdRef.value && typeof osdRef.value.showOsd === 'function') {
+    osdRef.value.showOsd(String(clamped).padStart(effectiveDigits.value, '0'));
+  }
+};
+
+const applyChannelPreset = (nextMax, sampleCh) => {
+  maxChannel.value = nextMax;
+  activeChannel.value = sampleCh;
+  if (osdRef.value && typeof osdRef.value.showOsd === 'function') {
+    const digits = resolveChannelOsdMaxDigits({ max: nextMax });
+    osdRef.value.showOsd(String(sampleCh).padStart(digits, '0'));
   }
 };
 
@@ -29,13 +96,15 @@ const replayWelcomeHud = () => {
 const codeTabs = createDocTabs({
   componentName: 'NanoChannelOsd',
   stateRef: 'activeChannel',
-  initialValue: '1',
+  initialValue: '16',
   templateAttrs: [
     'v-model="activeChannel"',
     ':min="1"',
-    ':max="13"',
-    ':timeout="550"',
+    ':max="128"',
+    'shape="rect"',
+    ':timeout="780"',
     ':size="140"',
+    'subtitle="Relatywistyczna Kratownica"',
   ],
   apiSections: [
     {
@@ -43,10 +112,13 @@ const codeTabs = createDocTabs({
       items: [
         'modelValue: Number (default: 1) - Currently selected 1-based channel number',
         'min: Number (default: 1) - Minimum valid channel number',
-        'max: Number (default: 99) - Maximum valid channel number (e.g. 13 for 13 scenes)',
-        'maxDigits: Number (default: 2) - Maximum digits buffered per sequence',
+        'max: Number (default: 99) - Maximum valid channel number (e.g. 128 for shaders.7u.pl)',
+        'maxDigits: Number (default: 0 -> auto from max) - Maximum digits buffered per sequence (min 2)',
+        "shape: 'rect' | 'square' (default: 'rect') - Multi-digit expansion strategy resolved via naturalSearch: 'rect' widens horizontally while keeping height = size; 'square' grows width & height 1:1",
+        'stabilizeCapacity: Boolean (default: true) - Locks container width to maxDigits capacity so typing 1 -> 12 -> 128 produces zero layout shift (CLS = 0)',
+        'subtitle: String (default: "") - Optional single-line channel title rendered beneath digits',
         'timeout: Number (default: 550) - Auto-dismiss & sequence reset timeout in milliseconds',
-        'size: Number (default: 140) - Square HUD width and height in pixels',
+        'size: Number (default: 140) - Base HUD height / 2-digit square side in pixels',
         'listenKeyboard: Boolean (default: true) - Listen for global 0-9 keydown events',
       ],
     },
@@ -58,11 +130,12 @@ const codeTabs = createDocTabs({
       ],
     },
     {
-      title: 'Exposed Methods & State (via template ref)',
+      title: 'Exposed Methods & Helpers',
       items: [
         'pushDigit(digitChar): number | null - Programmatically push a digit 0-9 into the sequence buffer',
         'showOsd(valueOrText): void - Display custom HUD value and reset auto-hide timer',
-        'osdDisplay / osdSequence: Ref<string | null>',
+        'osdMetrics: ComputedRef<{ widthPx, heightPx, fontSizePx, borderRadiusPx, aspectRatio, shape }>',
+        'resolveChannelOsdBox(options): Pure O(log N) naturalSearch layout helper exported from @gkucmierz/nano-ui',
       ],
     },
   ],
@@ -74,17 +147,39 @@ const codeTabs = createDocTabs({
     <div class="header-section">
       <h2>NanoChannelOsd</h2>
       <p class="desc">
-        TV-style multi-digit glassmorphic HUD overlay (inspired by geo-words.7u.pl). Listens for 0–9 digit sequences (e.g. typing <code>1</code> then <code>2</code> selects channel <code>12</code>) and renders a centered translucent badge that auto-dismisses after a configurable timeout.
+        TV-style multi-digit glassmorphic HUD overlay (used on <code>geo-words.7u.pl</code> and <code>shaders.7u.pl</code>). Uses <code>naturalSearch</code> to size 3+ digit channels (<code>&gt; 99</code>) cleanly in two selectable geometries: horizontal rounded rectangle (<code>shape="rect"</code>) or expanded <code>1:1</code> square (<code>shape="square"</code>).
       </p>
     </div>
 
     <div class="demo-section">
       <div class="osd-stage-card">
         <div class="osd-stage-hint">
-          <div class="active-channel-pill">
-            Active Channel: <strong>#{{ String(activeChannel).padStart(2, '0') }}</strong>
+          <div class="osd-telemetry-row">
+            <div class="active-channel-pill">
+              Active: <strong>#{{ formattedActive }}</strong> / {{ maxChannel }}
+            </div>
+            <div class="active-channel-pill is-muted">
+              <code>{{ liveBoxMetrics.shape }}</code> · <strong>{{ liveBoxMetrics.widthPx }}×{{ liveBoxMetrics.heightPx }}px</strong> ({{ liveBoxMetrics.aspectRatio }}:1)
+            </div>
           </div>
-          <p>Press digits <kbd>0</kbd>–<kbd>9</kbd> on your keyboard (e.g. <kbd>1</kbd> + <kbd>2</kbd> for <strong>12</strong>) or click the keypad below:</p>
+
+          <p>Press digits <kbd>0</kbd>–<kbd>9</kbd> on your keyboard or test multi-digit presets:</p>
+
+          <div class="preset-row">
+            <button type="button" class="preset-btn" :class="{ 'is-active': maxChannel <= 99 }" @click="applyChannelPreset(99, 12)">
+              2 Digits (01–99)
+            </button>
+            <button type="button" class="preset-btn" :class="{ 'is-active': maxChannel === 128 }" @click="applyChannelPreset(128, 16)">
+              3 Digits (016 / 128 · Shaders)
+            </button>
+            <button type="button" class="preset-btn" :class="{ 'is-active': maxChannel >= 1000 }" @click="applyChannelPreset(1024, 512)">
+              4 Digits (0512 / 1024)
+            </button>
+            <button type="button" class="preset-btn" @click="previewChannelSample(activeChannel)">
+              Show OSD Now
+            </button>
+          </div>
+
           <div class="keypad-row">
             <button
               v-for="d in [1, 2, 3, 4, 5, 6, 7, 8, 9, 0]"
@@ -103,25 +198,61 @@ const codeTabs = createDocTabs({
           v-model="activeChannel"
           :min="1"
           :max="maxChannel"
+          :shape="hudShape"
+          :stabilize-capacity="stabilizeCapacity"
+          :subtitle="subtitleText"
           :timeout="timeoutMs"
           :size="hudSize"
         />
       </div>
 
       <div class="osd-controls-card">
-        <h3 class="controls-title">Playground Controls</h3>
+        <h3 class="controls-title">Playground Controls &amp; <code>naturalSearch</code> Geometry</h3>
+
+        <div class="shape-toggle-bar">
+          <div class="shape-segmented" role="radiogroup" aria-label="OSD Multi-Digit Shape">
+            <button
+              type="button"
+              class="shape-seg-btn"
+              :class="{ 'is-selected': hudShape === 'rect' }"
+              @click="hudShape = 'rect'; previewChannelSample(activeChannel)"
+            >
+              shape="rect" (Horizontal Capsule &gt; 1:1)
+            </button>
+            <button
+              type="button"
+              class="shape-seg-btn"
+              :class="{ 'is-selected': hudShape === 'square' }"
+              @click="hudShape = 'square'; previewChannelSample(activeChannel)"
+            >
+              shape="square" (Expanded 1:1 Square)
+            </button>
+          </div>
+
+          <div class="switch-group">
+            <label class="switch-label">
+              <NanoSwitch v-model="showSubtitle" size="sm" />
+              <span>Show Subtitle</span>
+            </label>
+            <label class="switch-label">
+              <NanoSwitch v-model="stabilizeCapacity" size="sm" />
+              <span>CLS=0 Capacity Lock</span>
+            </label>
+          </div>
+        </div>
+
         <div class="controls-grid">
           <div class="control-item">
             <div class="control-label">
-              <span>Max Channel</span>
+              <span>Max Channel (<code>{{ effectiveDigits }}</code> digits)</span>
               <span class="control-value">{{ maxChannel }}</span>
             </div>
-            <NanoSlider v-model="maxChannel" :min="9" :max="99" :step="1" size="sm" aria-label="Max Channel" />
+            <NanoSlider v-model="maxChannel" :min="9" :max="1024" :step="1" size="sm" aria-label="Max Channel" />
           </div>
 
           <div class="control-item">
             <div class="control-label">
-              <span>HUD Size (px)</span>
+              <span>Base Size (px)</span>
               <span class="control-value">{{ hudSize }}px</span>
             </div>
             <NanoSlider v-model="hudSize" :min="96" :max="200" :step="4" size="sm" aria-label="HUD Size" />
@@ -132,7 +263,54 @@ const codeTabs = createDocTabs({
               <span>Fade Timeout</span>
               <span class="control-value">{{ timeoutMs }}ms</span>
             </div>
-            <NanoSlider v-model="timeoutMs" :min="250" :max="1500" :step="50" size="sm" aria-label="Fade Timeout" />
+            <NanoSlider v-model="timeoutMs" :min="250" :max="2000" :step="50" size="sm" aria-label="Fade Timeout" />
+          </div>
+        </div>
+
+        <!-- Static Side-by-Side Comparison of rect vs square -->
+        <div class="comparison-grid">
+          <div class="comparison-cell">
+            <div class="comparison-caption">
+              <strong>Option A: <code>shape="rect"</code></strong>
+              <span>{{ compareRectMetrics.widthPx }}×{{ compareRectMetrics.heightPx }}px · {{ compareRectMetrics.aspectRatio }}:1</span>
+            </div>
+            <div class="comparison-stage">
+              <div
+                class="osd-static-preview"
+                :style="{
+                  width: `${compareRectMetrics.widthPx}px`,
+                  height: `${compareRectMetrics.heightPx}px`,
+                  borderRadius: `${compareRectMetrics.borderRadiusPx}px`,
+                }"
+              >
+                <span class="osd-static-digits" :style="{ fontSize: `${compareRectMetrics.fontSizePx}px` }">
+                  {{ formattedActive }}
+                </span>
+                <span v-if="subtitleText" class="osd-static-sub">{{ subtitleText }}</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="comparison-cell">
+            <div class="comparison-caption">
+              <strong>Option B: <code>shape="square"</code></strong>
+              <span>{{ compareSquareMetrics.widthPx }}×{{ compareSquareMetrics.heightPx }}px · 1:1</span>
+            </div>
+            <div class="comparison-stage">
+              <div
+                class="osd-static-preview"
+                :style="{
+                  width: `${compareSquareMetrics.widthPx}px`,
+                  height: `${compareSquareMetrics.heightPx}px`,
+                  borderRadius: `${compareSquareMetrics.borderRadiusPx}px`,
+                }"
+              >
+                <span class="osd-static-digits" :style="{ fontSize: `${compareSquareMetrics.fontSizePx}px` }">
+                  {{ formattedActive }}
+                </span>
+                <span v-if="subtitleText" class="osd-static-sub">{{ subtitleText }}</span>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -200,7 +378,7 @@ const codeTabs = createDocTabs({
 
 .osd-stage-card {
   position: relative;
-  min-height: 280px;
+  min-height: 300px;
   border-radius: var(--nano-radius-lg, 12px);
   border: 1px solid var(--nano-border-card);
   background: radial-gradient(circle at 50% 40%, rgba(56, 189, 248, 0.14), rgba(15, 23, 42, 0.9));
@@ -217,17 +395,58 @@ const codeTabs = createDocTabs({
   align-items: center;
   gap: 12px;
   text-align: center;
-  color: var(--nano-text-muted);
+  color: rgba(226, 232, 240, 0.85);
   font-size: 0.9rem;
+}
+
+.osd-telemetry-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: center;
 }
 
 .active-channel-pill {
   padding: 6px 14px;
   border-radius: 999px;
-  background: rgba(56, 189, 248, 0.15);
-  border: 1px solid rgba(56, 189, 248, 0.35);
-  color: var(--nano-text-main);
-  font-size: 0.85rem;
+  background: rgba(56, 189, 248, 0.16);
+  border: 1px solid rgba(56, 189, 248, 0.38);
+  color: #f8fafc;
+  font-size: 0.84rem;
+}
+
+.active-channel-pill.is-muted {
+  background: rgba(15, 23, 42, 0.65);
+  border-color: rgba(148, 163, 184, 0.32);
+}
+
+.preset-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: center;
+}
+
+.preset-btn {
+  height: 36px;
+  padding: 0 12px;
+  border-radius: 8px;
+  border: 1px solid rgba(148, 163, 184, 0.32);
+  background: rgba(15, 23, 42, 0.65);
+  color: #e2e8f0;
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  box-sizing: border-box;
+  line-height: 1;
+}
+
+.preset-btn.is-active {
+  border-color: rgba(56, 189, 248, 0.65);
+  background: rgba(56, 189, 248, 0.2);
+  color: #ffffff;
 }
 
 .keypad-row {
@@ -249,6 +468,11 @@ const codeTabs = createDocTabs({
   font-size: 0.95rem;
   font-weight: 700;
   cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  line-height: 1;
 }
 
 .osd-controls-card {
@@ -262,6 +486,60 @@ const codeTabs = createDocTabs({
   margin: 0 0 16px 0;
   font-size: 1rem;
   font-weight: 600;
+}
+
+.shape-toggle-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 18px;
+}
+
+.shape-segmented {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.shape-seg-btn {
+  height: 36px;
+  padding: 0 14px;
+  border-radius: 8px;
+  border: 1px solid var(--nano-border-card);
+  background: var(--nano-bg-surface, transparent);
+  color: var(--nano-text-muted);
+  font-size: 0.83rem;
+  font-weight: 600;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  box-sizing: border-box;
+  line-height: 1;
+}
+
+.shape-seg-btn.is-selected {
+  border-color: var(--nano-primary, #38bdf8);
+  background: rgba(56, 189, 248, 0.14);
+  color: var(--nano-text-main);
+}
+
+.switch-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  align-items: center;
+}
+
+.switch-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.85rem;
+  color: var(--nano-text-main);
+  cursor: pointer;
+  user-select: none;
 }
 
 .controls-grid {
@@ -288,5 +566,83 @@ const codeTabs = createDocTabs({
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
   font-weight: 600;
   color: var(--nano-text-main);
+}
+
+.comparison-grid {
+  margin-top: 22px;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(270px, 1fr));
+  gap: 16px;
+}
+
+.comparison-cell {
+  border: 1px solid var(--nano-border-card);
+  border-radius: 10px;
+  padding: 14px;
+  background: rgba(15, 23, 42, 0.35);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.comparison-caption {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.82rem;
+  color: var(--nano-text-muted);
+}
+
+.comparison-caption strong {
+  color: var(--nano-text-main);
+}
+
+.comparison-stage {
+  min-height: 250px;
+  border-radius: 8px;
+  background: linear-gradient(135deg, rgba(30, 41, 59, 0.92), rgba(15, 23, 42, 0.96));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  overflow: auto;
+}
+
+.osd-static-preview {
+  background: rgba(10, 14, 24, 0.56);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  color: #ffffff;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  padding: 0 12px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.32);
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
+  user-select: none;
+}
+
+.osd-static-digits {
+  font-family: Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+  letter-spacing: -0.03em;
+  white-space: nowrap;
+}
+
+.osd-static-sub {
+  margin-top: 6px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.84);
+  max-width: calc(100% - 8px);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 </style>

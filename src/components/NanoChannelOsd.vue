@@ -1,5 +1,9 @@
 <script setup>
 import { ref, computed, onMounted, onUnmounted } from 'vue';
+import {
+  resolveChannelOsdBox,
+  resolveChannelOsdMaxDigits,
+} from '../utils/channelOsdLayout.js';
 
 const props = defineProps({
   modelValue: {
@@ -16,7 +20,7 @@ const props = defineProps({
   },
   maxDigits: {
     type: Number,
-    default: 2,
+    default: 0,
   },
   timeout: {
     type: Number,
@@ -25,6 +29,15 @@ const props = defineProps({
   size: {
     type: Number,
     default: 140,
+  },
+  shape: {
+    type: String,
+    default: 'rect',
+    validator: (v) => v === 'rect' || v === 'square',
+  },
+  stabilizeCapacity: {
+    type: Boolean,
+    default: true,
   },
   subtitle: {
     type: String,
@@ -46,15 +59,32 @@ const osdDisplay = ref(null);
 const osdSequence = ref('');
 let osdTimer = null;
 
+const effectiveMaxDigits = computed(() =>
+  resolveChannelOsdMaxDigits({
+    max: props.max,
+    maxDigits: props.maxDigits,
+  })
+);
+
+const osdMetrics = computed(() =>
+  resolveChannelOsdBox({
+    size: props.size,
+    displayText: osdDisplay.value ?? '',
+    max: props.max,
+    maxDigits: effectiveMaxDigits.value,
+    subtitle: props.subtitle,
+    shape: props.shape,
+    stabilizeCapacity: props.stabilizeCapacity,
+  })
+);
+
 const osdStyle = computed(() => {
-  const s = Math.max(72, Number(props.size) || 140);
-  const fontSize = Math.round(s * 0.6);
-  const radius = Math.round(s * 0.17);
+  const m = osdMetrics.value;
   return {
-    width: `${s}px`,
-    height: `${s}px`,
-    borderRadius: `${radius}px`,
-    '--nano-osd-font-size': `${fontSize}px`,
+    width: `${m.widthPx}px`,
+    height: `${m.heightPx}px`,
+    borderRadius: `${m.borderRadiusPx}px`,
+    '--nano-osd-font-size': `${m.fontSizePx}px`,
   };
 });
 
@@ -83,7 +113,7 @@ const pushDigit = (digitChar) => {
   if (!/^[0-9]$/.test(d)) return null;
 
   let nextSeq = osdSequence.value;
-  if (nextSeq.length >= props.maxDigits) {
+  if (nextSeq.length >= effectiveMaxDigits.value) {
     nextSeq = '';
   }
 
@@ -144,6 +174,8 @@ onUnmounted(() => {
 defineExpose({
   osdDisplay,
   osdSequence,
+  osdMetrics,
+  effectiveMaxDigits,
   pushDigit,
   showOsd,
   clearOsdTimer,
@@ -155,7 +187,10 @@ defineExpose({
     <div
       v-if="osdDisplay !== null"
       class="nano-channel-osd"
-      :class="{ 'is-fixed': fixed }"
+      :class="[
+        { 'is-fixed': fixed },
+        osdMetrics.shape === 'square' ? 'is-shape-square' : 'is-shape-rect',
+      ]"
       :style="osdStyle"
       role="status"
       aria-live="polite"
@@ -181,6 +216,8 @@ defineExpose({
   flex-direction: column;
   align-items: center;
   justify-content: center;
+  box-sizing: border-box;
+  padding: 0 12px;
   pointer-events: none;
   z-index: 5000;
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.28);
@@ -196,16 +233,18 @@ defineExpose({
   font-family: Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   font-size: var(--nano-osd-font-size, 84px);
   font-weight: 600;
+  font-variant-numeric: tabular-nums;
   line-height: 1;
   letter-spacing: -0.03em;
+  white-space: nowrap;
 }
 
 .nano-channel-osd-subtitle {
   margin-top: 6px;
-  font-size: 0.72rem;
+  font-size: 0.75rem;
   font-weight: 600;
-  color: rgba(255, 255, 255, 0.82);
-  max-width: 90%;
+  color: rgba(255, 255, 255, 0.84);
+  max-width: calc(100% - 8px);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
