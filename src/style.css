@@ -1,6 +1,25 @@
 /* Nano UI - Central Stylesheet */
 @import './assets/nano-ui.css';
 
+/* Ecosystem Zero-Delay Mobile Touch Standard (Rule 1->0):
+   Eliminate 300ms double-tap-to-zoom wait & native grey tap flash across all interactive elements */
+html,
+body,
+button,
+a,
+label,
+input,
+select,
+textarea,
+summary,
+[role="button"],
+[role="tab"],
+[role="switch"],
+[role="checkbox"] {
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
 /* Ecosystem Poka-Yoke Reset: Strip native browser double focus outlines on form controls */
 input:focus,
 input:focus-visible,

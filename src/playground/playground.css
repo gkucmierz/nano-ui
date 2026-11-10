@@ -535,6 +535,7 @@ pre {
 
 .content {
   flex-grow: 1;
+  min-width: 0;
   padding: 3rem;
   width: calc(100% - 280px);
   max-width: 1200px;
