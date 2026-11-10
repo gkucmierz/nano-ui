@@ -34,4 +34,21 @@ describe('NanoSlider Component & Playground Integration', () => {
     assert.ok(indexJs.includes('NanoSlider'));
     assert.ok(routerJs.includes("path: '/docs/slider'"));
   });
+
+  it('should walk up parentNode in resolveSliderSafeInsets and inset .nano-slider-rail so the circular thumb is never clipped at 0% or 100%', async () => {
+    const { getSliderThumbOverhangPx, resolveSliderSafeInsets } = await import(
+      '../../src/utils/sliderPositioning.js'
+    );
+    assert.equal(getSliderThumbOverhangPx('sm'), 9);
+    assert.equal(getSliderThumbOverhangPx('md'), 11);
+    assert.equal(getSliderThumbOverhangPx('lg'), 13);
+
+    const fallback = resolveSliderSafeInsets(null, 'sm');
+    assert.equal(fallback.safeLeftPx, 9);
+    assert.equal(fallback.safeRightPx, 9);
+
+    assert.ok(sliderSfc.includes('nano-slider-rail'));
+    assert.ok(sliderSfc.includes('--_slider-safe-left'));
+    assert.ok(sliderSfc.includes('--_slider-safe-right'));
+  });
 });

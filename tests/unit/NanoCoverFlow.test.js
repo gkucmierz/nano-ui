@@ -1,11 +1,18 @@
 import { describe, test } from 'node:test';
 import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import {
   COVERFLOW_ORIENTATIONS,
+  COVERFLOW_FADE_MODES,
   clampCoverFlowIndex,
   stepCoverFlowIndex,
   computeCoverFlowItemTransform,
 } from '../../src/utils/coverflow.js';
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const coverFlowVuePath = path.resolve(__dirname, '../../src/components/NanoCoverFlow.vue');
 
 describe('NanoCoverFlow 3D Bookshelf / Curtain Geometry Engine', () => {
   test('clampCoverFlowIndex and stepCoverFlowIndex should bound and wrap indices cleanly', () => {
@@ -65,5 +72,34 @@ describe('NanoCoverFlow 3D Bookshelf / Curtain Geometry Engine', () => {
     assert.equal(topCard.translateY, -160);
     assert.equal(topCard.rotateX, -72);
     assert.equal(topCard.rotateY, 0);
+  });
+
+  test('NanoCoverFlow.vue enforces fixed card height by default (autoExpandActive: false) and clamps effectiveCardWidth on mobile', () => {
+    const src = fs.readFileSync(coverFlowVuePath, 'utf8');
+    assert.match(
+      src,
+      /autoExpandActive:\s*\{\s*type:\s*Boolean,\s*default:\s*false/s,
+      'autoExpandActive must default to false so cards have a deterministic fixed height'
+    );
+    assert.ok(
+      src.includes('effectiveCardWidth'),
+      'Clamps effectiveCardWidth on narrow mobile viewports'
+    );
+  });
+
+  test('computeCoverFlowItemTransform supports fadeMode switch ("color" default vs "opacity" for mixed/animated backdrops)', () => {
+    assert.deepEqual(COVERFLOW_FADE_MODES, ['color', 'opacity']);
+    const colorSide = computeCoverFlowItemTransform(3, 1, { fadeMode: 'color' });
+    assert.equal(colorSide.opacity, 1, 'color fadeMode keeps shelf cards at opacity=1 to prevent rear bleed and GPU alpha group overhead');
+
+    const opacitySide1 = computeCoverFlowItemTransform(2, 1, { fadeMode: 'opacity' });
+    const opacitySide3 = computeCoverFlowItemTransform(4, 1, { fadeMode: 'opacity' });
+    assert.ok(opacitySide1.opacity < 1 && opacitySide1.opacity > 0.6);
+    assert.ok(opacitySide3.opacity < opacitySide1.opacity && opacitySide3.opacity > 0.2);
+
+    const src = fs.readFileSync(coverFlowVuePath, 'utf8');
+    assert.match(src, /fadeMode:\s*\{/);
+    assert.match(src, /\.theme-light\s+\.nano-cf-shade/);
+    assert.match(src, /\.theme-light\s+\.nano-cf-card-surface/);
   });
 });
