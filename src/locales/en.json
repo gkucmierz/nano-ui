@@ -48,6 +48,8 @@
     "secretPipe": "Secret Pipe (NanoSecretPipe)",
     "tabs": "Nano Tabs (Docked & Segmented)",
     "coverFlow": "Nano CoverFlow (3D Shelf)",
+    "dropzone": "Nano Dropzone (Upload & Hover)",
+    "layoutDirectives": "Layout Directives, CSHR & Collapsible",
     "ripple": "v-ripple Directive",
     "tooltip": "v-tooltip Directive"
   },
