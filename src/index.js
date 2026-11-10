@@ -334,6 +334,11 @@ import {
   fitTextDirective,
 } from './utils/fitText.js';
 import {
+  CHANNEL_OSD_SHAPES,
+  resolveChannelOsdMaxDigits,
+  resolveChannelOsdBox,
+} from './utils/channelOsdLayout.js';
+import {
   easeInOutCubic,
   computeSphericalLabelOpacity,
   computeSolarCosZenith,
@@ -673,6 +678,9 @@ export {
   fitCardContentToHeight,
   fitTextDirective,
   fitTextDirective as vFitText,
+  CHANNEL_OSD_SHAPES,
+  resolveChannelOsdMaxDigits,
+  resolveChannelOsdBox,
   easeInOutCubic,
   computeSphericalLabelOpacity,
   computeSolarCosZenith,
