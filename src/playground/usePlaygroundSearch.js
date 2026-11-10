@@ -206,6 +206,16 @@ export const PLAYGROUND_NAV_ITEMS = [
     componentTag: 'PrecisionScrubber',
     keywords: 'scrubber jog dial precyzyjny suwak micro vernier skala',
   },
+  {
+    id: '/docs/dropzone',
+    to: '/docs/dropzone',
+    sectionKey: 'nav.formControls',
+    navKey: 'nav.dropzone',
+    docFile: 'DropzoneDoc.vue',
+    localeKeys: [],
+    componentTag: 'NanoDropzone',
+    keywords: 'dropzone drag drop upload file plik wideo mov mp4 hover overlay drop-box video-lab',
+  },
   // Layout & Navigation
   {
     id: '/docs/tabs',
@@ -418,6 +428,16 @@ export const PLAYGROUND_NAV_ITEMS = [
     localeKeys: [],
     componentTag: 'v-ripple',
     keywords: 'directive dyrektywa ripple fala wave click touch animation efekt',
+  },
+  {
+    id: '/docs/layout-directives',
+    to: '/docs/layout-directives',
+    sectionKey: 'nav.directives',
+    navKey: 'nav.layoutDirectives',
+    docFile: 'LayoutDirectivesDoc.vue',
+    localeKeys: [],
+    componentTag: 'v-fill-height · v-fit-text · CSHR',
+    keywords: 'v-fill-height useFillHeight v-fit-text naturalSearch v-scroll-persist scrollElementToBoundedCenter useCoupledSelection CSHR NanoCollapsible NanoAccordion',
   },
 ];
 
