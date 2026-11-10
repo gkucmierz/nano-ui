@@ -2,6 +2,7 @@
 import { ref, computed, onMounted, onUnmounted } from 'vue';
 import NanoCodeBlock from '../../components/NanoCodeBlock.vue';
 import NanoSwitch from '../../components/NanoSwitch.vue';
+import NanoTree from '../../components/NanoTree.vue';
 import {
   toAcronym,
   buildHierarchicalKey,
@@ -140,6 +141,65 @@ const firstPartyPackages = [
   },
 ];
 
+const ecosystemTreeNodes = [
+  {
+    id: 'nano-ui',
+    label: '@gkucmierz/nano-ui',
+    version: '1.14.0',
+    icon: '🎨',
+    badge: 'PUBLIC · MIT',
+    badgeVariant: 'emerald',
+    meta: '🚀 28 apps',
+    children: [
+      {
+        id: 'storage-controller',
+        label: '@gkucmierz/storage-controller',
+        version: '1.0.0',
+        icon: '💾',
+        badge: 'PUBLIC · MIT',
+        badgeVariant: 'emerald',
+        meta: '0 deps (SC)',
+      },
+      {
+        id: 'key-controller',
+        label: '@gkucmierz/key-controller',
+        version: '1.0.1',
+        icon: '⌨️',
+        badge: 'PUBLIC · MIT',
+        badgeVariant: 'emerald',
+        meta: '0 deps (KC)',
+      },
+      {
+        id: 'nano-sound',
+        label: '@gkucmierz/nano-sound',
+        version: '1.0.1',
+        icon: '🔊',
+        badge: 'PUBLIC · MIT',
+        badgeVariant: 'emerald',
+        meta: '0 deps (.nsd)',
+      },
+      {
+        id: 'dport',
+        label: '@gkucmierz/dport',
+        version: '1.6.1',
+        icon: '🔌',
+        badge: 'PUBLIC · MIT',
+        badgeVariant: 'emerald',
+        meta: '0 deps (SHA-256)',
+      },
+      {
+        id: 'utils',
+        label: '@gkucmierz/utils',
+        version: '5.4.0',
+        icon: '🧬',
+        badge: 'PUBLIC · MIT',
+        badgeVariant: 'emerald',
+        meta: '0 deps (is/same/of)',
+      },
+    ],
+  },
+];
+
 const codeTabs = [
   {
     label: 'Storage Front-Controller',
@@ -217,6 +277,15 @@ const off = keys.bindAll({
             </tr>
           </tbody>
         </table>
+      </div>
+
+      <div style="margin-top: 16px;">
+        <NanoTree
+          :nodes="ecosystemTreeNodes"
+          root-title="@gkucmierz/nano-ui"
+          root-sublabel="Unix tree(1) DAG"
+          footer-summary="1 root library, 3 front-controllers, 0 circular dependencies"
+        />
       </div>
     </div>
 
