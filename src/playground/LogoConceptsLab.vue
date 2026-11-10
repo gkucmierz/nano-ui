@@ -95,7 +95,7 @@ const cachedSafeStageBounds = ref({ minX: -25.5, maxX: 57.5, minY: -10.5, maxY: 
 const refreshSafeStageBounds = () => {
   cachedSafeStageBounds.value = measureSafeStageBounds(
     stage3DSvgRef.value || stage3DBoxRef.value,
-    { minX: -22, minY: -7, width: 76, height: 46 },
+    { minX: -26, minY: -11, width: 84, height: 54 },
     { minX: -25.5, maxX: 57.5, minY: -10.5, maxY: 42.5 }
   );
 };
@@ -753,16 +753,6 @@ onMounted(() => {
     window.addEventListener('keydown', onGlobalKeydown);
     window.addEventListener('resize', refreshSafeStageBounds);
     document.addEventListener('fullscreenchange', onFullscreenChange);
-    // Walk up parentNode from the 3D SVG stage so floating 3D windows never get clipped by intermediate wrappers
-    let parentEl = (stage3DSvgRef.value || stage3DBoxRef.value)?.parentNode;
-    let depth = 0;
-    while (parentEl && parentEl !== document.body && parentEl.nodeType === 1 && depth < 6) {
-      if (!parentEl.classList?.contains('is-fullscreen-deck')) {
-        parentEl.style.overflow = 'visible';
-      }
-      parentEl = parentEl.parentNode;
-      depth++;
-    }
     refreshSafeStageBounds();
     const keys = getGlobalKeyController();
     offKeyController = keys.bindAll(
@@ -978,9 +968,9 @@ const concepts = [
                 <svg
                   ref="stage3DSvgRef"
                   overflow="visible"
-                  :viewBox="deviceViewport === 'mobile' ? '-2 -2 36 36' : '-22 -7 76 46'"
-                  :width="deviceViewport === 'mobile' ? 320 : 450"
-                  :height="deviceViewport === 'mobile' ? 320 : 272"
+                  :viewBox="deviceViewport === 'mobile' ? '-2 -2 36 36' : '-26 -11 84 54'"
+                  :width="deviceViewport === 'mobile' ? 320 : 480"
+                  :height="deviceViewport === 'mobile' ? 320 : 308"
                   class="stage-svg"
                 >
                   <defs>
@@ -2135,6 +2125,9 @@ const concepts = [
   margin-top: 1.5rem;
   margin-bottom: 2.75rem;
   box-shadow: var(--nano-shadow-card);
+  max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
 }
 
 .logo-lab-card.is-fullscreen-deck {
