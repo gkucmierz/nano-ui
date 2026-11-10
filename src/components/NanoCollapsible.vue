@@ -171,15 +171,15 @@ defineExpose({
 
 <style scoped>
 .nano-collapsible {
-  border: 1px solid var(--nano-border, var(--color-border, rgba(148, 163, 184, 0.2)));
+  border: 1px solid var(--nano-border-card, var(--color-border, rgba(148, 163, 184, 0.22)));
   border-radius: 10px;
-  background: var(--nano-bg-surface, var(--color-bg-card, rgba(15, 23, 42, 0.55)));
+  background: var(--nano-bg-muted, var(--nano-bg-card, rgba(15, 23, 42, 0.55)));
   overflow: hidden;
   transition: border-color 0.16s ease, background-color 0.16s ease;
 }
 
 .nano-collapsible.is-open {
-  border-color: var(--nano-border-strong, var(--color-border, rgba(148, 163, 184, 0.28)));
+  border-color: var(--nano-border-hover, var(--nano-border-card, rgba(148, 163, 184, 0.32)));
 }
 
 .nano-collapsible-header-bar {
@@ -189,7 +189,7 @@ defineExpose({
   gap: 10px;
   min-height: 38px;
   padding: 6px 12px;
-  background: rgba(148, 163, 184, 0.04);
+  background: var(--nano-bg-card, rgba(148, 163, 184, 0.04));
 }
 
 .nano-collapsible.is-compact .nano-collapsible-header-bar {
@@ -206,7 +206,7 @@ defineExpose({
   padding: 2px 0;
   border: none;
   background: transparent;
-  color: var(--nano-text, var(--color-text-heading, #e2e8f0));
+  color: var(--nano-text-main, var(--color-text-heading, #e2e8f0));
   font: inherit;
   text-align: left;
   cursor: pointer;
@@ -227,19 +227,19 @@ defineExpose({
   justify-content: center;
   flex-shrink: 0;
   color: var(--nano-text-muted, var(--color-text-secondary, #94a3b8));
-  background: rgba(148, 163, 184, 0.1);
+  background: var(--nano-status-neutral-bg, rgba(148, 163, 184, 0.1));
   transition: transform 0.18s cubic-bezier(0.22, 1, 0.36, 1), color 0.15s ease, background 0.15s ease;
   transform: rotate(-90deg);
 }
 
 .nano-collapsible.is-open .nano-collapsible-chevron {
   transform: rotate(0deg);
-  color: var(--nano-accent, var(--color-accent-cyan, #38bdf8));
-  background: rgba(56, 189, 248, 0.14);
+  color: var(--nano-status-info-text, #38bdf8);
+  background: var(--nano-status-info-bg, rgba(56, 189, 248, 0.14));
 }
 
 .nano-collapsible-trigger:hover:not(:disabled) .nano-collapsible-chevron {
-  color: var(--nano-accent, var(--color-accent-cyan, #38bdf8));
+  color: var(--nano-status-info-text, #38bdf8);
 }
 
 .nano-collapsible-title-group {
@@ -254,6 +254,7 @@ defineExpose({
   font-size: 0.76rem;
   font-weight: 700;
   line-height: 1.25;
+  color: var(--nano-text-main, #e2e8f0);
 }
 
 .nano-collapsible-subtitle {
@@ -269,9 +270,9 @@ defineExpose({
   font-family: var(--font-family-mono, monospace);
   font-size: 0.65rem;
   font-weight: 700;
-  background: rgba(56, 189, 248, 0.14);
-  color: var(--nano-accent, var(--color-accent-cyan, #38bdf8));
-  border: 1px solid rgba(56, 189, 248, 0.3);
+  background: var(--nano-status-info-bg, rgba(56, 189, 248, 0.14));
+  color: var(--nano-status-info-text, #38bdf8);
+  border: 1px solid var(--nano-status-info-border, rgba(56, 189, 248, 0.3));
 }
 
 .nano-collapsible-inline-preview {
@@ -294,7 +295,7 @@ defineExpose({
 
 .nano-collapsible-body {
   padding: 10px 12px;
-  border-top: 1px solid var(--nano-border, var(--color-border, rgba(148, 163, 184, 0.16)));
+  border-top: 1px solid var(--nano-border-subtle, var(--nano-border-card, rgba(148, 163, 184, 0.16)));
 }
 
 .nano-collapsible.is-compact .nano-collapsible-body {
