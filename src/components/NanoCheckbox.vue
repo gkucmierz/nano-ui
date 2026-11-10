@@ -145,7 +145,7 @@ const toggle = (event) => {
   </label>
 </template>
 
-<style scoped>
+<style>
 .nano-checkbox {
   display: inline-flex;
   align-items: center;
