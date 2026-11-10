@@ -36,6 +36,84 @@ const EXT_LANG_MAP = {
   dockerfile: 'dockerfile',
   nsd: 'nanosound',
   nanosound: 'nanosound',
+  glsl: 'glsl',
+  frag: 'glsl',
+  vert: 'glsl',
+  fs: 'glsl',
+  vs: 'glsl',
+  wgsl: 'glsl',
+  hlsl: 'glsl',
+  shader: 'glsl',
+  '7uaudio': 'json',
+  '7jap': 'json',
+  meme: 'json',
+};
+
+const IMAGE_EXTS = new Set([
+  'png',
+  'jpg',
+  'jpeg',
+  'webp',
+  'gif',
+  'svg',
+  'ico',
+  'avif',
+  'bmp',
+]);
+
+const AUDIO_EXTS = new Set([
+  'mp3',
+  'wav',
+  'ogg',
+  'm4a',
+  'flac',
+  'aac',
+  'opus',
+  'weba',
+]);
+
+const VIDEO_EXTS = new Set([
+  'mp4',
+  'webm',
+  'mov',
+  'm4v',
+  'mkv',
+  'ogv',
+]);
+
+/**
+ * Detects whether a file path represents a visual/audio media asset or custom 7u RFC format.
+ * Returns: 'image' | 'audio' | 'video' | 'pdf' | 'nsd' | '7uaudio' | 'meme' | null
+ * @param {string} [filePath='']
+ * @returns {string|null}
+ */
+export const detectMediaTypeFromPath = (filePath = '') => {
+  if (!filePath || typeof filePath !== 'string') return null;
+  const clean = filePath.split('?')[0].split('#')[0].trim().toLowerCase();
+  const dotIdx = clean.lastIndexOf('.');
+  if (dotIdx === -1) return null;
+  const ext = clean.slice(dotIdx + 1);
+  if (IMAGE_EXTS.has(ext)) return 'image';
+  if (AUDIO_EXTS.has(ext)) return 'audio';
+  if (VIDEO_EXTS.has(ext)) return 'video';
+  if (ext === 'pdf') return 'pdf';
+  if (ext === 'nsd' || ext === 'nanosound') return 'nsd';
+  if (ext === '7uaudio' || ext === '7jap') return '7uaudio';
+  if (ext === 'meme') return 'meme';
+  return null;
+};
+
+/**
+ * Formats byte count into a human-readable KB / MB string.
+ * @param {number} bytes
+ * @returns {string}
+ */
+export const formatFileSizeBytes = (bytes) => {
+  const n = Number(bytes);
+  if (!Number.isFinite(n) || n < 0) return '';
+  if (n < 1024) return `${n} B`;
+  if (n < 1024 * 1024) return `${(n / 1024).toFixed(1)} KB`;
+  return `${(n / (1024 * 1024)).toFixed(2)} MB`;
 };
 
 /**
