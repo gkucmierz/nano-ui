@@ -607,7 +607,8 @@ onUnmounted(() => {
   color: var(--hl-punct, #94a3b8);
 }
 
-:deep(.hljs-built_in) {
+:deep(.hljs-built_in),
+:deep(.hljs-meta) {
   color: var(--hl-builtin, #60a5fa);
   font-weight: 600;
 }
