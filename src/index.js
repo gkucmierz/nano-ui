@@ -1,6 +1,16 @@
 import pkg from '../package.json';
 import { initTheme, getZeroFoucScript, getZeroFoucStyle, getZeroFoucHtml } from './theme.js';
 import { useTheme, getNextTheme } from './composables/useTheme.js';
+import {
+  useInertialStabilizer,
+  createInertialStabilizerEngine,
+  deviceOrientationToQuaternion,
+  computeStabilizedWorldQuaternion,
+  quatMultiply,
+  quatConjugate,
+  quatNormalize,
+  quatSlerp,
+} from './composables/useInertialStabilizer.js';
 import Ripple from './directives/ripple.js';
 import { tooltipDirective } from './directives/tooltip.js';
 import { showTooltip, hideTooltip, tooltipState } from './composables/useTooltip.js';
@@ -46,6 +56,15 @@ import NanoSecretPipe from './components/NanoSecretPipe.vue';
 import NanoCoverFlow from './components/NanoCoverFlow.vue';
 import NanoCollapsible from './components/NanoCollapsible.vue';
 import NanoDropzone from './components/NanoDropzone.vue';
+import NanoTree from './components/NanoTree.vue';
+import {
+  UNIX_TREE_GLYPHS,
+  matchesTreeNodeQuery,
+  filterUnixTreeNodes,
+  collectExpandableTreeIds,
+  flattenUnixTree,
+  formatUnixAsciiTree,
+} from './utils/unixTree.js';
 import {
   DROPZONE_MODES,
   formatDropzoneBytes,
@@ -255,6 +274,7 @@ import {
 } from './utils/chart-bands.js';
 import {
   highlightCode,
+  highlightGlsl,
   registerParser,
   unregisterParser,
   isParserRegistered,
@@ -284,9 +304,13 @@ import {
   apiParser,
   nanosoundParser,
   NANOSOUND_COMPLETIONS,
+  glslParser,
+  GLSL_COMPLETIONS,
 } from './parsers/index.js';
 import {
   detectLangFromPath,
+  detectMediaTypeFromPath,
+  formatFileSizeBytes,
   normalizeFileStatus,
   middleTruncatePath,
   parseUnifiedDiff,
@@ -426,6 +450,13 @@ export {
   matchesAcceptPattern,
   validateDroppedFiles,
   createDropzoneStateMachine,
+  NanoTree,
+  UNIX_TREE_GLYPHS,
+  matchesTreeNodeQuery,
+  filterUnixTreeNodes,
+  collectExpandableTreeIds,
+  flattenUnixTree,
+  formatUnixAsciiTree,
   shouldPreventModalBackgroundScroll,
   lockModalBackgroundScroll,
   unlockModalBackgroundScroll,
@@ -588,6 +619,7 @@ export {
   computeVerticalBands,
   computeWeekendBands,
   highlightCode,
+  highlightGlsl,
   registerParser,
   unregisterParser,
   isParserRegistered,
@@ -615,7 +647,11 @@ export {
   apiParser,
   nanosoundParser,
   NANOSOUND_COMPLETIONS,
+  glslParser,
+  GLSL_COMPLETIONS,
   detectLangFromPath,
+  detectMediaTypeFromPath,
+  formatFileSizeBytes,
   normalizeFileStatus,
   middleTruncatePath,
   parseUnifiedDiff,
@@ -656,6 +692,14 @@ export {
   initTheme,
   useTheme,
   getNextTheme,
+  useInertialStabilizer,
+  createInertialStabilizerEngine,
+  deviceOrientationToQuaternion,
+  computeStabilizedWorldQuaternion,
+  quatMultiply,
+  quatConjugate,
+  quatNormalize,
+  quatSlerp,
   getZeroFoucScript,
   getZeroFoucStyle,
   getZeroFoucHtml,
@@ -742,5 +786,6 @@ export default {
     app.component(`${cp}NanoCollapsible`, NanoCollapsible);
     app.component(`${cp}NanoAccordion`, NanoCollapsible);
     app.component(`${cp}NanoDropzone`, NanoDropzone);
+    app.component(`${cp}NanoTree`, NanoTree);
   },
 };

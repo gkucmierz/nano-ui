@@ -14,6 +14,7 @@ import { dockerfileParser } from './dockerfile.js';
 import { diffParser } from './diff.js';
 import { apiParser } from './api.js';
 import { nanosoundParser, NANOSOUND_COMPLETIONS } from './nanosound.js';
+import { glslParser, GLSL_COMPLETIONS } from './glsl.js';
 
 export const CORE_PARSERS = [
   javascriptParser,
@@ -26,6 +27,7 @@ export const CORE_PARSERS = [
   diffParser,
   apiParser,
   nanosoundParser,
+  glslParser,
 ];
 
 export const EXTRA_PARSERS = [
@@ -71,6 +73,14 @@ export const PARSER_MAP = {
   nanosound: nanosoundParser,
   nsd: nanosoundParser,
   sound: nanosoundParser,
+  glsl: glslParser,
+  frag: glslParser,
+  vert: glslParser,
+  shader: glslParser,
+  wgsl: glslParser,
+  hlsl: glslParser,
+  fs: glslParser,
+  vs: glslParser,
 };
 
 export {
@@ -92,4 +102,6 @@ export {
   apiParser,
   nanosoundParser,
   NANOSOUND_COMPLETIONS,
+  glslParser,
+  GLSL_COMPLETIONS,
 };
