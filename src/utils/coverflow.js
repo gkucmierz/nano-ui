@@ -6,6 +6,7 @@
  */
 
 export const COVERFLOW_ORIENTATIONS = Object.freeze(['horizontal', 'vertical']);
+export const COVERFLOW_FADE_MODES = Object.freeze(['color', 'opacity']);
 
 export function clampCoverFlowIndex(index, length) {
   const count = Math.max(0, Number(length) || 0);
@@ -51,6 +52,7 @@ export function computeCoverFlowItemTransform(
     depthOffsetPx = 140,
     stackDepthStepPx = 68,
     maxVisibleSide = 6,
+    fadeMode = 'color',
   } = {}
 ) {
   const offset = Number(index) - Number(activeIndex);
@@ -87,14 +89,25 @@ export function computeCoverFlowItemTransform(
 
   const scale = Number(Math.max(0.72, 1 - centralBlend * 0.08 - shelfSteps * 0.03).toFixed(3));
   const zIndex = Math.max(1, 200 - Math.round(absOffset * 20));
-  // Keep side cards on the shelf opaque (opacity = 1) so rear cards never bleed through front cards;
-  // depth dimming is handled by the opaque .nano-cf-shade curtain overlay.
+  // In 'color' fadeMode (default): keep side cards on the shelf opaque (opacity = 1) so rear cards
+  // never bleed through front cards and the GPU avoids per-card offscreen alpha group compositing;
+  // depth dimming is handled by the theme-aware .nano-cf-shade overlay.
+  // In 'opacity' fadeMode (for mixed/animated backdrops like @gkucmierz/trianglify): fade cards via alpha.
   const opacity =
     absOffset > maxVis
       ? 0
-      : absOffset > maxVis - 0.75
-        ? Number(Math.max(0, (maxVis - absOffset) / 0.75).toFixed(3))
-        : 1;
+      : fadeMode === 'opacity'
+        ? absOffset < 0.05
+          ? 1
+          : Number(
+            Math.max(
+              0,
+              Math.min(1, Math.pow(Math.max(0, 1 - absOffset / (maxVis + 0.4)), 1.35))
+            ).toFixed(3)
+          )
+        : absOffset > maxVis - 0.75
+          ? Number(Math.max(0, (maxVis - absOffset) / 0.75).toFixed(3))
+          : 1;
 
   const transform = isVertical
     ? `translate3d(0px, ${translateY}px, ${translateZ}px) rotateX(${rotateX}deg) scale(${scale})`
