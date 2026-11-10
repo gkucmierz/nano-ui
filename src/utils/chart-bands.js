@@ -532,7 +532,7 @@ export const computeVerticalBands = (points, leftBound, rightBound, options = {}
     const isClippedRight = Boolean(
       targetDays &&
       targetDays.length > 1 &&
-      b.endIdx === n - 1 &&
+      b.endIdx === activePoints.length - 1 &&
       b.days.length === 1 &&
       b.days[0] === targetDays[0]
     );
