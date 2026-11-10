@@ -14,9 +14,13 @@ const props = defineProps({
     type: Boolean,
     default: false,
   },
+  autoDismiss: {
+    type: Boolean,
+    default: false,
+  },
   duration: {
     type: Number,
-    default: 4200,
+    default: 0,
   },
   icon: {
     type: String,
@@ -83,15 +87,15 @@ function clearHideTimer() {
 
 function scheduleAutoDismiss() {
   clearHideTimer();
-  const ms = Math.max(800, Number(props.duration) || 4200);
+  const ms = Number(props.duration) || 0;
+  if (!props.autoDismiss || ms <= 0) return;
   hideTimer = setTimeout(() => {
     dismissHud('timeout');
-  }, ms);
+  }, Math.max(800, ms));
 }
 
 function showHud() {
   isVisible.value = true;
-  markVisited();
   emit('shown');
   scheduleAutoDismiss();
 }
@@ -120,14 +124,31 @@ watch(
   }
 );
 
+function onGlobalKeyDown(e) {
+  if (!isVisible.value || !props.shortcutKey) return;
+  const tag = e?.target?.tagName;
+  if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || e?.target?.isContentEditable) {
+    return;
+  }
+  if (String(e.key || '').toLowerCase() === String(props.shortcutKey).toLowerCase()) {
+    handleActivate(e);
+  }
+}
+
 onMounted(() => {
   if (!hasVisitedBefore()) {
     showHud();
+  }
+  if (typeof window !== 'undefined') {
+    window.addEventListener('keydown', onGlobalKeyDown);
   }
 });
 
 onUnmounted(() => {
   clearHideTimer();
+  if (typeof window !== 'undefined') {
+    window.removeEventListener('keydown', onGlobalKeyDown);
+  }
 });
 
 defineExpose({
