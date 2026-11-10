@@ -6,6 +6,8 @@ import {
   resolveCollapsibleConfig,
   evaluateSplitterSnapCollapse,
   computeVirtualCollapsedPaneStyles,
+  resolveSplitterHitboxSizePx,
+  computeSplitterProximityField,
 } from '../utils/splitterCollapse.js';
 
 const nanoStorage = getScopedStorageController('nano-ui');
@@ -161,7 +163,21 @@ const props = defineProps({
    */
   showGrip: {
     type: Boolean,
-    default: false,
+    default: true,
+  },
+  /**
+   * Minimum ergonomic capture band thickness in px (±minHitboxPx/2 around the splitter axis)
+   */
+  minHitboxPx: {
+    type: Number,
+    default: 28,
+  },
+  /**
+   * 1D Voronoi proximity halo radius in px for pre-highlighting the splitter as the pointer approaches
+   */
+  proximityRadiusPx: {
+    type: Number,
+    default: 36,
   },
   /**
    * Reset to defaultSize on double-click
@@ -205,9 +221,11 @@ const emit = defineEmits([
 ]);
 
 const containerRef = ref(null);
+const gutterRef = ref(null);
 const isDragging = ref(false);
 const containerSpanPx = ref(0);
 const approachingPane = ref(null);
+const proximityRatio = ref(0);
 
 const collapsibleConfig = computed(() => resolveCollapsibleConfig(props.collapsible));
 
@@ -417,11 +435,12 @@ const gutterStyle = computed(() => {
   return {
     flex: `0 0 ${g}px`,
     [props.orientation === 'vertical' ? 'height' : 'width']: `${g}px`,
+    '--nano-splitter-proximity': proximityRatio.value,
   };
 });
 
 const hitboxStyle = computed(() => {
-  const hitSize = Math.max(props.gap, 20);
+  const hitSize = resolveSplitterHitboxSizePx(props.gap, props.minHitboxPx);
   if (props.orientation === 'vertical') {
     return {
       height: `${hitSize}px`,
@@ -553,6 +572,106 @@ function toggleLock() {
   internalLocked.value = next;
   emit('update:locked', next);
   persistState();
+}
+
+function handleContainerPointerMove(e) {
+  if (isDragging.value) {
+    proximityRatio.value = 1;
+    return;
+  }
+  if (!gutterRef.value) return;
+  const gRect = gutterRef.value.getBoundingClientRect();
+  const isVert = props.orientation === 'vertical';
+  const pointerCoordPx = isVert ? e.clientY : e.clientX;
+  const splitterCenterCoordPx = isVert
+    ? gRect.top + gRect.height / 2
+    : gRect.left + gRect.width / 2;
+  const field = computeSplitterProximityField({
+    pointerCoordPx,
+    splitterCenterCoordPx,
+    hitboxSizePx: resolveSplitterHitboxSizePx(props.gap, props.minHitboxPx),
+    proximityRadiusPx: props.proximityRadiusPx,
+  });
+  proximityRatio.value = field.proximityRatio;
+}
+
+function handleContainerPointerLeave() {
+  if (!isDragging.value) {
+    proximityRatio.value = 0;
+  }
+}
+
+/**
+ * Disambiguates between a stationary click (< 3px, toggles lock) and a drag gesture (>= 3px, drags splitter)
+ * when the user grabs the glowing edge triangle tab directly.
+ */
+function handleLockToggleMouseDown(e) {
+  if (e.button !== undefined && e.button !== 0) return;
+  e.stopPropagation();
+  e.preventDefault();
+  const startX = e.clientX;
+  const startY = e.clientY;
+  let movedIntoDrag = false;
+
+  const onMove = (moveEvt) => {
+    const dist = Math.hypot(moveEvt.clientX - startX, moveEvt.clientY - startY);
+    if (!movedIntoDrag && dist >= 3) {
+      movedIntoDrag = true;
+      window.removeEventListener('mousemove', onMove);
+      window.removeEventListener('mouseup', onUp);
+      if (isLocked.value) {
+        internalLocked.value = false;
+        emit('update:locked', false);
+      }
+      startDrag(moveEvt);
+      onDrag(moveEvt);
+    }
+  };
+
+  const onUp = () => {
+    window.removeEventListener('mousemove', onMove);
+    window.removeEventListener('mouseup', onUp);
+    if (!movedIntoDrag) {
+      toggleLock();
+    }
+  };
+
+  window.addEventListener('mousemove', onMove);
+  window.addEventListener('mouseup', onUp);
+}
+
+/**
+ * Allows dragging the collapsed bar directly (>= 4px movement) to pull the collapsed pane open,
+ * while preserving normal single-click (< 4px) expansion.
+ */
+function handleCollapsedBarMouseDown(e) {
+  if (e.button !== undefined && e.button !== 0) return;
+  const startX = e.clientX;
+  const startY = e.clientY;
+  let movedIntoDrag = false;
+
+  const onMove = (moveEvt) => {
+    const dist = Math.hypot(moveEvt.clientX - startX, moveEvt.clientY - startY);
+    if (!movedIntoDrag && dist >= 4) {
+      movedIntoDrag = true;
+      window.removeEventListener('mousemove', onMove);
+      window.removeEventListener('mouseup', onUp);
+      if (isLocked.value) {
+        internalLocked.value = false;
+        emit('update:locked', false);
+      }
+      startDrag(moveEvt);
+      onDrag(moveEvt);
+    }
+  };
+
+  const onUp = () => {
+    window.removeEventListener('mousemove', onMove);
+    window.removeEventListener('mouseup', onUp);
+  };
+
+  window.addEventListener('mousemove', onMove);
+  window.addEventListener('mouseup', onUp);
 }
 
 function handleDoubleClick() {
@@ -742,8 +861,11 @@ defineExpose({
         'is-dragging': isDragging,
         'is-locked': isLocked,
         'has-collapsed-pane': Boolean(activeCollapsedPane),
+        'is-near-splitter': proximityRatio > 0.05,
       },
     ]"
+    @mousemove="handleContainerPointerMove"
+    @mouseleave="handleContainerPointerLeave"
   >
     <!-- First Pane (Left / Top) -->
     <div
@@ -759,8 +881,9 @@ defineExpose({
         type="button"
         class="nano-splitter-collapsed-bar"
         :class="`is-${orientation}-bar`"
-        v-tooltip="`Rozwiń: ${firstTitle}`"
+        v-tooltip="`Rozwiń lub przeciągnij: ${firstTitle}`"
         :aria-label="`Rozwiń: ${firstTitle}`"
+        @mousedown="handleCollapsedBarMouseDown"
         @click="expandCollapsedPane"
       >
         <slot name="first-collapsed" :pane-title="firstTitle" :badge="firstBadge" :expand="expandCollapsedPane">
@@ -780,11 +903,12 @@ defineExpose({
     </div>
 
     <!-- Splitter Gutter & Laser Line -->
-    <div class="nano-splitter-gutter" :style="gutterStyle">
+    <div ref="gutterRef" class="nano-splitter-gutter" :style="gutterStyle">
       <div
         class="nano-splitter-hitbox"
         :class="{
           active: isDragging,
+          'is-near': proximityRatio > 0.15,
           'is-locked': isLocked,
           'is-snapped': Boolean(activeCollapsedPane),
           'is-approaching': Boolean(approachingPane),
@@ -798,15 +922,15 @@ defineExpose({
         @dblclick="handleDoubleClick"
         @keydown="handleKeyDown"
       >
-        <!-- Triangle Lock/Unlock Pull-Tab -->
+        <!-- Triangle Lock/Unlock Pull-Tab (supports both Drag >= 3px to resize and Click < 3px to lock/unlock) -->
         <button
           v-if="lockable"
           type="button"
           class="nano-splitter-lock-toggle"
           v-tooltip="isLocked ? unlockTooltip : lockTooltip"
           :aria-label="isLocked ? unlockTooltip : lockTooltip"
-          @mousedown.stop
-          @click.stop="toggleLock"
+          @mousedown="handleLockToggleMouseDown"
+          @click.stop.prevent
         >
           <svg
             v-if="orientation === 'vertical'"
@@ -838,7 +962,7 @@ defineExpose({
           </svg>
         </button>
 
-        <!-- Optional Center 3-Dot Grip -->
+        <!-- Center 3-Dot Grip Pill -->
         <div v-if="showGrip" class="nano-splitter-grip" aria-hidden="true">
           <span />
           <span />
@@ -861,8 +985,9 @@ defineExpose({
         type="button"
         class="nano-splitter-collapsed-bar"
         :class="`is-${orientation}-bar`"
-        v-tooltip="`Rozwiń: ${secondTitle}`"
+        v-tooltip="`Rozwiń lub przeciągnij: ${secondTitle}`"
         :aria-label="`Rozwiń: ${secondTitle}`"
+        @mousedown="handleCollapsedBarMouseDown"
         @click="expandCollapsedPane"
       >
         <slot name="second-collapsed" :pane-title="secondTitle" :badge="secondBadge" :expand="expandCollapsedPane">
@@ -1017,7 +1142,7 @@ defineExpose({
 
 .nano-splitter-gutter {
   position: relative;
-  z-index: 15;
+  z-index: 30;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1032,6 +1157,7 @@ defineExpose({
   justify-content: center;
   outline: none;
   background: transparent;
+  z-index: 30;
 }
 
 .nano-splitter.is-horizontal .nano-splitter-hitbox {
@@ -1054,12 +1180,12 @@ defineExpose({
   cursor: default !important;
 }
 
-/* Signature 1px Laser Line */
+/* Signature Laser Line with 1D Voronoi Proximity Halo Response */
 .nano-splitter-hitbox::before {
   content: '';
   position: absolute;
-  background: transparent;
-  transition: background-color 0.15s ease, box-shadow 0.15s ease;
+  background: rgba(56, 189, 248, calc(0.18 + var(--nano-splitter-proximity, 0) * 0.62));
+  transition: background-color 0.14s ease, box-shadow 0.14s ease;
   pointer-events: none;
 }
 
@@ -1079,10 +1205,26 @@ defineExpose({
   transform: translateY(-50%);
 }
 
+.nano-splitter-hitbox.is-near::before {
+  background: rgba(0, 229, 255, calc(0.32 + var(--nano-splitter-proximity, 0) * 0.58));
+  box-shadow: 0 0 6px rgba(0, 229, 255, calc(var(--nano-splitter-proximity, 0) * 0.45));
+}
+
 .nano-splitter-hitbox:hover::before,
 .nano-splitter-hitbox.active::before,
 .nano-splitter-hitbox:focus-visible::before {
   background: var(--nano-splitter-laser, #00e5ff);
+  box-shadow: 0 0 8px rgba(0, 229, 255, 0.65);
+}
+
+.nano-splitter.is-horizontal .nano-splitter-hitbox:hover::before,
+.nano-splitter.is-horizontal .nano-splitter-hitbox.active::before {
+  width: 2px;
+}
+
+.nano-splitter.is-vertical .nano-splitter-hitbox:hover::before,
+.nano-splitter.is-vertical .nano-splitter-hitbox.active::before {
+  height: 2px;
 }
 
 .nano-splitter-hitbox.is-approaching::before {
@@ -1091,12 +1233,13 @@ defineExpose({
 }
 
 .nano-splitter-hitbox.is-snapped::before {
-  background: rgba(56, 189, 248, 0.45);
+  background: rgba(56, 189, 248, 0.48);
 }
 
+.nano-splitter-hitbox.is-locked::before,
 .nano-splitter-hitbox.is-locked:hover::before,
 .nano-splitter-hitbox.is-locked.active::before {
-  background: transparent !important;
+  background: rgba(148, 163, 184, 0.14) !important;
   box-shadow: none !important;
 }
 
@@ -1170,27 +1313,38 @@ defineExpose({
   transform: scaleX(1.22);
 }
 
-/* Optional 3-dot grip */
+/* Center 3-dot grip pill */
 .nano-splitter-grip {
   position: absolute;
   display: flex;
+  align-items: center;
+  justify-content: center;
   gap: 3px;
+  padding: 2px 6px;
+  border-radius: 999px;
+  background: rgba(15, 23, 42, 0.78);
+  border: 1px solid rgba(56, 189, 248, calc(0.28 + var(--nano-splitter-proximity, 0) * 0.55));
   pointer-events: none;
-  opacity: 0.45;
-  transition: opacity 0.15s ease;
+  opacity: calc(0.62 + var(--nano-splitter-proximity, 0) * 0.38);
+  transition: opacity 0.14s ease, transform 0.14s ease, border-color 0.14s ease, box-shadow 0.14s ease;
 }
 
 .nano-splitter.is-horizontal .nano-splitter-grip {
   flex-direction: column;
+  padding: 6px 2px;
 }
 
 .nano-splitter.is-vertical .nano-splitter-grip {
   flex-direction: row;
+  padding: 2px 6px;
 }
 
 .nano-splitter-hitbox:hover .nano-splitter-grip,
 .nano-splitter-hitbox.active .nano-splitter-grip {
-  opacity: 0.95;
+  opacity: 1;
+  border-color: var(--nano-splitter-laser, #00e5ff);
+  box-shadow: 0 0 8px rgba(0, 229, 255, 0.42);
+  transform: scale(1.08);
 }
 
 .nano-splitter-grip span {
