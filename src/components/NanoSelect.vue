@@ -833,9 +833,12 @@ defineExpose({
 </template>
 
 <style scoped>
+:where(.nano-select) {
+  width: 100%;
+}
+
 .nano-select {
   position: relative;
-  width: 100%;
   user-select: none;
   -webkit-user-select: none;
   font-family: var(--nano-font-sans, -apple-system, BlinkMacSystemFont, sans-serif);
