@@ -72,6 +72,8 @@ export default defineConfig(({ mode }) => {
             'parsers/dockerfile': resolve(__dirname, 'src/parsers/dockerfile.js'),
             'parsers/diff': resolve(__dirname, 'src/parsers/diff.js'),
             'parsers/api': resolve(__dirname, 'src/parsers/api.js'),
+            'parsers/nanosound': resolve(__dirname, 'src/parsers/nanosound.js'),
+            'parsers/glsl': resolve(__dirname, 'src/parsers/glsl.js'),
           },
           formats: ['es'],
           fileName: (format, entryName) => `${entryName}.js`,
