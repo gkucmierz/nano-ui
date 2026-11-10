@@ -48,6 +48,8 @@
     "secretPipe": "Tunel Haseł (NanoSecretPipe)",
     "tabs": "Nano Tabs (Dokowane & Segmenty)",
     "coverFlow": "Nano CoverFlow (Karty 3D)",
+    "dropzone": "Nano Dropzone (Upload & Hover)",
+    "layoutDirectives": "Dyrektywy Układu, CSHR & Collapsible",
     "ripple": "Dyrektywa v-ripple",
     "tooltip": "Dyrektywa v-tooltip"
   },
