@@ -1,35 +1,63 @@
 <div align="center">
 
-<img src="https://nano-ui.7u.pl/nano-ui.svg" width="120" height="120" alt="Nano UI Logo" />
+<picture>
+  <source media="(prefers-color-scheme: light)" srcset="https://nano-ui.7u.pl/nano-ui-light.svg" />
+  <source media="(prefers-color-scheme: dark)" srcset="https://nano-ui.7u.pl/nano-ui-dark.svg" />
+  <img src="https://nano-ui.7u.pl/nano-ui.svg" width="136" height="136" alt="Nano UI — Bauhaus Φ (1.618) 3D-to-2D Logo" />
+</picture>
 
 # @gkucmierz/nano-ui
 
-**High-performance, minimal-footprint Vue 3 UI library, interactive 3D charts, and directives.**  
-Engineered for glassmorphism aesthetics, continuous Hermite kinematics, and zero-FOUC offline-first applications.
+**High-performance, minimal-footprint Vue 3 UI library, 3D/2D Bauhaus $\Phi$ visual studio, interactive data visualizations, and 1st-party Front-Controllers.**  
+Engineered for glassmorphism aesthetics, continuous Hermite kinematics, Unix `tree(1)` hierarchies, and zero-FOUC offline-first applications.
 
 [![npm version](https://img.shields.io/npm/v/@gkucmierz/nano-ui?style=flat-square&color=6366f1&label=npm)](https://www.npmjs.com/package/@gkucmierz/nano-ui)
 [![license](https://img.shields.io/badge/license-MIT-blue?style=flat-square)](LICENSE)
 [![vue version](https://img.shields.io/badge/vue-3.x-42b883?style=flat-square&logo=vue.js&logoColor=white)](https://vuejs.org/)
-[![i18n](https://img.shields.io/badge/i18n-EN%20%7C%20PL-00f2fe?style=flat-square)](src/locales/)
+[![showoff studio](https://img.shields.io/badge/3D%20Showoff-Bauhaus%20%CE%A6%201.618-00f2fe?style=flat-square)](https://nano-ui.7u.pl/showoff)
+[![i18n](https://img.shields.io/badge/i18n-EN%20%7C%20PL-38bdf8?style=flat-square)](src/locales/)
 [![zero-fouc](https://img.shields.io/badge/zero--fouc-ready-10b981?style=flat-square)](#zero-fouc-architecture)
 [![offline-first](https://img.shields.io/badge/dependencies-0%20external%20CDNs-f59e0b?style=flat-square)](#zero-trust-offline-first)
 
-🌐 **[Live Interactive Playground & Documentation](https://nano-ui.7u.pl)**
+🌐 **[Live Interactive Playground & Docs (`nano-ui.7u.pl`)](https://nano-ui.7u.pl)** · ✨ **[Interactive 3D $\to$ 2D Bauhaus $\Phi$ Logo Presentation (`nano-ui.7u.pl/showoff`)](https://nano-ui.7u.pl/showoff)**
 
 </div>
 
 ---
 
+## 🎨 Milestone: Bauhaus $\Phi$ (`1.618`) 3D $\to$ 2D Logo & Interactive `/showoff` Studio
+
+The `@gkucmierz/nano-ui` brand mark is not a static vector drawing — it is the **exact orthographic 2D projection of a 3D Bauhaus architectural sculpture** governed by the Golden Ratio ($\Phi = \frac{1 + \sqrt{5}}{2} \approx 1.618$):
+
+```
+┌────────────────────────────────────────────────────────────────────────┐
+│           BAUHAUS Φ (1.618) 3D SCULPTURE → 2D SVG PROJECTION           │
+├───────────────────────────────────┬────────────────────────────────────┤
+│ 3D Spatial Scene (/showoff)       │ Orthographic 2D Lock (/nano-ui.svg)│
+│ • Left Cyan Pillar (Kinetic Track)│ • Seamless 3D → 2D camera morphing │
+│ • Right Indigo Pillar + Cutout    │ • Golden Ratio Φ = 1.618 geometry  │
+│ • Diagonal Glass Bridge (N-stroke)│ • Monte Carlo N-Shadow raycasting  │
+│ • Floating Gold Sphere (r = Φ⁻²)  │ • 432Hz Web Audio (.nsd) synthesis │
+└───────────────────────────────────┴────────────────────────────────────┘
+```
+
+Explore the live interactive presentation at **[https://nano-ui.7u.pl/showoff](https://nano-ui.7u.pl/showoff)**:
+- **3D $\leftrightarrow$ 2D Orthographic Lock:** Morph continuously between free 3D orbital inspection and the canonical flat 2D vector logo (`nano-ui-dark.svg` / `nano-ui-light.svg`).
+- **Monte Carlo $N$-Shadow Studio:** Configurable stochastic multi-light raycasting (`1..16` lights) with real-time penumbra softness, light-source helper gizmos, and glass transmission controls.
+- **432Hz Ambient Soundscape (`.nsd`):** Powered by `@gkucmierz/nano-sound` — procedural Web Audio synthesis coupled to camera velocity and morph transitions with zero external audio files.
+
+---
+
 ## 🚀 Key Highlights
 
-- ⚡ **Continuous Hermite Kinematics (`KineticRotator`):** Velocity-preserving $C^1$ continuity on interrupts, geodesic shortest-path interpolation, and dynamic momentum preservation.
-- 🎛️ **Multi-Resolution DAW Scrubber (`PrecisionScrubber`):** Vertical-distance 2D precision scaling (1x &rarr; 0.1x &rarr; 0.01x &rarr; 0.001x) with floating HUD overlay.
-- 🔄 **Morphing Sticky Navigation (`MutatingHeader`):** Transitions smoothly between a floating glassmorphism card and an edge-to-edge docked navbar with configurable hysteresis.
-- 📊 **3D SVG Data Visualizations (`ThreeDDonutChart`):** Interactive 3D perspective donut & pie charts with auto-balancing side callouts, depth slope ratio, and slice locking.
-- 🎚️ **Accessible Glass Controls (`NanoSwitch`, `NanoModal`):** Lightweight toggle switches and hash-routed modals with universal dismissal triad (ESC, backdrop click, header close).
-- 💧 **Optimized Micro-Directives (`v-ripple`, `v-tooltip`):** Material ripples and GPU-accelerated tooltips with minimal runtime overhead.
-- 🌍 **Zero-Dependency i18n:** Built-in reactive English/Polish localization engine featuring line-correlated translation dictionaries.
-- 🛡️ **Zero-Trust Offline-First:** Zero external runtime CDNs (`esm.sh`, `unpkg`, `cdnjs`) &mdash; 100% bundled locally for offline PWA reliability.
+- ⚡ **Continuous Hermite Kinematics (`KineticRotator`):** Velocity-preserving $C^1$ continuity on mid-flight interrupts, geodesic shortest-path modulo $360^\circ$ navigation, and dynamic momentum preservation.
+- 🌳 **Authentic Unix `tree(1)` Hierarchy (`NanoTree` + `unixTree.js`):** Interactive collapsible tree view with true box-drawing connectors (`├── `, `└── `, `│   `), instant search with ancestor path preservation, semantic badges, and 1-click ASCII `tree` copy.
+- 🎛️ **Multi-Resolution DAW Scrubber (`PrecisionScrubber`):** Vertical-distance 2D precision scaling ($1\times \to 0.1\times \to 0.01\times \to 0.001\times$) with floating HUD overlay.
+- 🔄 **Hybrid Priority+ Adaptive Header (`MutatingHeader`):** Smooth floating-to-docked glassmorphism transition with deterministic `resolveOptimalHeaderTier` Priority+ responsive condensation.
+- 📊 **3D SVG Data Visualizations & CSHR (`ThreeDDonutChart`, `useCoupledSelection`):** Interactive 3D perspective donut & pie charts with auto-balancing callouts and Coupled Selection & Hover-Suppress-Rearm (`CSHR`) state synchronization.
+- 🎠 **3D CoverFlow & Universal Media Preview (`NanoCoverFlow`, `NanoCodeEditor`, `NanoDropzone`):** Hardware-accelerated CoverFlow carousel and multi-format 7u RFC previewer (`.nsd` audio waveforms, `.3d` PBR scenes, `.svg`, `.json`, `.csv`, and syntax-highlighted code).
+- 🧱 **1st-Party Ecosystem Front-Controllers:** Powered by zero-dependency MIT micro-packages (`@gkucmierz/storage-controller`, `@gkucmierz/key-controller`, `@gkucmierz/nano-sound`, `@gkucmierz/dport`, `@gkucmierz/utils`) sharing `Symbol.for(...)` singletons.
+- 🛡️ **Zero-Trust Offline-First & Zero-FOUC:** Zero external runtime CDNs (`esm.sh`, `unpkg`, `cdnjs`, `fonts.googleapis.com`) and zero Flash of Unstyled Content.
 
 ---
 
@@ -59,20 +87,45 @@ app.use(NanoUI);
 app.mount('#app');
 ```
 
-### Individual Component Import
+### Individual Component & Utility Import
 
-You can also import individual components and directives on demand:
+Import individual components, directives, and deterministic layout/tree helpers on demand:
 
 ```javascript
-import { 
-  KineticRotator, 
-  MutatingHeader, 
-  PrecisionScrubber, 
-  NanoSwitch, 
+import {
+  // Interactive Components
+  KineticRotator,
+  MutatingHeader,
+  PrecisionScrubber,
   ThreeDDonutChart,
+  NanoTree,
+  NanoCoverFlow,
+  NanoCodeEditor,
+  NanoCodeBlock,
+  NanoDropzone,
+  NanoCollapsible,
+  NanoSplitter,
   NanoModal,
+  NanoSwitch,
+  NanoSelect,
+  NanoNumberStepper,
+  NanoDatePicker,
+  NanoCheckbox,
+  NanoRadio,
+  NanoSlider,
+  NanoColorPicker,
+  NanoIcon,
+  // Directives
   Ripple,
-  tooltipDirective 
+  tooltipDirective,
+  vFillHeight,
+  // Composables & Deterministic Engines
+  useCoupledSelection,
+  useFillHeight,
+  scrollElementToBoundedCenter,
+  resolveOptimalHeaderTier,
+  flattenUnixTree,
+  formatUnixAsciiTree,
 } from '@gkucmierz/nano-ui';
 import '@gkucmierz/nano-ui/style.css';
 ```
@@ -80,6 +133,54 @@ import '@gkucmierz/nano-ui/style.css';
 ---
 
 ## 🧩 Component Catalog & API
+
+### 🌳 `NanoTree` (Unix `tree(1)` Component & ASCII Generator)
+
+An interactive hierarchical tree component modeled after the classic Unix `tree(1)` utility. Renders authentic box-drawing branch connectors (`├── `, `└── `, `│   `), supports collapsible subtrees (`[−]` / `[+]`), real-time search filtering that preserves ancestor chains, keyboard arrow navigation, and 1-click plain-text ASCII export.
+
+```vue
+<template>
+  <NanoTree
+    :nodes="treeNodes"
+    title="@gkucmierz/nano-ui"
+    root-meta="1st-party dependency tree"
+    v-model:selected-id="activeNodeId"
+    :default-expand-depth="2"
+    @select="onSelectNode"
+  />
+</template>
+
+<script setup>
+import { ref } from 'vue';
+import { NanoTree } from '@gkucmierz/nano-ui';
+
+const activeNodeId = ref('nano-ui');
+const treeNodes = [
+  {
+    id: 'nano-ui',
+    label: '@gkucmierz/nano-ui',
+    version: '1.14.0',
+    icon: '🎨',
+    badge: 'PUBLIC · MIT',
+    badgeVariant: 'emerald',
+    meta: '🚀 28 apps',
+    children: [
+      { id: 'storage-controller', label: '@gkucmierz/storage-controller', version: '1.0.0', icon: '💾', meta: '0 deps' },
+      { id: 'key-controller', label: '@gkucmierz/key-controller', version: '1.0.1', icon: '⌨️', meta: '0 deps' },
+      { id: 'nano-sound', label: '@gkucmierz/nano-sound', version: '1.0.1', icon: '🔊', meta: '0 deps (.nsd)' }
+    ]
+  }
+];
+
+const onSelectNode = (node) => {
+  console.log('Selected tree node:', node.id);
+};
+</script>
+```
+
+You can also generate pure ASCII `tree(1)` strings programmatically in Node.js or browser scripts via `formatUnixAsciiTree(nodes, { rootLabel: '.' })`.
+
+---
 
 ### 🌀 `KineticRotator`
 
@@ -91,76 +192,22 @@ A high-performance angular rotator component powered by Cubic Hermite spline kin
 - **Dynamic Timing Modes:**
   - `proportional` *(Isokinetic, $v \approx \text{const}$)*: Duration scales proportionally with angular displacement ($|\Delta\theta|$).
   - `fixed` *(Isochronous, $T = \text{const}$)*: Duration is constant regardless of angle distance.
-- **In-Flight Duration Adaptation:** Dynamically updates duration without spatial jumps on the normalized time axis.
 
 #### Code Example
 ```vue
 <template>
-  <div class="rotator-container">
-    <KineticRotator
-      ref="rotatorRef"
-      v-model="angle"
-      :duration="1000"
-      :speed-multiplier="1"
-      timing-mode="proportional"
-      :shortest-path="true"
-      :inertia-threshold="0.25"
-      :size="260"
-      @frame="onFrame"
-      @settled="onSettled"
-    >
-      <template #default="{ currentAngle, velocity, isMoving }">
-        <div class="custom-compass-tile">
-          <span class="compass-pointer">⬆</span>
-          <span class="telemetry">{{ Math.round(currentAngle) }}° ({{ Math.round(velocity) }}°/s)</span>
-        </div>
-      </template>
-    </KineticRotator>
-
-    <div class="controls">
-      <button @click="rotatorRef?.rotateBy(90)">+90°</button>
-      <button @click="rotatorRef?.rotateBy(-90)">-90°</button>
-      <button @click="rotatorRef?.reset()">Reset</button>
-    </div>
-  </div>
+  <KineticRotator
+    ref="rotatorRef"
+    v-model="angle"
+    :duration="1000"
+    :speed-multiplier="1"
+    timing-mode="proportional"
+    :shortest-path="true"
+    :inertia-threshold="0.25"
+    :size="260"
+  />
 </template>
-
-<script setup>
-import { ref } from 'vue';
-import { KineticRotator } from '@gkucmierz/nano-ui';
-
-const angle = ref(0);
-const rotatorRef = ref(null);
-
-const onFrame = (telemetry) => {
-  // telemetry: { currentAngle, targetAngle, velocity, acceleration, progress, isMoving, timestamp }
-};
-
-const onSettled = ({ angle, normalizedAngle }) => {
-  console.log('Rotator settled at:', angle, 'modulo:', normalizedAngle);
-};
-</script>
 ```
-
-#### Props
-| Prop | Type | Default | Description |
-|---|---|---|---|
-| `modelValue` | `Number` | `0` | Target angle in degrees. Supports `v-model`. |
-| `duration` | `Number` | `1000` | Base duration in milliseconds for a $90^\circ$ rotation step. |
-| `speedMultiplier` | `Number` | `1` | Speed scaling factor (e.g., `0.5` = half speed, `2.0` = double speed). |
-| `step` | `Number` | `90` | Reference step angle in degrees used for proportional duration scaling. |
-| `shortestPath` | `Boolean` | `true` | When true, targets are reduced modulo $360^\circ$ along the shortest geodesic arc. |
-| `timingMode` | `String` | `'proportional'` | `'proportional'` (isokinetic, $v \approx \text{const}$) or `'fixed'` (isochronous, $T = \text{const}$). |
-| `inertiaThreshold` | `Number` | `0.25` | Momentum threshold (in seconds) to avoid abrupt directional reversals during high-speed motion. |
-| `size` | `Number \| String` | `260` | Width and height of the rotator bounding box in pixels or CSS units. |
-
-#### Events
-| Event | Payload | Description |
-|---|---|---|
-| `update:modelValue` | `Number` | Emitted when motion settles to update the `v-model` binding. |
-| `change` | `Number` | Emitted immediately when a new target destination is committed. |
-| `settled` | `{ angle, normalizedAngle }` | Emitted once motion comes to a complete rest. |
-| `frame` | `Object` | Emitted every `requestAnimationFrame` with live kinematics telemetry. |
 
 ---
 
@@ -168,7 +215,6 @@ const onSettled = ({ angle, normalizedAngle }) => {
 
 A 2D jog-dial precision scrubbing widget inspired by digital audio workstations (DAWs) and professional video editing suites. Dragging horizontally adjusts the parameter value, while dragging vertically increases resolution precision exponentially (up to $0.001\times$) with a floating HUD anchor guide.
 
-#### Code Example
 ```vue
 <template>
   <PrecisionScrubber
@@ -182,34 +228,14 @@ A 2D jog-dial precision scrubbing widget inspired by digital audio workstations 
     :relative="true"
   />
 </template>
-
-<script setup>
-import { ref } from 'vue';
-import { PrecisionScrubber } from '@gkucmierz/nano-ui';
-
-const frequency = ref(440);
-</script>
 ```
-
-#### Props
-| Prop | Type | Default | Description |
-|---|---|---|---|
-| `modelValue` | `Number` | *Required* | Current numerical value (`v-model`). |
-| `min` | `Number` | `0` | Minimum allowed value boundary. |
-| `max` | `Number` | `100` | Maximum allowed value boundary. |
-| `step` | `Number` | `1` | Increment step size at base $1\times$ resolution. |
-| `label` | `String` | `''` | Descriptive label displayed on the scrubber track. |
-| `unit` | `String` | `''` | Value unit suffix (e.g., `'ms'`, `'px'`, `'%'`, `'Hz'`). |
-| `sensitivity` | `Number` | `1` | Horizontal drag sensitivity multiplier. |
-| `relative` | `Boolean` | `true` | Enables vertical distance dynamic precision scaling. |
 
 ---
 
-### 🔄 `MutatingHeader`
+### 🔄 `MutatingHeader` & Hybrid Priority+ Adaptive Header
 
-A reactive, scroll-docking navigation container that dynamically morphs between an elevated floating glassmorphism card and an edge-to-edge docked navbar as the user scrolls.
+A reactive, scroll-docking navigation container that morphs between an elevated floating glassmorphism card and an edge-to-edge docked navbar, paired with `resolveOptimalHeaderTier` and `pickAdaptiveHeaderLabel` for zero-overflow Priority+ responsive layouts.
 
-#### Code Example
 ```vue
 <template>
   <MutatingHeader
@@ -219,234 +245,106 @@ A reactive, scroll-docking navigation container that dynamically morphs between 
     floating-margin="12px 24px 0 24px"
     floating-radius="16px"
     :glassmorphism="true"
-    @change="onDockStateChange"
   >
     <div class="nav-content">
       <span class="brand">Project Nexus</span>
-      <nav class="links">
-        <a href="#overview">Overview</a>
-        <a href="#features">Features</a>
-      </nav>
     </div>
   </MutatingHeader>
 </template>
-
-<script setup>
-import { MutatingHeader } from '@gkucmierz/nano-ui';
-
-const onDockStateChange = (isDocked) => {
-  console.log('Header docked status:', isDocked);
-};
-</script>
 ```
-
-#### Props
-| Prop | Type | Default | Description |
-|---|---|---|---|
-| `threshold` | `Number` | `24` | Scroll distance in pixels after which the header docks edge-to-edge. |
-| `hysteresis` | `Number` | `8` | Scroll delta in pixels below threshold required to un-dock back into floating card. |
-| `scrollContainer`| `String \| Object` | `null` | Target scroll container selector or DOM element (defaults to `window`). |
-| `height` | `String` | `'60px'` | Height of the header bar. |
-| `floatingMargin` | `String` | `'12px 24px 0 24px'` | Outer margins when floating at the top of the viewport. |
-| `floatingRadius` | `String` | `'16px'` | Corner border radius when in floating card state. |
-| `glassmorphism` | `Boolean` | `true` | Enables blurred backdrop filter glassmorphism effect. |
-| `stuck` | `Boolean` | `undefined` | Controlled dock state override via `v-model:stuck`. |
 
 ---
 
-### 🔘 `NanoSwitch`
+### 📊 `ThreeDDonutChart` & `useCoupledSelection` (CSHR)
 
-A lightweight, accessible toggle switch component featuring glassmorphism styles, keyboard accessibility (`Space` / `Enter`), and smooth state transitions.
+A 3D SVG Donut and Pie Chart component with smooth 2D/3D perspective transitions, auto-balancing side callouts, and first-class support for the **Coupled Selection & Hover-Suppress-Rearm (`CSHR`)** state machine (`useCoupledSelection`) when synchronizing charts with external legends and tables.
 
 ```vue
 <template>
-  <NanoSwitch
-    v-model="isEnabled"
-    label="Hardware Acceleration"
-    size="md"
+  <ThreeDDonutChart 
+    v-model:selectedItemId="selectedId"
+    :hovered-item-id="hoveredId"
+    :data="chartData"
+    :isExpanded="true"
+    :showLabels="true"
+    :is3D="true"
+    :slopeRatio="0.55"
+    :autoRotate="true"
+    :selectable="true"
+    centerLabel="Total Portfolio"
   />
 </template>
-
-<script setup>
-import { ref } from 'vue';
-import { NanoSwitch } from '@gkucmierz/nano-ui';
-
-const isEnabled = ref(true);
-</script>
 ```
 
 ---
 
-### 📊 `ThreeDDonutChart`
+### 🪟 `NanoModal`, `NanoCollapsible`, `NanoCoverFlow` & Form Controls
 
-A premium 3D SVG Donut and Pie Chart component for Vue 3. Features smooth morphing animations, dynamic 2D/3D perspective transitions, responsive side-label columns with callout leader lines, auto-rotation label balancing, and slice selection locking.
-
-```vue
-<template>
-  <div class="chart-container">
-    <ThreeDDonutChart 
-      v-model:selectedItemId="selectedId"
-      :data="chartData"
-      :isExpanded="true"
-      :showLabels="true"
-      :is3D="true"
-      :slopeRatio="0.55"
-      :autoRotate="true"
-      :selectable="true"
-      valueDecimals="2"
-      centerLabel="Total Portfolio"
-    />
-  </div>
-</template>
-
-<script setup>
-import { ref } from 'vue';
-import { ThreeDDonutChart } from '@gkucmierz/nano-ui';
-
-const selectedId = ref(null);
-const chartData = ref([
-  { id: '1', name: 'Ethereum', value: 140, color: '#3b82f6', unit: 'ETH' },
-  { id: '2', name: 'Solana', value: 95, color: '#10b981', unit: 'SOL' },
-  { id: '3', name: 'Bitcoin', value: 55, color: '#f59e0b', unit: 'BTC' }
-]);
-</script>
-```
-
-#### Props
-| Prop | Type | Default | Description |
-|---|---|---|---|
-| `data` | `Array` | *Required* | Array of objects: `{ id, name, value, color, unit }`. |
-| `isExpanded` | `Boolean` | `false` | Large container layout with callout margins (`true`) or compact mini layout (`false`). |
-| `showLabels` | `Boolean` | `true` | Show/hide side callouts and leader lines (applicable when `isExpanded` is true). |
-| `is3D` | `Boolean` | `true` | Enables 3D perspective rendering (depth and tilt). When false, renders in flat 2D. |
-| `slopeRatio` | `Number` | `0.5` | Vertical tilt factor of the 3D plane (from `0.2` to `1.0`). |
-| `rotationAngle` | `Number` | `-90` | Starting rotation angle of the chart in degrees. |
-| `autoRotate` | `Boolean` | `false` | Dynamically optimizes rotation to balance side labels evenly. |
-| `selectable` | `Boolean` | `false` | Enables slice selection/locking on click or tap. |
-| `selectedItemId` | `String \| Number` | `null` | ID of the currently locked slice (`v-model:selectedItemId`). |
-| `centerValue` | `String \| Number` | `''` | Custom text inside donut hole (defaults to sum of all items). |
-| `centerLabel` | `String` | `''` | Sub-label text displayed below center value. |
-| `centerValueFormatter` | `Function` | `null` | Formatter function: `(value, item) => string`. |
-| `valueDecimals` | `Number` | `undefined` | Decimals to round slice values on callouts. |
-| `aggregateOthers` | `Boolean` | `false` | Merges slices below threshold into an "Other" item. |
-| `othersThreshold` | `Number` | `0.01` | Fraction threshold (e.g. `0.05` for 5%) for "Other" aggregation. |
+- **`NanoModal`:** Standardized modal dialog adhering to the **Universal Dismissal Triad** (`ESC` key stack with `stopImmediatePropagation()`, backdrop click, header close `✕`), automatic background scroll lock (`lockModalBackgroundScroll`), and URL hash synchronization (`/#help`).
+- **`NanoCollapsible`:** Smooth accordion container with persistent expand/collapse memory via `@gkucmierz/storage-controller`.
+- **`NanoCoverFlow`:** Interactive 3D perspective carousel with keyboard, wheel, and pointer kinematics.
+- **`NanoCodeEditor` & `NanoCodeBlock`:** Universal Media & 7u RFC Previewer supporting live `.nsd` sound synthesis, `.3d` scene inspection, `.svg` vector zoom, `.csv` tables, and syntax-highlighted code.
+- **Poka-Yoke Controls:** `NanoSwitch`, `NanoNumberStepper`, `NanoDatePicker`, `NanoSelect`, `NanoCheckbox`, `NanoRadio`, `NanoSlider`, `NanoColorPicker`, `NanoDropzone`, `NanoSplitter`.
 
 ---
 
-### 🪟 `NanoModal`
+## 🧱 1st-Party Ecosystem & Front-Controllers
 
-Standardized modal dialog adhering to the **Universal Dismissal Triad** (ESC key with `event.stopPropagation()`, backdrop click `@click.self`, and header close `✕`), with deep-linking URL hash synchronization support.
+Every micro-package used by `@gkucmierz/nano-ui` is **100% 1st-party, authored in-house under MIT, with zero 3rd-party transitive dependencies**:
 
-```vue
-<template>
-  <NanoModal
-    v-model="isOpen"
-    title="System Configuration"
-    icon="⚙️"
-    max-width="540px"
-    @close="isOpen = false"
-  >
-    <div class="modal-body">
-      <p>Configure hardware telemetry parameters and sync preferences.</p>
-    </div>
-  </NanoModal>
-</template>
-
-<script setup>
-import { ref } from 'vue';
-import { NanoModal } from '@gkucmierz/nano-ui';
-
-const isOpen = ref(false);
-</script>
-```
-
----
-
-### 💧 Directives
-
-#### `v-ripple`
-Material-style ripple effect directive with configurable colors:
-
-```vue
-<template>
-  <button v-ripple class="btn">Default Ripple</button>
-  <div v-ripple="'rgba(0, 242, 254, 0.3)'" class="card">Custom Cyan Ripple</div>
-</template>
-```
-
-#### `v-tooltip`
-Lightweight, accessible tooltip directive powered by `@gkucmierz/nano-ui` composable state:
-
-```vue
-<template>
-  <button v-tooltip="'Synchronize system telemetry'">Sync Now</button>
-  <span v-tooltip="{ text: 'High-precision sensor', position: 'bottom' }">Sensor A</span>
-</template>
-```
+| Package | Acronym | Transitive Deps | Role in Nano UI Ecosystem |
+| :--- | :---: | :---: | :--- |
+| **`@gkucmierz/storage-controller`** | `SC` | `0` | Global `Symbol.for(...)` singleton Front-Controller for `localStorage` (`ls`), `sessionStorage` (`ss`), and `none` with `DA_NU_<key>` acronym key compression. |
+| **`@gkucmierz/key-controller`** | `KC` | `0` | Focus-aware keyboard shortcut Front-Controller with automatic `ignoreUsedKeyModifiers` collision resolution (`Shift+Arrow` vs `Arrow`, held `C+Arrow` chords). |
+| **`@gkucmierz/nano-sound`** | `NS` | `0` | Procedural Web Audio API synthesizer and algebraic `.nsd` DSL compiler powering tactile UI sound effects and the 432Hz `/showoff` studio. |
+| **`@gkucmierz/dport`** | `DP` | `0` | Deterministic SHA-256 port & OKLCH accent preset generator (`pickNanoPresetByPort`). |
+| **`@gkucmierz/utils`** | `UT` | `0` | Prototype-safe runtime type guards (`is`, `same`, `of`) replacing raw `typeof` checks. |
 
 ---
 
 ## 🌐 Built-in i18n Architecture
 
-Nano UI includes a zero-dependency, ultra-lightweight reactive internationalization engine (`src/locales.js`) featuring **strictly line-correlated JSON translation dictionaries**:
+Nano UI includes a zero-dependency reactive internationalization engine (`src/locales.js`) featuring **strictly 1:1 line-correlated JSON translation dictionaries** (`src/locales/en.json` and `src/locales/pl.json`):
 
 ```javascript
 import { t, currentLang, setLang, toggleLang } from '@gkucmierz/nano-ui/locales';
 
-// Switch language reactively
 setLang('pl'); // 'en' | 'pl'
 toggleLang();
-
-// Translate keys with parameter interpolation
-const label = t('rotator.isokinetic');
 ```
-
-The translation files (`src/locales/en.json` and `src/locales/pl.json`) are maintained in strict 1:1 line synchronization, enabling seamless structural diffing and zero missing-key drift.
 
 ---
 
 <a id="zero-fouc-architecture"></a>
 ## ⚡ Zero-FOUC Architecture
 
-Nano UI provides synchronized design tokens with automatic system and dark-mode adaptation. Zero Flash of Unstyled Content (FOUC) is guaranteed through immediate inline CSS variable evaluation before Vue hydration:
-
-```css
-:root {
-  --nano-bg-main: #060913;
-  --nano-bg-card: rgba(15, 23, 42, 0.75);
-  --nano-border-card: rgba(255, 255, 255, 0.12);
-  --nano-state-active: #00f2fe;
-  --nano-state-accent: #6366f1;
-  --nano-radius-md: 10px;
-  --nano-radius-lg: 16px;
-}
-```
+Nano UI provides synchronized design tokens with automatic system and dark/light theme adaptation. Zero Flash of Unstyled Content (FOUC) is guaranteed through immediate inline CSS variable evaluation before Vue hydration.
 
 ---
 
 <a id="zero-trust-offline-first"></a>
 ## 🛡️ Zero-Trust Offline-First
 
-In accordance with workspace reliability standards:
-- **No External CDNs:** Zero runtime script imports from `unpkg.com`, `esm.sh`, `jsdelivr`, or `cdnjs`.
-- **Bundled Assets:** All SVG graphics and fonts resolve locally to guarantee 100% offline functionality in air-gapped environments or Progressive Web Apps (PWAs).
+- **No External CDNs:** Zero runtime script or font imports from `unpkg.com`, `esm.sh`, `jsdelivr`, `cdnjs`, or `fonts.googleapis.com`.
+- **Bundled Assets:** All SVG graphics (`nano-ui.svg`, `nano-ui-dark.svg`, `nano-ui-light.svg`, `og-image.png`) and fonts resolve locally for 100% offline reliability.
 
 ---
 
 ## 📜 Scripts & Development
 
 ```bash
-# Start local Vite development server & playground
+# Start local Vite development server & interactive playground
 npm run dev
+
+# Run ESLint & full unit/architecture test suite
+npm run lint
+npm test
 
 # Build the production library distribution (dist/nano-ui.js & dist/nano-ui.css)
 npm run build
 
-# Build the standalone documentation & playground application
+# Build the standalone documentation & /showoff studio application
 npm run build:app
-
-# Regenerate master branding assets (SVG -> 512x512 PNG)
-npm run icons
 ```
 
 ---
