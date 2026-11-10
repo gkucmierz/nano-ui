@@ -68,8 +68,50 @@ export const initTheme = ({
   }
 };
 
-// Immediate instant execution on module evaluation
-initTheme();
+/**
+ * Detects whether Nano UI is loaded inside a VitePress host application
+ * (where VitePress owns `<html class="dark">` and `vitepress-theme-appearance`).
+ *
+ * @returns {boolean}
+ */
+export const isVitePressHost = () => {
+  if (typeof window === 'undefined' || typeof document === 'undefined') return false;
+  if (window.__VP_HASH_MAP__ || window.__VP_SITE_DATA__) return true;
+  if (typeof document.querySelector === 'function') {
+    const gen = document.querySelector('meta[name="generator"]');
+    if (gen && /^VitePress\b/i.test(gen.getAttribute('content') || '')) return true;
+  }
+  return false;
+};
+
+/**
+ * Synchronizes `<html data-theme="...">` and `style.colorScheme` from a boolean `isDark` signal
+ * (used when Nano UI components are embedded inside VitePress or external theme hosts).
+ *
+ * @param {boolean} isDark
+ * @returns {'dark' | 'light'}
+ */
+export const syncThemeWithHostDark = (isDark) => {
+  const active = isDark ? 'dark' : 'light';
+  if (typeof document !== 'undefined' && document.documentElement) {
+    if (active === 'light') {
+      document.documentElement.setAttribute('data-theme', 'light');
+    } else {
+      document.documentElement.removeAttribute('data-theme');
+    }
+    if (document.documentElement.style) {
+      document.documentElement.style.colorScheme = active;
+    }
+  }
+  return active;
+};
+
+// Immediate instant execution on module evaluation (respects VitePress host polarity when embedded)
+if (isVitePressHost()) {
+  syncThemeWithHostDark(document.documentElement.classList.contains('dark'));
+} else {
+  initTheme();
+}
 
 /**
  * Inlined client-side theme initialization logic.
