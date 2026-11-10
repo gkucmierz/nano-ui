@@ -45,6 +45,14 @@ import NanoDatePicker from './components/NanoDatePicker.vue';
 import NanoSecretPipe from './components/NanoSecretPipe.vue';
 import NanoCoverFlow from './components/NanoCoverFlow.vue';
 import NanoCollapsible from './components/NanoCollapsible.vue';
+import NanoDropzone from './components/NanoDropzone.vue';
+import {
+  DROPZONE_MODES,
+  formatDropzoneBytes,
+  matchesAcceptPattern,
+  validateDroppedFiles,
+  createDropzoneStateMachine,
+} from './utils/dropzoneState.js';
 import {
   shouldPreventModalBackgroundScroll,
   lockModalBackgroundScroll,
@@ -70,9 +78,27 @@ import {
 } from './utils/fillHeight.js';
 import {
   DEFAULT_REARM_MOVE_THRESHOLD_PX,
+  NANO_TRI_BORDER_STATES,
+  resolveCoupledItemIds,
+  resolveTriStateBorder,
+  resolveTriStateBorderClasses,
   createCoupledSelectionMachine,
   useCoupledSelection,
 } from './utils/coupledSelection.js';
+import {
+  NON_TEXT_INPUT_TYPES,
+  isEditableTextTarget,
+  isNativeControlConflict,
+  parseKeyCombo,
+  createKeyController,
+  getGlobalKeyController,
+  stepWrappedIndex,
+  isGroupOptionActive,
+  isInteractiveGroupOptionElement,
+  getGroupInteractiveChildren,
+  resolveInteractiveDomGroup,
+  stepInteractiveDomGroup,
+} from './utils/key-controller.js';
 import {
   saveElementScrollPosition,
   readElementScrollPosition,
@@ -80,9 +106,16 @@ import {
   scrollPersistDirective,
 } from './utils/scrollPersist.js';
 import {
+  SLIDER_THUMB_OVERHANG_BY_SIZE,
+  getSliderThumbOverhangPx,
+  resolveSliderSafeInsets,
+} from './utils/sliderPositioning.js';
+import {
   resolveCollapsibleConfig,
   evaluateSplitterSnapCollapse,
   computeVirtualCollapsedPaneStyles,
+  resolveSplitterHitboxSizePx,
+  computeSplitterProximityField,
 } from './utils/splitterCollapse.js';
 import {
   COVERFLOW_ORIENTATIONS,
@@ -273,6 +306,7 @@ import {
   computeMonospaceFittedFontSize,
   fitSvgTextSize,
   fitHtmlTextSize,
+  fitCardContentToHeight,
   fitTextDirective,
 } from './utils/fitText.js';
 import {
@@ -383,8 +417,15 @@ export {
   NanoSecretPipe as NanoPasswordTunnel,
   NanoCoverFlow,
   NanoCoverFlow as CoverFlow,
+  NanoCoverFlow as NanoCarousel,
   NanoCollapsible,
   NanoCollapsible as NanoAccordion,
+  NanoDropzone,
+  DROPZONE_MODES,
+  formatDropzoneBytes,
+  matchesAcceptPattern,
+  validateDroppedFiles,
+  createDropzoneStateMachine,
   shouldPreventModalBackgroundScroll,
   lockModalBackgroundScroll,
   unlockModalBackgroundScroll,
@@ -404,8 +445,24 @@ export {
   fillHeightDirective,
   fillHeightDirective as vFillHeight,
   DEFAULT_REARM_MOVE_THRESHOLD_PX,
+  NANO_TRI_BORDER_STATES,
+  resolveCoupledItemIds,
+  resolveTriStateBorder,
+  resolveTriStateBorderClasses,
   createCoupledSelectionMachine,
   useCoupledSelection,
+  NON_TEXT_INPUT_TYPES,
+  isEditableTextTarget,
+  isNativeControlConflict,
+  parseKeyCombo,
+  createKeyController,
+  getGlobalKeyController,
+  stepWrappedIndex,
+  isGroupOptionActive,
+  isInteractiveGroupOptionElement,
+  getGroupInteractiveChildren,
+  resolveInteractiveDomGroup,
+  stepInteractiveDomGroup,
   saveElementScrollPosition,
   readElementScrollPosition,
   restoreElementScroll,
@@ -414,6 +471,8 @@ export {
   resolveCollapsibleConfig,
   evaluateSplitterSnapCollapse,
   computeVirtualCollapsedPaneStyles,
+  resolveSplitterHitboxSizePx,
+  computeSplitterProximityField,
   COVERFLOW_ORIENTATIONS,
   clampCoverFlowIndex,
   stepCoverFlowIndex,
@@ -568,10 +627,14 @@ export {
   getPositionedReferenceEl,
   clampFloatingBox2D,
   measureSafeStageBounds,
+  SLIDER_THUMB_OVERHANG_BY_SIZE,
+  getSliderThumbOverhangPx,
+  resolveSliderSafeInsets,
   naturalSearch,
   computeMonospaceFittedFontSize,
   fitSvgTextSize,
   fitHtmlTextSize,
+  fitCardContentToHeight,
   fitTextDirective,
   fitTextDirective as vFitText,
   easeInOutCubic,
@@ -675,7 +738,9 @@ export default {
     app.component(`${cp}NanoPasswordTunnel`, NanoSecretPipe);
     app.component(`${cp}NanoCoverFlow`, NanoCoverFlow);
     app.component(`${cp}CoverFlow`, NanoCoverFlow);
+    app.component(`${cp}NanoCarousel`, NanoCoverFlow);
     app.component(`${cp}NanoCollapsible`, NanoCollapsible);
     app.component(`${cp}NanoAccordion`, NanoCollapsible);
+    app.component(`${cp}NanoDropzone`, NanoDropzone);
   },
 };

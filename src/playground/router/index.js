@@ -37,6 +37,8 @@ import TabsDoc from '../docs/TabsDoc.vue';
 import SortableDoc from '../docs/SortableDoc.vue';
 import KineticAnimationsDoc from '../docs/KineticAnimationsDoc.vue';
 import CoverFlowDoc from '../docs/CoverFlowDoc.vue';
+import DropzoneDoc from '../docs/DropzoneDoc.vue';
+import LayoutDirectivesDoc from '../docs/LayoutDirectivesDoc.vue';
 import NotFoundDoc from '../docs/NotFoundDoc.vue';
 
 export const routes = [
@@ -467,6 +469,28 @@ export const routes = [
       componentName: 'NanoCoverFlow',
       type: 'component',
       description: '3D CoverFlow bookshelf and curtain carousel for single-row or single-column presentation of images, cards, and custom components.',
+    },
+  },
+  {
+    path: '/docs/dropzone',
+    name: 'Dropzone',
+    component: DropzoneDoc,
+    meta: {
+      title: 'NanoDropzone (Upload Box & Anti-Flicker Overlay) | Nano UI',
+      componentName: 'NanoDropzone',
+      type: 'component',
+      description: 'Unified drag-and-drop file upload box and anti-flicker full-container drag-hover overlay with MIME/extension and size validation.',
+    },
+  },
+  {
+    path: '/docs/layout-directives',
+    name: 'LayoutDirectives',
+    component: LayoutDirectivesDoc,
+    meta: {
+      title: 'v-fill-height, v-fit-text, v-scroll-persist, CSHR & NanoCollapsible | Nano UI',
+      componentName: 'LayoutDirectives',
+      type: 'directive',
+      description: 'Built-in layout directives (v-fill-height, v-fit-text, v-scroll-persist), coupled selection state machine (CSHR), bounded center scroll, and NanoCollapsible.',
     },
   },
   {
