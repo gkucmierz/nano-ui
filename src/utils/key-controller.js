@@ -377,4 +377,114 @@ export const stepWrappedIndex = (currentIndex, delta, length) => {
   return (((cur + step) % n) + n) % n;
 };
 
+const ACTIVE_OPTION_CLASSES = ['active', 'is-active', 'is-selected', 'selected'];
+const INTERACTIVE_ITEM_CLASSES = [
+  'nano-pill',
+  'cshr-pill',
+  'cshr-card',
+  'nano-tri-border-card',
+  'bounded-scroll-item',
+  'slice-row',
+  'seg-btn',
+  'mode-btn',
+  'preset-btn',
+  'theme-pill',
+  'parser-pill',
+  'parser-card',
+];
+
+export const isGroupOptionActive = (el) => {
+  if (!el || typeof el !== 'object') return false;
+  if (el.classList && ACTIVE_OPTION_CLASSES.some((cls) => el.classList.contains(cls))) {
+    return true;
+  }
+  if (typeof el.getAttribute === 'function') {
+    if (
+      el.getAttribute('aria-selected') === 'true' ||
+      el.getAttribute('aria-pressed') === 'true'
+    ) {
+      return true;
+    }
+  }
+  return false;
+};
+
+export const isInteractiveGroupOptionElement = (el) => {
+  if (!el || typeof el !== 'object') return false;
+  if (el.disabled || (typeof el.getAttribute === 'function' && el.getAttribute('aria-disabled') === 'true')) {
+    return false;
+  }
+  const tag = String(el.tagName || '').toUpperCase();
+  if (tag === 'BUTTON') return true;
+  if (el.classList && INTERACTIVE_ITEM_CLASSES.some((cls) => el.classList.contains(cls))) {
+    return true;
+  }
+  const role = typeof el.getAttribute === 'function' ? String(el.getAttribute('role') || '') : '';
+  return role === 'tab' || role === 'option' || role === 'radio';
+};
+
+export const getGroupInteractiveChildren = (containerEl) => {
+  if (!containerEl || !containerEl.children) return [];
+  const children = Array.from(containerEl.children).filter(isInteractiveGroupOptionElement);
+  if (children.length < 2) return [];
+  if (!children.some(isGroupOptionActive)) return [];
+  return children;
+};
+
+export const resolveInteractiveDomGroup = (targetEl, boundaryEl = null) => {
+  let cur = targetEl && targetEl.parentElement ? targetEl.parentElement : null;
+  while (cur && cur !== boundaryEl && cur !== document?.body) {
+    if (cur.classList && (cur.classList.contains('sidebar') || cur.classList.contains('nano-code-block'))) {
+      return null;
+    }
+    const items = getGroupInteractiveChildren(cur);
+    if (items.length >= 2) {
+      return cur;
+    }
+    cur = cur.parentElement;
+  }
+  return null;
+};
+
+/**
+ * Steps the active option inside a pill bar / segmented control / card grid by `delta` (-1 / +1)
+ * with modulo wrap-around and invokes `.click()` on the target element.
+ */
+export const stepInteractiveDomGroup = (boundaryEl, delta, preferredGroupEl = null) => {
+  if (!boundaryEl || typeof boundaryEl.querySelectorAll !== 'function') return false;
+
+  let groupEl = null;
+  if (
+    preferredGroupEl &&
+    boundaryEl.contains(preferredGroupEl) &&
+    getGroupInteractiveChildren(preferredGroupEl).length >= 2
+  ) {
+    groupEl = preferredGroupEl;
+  } else {
+    const candidates = boundaryEl.querySelectorAll('div, nav, section, ul');
+    for (const cand of candidates) {
+      if (cand.closest && (cand.closest('.nano-code-block') || cand.closest('.sidebar'))) {
+        continue;
+      }
+      if (getGroupInteractiveChildren(cand).length >= 2) {
+        groupEl = cand;
+        break;
+      }
+    }
+  }
+
+  if (!groupEl) return false;
+  const items = getGroupInteractiveChildren(groupEl);
+  if (items.length < 2) return false;
+
+  const curIdx = items.findIndex(isGroupOptionActive);
+  const nextIdx = curIdx === -1 ? (delta >= 0 ? 0 : items.length - 1) : stepWrappedIndex(curIdx, delta, items.length);
+  const nextEl = items[nextIdx];
+  if (nextEl && typeof nextEl.click === 'function') {
+    nextEl.click();
+    return true;
+  }
+  return false;
+};
+
 export default createKeyController;
