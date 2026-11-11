@@ -445,7 +445,7 @@ export function computeFloating3DArtifacts(
   perfectionScalar = 0,
   cursorNormX = 0,
   cursorNormY = 0,
-  stageBounds = { minX: -25.5, maxX: 57.5, minY: -10.5, maxY: 42.5 }
+  stageBounds = { minX: -24.2, maxX: 56.2, minY: -9.2, maxY: 41.2 }
 ) {
   const T = BAUHAUS_PHI_EXACT_TARGETS;
   const isLocked = perfectionScalar <= 1e-9;
@@ -495,8 +495,8 @@ export function computeFloating3DArtifacts(
   const fBell = pickFormula(MATH_FORMULA_SWEEP_BANK.HARMONIC_BELL, T.freqSphereBellHz, 2.7);
 
   // 3D Orbiting coordinates in Left & Right Holographic Wings:
-  // Cards are allowed to break out beyond the inner violet backdrop ([-21..53, -6..38])
-  // via SVG overflow:visible + .parentNode boundary detection, preventing vertical card crowding.
+  // Symmetrically balanced around vertical center y = 16.0 (top ~ 5.3, bottom ~ 26.7)
+  // and strictly bounded within the dark holographic stage backdrop so cards never fly upward out of frame.
   const rawDefs = [
     {
       id: 'art-phi',
@@ -506,7 +506,7 @@ export function computeFloating3DArtifacts(
       color: '#38bdf8',
       pos3D: [
         39.5 + Math.cos(phaseRad * 0.65) * 1.8,
-        3.6 + Math.sin(phaseRad * 0.65) * 1.4,
+        4.6 + Math.sin(phaseRad * 0.65) * 1.1,
         T.zSphere + Math.sin(phaseRad * 0.65) * 4.5,
       ],
       target3D: [22.55, 9.45, T.zSphere],
@@ -523,7 +523,7 @@ export function computeFloating3DArtifacts(
       color: '#818cf8',
       pos3D: [
         -7.5 + Math.sin(phaseRad * 0.55) * 1.8,
-        4.2 + Math.cos(phaseRad * 0.55) * 1.4,
+        5.4 + Math.cos(phaseRad * 0.55) * 1.1,
         T.zPillar + Math.cos(phaseRad * 0.55) * 4.5,
       ],
       target3D: [7, 11, T.zPillar],
@@ -540,7 +540,7 @@ export function computeFloating3DArtifacts(
       color: '#2dd4bf',
       pos3D: [
         39.5 + Math.sin(phaseRad * 0.72 + 1.4) * 1.8,
-        27.4 + Math.cos(phaseRad * 0.72 + 1.4) * 1.3,
+        26.8 + Math.cos(phaseRad * 0.72 + 1.4) * 1.1,
         Math.sin(phaseRad * 0.72 + 1.4) * 5.2,
       ],
       target3D: [25, 13.875, 0],
@@ -557,7 +557,7 @@ export function computeFloating3DArtifacts(
       color: '#f59e0b',
       pos3D: [
         -7.5 + Math.cos(phaseRad * 0.8 + 2.2) * 1.8,
-        27.6 + Math.sin(phaseRad * 0.8 + 2.2) * 1.3,
+        26.6 + Math.sin(phaseRad * 0.8 + 2.2) * 1.1,
         Math.cos(phaseRad * 0.8 + 2.2) * 5.2,
       ],
       target3D: [9.125, 22.8, T.zPillar],
@@ -567,6 +567,8 @@ export function computeFloating3DArtifacts(
       chartKind: 'harmonic-wave',
     },
   ];
+
+  const HUD_VERTICAL_PITCH_DAMPING = 0.68;
 
   const projected = rawDefs.map((item) => {
     const pCard = projectOrthographic3D(
@@ -585,10 +587,18 @@ export function computeFloating3DArtifacts(
     );
 
     const normZ = Math.max(-1, Math.min(1, pCard.exactZ / 9));
-    // Depth-differential holographic cursor parallax shift (cards at z > 0 glide further than cards at z < 0)
+    // Depth-differential holographic cursor parallax shift with damped vertical lever arm
+    // and hemisphere slot bounds so cards stay anchored in their top/bottom wing zones.
     const parallaxFactor = 1 + normZ * 0.45;
-    const rawShiftedX = pCard.x + cursorNormX * 1.65 * parallaxFactor;
-    const rawShiftedY = pCard.y + cursorNormY * 1.15 * parallaxFactor;
+    const dampedCardY = item.pos3D[1] + (pCard.exactY - item.pos3D[1]) * HUD_VERTICAL_PITCH_DAMPING;
+    const clampedCursorX = Math.max(-1, Math.min(1, Number(cursorNormX) || 0));
+    const clampedCursorY = Math.max(-1, Math.min(1, Number(cursorNormY) || 0));
+    const rawShiftedX = pCard.x + clampedCursorX * 1.65 * parallaxFactor;
+    const slotBoundedY =
+      item.wingSlot === 'top'
+        ? Math.min(13.2, dampedCardY + clampedCursorY * 0.85 * parallaxFactor)
+        : Math.max(18.8, dampedCardY + clampedCursorY * 0.85 * parallaxFactor);
+    const rawShiftedY = slotBoundedY;
 
     const scale = Number((0.92 + normZ * 0.16).toFixed(3));
     const opacity = Number((0.76 + normZ * 0.24).toFixed(2));
@@ -663,21 +673,22 @@ export function computeFloating3DArtifacts(
   });
 
   // Pairwise same-wing vertical anti-collision guard:
-  // Ensures top & bottom cards on the same wing (e.g. Φ SWEEP & △ KLIN on the right wing)
-  // never overlap each other at steep pitch angles, pushing them cleanly into the overflow:visible margin.
+  // Preserves clear vertical separation between top & bottom wing slots while keeping both strictly inside stageBounds.
+  const boundsHeight = Number(stageBounds.maxY) - Number(stageBounds.minY);
+  const desiredGapY = boundsHeight >= 34 ? 8.2 : 1.6;
   for (const wingName of ['left', 'right']) {
     const topCard = projected.find((c) => c.wing === wingName && c.wingSlot === 'top');
     const bottomCard = projected.find((c) => c.wing === wingName && c.wingSlot === 'bottom');
     if (topCard && bottomCard) {
-      const minCenterDistY = topCard.cardHalfH + bottomCard.cardHalfH + 1.6;
+      const minCenterDistY = topCard.cardHalfH + bottomCard.cardHalfH + desiredGapY;
       const currentDistY = bottomCard.y - topCard.y;
       if (currentDistY < minCenterDistY) {
         const push = (minCenterDistY - currentDistY) * 0.5;
         topCard.y = Number(
-          Math.max(stageBounds.minY + topCard.cardHalfH + 0.4, topCard.y - push).toFixed(3)
+          Math.max(stageBounds.minY + topCard.cardHalfH + 0.65, topCard.y - push).toFixed(3)
         );
         bottomCard.y = Number(
-          Math.min(stageBounds.maxY - bottomCard.cardHalfH - 0.4, bottomCard.y + push).toFixed(3)
+          Math.min(stageBounds.maxY - bottomCard.cardHalfH - 0.65, bottomCard.y + push).toFixed(3)
         );
       }
     }
@@ -1079,6 +1090,62 @@ export function reanchorGoldenFlowAngle({
 }
 
 /**
+ * Computes viewport-normalized cursor field coordinates `[-1, 1]` strictly relative to
+ * the 3D SVG canvas `stageRect` (`getBoundingClientRect()`), releasing cursor presence
+ * whenever the pointer hovers stage headers/toolbars outside the 3D canvas or when browser
+ * scrolling moves the 3D canvas away from a stationary cursor.
+ */
+export function computeStagePointerField({
+  clientX,
+  clientY,
+  stageRect,
+  haloPx = 12,
+  isDragging = false,
+} = {}) {
+  if (
+    !stageRect ||
+    !(stageRect.width > 0) ||
+    !(stageRect.height > 0) ||
+    !Number.isFinite(clientX) ||
+    !Number.isFinite(clientY)
+  ) {
+    return { inside: false, normX: 0, normY: 0, presence: 0 };
+  }
+
+  const right = Number.isFinite(stageRect.right)
+    ? stageRect.right
+    : stageRect.left + stageRect.width;
+  const bottom = Number.isFinite(stageRect.bottom)
+    ? stageRect.bottom
+    : stageRect.top + stageRect.height;
+  const pad = Math.max(0, Number(haloPx) || 0);
+
+  const inside =
+    clientX >= stageRect.left - pad &&
+    clientX <= right + pad &&
+    clientY >= stageRect.top - pad &&
+    clientY <= bottom + pad;
+
+  if (!inside && !isDragging) {
+    return { inside: false, normX: 0, normY: 0, presence: 0 };
+  }
+
+  const normX = Number(
+    Math.max(-1, Math.min(1, ((clientX - stageRect.left) / stageRect.width) * 2 - 1)).toFixed(4)
+  );
+  const normY = Number(
+    Math.max(-1, Math.min(1, ((clientY - stageRect.top) / stageRect.height) * 2 - 1)).toFixed(4)
+  );
+
+  return {
+    inside,
+    normX,
+    normY,
+    presence: 1,
+  };
+}
+
+/**
  * Computes the complete 3D Bauhaus Φ Tri-Primitive scene at (yawDeg, pitchDeg).
  */
 export function computeBauhausPhiScene3D(
@@ -1087,7 +1154,7 @@ export function computeBauhausPhiScene3D(
   calibrationPerturbation = 0,
   phaseRad = 0,
   cursorField = null,
-  stageBounds = { minX: -25.5, maxX: 57.5, minY: -10.5, maxY: 42.5 }
+  stageBounds = { minX: -24.2, maxX: 56.2, minY: -9.2, maxY: 41.2 }
 ) {
   const { rect, triangle, circle } = BAUHAUS_PHI_2D_SPEC;
   const cursorNormX = cursorField ? Number(cursorField.normX) || 0 : 0;
