@@ -174,29 +174,60 @@ const displayLabel = computed(() => {
 
 const effectivePlaceholder = computed(() => {
   if (props.placeholder) return props.placeholder;
-  return effectiveLang.value === 'en' ? 'Select date (YYYY-MM-DD)...' : 'Wybierz datę (RRRR-MM-DD)...';
+  return effectiveLang.value === 'en' ? 'Select date (YYYY-MM-DD)' : 'Wybierz datę (RRRR-MM-DD)';
 });
 
 const updatePopoverPosition = () => {
   if (!isOpen.value || !triggerRef.value || typeof window === 'undefined') return;
-  const mountEl = findSafeSelectMount(triggerRef.value);
-  teleportTarget.value = mountEl || 'body';
+  const { mountEl, viewportEl } = findSafeSelectMount(triggerRef.value, 336);
+  const useAncestorMount = Boolean(mountEl && mountEl.nodeType === 1);
+  teleportTarget.value = useAncestorMount ? mountEl : 'body';
+
   const triggerRect = triggerRef.value.getBoundingClientRect();
-  const refEl = getPositionedReferenceEl(mountEl);
-  const refRect = refEl ? refEl.getBoundingClientRect() : null;
+  const screenRect =
+    viewportEl && typeof viewportEl.getBoundingClientRect === 'function'
+      ? viewportEl.getBoundingClientRect()
+      : {
+        top: 0,
+        left: 0,
+        right: window.innerWidth || 1024,
+        bottom: window.innerHeight || 768,
+        width: window.innerWidth || 1024,
+        height: window.innerHeight || 768,
+      };
+
+  const refEl = useAncestorMount ? getPositionedReferenceEl(mountEl) : null;
+  const refRect = refEl && typeof refEl.getBoundingClientRect === 'function'
+    ? refEl.getBoundingClientRect()
+    : { top: 0, left: 0 };
+  const scrollLeft = useAncestorMount && refEl ? (refEl.scrollLeft || 0) : 0;
+  const scrollTop = useAncestorMount && refEl ? (refEl.scrollTop || 0) : 0;
+
+  const actualH = popoverRef.value?.offsetHeight || (props.showPresets ? 334 : 292);
   const layout = computeSelectDropdownLayout({
     triggerRect,
-    viewportWidth: window.innerWidth,
-    viewportHeight: window.innerHeight,
-    preferredMaxHeight: 330,
-    minDropdownWidth: 284,
-    referenceRect: refRect,
+    screenRect,
+    mountRect: refRect,
+    mountScrollLeft: scrollLeft,
+    mountScrollTop: scrollTop,
+    searchable: false,
+    optionsCount: 7,
+    maxDropdownHeight: actualH,
+    actualDropdownHeight: actualH,
+    actualChromeHeight: 0,
+    optionsScrollHeight: actualH,
+    gap: 6,
+    edgeMargin: 8,
   });
+
+  const baseWidth = Math.max(288, Math.round(triggerRect.width || 0), Number(layout.minWidth) || 288);
+  const clampedWidth = Math.min(316, Math.max(288, baseWidth));
+
   popoverStyle.value = {
-    position: layout.position,
-    top: `${layout.top}px`,
-    left: `${layout.left}px`,
-    width: `${Math.max(284, Math.min(312, layout.width))}px`,
+    position: useAncestorMount ? 'absolute' : 'fixed',
+    top: `${Math.round(Number(layout.top) || 0)}px`,
+    left: `${Math.round(Number(layout.left) || 0)}px`,
+    width: `${clampedWidth}px`,
     zIndex: 10050,
   };
 };
@@ -457,7 +488,7 @@ onUnmounted(() => {
   --ndp-muted: var(--nano-text-muted, var(--text-muted, #94a3b8));
   position: relative;
   display: inline-flex;
-  min-width: 215px;
+  min-width: 248px;
   user-select: none;
   -webkit-user-select: none;
 }
