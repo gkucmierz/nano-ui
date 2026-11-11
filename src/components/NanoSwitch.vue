@@ -1,6 +1,7 @@
 <script setup>
 import { ref, computed, watch, useId } from 'vue';
 import { resolveNanoColor } from '../utils/colors.js';
+import { playNanoUiSound } from '../utils/sound-controller.js';
 
 const props = defineProps({
   modelValue: {
@@ -35,6 +36,10 @@ const props = defineProps({
   id: {
     type: String,
     default: ''
+  },
+  sound: {
+    type: [Boolean, String, Object],
+    default: undefined
   }
 });
 
@@ -71,10 +76,12 @@ const toggle = (event) => {
     emit('update:indeterminate', false);
     emit('update:modelValue', true);
     emit('change', true, event);
+    playNanoUiSound('switchOn', { propSound: props.sound, minIntervalMs: 24 });
   } else {
     const nextVal = !isChecked.value;
     emit('update:modelValue', nextVal);
     emit('change', nextVal, event);
+    playNanoUiSound(nextVal ? 'switchOn' : 'switchOff', { propSound: props.sound, minIntervalMs: 24 });
   }
 };
 </script>
