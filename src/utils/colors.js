@@ -137,11 +137,15 @@ export const rgbToOklch = (r255, g255, b255) => {
  * Converts OKLCH { l, c, h } to 8-bit sRGB { r, g, b }.
  *
  * @param {number} l - Perceptual lightness in [0, 1]
+/**
+ * Converts OKLCH { l, c, h } directly into unclipped linear sRGB channels { rLin, gLin, bLin }.
+ *
+ * @param {number} l - Perceptual lightness in [0, 1]
  * @param {number} c - Chroma >= 0
  * @param {number} h - Hue angle in degrees [0, 360)
- * @returns {{ r: number, g: number, b: number }}
+ * @returns {{ rLin: number, gLin: number, bLin: number }}
  */
-export const oklchToRgb = (l, c, h) => {
+export const oklchToLinearRgb = (l, c, h) => {
   const L = clamp(l, 0, 1);
   const C = Math.max(0, c);
   const hRad = (normalizeAngle(h) * Math.PI) / 180;
@@ -157,9 +161,79 @@ export const oklchToRgb = (l, c, h) => {
   const mCone = mRoot * mRoot * mRoot;
   const sCone = sRoot * sRoot * sRoot;
 
-  const rLin = +4.0767416621 * lCone - 3.3077115913 * mCone + 0.2309699292 * sCone;
-  const gLin = -1.2684380046 * lCone + 2.6097574011 * mCone - 0.3413193965 * sCone;
-  const bLin = -0.0041960863 * lCone - 0.7034186147 * mCone + 1.7076147010 * sCone;
+  return {
+    rLin: +4.0767416621 * lCone - 3.3077115913 * mCone + 0.2309699292 * sCone,
+    gLin: -1.2684380046 * lCone + 2.6097574011 * mCone - 0.3413193965 * sCone,
+    bLin: -0.0041960863 * lCone - 0.7034186147 * mCone + 1.7076147010 * sCone,
+  };
+};
+
+/**
+ * Tests whether an OKLCH coordinate `(l, c, h)` lies inside the displayable sRGB gamut `[0, 1]^3`.
+ *
+ * @param {number} l - Perceptual lightness in [0, 1]
+ * @param {number} c - Chroma >= 0
+ * @param {number} h - Hue angle in degrees
+ * @param {number} [epsilon=0.0001] - Numerical tolerance
+ * @returns {boolean}
+ */
+export const isOklchInSrgbGamut = (l, c, h, epsilon = 0.0001) => {
+  const { rLin, gLin, bLin } = oklchToLinearRgb(l, c, h);
+  return (
+    rLin >= -epsilon &&
+    rLin <= 1 + epsilon &&
+    gLin >= -epsilon &&
+    gLin <= 1 + epsilon &&
+    bLin >= -epsilon &&
+    bLin <= 1 + epsilon
+  );
+};
+
+/**
+ * Computes the exact maximum sRGB-displayable OKLCH chroma $C_{\max}(L, H)$ at fixed `(l, h)`
+ * via 18-step binary search (~1.5e-6 precision). Prevents hue shifts caused by naive RGB clipping.
+ *
+ * @param {number} l - Perceptual lightness in [0, 1]
+ * @param {number} h - Hue angle in degrees
+ * @param {number} [maxSearch=0.4] - Upper chroma search bound
+ * @returns {number}
+ */
+export const getMaxOklchChroma = (l, h, maxSearch = 0.4) => {
+  const L = clamp(l, 0, 1);
+  if (L <= 0.0005 || L >= 0.9995) return 0;
+  const H = normalizeAngle(h);
+  let low = 0;
+  let high = Math.max(0.01, Number(maxSearch) || 0.4);
+  if (isOklchInSrgbGamut(L, high, H)) return high;
+  for (let i = 0; i < 18; i++) {
+    const mid = (low + high) * 0.5;
+    if (isOklchInSrgbGamut(L, mid, H)) {
+      low = mid;
+    } else {
+      high = mid;
+    }
+  }
+  return low;
+};
+
+/**
+ * Converts OKLCH { l, c, h } to 8-bit sRGB { r, g, b } with constant-hue gamut chroma clamping
+ * so out-of-gamut colors never shift hue during RGB/HEX conversion.
+ *
+ * @param {number} l - Perceptual lightness in [0, 1]
+ * @param {number} c - Chroma >= 0
+ * @param {number} h - Hue angle in degrees [0, 360)
+ * @returns {{ r: number, g: number, b: number }}
+ */
+export const oklchToRgb = (l, c, h) => {
+  const L = clamp(l, 0, 1);
+  const H = normalizeAngle(h);
+  const rawC = Math.max(0, c);
+  const safeC = isOklchInSrgbGamut(L, rawC, H)
+    ? rawC
+    : Math.min(rawC, getMaxOklchChroma(L, H, Math.max(0.4, rawC)));
+
+  const { rLin, gLin, bLin } = oklchToLinearRgb(L, safeC, H);
 
   return {
     r: Math.round(linearToSrgb(rLin) * 255),
