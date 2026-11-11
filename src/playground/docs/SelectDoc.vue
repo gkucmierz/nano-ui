@@ -837,27 +837,27 @@ const codeTabs = createDocTabs({
 }
 
 .sim-badge-indigo {
-  background: rgba(99, 102, 241, 0.18);
-  color: #818cf8;
-  border: 1px solid rgba(99, 102, 241, 0.35);
+  background: var(--nano-nav-active-bg, rgba(99, 102, 241, 0.18));
+  color: var(--nano-nav-active-color, #818cf8);
+  border: 1px solid color-mix(in srgb, var(--nano-nav-active-color, #818cf8) 38%, transparent);
 }
 
 .sim-badge-emerald {
-  background: rgba(16, 185, 129, 0.16);
-  color: #34d399;
-  border: 1px solid rgba(16, 185, 129, 0.35);
+  background: var(--nano-status-success-bg, rgba(16, 185, 129, 0.16));
+  color: var(--nano-status-success-text, #34d399);
+  border: 1px solid var(--nano-status-success-border, rgba(16, 185, 129, 0.35));
 }
 
 .sim-badge-amber {
-  background: rgba(245, 158, 11, 0.16);
-  color: #fbbf24;
-  border: 1px solid rgba(245, 158, 11, 0.35);
+  background: var(--nano-status-warn-bg, rgba(245, 158, 11, 0.16));
+  color: var(--nano-status-warn-text, #fbbf24);
+  border: 1px solid var(--nano-status-warn-border, rgba(245, 158, 11, 0.35));
 }
 
 .sim-badge-cyan {
-  background: rgba(56, 189, 248, 0.16);
-  color: #38bdf8;
-  border: 1px solid rgba(56, 189, 248, 0.35);
+  background: var(--nano-status-info-bg, rgba(56, 189, 248, 0.16));
+  color: var(--nano-status-info-text, #38bdf8);
+  border: 1px solid var(--nano-status-info-border, rgba(56, 189, 248, 0.35));
 }
 
 .sim-dual-grid {
@@ -890,10 +890,10 @@ const codeTabs = createDocTabs({
 
 .browser-frame {
   border-radius: 10px;
-  border: 1px solid var(--nano-border-card, rgba(255, 255, 255, 0.16));
-  background: #090d16;
+  border: 1px solid var(--nano-sim-frame-border, var(--nano-border-card));
+  background: var(--nano-sim-frame-bg, #090d16);
   overflow: hidden;
-  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.35);
+  box-shadow: var(--nano-sim-frame-shadow, 0 12px 32px rgba(0, 0, 0, 0.35));
 }
 
 .browser-chrome {
@@ -902,8 +902,8 @@ const codeTabs = createDocTabs({
   justify-content: space-between;
   gap: 10px;
   padding: 8px 12px;
-  background: #111827;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  background: var(--nano-sim-chrome-bg, #111827);
+  border-bottom: 1px solid var(--nano-sim-chrome-border, rgba(255, 255, 255, 0.08));
   font-size: 0.74rem;
 }
 
@@ -923,7 +923,7 @@ const codeTabs = createDocTabs({
 .b-dot.is-green { background: #10b981; }
 
 .browser-url {
-  color: #94a3b8;
+  color: var(--nano-sim-url-fg, #94a3b8);
   font-family: var(--nano-font-mono, monospace);
   overflow: hidden;
   text-overflow: ellipsis;
@@ -939,8 +939,8 @@ const codeTabs = createDocTabs({
 .browser-telemetry code {
   padding: 2px 6px;
   border-radius: 4px;
-  background: rgba(99, 102, 241, 0.16);
-  color: #a5b4fc;
+  background: var(--nano-sim-telemetry-bg, rgba(99, 102, 241, 0.16));
+  color: var(--nano-sim-telemetry-fg, #a5b4fc);
   font-size: 0.7rem;
 }
 
@@ -948,7 +948,7 @@ const codeTabs = createDocTabs({
   position: relative;
   width: 100%;
   overflow: hidden;
-  background: radial-gradient(circle at 50% 20%, rgba(99, 102, 241, 0.1), rgba(9, 13, 22, 0.98) 75%);
+  background: var(--nano-sim-viewport-bg, radial-gradient(circle at 50% 20%, rgba(99, 102, 241, 0.1), rgba(9, 13, 22, 0.98) 75%));
   box-sizing: border-box;
 }
 
@@ -963,10 +963,10 @@ const codeTabs = createDocTabs({
 }
 
 .sim-modal-window {
-  background: #12131a;
-  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: var(--nano-sim-window-bg, #12131a);
+  border: 1px solid var(--nano-sim-window-border, rgba(255, 255, 255, 0.12));
   border-radius: 12px;
-  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.65);
+  box-shadow: var(--nano-sim-window-shadow, 0 20px 50px rgba(0, 0, 0, 0.65));
   display: flex;
   flex-direction: column;
   max-height: 280px;
@@ -978,20 +978,20 @@ const codeTabs = createDocTabs({
   align-items: center;
   justify-content: space-between;
   padding: 12px 18px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-  background: rgba(255, 255, 255, 0.02);
+  border-bottom: 1px solid var(--nano-sim-window-divider, rgba(255, 255, 255, 0.08));
+  background: var(--nano-sim-window-header-bg, rgba(255, 255, 255, 0.02));
 }
 
 .sim-modal-title {
   font-size: 0.88rem;
   font-weight: 700;
-  color: #f8fafc;
+  color: var(--nano-sim-title-fg, #f8fafc);
 }
 
 .sim-modal-tag {
   font-size: 0.68rem;
   font-family: var(--nano-font-mono, monospace);
-  color: #94a3b8;
+  color: var(--nano-sim-muted-fg, #94a3b8);
 }
 
 .sim-modal-body {
@@ -1008,10 +1008,10 @@ const codeTabs = createDocTabs({
   gap: 6px;
   padding: 8px 12px;
   border-radius: 8px;
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid rgba(255, 255, 255, 0.06);
+  background: var(--nano-sim-surface-bg, rgba(255, 255, 255, 0.03));
+  border: 1px solid var(--nano-sim-surface-border, rgba(255, 255, 255, 0.06));
   font-size: 0.78rem;
-  color: #cbd5e1;
+  color: var(--nano-sim-body-fg, #cbd5e1);
 }
 
 .sim-setting-line {
@@ -1023,7 +1023,7 @@ const codeTabs = createDocTabs({
 .sim-status-ok {
   font-size: 0.68rem;
   font-weight: 700;
-  color: #4ade80;
+  color: var(--nano-status-success-text, #4ade80);
 }
 
 .sim-commit-grid {
@@ -1038,7 +1038,7 @@ const codeTabs = createDocTabs({
   margin-bottom: 6px;
   font-size: 0.76rem;
   font-weight: 700;
-  color: #94a3b8;
+  color: var(--nano-sim-muted-fg, #94a3b8);
 }
 
 .sim-modal-footer {
@@ -1047,8 +1047,8 @@ const codeTabs = createDocTabs({
   justify-content: flex-end;
   gap: 10px;
   padding: 11px 18px;
-  border-top: 1px solid rgba(255, 255, 255, 0.08);
-  background: #161821;
+  border-top: 1px solid var(--nano-sim-window-divider, rgba(255, 255, 255, 0.08));
+  background: var(--nano-sim-window-footer-bg, #161821);
   flex-shrink: 0;
 }
 
@@ -1058,12 +1058,12 @@ const codeTabs = createDocTabs({
   font-size: 0.8rem;
   font-weight: 600;
   cursor: pointer;
-  border: 1px solid rgba(255, 255, 255, 0.12);
+  border: 1px solid var(--nano-sim-btn-ghost-border, rgba(255, 255, 255, 0.12));
 }
 
 .sim-btn-ghost {
-  background: rgba(255, 255, 255, 0.05);
-  color: #e2e8f0;
+  background: var(--nano-sim-btn-ghost-bg, rgba(255, 255, 255, 0.05));
+  color: var(--nano-sim-btn-ghost-fg, #e2e8f0);
 }
 
 .sim-btn-save {
@@ -1076,7 +1076,7 @@ const codeTabs = createDocTabs({
   position: absolute;
   inset: 0;
   z-index: 260;
-  background: rgba(9, 13, 22, 0.76);
+  background: var(--nano-sim-backdrop-2nd, rgba(9, 13, 22, 0.76));
   backdrop-filter: blur(5px);
   display: flex;
   align-items: center;
@@ -1088,10 +1088,10 @@ const codeTabs = createDocTabs({
   max-width: 390px;
   padding: 18px 20px;
   border-radius: 12px;
-  background: #1e293b;
+  background: var(--nano-sim-card-2nd-bg, #1e293b);
   border: 1px solid #6366f1;
-  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.65);
-  color: #f8fafc;
+  box-shadow: var(--nano-sim-window-shadow, 0 20px 50px rgba(0, 0, 0, 0.65));
+  color: var(--nano-sim-title-fg, #f8fafc);
 }
 
 .sim-second-modal-card h5 {
@@ -1103,7 +1103,7 @@ const codeTabs = createDocTabs({
   margin: 0 0 14px;
   font-size: 0.8rem;
   line-height: 1.45;
-  color: #cbd5e1;
+  color: var(--nano-sim-body-fg, #cbd5e1);
 }
 
 .sim-bottom-viewport {
@@ -1118,10 +1118,10 @@ const codeTabs = createDocTabs({
   display: flex;
   align-items: center;
   justify-content: center;
-  border: 1px dashed rgba(255, 255, 255, 0.12);
+  border: 1px dashed var(--nano-sim-watermark-border, rgba(255, 255, 255, 0.12));
   border-radius: 8px;
   margin-bottom: 12px;
-  color: #64748b;
+  color: var(--nano-sim-watermark-fg, #64748b);
   font-size: 0.78rem;
 }
 
@@ -1131,8 +1131,8 @@ const codeTabs = createDocTabs({
   justify-content: space-between;
   padding: 10px 14px;
   border-radius: 9px;
-  background: rgba(15, 23, 42, 0.85);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: var(--nano-sim-dock-bg, rgba(15, 23, 42, 0.85));
+  border: 1px solid var(--nano-sim-surface-border, rgba(255, 255, 255, 0.1));
 }
 
 .sim-overlap-viewport {
@@ -1155,15 +1155,15 @@ const codeTabs = createDocTabs({
 .sim-scroll-section {
   padding: 14px 16px;
   border-radius: 9px;
-  background: rgba(15, 23, 42, 0.75);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  color: #cbd5e1;
+  background: var(--nano-sim-section-bg, rgba(15, 23, 42, 0.75));
+  border: 1px solid var(--nano-sim-surface-border, rgba(255, 255, 255, 0.08));
+  color: var(--nano-sim-body-fg, #cbd5e1);
   font-size: 0.82rem;
 }
 
 .sim-scroll-section p {
   margin: 6px 0 12px;
-  color: #94a3b8;
+  color: var(--nano-sim-muted-fg, #94a3b8);
   font-size: 0.78rem;
 }
 </style>
