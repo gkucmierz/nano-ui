@@ -9,7 +9,9 @@ import {
 import {
   detectLangFromPath,
   detectMediaTypeFromPath,
+  extractSvgIntrinsicDimensions,
   formatFileSizeBytes,
+  normalizeSvgPreviewMarkup,
   parseUnifiedDiff,
   PREVIEW_MEDIA_TYPES,
   resolveEditorViewMode,
@@ -320,22 +322,44 @@ const currentCode = computed(() => {
   return props.code || fetchedMediaText.value || '';
 });
 
-const svgInlineDataUrl = computed(() => {
-  const pathLower = String(props.filePath || '').toLowerCase();
-  if (!pathLower.endsWith('.svg')) return '';
+const isSvgAsset = computed(() => {
+  const pathClean = String(props.filePath || props.mediaUrl || '')
+    .split('?')[0]
+    .split('#')[0]
+    .trim()
+    .toLowerCase();
+  return pathClean.endsWith('.svg');
+});
+
+const rawSvgPreviewSource = computed(() => {
+  if (!isSvgAsset.value) return '';
   let rawSvg = currentCode.value.trim();
   if (!rawSvg && props.diff) {
-    const addedLines = props.diff
+    const reconstructedLines = props.diff
       .split(/\r?\n/)
-      .filter((l) => l.startsWith('+') && !l.startsWith('+++'))
+      .filter((l) => (l.startsWith('+') || l.startsWith(' ')) && !l.startsWith('+++'))
       .map((l) => l.slice(1));
-    rawSvg = addedLines.join('\n').trim();
+    rawSvg = reconstructedLines.join('\n').trim();
   }
-  if (!rawSvg || !rawSvg.includes('<svg')) return '';
-  return `data:image/svg+xml;utf8,${encodeURIComponent(rawSvg)}`;
+  return rawSvg && rawSvg.includes('<svg') ? rawSvg : '';
+});
+
+const svgIntrinsicDims = computed(() => {
+  if (!rawSvgPreviewSource.value) return { width: 0, height: 0, source: null };
+  return extractSvgIntrinsicDimensions(rawSvgPreviewSource.value);
+});
+
+const svgInlineDataUrl = computed(() => {
+  if (!rawSvgPreviewSource.value) return '';
+  const normalized = normalizeSvgPreviewMarkup(rawSvgPreviewSource.value);
+  if (!normalized) return '';
+  return `data:image/svg+xml;utf8,${encodeURIComponent(normalized)}`;
 });
 
 const effectiveMediaUrl = computed(() => {
+  if (isSvgAsset.value && svgInlineDataUrl.value) {
+    return svgInlineDataUrl.value;
+  }
   return props.mediaUrl || svgInlineDataUrl.value || '';
 });
 
@@ -459,17 +483,18 @@ watch(
   }
 );
 
-// Fetch complete text for custom text-based RFC formats (.nsd, .7uaudio, .meme) when only diff/mediaUrl is provided
+// Fetch complete text for custom text-based RFC formats (.nsd, .7uaudio, .meme) and .svg icons when only mediaUrl is provided
 watch(
-  [() => props.filePath, () => props.mediaUrl, resolvedMediaType, () => props.code, () => props.modelValue],
-  async ([_fp, mUrl, mt, explicitCode, modelVal]) => {
+  [() => props.filePath, () => props.mediaUrl, resolvedMediaType, isSvgAsset, () => props.code, () => props.modelValue],
+  async ([_fp, mUrl, mt, svgFlag, explicitCode, modelVal]) => {
     const seq = ++customTextReqSeq;
     if (customTextAbortCtrl) {
       customTextAbortCtrl.abort();
       customTextAbortCtrl = null;
     }
     fetchedMediaText.value = '';
-    if (!mUrl || (mt !== 'nsd' && mt !== '7uaudio' && mt !== 'meme')) return;
+    const isCustomTextFmt = mt === 'nsd' || mt === '7uaudio' || mt === 'meme';
+    if (!mUrl || (!isCustomTextFmt && !svgFlag)) return;
     if (explicitCode || modelVal !== undefined) return;
     if (!globalThis.fetch) return;
 
@@ -479,12 +504,13 @@ watch(
       const res = await globalThis.fetch(mUrl, { signal: ctrl.signal });
       if (seq !== customTextReqSeq || !res.ok) return;
       const ctype = String(res.headers?.get?.('content-type') || '').toLowerCase();
-      if (ctype.startsWith('image/') || ctype.startsWith('audio/') || ctype.startsWith('video/')) return;
+      const isAllowedSvgMime = svgFlag && ctype.includes('svg');
+      if (!isAllowedSvgMime && (ctype.startsWith('image/') || ctype.startsWith('audio/') || ctype.startsWith('video/'))) return;
       const txt = await res.text();
       if (seq !== customTextReqSeq) return;
       fetchedMediaText.value = txt;
     } catch {
-      // Ignore AbortError or offline fetch failure; diff fallback still works
+      // Ignore AbortError or offline fetch failure; diff/mediaUrl fallback still works
     }
   },
   { immediate: true }
@@ -534,8 +560,8 @@ function handleAfterImageLoad(e) {
   afterImgMissing.value = false;
   const el = e?.target;
   if (el) {
-    naturalImgWidth.value = el.naturalWidth || 0;
-    naturalImgHeight.value = el.naturalHeight || 0;
+    naturalImgWidth.value = el.naturalWidth || svgIntrinsicDims.value.width || 0;
+    naturalImgHeight.value = el.naturalHeight || svgIntrinsicDims.value.height || 0;
   }
 }
 
@@ -547,8 +573,8 @@ function handleBeforeImageLoad(e) {
   beforeImgMissing.value = false;
   const el = e?.target;
   if (el) {
-    beforeImgWidth.value = el.naturalWidth || 0;
-    beforeImgHeight.value = el.naturalHeight || 0;
+    beforeImgWidth.value = el.naturalWidth || svgIntrinsicDims.value.width || 0;
+    beforeImgHeight.value = el.naturalHeight || svgIntrinsicDims.value.height || 0;
   }
 }
 
@@ -1146,8 +1172,8 @@ defineExpose({
           >({{ formattedMediaDelta }})</span>
         </span>
 
-        <span v-if="naturalImgWidth && naturalImgHeight" class="nce-media-meta-badge">
-          {{ naturalImgWidth }}×{{ naturalImgHeight }} px
+        <span v-if="(naturalImgWidth || svgIntrinsicDims.width) && (naturalImgHeight || svgIntrinsicDims.height)" class="nce-media-meta-badge">
+          {{ naturalImgWidth || svgIntrinsicDims.width }}×{{ naturalImgHeight || svgIntrinsicDims.height }} px
         </span>
 
         <span v-if="mediaDurationSec > 0" class="nce-media-meta-badge">
@@ -1328,9 +1354,9 @@ defineExpose({
       <template v-if="resolvedMediaType === 'image'">
         <div class="nce-media-toolbar">
           <div class="nce-media-toolbar-left">
-            <span class="nce-media-kind-pill">IMAGE</span>
-            <span v-if="naturalImgWidth && naturalImgHeight" class="nce-media-dim-label">
-              {{ naturalImgWidth }} × {{ naturalImgHeight }} px
+            <span class="nce-media-kind-pill">{{ isSvgAsset ? 'SVG' : 'IMAGE' }}</span>
+            <span v-if="(naturalImgWidth || svgIntrinsicDims.width) && (naturalImgHeight || svgIntrinsicDims.height)" class="nce-media-dim-label">
+              {{ naturalImgWidth || svgIntrinsicDims.width }} × {{ naturalImgHeight || svgIntrinsicDims.height }} px
             </span>
             <span v-if="formattedMediaSize" class="nce-media-dim-label">
               · {{ formattedMediaSize }}
@@ -1418,6 +1444,7 @@ defineExpose({
                 :src="beforeMediaUrl"
                 :alt="`Before ${filePath}`"
                 class="nce-preview-img"
+                :class="{ 'is-svg-asset': isSvgAsset }"
                 :style="{ transform: `scale(${mediaZoom})` }"
                 @load="handleBeforeImageLoad"
                 @error="handleBeforeImageError"
@@ -1426,7 +1453,7 @@ defineExpose({
             <figure class="nce-media-figure">
               <figcaption class="nce-media-caption is-after" :class="{ 'is-deleted': afterImgMissing }">
                 {{ afterImgMissing ? 'AFTER · DELETED (0 B)' : 'AFTER' }}
-                <span v-if="!afterImgMissing && naturalImgWidth && naturalImgHeight">({{ naturalImgWidth }}×{{ naturalImgHeight }})</span>
+                <span v-if="!afterImgMissing && (naturalImgWidth || svgIntrinsicDims.width) && (naturalImgHeight || svgIntrinsicDims.height)">({{ naturalImgWidth || svgIntrinsicDims.width }}×{{ naturalImgHeight || svgIntrinsicDims.height }})</span>
               </figcaption>
               <div v-if="afterImgMissing" class="nce-media-missing-card is-deleted">
                 <span class="nce-media-missing-pill is-deleted">USUNIĘTO DUPLIKAT / PLIK (0 B)</span>
@@ -1437,6 +1464,7 @@ defineExpose({
                 :src="effectiveMediaUrl"
                 :alt="filePath || 'Image preview'"
                 class="nce-preview-img"
+                :class="{ 'is-svg-asset': isSvgAsset }"
                 :style="{ transform: `scale(${mediaZoom})` }"
                 @load="handleAfterImageLoad"
                 @error="handleAfterImageError"
@@ -1453,6 +1481,7 @@ defineExpose({
               :src="(mediaCompareMode === 'before' || afterImgMissing) && beforeMediaUrl ? beforeMediaUrl : (effectiveMediaUrl || beforeMediaUrl)"
               :alt="filePath || 'Image preview'"
               class="nce-preview-img"
+              :class="{ 'is-svg-asset': isSvgAsset }"
               :style="{ transform: `scale(${mediaZoom})` }"
               @load="handleAfterImageLoad"
               @error="handleAfterImageError"
@@ -2688,6 +2717,7 @@ td.is-empty {
 }
 
 .nce-preview-img {
+  display: block;
   max-width: 100%;
   max-height: 62vh;
   object-fit: contain;
@@ -2695,6 +2725,15 @@ td.is-empty {
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.45);
   transition: transform 0.15s ease;
   transform-origin: center center;
+}
+
+.nce-preview-img.is-svg-asset {
+  width: min(240px, 60vw);
+  height: auto;
+  min-width: 96px;
+  min-height: 96px;
+  box-shadow: none;
+  filter: drop-shadow(0 10px 24px rgba(0, 0, 0, 0.35));
 }
 
 .nce-audio-card {
