@@ -10,7 +10,11 @@ import {
   resolveInteractiveDomGroup,
   stepInteractiveDomGroup,
 } from '../utils/key-controller.js';
+import { useNanoUiSound, playNanoUiSound } from '../utils/sound-controller.js';
 import './playground.css';
+
+const GLOBAL_SOUND_STORAGE_KEY = 'nano-ui-global-sound';
+const globalSound = useNanoUiSound();
 
 const router = useRouter();
 const version = pkg.version;
@@ -156,6 +160,23 @@ const onContentPointerEvent = (e) => {
   }
 };
 
+const toggleGlobalSound = () => {
+  const next = !globalSound.enabled.value;
+  globalSound.setEnabled(next);
+  if (next) {
+    playNanoUiSound('switchOn', { propSound: true, minIntervalMs: 24 });
+  }
+};
+
+watch(
+  () => globalSound.enabled.value,
+  (enabled) => {
+    try {
+      globalThis.localStorage?.setItem(GLOBAL_SOUND_STORAGE_KEY, enabled ? '1' : '0');
+    } catch {}
+  }
+);
+
 const focusSearchInput = () => {
   searchInputRef.value?.focus();
   searchInputRef.value?.select();
@@ -163,6 +184,11 @@ const focusSearchInput = () => {
 
 onMounted(() => {
   initSavedLang();
+  try {
+    if (globalThis.localStorage?.getItem(GLOBAL_SOUND_STORAGE_KEY) === '1') {
+      globalSound.setEnabled(true);
+    }
+  } catch {}
   try {
     if (typeof localStorage !== 'undefined') {
       const savedSecs = localStorage.getItem(SIDEBAR_SECTIONS_STORAGE_KEY);
@@ -231,7 +257,7 @@ onUnmounted(() => {
   <div class="playground-layout">
     <aside class="sidebar">
       <div class="sidebar-header">
-        <router-link to="/" class="header-brand" v-tooltip="isNarrow ? 'Nano UI' : undefined" @click="playConceptSonicLogo(sharedBrandConcept)">
+        <router-link to="/" class="header-brand" v-tooltip="isNarrow ? 'Nano UI' : undefined" @click="globalSound.enabled.value && playConceptSonicLogo(sharedBrandConcept)">
           <svg class="brand-icon" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg" width="40" height="40">
             <rect x="1" y="1" width="30" height="30" rx="7.2" fill="var(--nano-bg-card-elevated, #0f172a)" stroke="var(--nano-border-card, rgba(148,163,184,0.35))" stroke-width="1"/>
             <template v-if="sharedBrandConcept === 'PHI'">
@@ -261,6 +287,26 @@ onUnmounted(() => {
           </div>
         </router-link>
         <div class="header-controls desktop-toggle">
+          <button
+            type="button"
+            class="sound-toggle"
+            :class="{ 'is-active': globalSound.enabled.value }"
+            :aria-pressed="globalSound.enabled.value ? 'true' : 'false'"
+            :aria-label="t(globalSound.enabled.value ? 'common.toggleSoundOff' : 'common.toggleSoundOn')"
+            v-tooltip="t(globalSound.enabled.value ? 'common.toggleSoundOff' : 'common.toggleSoundOn')"
+            @click="toggleGlobalSound"
+          >
+            <svg v-if="globalSound.enabled.value" class="theme-icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
+              <path d="M15.54 8.46a5 5 0 0 1 0 7.07"></path>
+              <path d="M19.07 4.93a10 10 0 0 1 0 14.14"></path>
+            </svg>
+            <svg v-else class="theme-icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
+              <line x1="22" y1="9" x2="16" y2="15"></line>
+              <line x1="16" y1="9" x2="22" y2="15"></line>
+            </svg>
+          </button>
           <button class="lang-toggle-btn" @click="toggleLang" :aria-label="t('common.toggleLang')" v-tooltip="t('common.toggleLang')">
             {{ currentLang.toUpperCase() }}
           </button>
@@ -827,6 +873,26 @@ onUnmounted(() => {
       </nav>
 
       <div class="sidebar-footer">
+        <button
+          type="button"
+          class="sound-toggle mobile-toggle"
+          :class="{ 'is-active': globalSound.enabled.value }"
+          :aria-pressed="globalSound.enabled.value ? 'true' : 'false'"
+          :aria-label="t(globalSound.enabled.value ? 'common.toggleSoundOff' : 'common.toggleSoundOn')"
+          v-tooltip="t(globalSound.enabled.value ? 'common.toggleSoundOff' : 'common.toggleSoundOn')"
+          @click="toggleGlobalSound"
+        >
+          <svg v-if="globalSound.enabled.value" class="theme-icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
+            <path d="M15.54 8.46a5 5 0 0 1 0 7.07"></path>
+            <path d="M19.07 4.93a10 10 0 0 1 0 14.14"></path>
+          </svg>
+          <svg v-else class="theme-icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
+            <line x1="22" y1="9" x2="16" y2="15"></line>
+            <line x1="16" y1="9" x2="22" y2="15"></line>
+          </svg>
+        </button>
         <button class="lang-toggle-btn mobile-toggle" @click="toggleLang" :aria-label="t('common.toggleLang')" v-tooltip="t('common.toggleLang')">
           {{ currentLang.toUpperCase() }}
         </button>

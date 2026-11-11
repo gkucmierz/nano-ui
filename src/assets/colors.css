@@ -199,6 +199,37 @@
   --nano-secret-badge-bg: rgba(16, 185, 129, 0.15);
   --nano-secret-badge-fg: #34d399;
   --nano-secret-prompt-fg: #34d399;
+
+  /* OS / Browser Viewport Simulator Tokens - Dark Theme */
+  --nano-sim-frame-bg: #090d16;
+  --nano-sim-frame-border: rgba(255, 255, 255, 0.16);
+  --nano-sim-frame-shadow: 0 12px 32px rgba(0, 0, 0, 0.35);
+  --nano-sim-chrome-bg: #111827;
+  --nano-sim-chrome-border: rgba(255, 255, 255, 0.08);
+  --nano-sim-url-fg: #94a3b8;
+  --nano-sim-telemetry-bg: rgba(99, 102, 241, 0.16);
+  --nano-sim-telemetry-fg: #a5b4fc;
+  --nano-sim-viewport-bg: radial-gradient(circle at 50% 20%, rgba(99, 102, 241, 0.1), rgba(9, 13, 22, 0.98) 75%);
+  --nano-sim-window-bg: #12131a;
+  --nano-sim-window-border: rgba(255, 255, 255, 0.12);
+  --nano-sim-window-shadow: 0 20px 50px rgba(0, 0, 0, 0.65);
+  --nano-sim-window-header-bg: rgba(255, 255, 255, 0.02);
+  --nano-sim-window-footer-bg: #161821;
+  --nano-sim-window-divider: rgba(255, 255, 255, 0.08);
+  --nano-sim-title-fg: #f8fafc;
+  --nano-sim-body-fg: #cbd5e1;
+  --nano-sim-muted-fg: #94a3b8;
+  --nano-sim-surface-bg: rgba(255, 255, 255, 0.03);
+  --nano-sim-surface-border: rgba(255, 255, 255, 0.08);
+  --nano-sim-dock-bg: rgba(15, 23, 42, 0.85);
+  --nano-sim-section-bg: rgba(15, 23, 42, 0.75);
+  --nano-sim-watermark-border: rgba(255, 255, 255, 0.12);
+  --nano-sim-watermark-fg: #64748b;
+  --nano-sim-btn-ghost-bg: rgba(255, 255, 255, 0.05);
+  --nano-sim-btn-ghost-border: rgba(255, 255, 255, 0.12);
+  --nano-sim-btn-ghost-fg: #e2e8f0;
+  --nano-sim-backdrop-2nd: rgba(9, 13, 22, 0.76);
+  --nano-sim-card-2nd-bg: #1e293b;
 }
 
 :root[data-theme="light"],
@@ -388,4 +419,35 @@ html[data-theme="light"],
   --nano-secret-badge-bg: rgba(5, 150, 105, 0.12);
   --nano-secret-badge-fg: #047857;
   --nano-secret-prompt-fg: #047857;
+
+  /* OS / Browser Viewport Simulator Tokens - Light Theme (Crisp Native macOS / Safari Light Chrome) */
+  --nano-sim-frame-bg: #f1f5f9;
+  --nano-sim-frame-border: #cbd5e1;
+  --nano-sim-frame-shadow: 0 10px 28px rgba(15, 23, 42, 0.08);
+  --nano-sim-chrome-bg: #e2e8f0;
+  --nano-sim-chrome-border: #cbd5e1;
+  --nano-sim-url-fg: #475569;
+  --nano-sim-telemetry-bg: rgba(79, 70, 229, 0.12);
+  --nano-sim-telemetry-fg: #4338ca;
+  --nano-sim-viewport-bg: radial-gradient(circle at 50% 18%, rgba(99, 102, 241, 0.09), rgba(241, 245, 249, 0.96) 76%);
+  --nano-sim-window-bg: #ffffff;
+  --nano-sim-window-border: #cbd5e1;
+  --nano-sim-window-shadow: 0 16px 38px rgba(15, 23, 42, 0.12);
+  --nano-sim-window-header-bg: #f8fafc;
+  --nano-sim-window-footer-bg: #f8fafc;
+  --nano-sim-window-divider: #e2e8f0;
+  --nano-sim-title-fg: #0f172a;
+  --nano-sim-body-fg: #1e293b;
+  --nano-sim-muted-fg: #475569;
+  --nano-sim-surface-bg: #f8fafc;
+  --nano-sim-surface-border: #e2e8f0;
+  --nano-sim-dock-bg: rgba(255, 255, 255, 0.92);
+  --nano-sim-section-bg: #ffffff;
+  --nano-sim-watermark-border: #cbd5e1;
+  --nano-sim-watermark-fg: #64748b;
+  --nano-sim-btn-ghost-bg: #ffffff;
+  --nano-sim-btn-ghost-border: #cbd5e1;
+  --nano-sim-btn-ghost-fg: #1e293b;
+  --nano-sim-backdrop-2nd: rgba(15, 23, 42, 0.42);
+  --nano-sim-card-2nd-bg: #ffffff;
 }

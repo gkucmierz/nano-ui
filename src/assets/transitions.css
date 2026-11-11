@@ -26,22 +26,39 @@
   --nano-transition-modal-backdrop: var(--nano-duration-medium) var(--nano-ease-out);
   --nano-transition-modal-enter: var(--nano-duration-slow) var(--nano-ease-spring);
   --nano-transition-modal-leave: var(--nano-duration-fast) var(--nano-ease-in);
-  --nano-transition-ripple: var(--nano-duration-ripple) var(--nano-ease-linear);
+  --nano-ease-ripple: cubic-bezier(0.22, 1, 0.36, 1);
+  --nano-transition-ripple: 540ms var(--nano-ease-ripple);
 }
 
-/* Ripple Animation Keyframes */
+/* 120fps GPU-Composited Ripple Wave (Exact Farthest-Corner Geometry + currentColor Tint) */
 span.ripple {
   position: absolute;
   border-radius: 50%;
-  transform: scale(0);
-  animation: nano-ripple-anim var(--nano-transition-ripple);
-  background-color: var(--nano-ripple-color, rgba(255, 255, 255, 0.4));
   pointer-events: none;
+  user-select: none;
+  contain: layout style paint;
+  will-change: transform, opacity;
+  transform: translate3d(0, 0, 0) scale(0.06);
+  opacity: 0.92;
+  background: radial-gradient(
+    circle,
+    color-mix(in srgb, currentColor 22%, var(--nano-ripple-color, rgba(255, 255, 255, 0.28))) 0%,
+    color-mix(in srgb, currentColor 13%, var(--nano-ripple-color, rgba(255, 255, 255, 0.14))) 62%,
+    transparent 100%
+  );
+  animation: nano-ripple-anim var(--nano-transition-ripple) forwards;
 }
 
 @keyframes nano-ripple-anim {
-  to {
-    transform: scale(4);
+  0% {
+    transform: translate3d(0, 0, 0) scale(0.06);
+    opacity: 0.92;
+  }
+  42% {
+    opacity: 0.68;
+  }
+  100% {
+    transform: translate3d(0, 0, 0) scale(1.04);
     opacity: 0;
   }
 }
