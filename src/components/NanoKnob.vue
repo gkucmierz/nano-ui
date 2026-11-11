@@ -5,6 +5,12 @@ import NanoIcon from './NanoIcon.vue';
 import { tooltipDirective as vTooltip } from '../directives/tooltip.js';
 import { clamp, normalizeAngle } from '../utils/math.js';
 import { resolveNanoColor } from '../utils/colors.js';
+import {
+  playNanoUiSound,
+  computeKnobDetentCrossings,
+} from '../utils/sound-controller.js';
+
+let knobUidSeq = 0;
 
 const props = defineProps({
   /**
@@ -126,6 +132,24 @@ const props = defineProps({
     type: String,
     default: 'Rotary angle dial',
   },
+  /**
+   * Optional tactile NanoSound (.nsd) stepper-motor ticks & cardinal detents:
+   * - `undefined` (default): inherits global `configureNanoUiSound` / `app.use(NanoUI, { sound })`
+   * - `true`: enables stepper-motor `.nsd` audio on this knob
+   * - `false`: mutes this knob even when global sound is enabled
+   * - `string | object`: custom `.nsd` expression or `{ enabled, volume, tickStep }`
+   */
+  sound: {
+    type: [Boolean, String, Object],
+    default: undefined,
+  },
+  /**
+   * Angular spacing in degrees between stepper-motor acoustic micro-ticks when `sound` is active
+   */
+  tickStep: {
+    type: Number,
+    default: 6,
+  },
 });
 
 const emit = defineEmits([
@@ -164,6 +188,9 @@ const displayValueText = computed(() => {
   return `${val}${props.unit}`;
 });
 
+const knobSoundKey = `nano-knob-${++knobUidSeq}`;
+let lastSoundTimestamp = 0;
+
 const clampOrWrap = (nextVal) => {
   const stepVal = props.step > 0 ? Math.round(nextVal / props.step) * props.step : nextVal;
   return clamp(Number(stepVal.toFixed(2)), props.min, props.max);
@@ -171,13 +198,54 @@ const clampOrWrap = (nextVal) => {
 
 const updateAngle = (val) => {
   if (props.disabled) return;
+  const prev = props.modelValue;
   const next = clampOrWrap(val);
+  if (next !== prev) {
+    const now = globalThis.performance ? globalThis.performance.now() : Date.now();
+    const dtMs = lastSoundTimestamp > 0 ? now - lastSoundTimestamp : 32;
+    lastSoundTimestamp = now;
+    const effectiveTickDeg = Math.max(
+      Number(props.step) || 1,
+      Number(props.sound?.tickStep) || Number(props.tickStep) || 6
+    );
+    const crossing = computeKnobDetentCrossings(prev, next, {
+      wrap: props.wrap,
+      tickStep: effectiveTickDeg,
+      cardinalStep: 30,
+      showTicks: props.showTicks,
+      dtMs,
+    });
+    if (crossing.crossedCardinal) {
+      playNanoUiSound('knobCardinal', {
+        propSound: props.sound,
+        playbackRate: crossing.playbackRate,
+        minIntervalMs: 18,
+        throttleKey: knobSoundKey,
+        nowMs: now,
+      });
+    } else if (crossing.crossedTick) {
+      playNanoUiSound('knobTick', {
+        propSound: props.sound,
+        playbackRate: crossing.playbackRate,
+        minIntervalMs: 18,
+        throttleKey: knobSoundKey,
+        nowMs: now,
+      });
+    }
+  }
   emit('update:modelValue', next);
   emit('change', next);
 };
 
 const handleReset = () => {
   if (props.disabled) return;
+  if (props.modelValue !== props.defaultValue) {
+    playNanoUiSound('knobReset', {
+      propSound: props.sound,
+      minIntervalMs: 40,
+      throttleKey: `${knobSoundKey}:reset`,
+    });
+  }
   emit('update:modelValue', props.defaultValue);
   emit('change', props.defaultValue);
   emit('reset', props.defaultValue);

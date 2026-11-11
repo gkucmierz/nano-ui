@@ -1,8 +1,9 @@
 <script setup>
-import { ref } from 'vue';
+import { ref, computed } from 'vue';
 import NanoKnob from '../../components/NanoKnob.vue';
 import NanoSwitch from '../../components/NanoSwitch.vue';
 import NanoCodeBlock from '../../components/NanoCodeBlock.vue';
+import { useNanoUiSound } from '../../utils/sound-controller.js';
 import { createDocTabs } from '../docSnippets.js';
 import { t } from '../../locales.js';
 
@@ -12,7 +13,22 @@ const knobColor = ref('cyan');
 const centerMode = ref('reset');
 const showTicks = ref(true);
 const wrap = ref(true);
+const localSoundMode = ref('inherit'); // 'inherit' (undefined) | 'true' | 'false'
 const disabled = ref(false);
+const globalSound = useNanoUiSound();
+
+const soundModes = [
+  { id: 'inherit', label: 'inherit' },
+  { id: 'true', label: ':sound="true"' },
+  { id: 'false', label: ':sound="false"' },
+];
+const resolvedLocalSound = computed(() =>
+  localSoundMode.value === 'true'
+    ? true
+    : localSoundMode.value === 'false'
+      ? false
+      : undefined
+);
 
 const sizes = [44, 56, 72, 96];
 const colors = ['primary', 'cyan', 'purple', 'emerald', 'amber', 'rose'];
@@ -41,6 +57,7 @@ const rotationAngle = ref(45);
     color="cyan"
     center-mode="reset"
     :show-ticks="true"
+    :sound="true"
     reset-tooltip="Reset to 0°"
   />
 </template>`;
@@ -61,6 +78,7 @@ const codeTabs = createDocTabs({
         'centerMode: String (default: "reset") - Center hub mode ("reset" | "value" | "none")',
         'unit: String (default: "°") - Unit suffix for value readout',
         'showTicks: Boolean (default: false) - Render 12-hour cardinal rim ticks',
+        'sound: Boolean | String | Object (default: undefined) - Optional .nsd stepper-motor micro-ticks & cardinal detents (inherits global configureNanoUiSound when undefined)',
         'disabled: Boolean (default: false) - Disable interaction',
       ],
     },
@@ -105,6 +123,7 @@ const codeTabs = createDocTabs({
             :center-mode="centerMode"
             :show-ticks="showTicks"
             :wrap="wrap"
+            :sound="resolvedLocalSound"
             :disabled="disabled"
             reset-tooltip="Reset (0°)"
           />
@@ -170,6 +189,22 @@ const codeTabs = createDocTabs({
             </div>
           </div>
 
+          <div class="ctrl-group">
+            <span class="ctrl-label">LOCAL :SOUND PROP (OVERRIDES GLOBAL)</span>
+            <div class="nano-btn-group">
+              <button
+                v-for="sm in soundModes"
+                :key="sm.id"
+                type="button"
+                class="nano-btn nano-btn-secondary nano-btn-sm"
+                :class="{ 'nano-btn-active': localSoundMode === sm.id }"
+                @click="localSoundMode = sm.id"
+              >
+                {{ sm.label }}
+              </button>
+            </div>
+          </div>
+
           <div class="toggle-grid">
             <label class="toggle-item">
               <NanoSwitch v-model="showTicks" size="compact" />
@@ -178,6 +213,14 @@ const codeTabs = createDocTabs({
             <label class="toggle-item">
               <NanoSwitch v-model="wrap" size="compact" />
               <span>{{ t('knob.wrap') }}</span>
+            </label>
+            <label class="toggle-item">
+              <NanoSwitch
+                :model-value="globalSound.enabled.value"
+                size="compact"
+                @update:model-value="globalSound.setEnabled"
+              />
+              <span>Global NanoUI <code>.nsd</code> audio</span>
             </label>
             <label class="toggle-item">
               <NanoSwitch v-model="disabled" size="compact" />
@@ -196,19 +239,19 @@ const codeTabs = createDocTabs({
       <div class="studio-rack">
         <div class="rack-channel">
           <span class="rack-title">AZIMUTH (θ)</span>
-          <NanoKnob v-model="camAzimuth" :size="68" color="cyan" center-mode="value" :show-ticks="true" />
+          <NanoKnob v-model="camAzimuth" :size="68" color="cyan" center-mode="value" :show-ticks="true" :sound="resolvedLocalSound" />
         </div>
         <div class="rack-channel">
           <span class="rack-title">ELEVATION (φ)</span>
-          <NanoKnob v-model="camElevation" :min="-90" :max="90" :wrap="false" :size="68" color="purple" center-mode="value" :show-ticks="true" />
+          <NanoKnob v-model="camElevation" :min="-90" :max="90" :wrap="false" :size="68" color="purple" center-mode="value" :show-ticks="true" :sound="resolvedLocalSound" />
         </div>
         <div class="rack-channel">
           <span class="rack-title">HORIZON ROLL</span>
-          <NanoKnob v-model="camRoll" :size="68" color="emerald" center-mode="reset" :show-ticks="true" />
+          <NanoKnob v-model="camRoll" :size="68" color="emerald" center-mode="reset" :show-ticks="true" :sound="resolvedLocalSound" />
         </div>
         <div class="rack-channel">
           <span class="rack-title">FILTER CUTOFF</span>
-          <NanoKnob v-model="synthCutoff" :min="0" :max="300" :wrap="false" :size="68" color="amber" center-mode="value" unit="Hz" :show-ticks="true" />
+          <NanoKnob v-model="synthCutoff" :min="0" :max="300" :wrap="false" :size="68" color="amber" center-mode="value" unit="Hz" :show-ticks="true" :sound="resolvedLocalSound" />
         </div>
       </div>
     </div>
@@ -299,6 +342,7 @@ const codeTabs = createDocTabs({
   gap: 10px;
   font-size: 0.84rem;
   cursor: pointer;
+  user-select: none;
 }
 
 .studio-rack {
