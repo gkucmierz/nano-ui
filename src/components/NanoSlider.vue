@@ -5,6 +5,12 @@ import {
   getSliderThumbOverhangPx,
   resolveSliderSafeInsets,
 } from '../utils/sliderPositioning.js';
+import {
+  playNanoUiSound,
+  computeSliderAcousticEvents,
+} from '../utils/sound-controller.js';
+
+let sliderUidSeq = 0;
 
 const props = defineProps({
   modelValue: {
@@ -47,6 +53,17 @@ const props = defineProps({
     type: String,
     default: 'Slider',
   },
+  /**
+   * Optional tactile NanoSound (.nsd) feedback (velvety drag swish + 25%/50%/75% quartile chimes):
+   * - `undefined` (default): inherits global `configureNanoUiSound` / `app.use(NanoUI, { sound })`
+   * - `true`: enables `.nsd` audio on this slider
+   * - `false`: mutes this slider even when global sound is enabled
+   * - `string | object`: custom `.nsd` expression or `{ enabled, volume, swish, quartiles }`
+   */
+  sound: {
+    type: [Boolean, String, Object],
+    default: undefined,
+  },
 });
 
 const emit = defineEmits(['update:modelValue', 'change']);
@@ -56,6 +73,52 @@ const trackRef = ref(null);
 const isDragging = ref(false);
 const activeThumbIndex = ref(0);
 const pendingOverlapResolve = ref(false);
+const sliderSoundKey = `nano-slider-${++sliderUidSeq}`;
+
+const valueToPct = (val) => {
+  const span = props.max - props.min;
+  if (span <= 0) return 0;
+  return ((clamp(Number(val) || 0, props.min, props.max) - props.min) / span) * 100;
+};
+
+const emitSliderSoundForTransition = (prevVal, nextVal, allowSwish = true) => {
+  if (prevVal === nextVal || !Number.isFinite(prevVal) || !Number.isFinite(nextVal)) return;
+  const prevPct = valueToPct(prevVal);
+  const nextPct = valueToPct(nextVal);
+  const soundOpts = typeof props.sound === 'object' && props.sound !== null ? props.sound : {};
+  const quartilesEnabled = soundOpts.quartiles !== false && props.showTicks;
+  const swishEnabled = soundOpts.swish !== false && allowSwish;
+
+  const events = computeSliderAcousticEvents(prevPct, nextPct, {
+    quartiles: quartilesEnabled ? [25, 50, 75] : [],
+  });
+
+  if (events.crossedQuartile !== null) {
+    playNanoUiSound('sliderQuartile', {
+      propSound: props.sound,
+      playbackRate: events.quartilePitch,
+      minIntervalMs: 28,
+      throttleKey: `${sliderSoundKey}:quartile`,
+    });
+  } else if (events.hitBoundary !== null) {
+    playNanoUiSound('sliderBoundary', {
+      propSound: props.sound,
+      playbackRate: events.hitBoundary === 100 ? 1.18 : 0.92,
+      minIntervalMs: 45,
+      throttleKey: `${sliderSoundKey}:boundary`,
+    });
+  }
+
+  if (swishEnabled && Math.abs(events.deltaPct) >= 0.65) {
+    playNanoUiSound('sliderSwish', {
+      propSound: props.sound,
+      playbackRate: events.swishPitch,
+      gain: 0.72,
+      minIntervalMs: 44,
+      throttleKey: `${sliderSoundKey}:swish`,
+    });
+  }
+};
 
 const safeLeftPx = ref(getSliderThumbOverhangPx(props.size));
 const safeRightPx = ref(getSliderThumbOverhangPx(props.size));
@@ -175,6 +238,8 @@ function updateFromClientX(clientX, pickNearestThumb = false) {
   const next = quantizeValue(rawValue);
 
   if (!isRange.value) {
+    const prevSingle = Number.isFinite(Number(props.modelValue)) ? quantizeValue(Number(props.modelValue)) : props.min;
+    emitSliderSoundForTransition(prevSingle, next, !pickNearestThumb);
     emit('update:modelValue', next);
     return;
   }
@@ -221,6 +286,7 @@ function updateFromClientX(clientX, pickNearestThumb = false) {
     }
   }
 
+  const prevActiveThumbVal = thumbPair.value[activeThumbIndex.value];
   if (props.allowCross) {
     const nextThumbs = [...thumbPair.value];
     nextThumbs[activeThumbIndex.value] = next;
@@ -233,6 +299,11 @@ function updateFromClientX(clientX, pickNearestThumb = false) {
       thumbPair.value = [low, Math.max(next, low)];
     }
   }
+  emitSliderSoundForTransition(
+    prevActiveThumbVal,
+    thumbPair.value[activeThumbIndex.value],
+    !pickNearestThumb
+  );
 
   const sortedLow = Math.min(thumbPair.value[0], thumbPair.value[1]);
   const sortedHigh = Math.max(thumbPair.value[0], thumbPair.value[1]);
@@ -316,19 +387,23 @@ function onKeydown(e) {
   if (e.key === 'ArrowRight' || e.key === 'ArrowUp') {
     e.preventDefault();
     const next = quantizeValue(cur + delta);
+    emitSliderSoundForTransition(cur, next, true);
     emit('update:modelValue', next);
     emit('change', next);
   } else if (e.key === 'ArrowLeft' || e.key === 'ArrowDown') {
     e.preventDefault();
     const next = quantizeValue(cur - delta);
+    emitSliderSoundForTransition(cur, next, true);
     emit('update:modelValue', next);
     emit('change', next);
   } else if (e.key === 'Home') {
     e.preventDefault();
+    emitSliderSoundForTransition(cur, props.min, false);
     emit('update:modelValue', props.min);
     emit('change', props.min);
   } else if (e.key === 'End') {
     e.preventDefault();
+    emitSliderSoundForTransition(cur, props.max, false);
     emit('update:modelValue', props.max);
     emit('change', props.max);
   }

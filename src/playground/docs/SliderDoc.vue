@@ -1,9 +1,25 @@
 <script setup>
-import { ref } from 'vue';
+import { ref, computed } from 'vue';
 import NanoSlider from '../../components/NanoSlider.vue';
 import NanoSwitch from '../../components/NanoSwitch.vue';
 import NanoCodeBlock from '../../components/NanoCodeBlock.vue';
+import { useNanoUiSound } from '../../utils/sound-controller.js';
 import { createDocTabs } from '../docSnippets.js';
+
+const globalSound = useNanoUiSound();
+const localSoundMode = ref('inherit'); // 'inherit' (undefined) | 'true' | 'false'
+const soundModes = [
+  { id: 'inherit', label: 'inherit' },
+  { id: 'true', label: ':sound="true"' },
+  { id: 'false', label: ':sound="false"' },
+];
+const resolvedLocalSound = computed(() =>
+  localSoundMode.value === 'true'
+    ? true
+    : localSoundMode.value === 'false'
+      ? false
+      : undefined
+);
 
 const codeTabs = createDocTabs({
   componentName: 'NanoSlider',
@@ -15,6 +31,7 @@ const codeTabs = createDocTabs({
     ':max="1"',
     ':step="0.01"',
     ':show-ticks="true"',
+    ':sound="true"',
     'size="md"',
     'aria-label="Master Volume"',
   ],
@@ -29,6 +46,7 @@ const codeTabs = createDocTabs({
         'max: Number (default: 100) - Maximum value',
         'step: Number (default: 1) - Quantization step (supports fractional steps like 0.01)',
         'showTicks: Boolean (default: true) - Render quartile scale ticks (25% / 50% / 75%)',
+        'sound: Boolean | String | Object (default: undefined) - Optional .nsd aerodynamic drag swish & 25%/50%/75% quartile harmonic chimes (inherits global configureNanoUiSound when undefined)',
         'size: String (default: "md") - Geometry preset ("sm" | "md" | "lg")',
         'disabled: Boolean (default: false) - Disable interaction',
         'ariaLabel: String (default: "Slider") - Accessible label',
@@ -86,6 +104,28 @@ const isDisabled = ref(false);
           <NanoSwitch v-model="showTicks" />
           <span>Show quartile ticks (25% / 50% / 75%)</span>
         </label>
+        <div class="ctrl-item ctrl-item-static">
+          <span>Local <code>:sound</code>:</span>
+          <div class="nano-btn-group">
+            <button
+              v-for="sm in soundModes"
+              :key="sm.id"
+              type="button"
+              class="nano-btn nano-btn-secondary nano-btn-sm"
+              :class="{ 'nano-btn-active': localSoundMode === sm.id }"
+              @click="localSoundMode = sm.id"
+            >
+              {{ sm.label }}
+            </button>
+          </div>
+        </div>
+        <label class="ctrl-item">
+          <NanoSwitch
+            :model-value="globalSound.enabled.value"
+            @update:model-value="globalSound.setEnabled"
+          />
+          <span>Global NanoUI <code>.nsd</code> audio</span>
+        </label>
         <label class="ctrl-item">
           <NanoSwitch v-model="isDisabled" />
           <span>Disabled state</span>
@@ -104,6 +144,7 @@ const isDisabled = ref(false);
             :max="100"
             :step="1"
             :show-ticks="showTicks"
+            :sound="resolvedLocalSound"
             :disabled="isDisabled"
             aria-label="Telemetry intensity"
           />
@@ -120,6 +161,7 @@ const isDisabled = ref(false);
             :max="1"
             :step="0.01"
             :show-ticks="showTicks"
+            :sound="resolvedLocalSound"
             :disabled="isDisabled"
             aria-label="Audio master volume"
           />
@@ -159,6 +201,7 @@ const isDisabled = ref(false);
             :max="600"
             :step="10"
             :show-ticks="showTicks"
+            :sound="resolvedLocalSound"
             :disabled="isDisabled"
             aria-label="Sound duration range in ms"
           />
@@ -177,6 +220,7 @@ const isDisabled = ref(false);
             :max="5000"
             :step="50"
             :show-ticks="showTicks"
+            :sound="resolvedLocalSound"
             :disabled="isDisabled"
             aria-label="Bandpass frequency window in Hz"
           />
@@ -195,7 +239,7 @@ const isDisabled = ref(false);
         <div class="size-row">
           <span class="size-tag mono">size="sm"</span>
           <div class="size-slider-wrap">
-            <NanoSlider v-model="smValue" size="sm" :show-ticks="showTicks" />
+            <NanoSlider v-model="smValue" size="sm" :show-ticks="showTicks" :sound="resolvedLocalSound" />
           </div>
           <span class="value-badge mono">{{ smValue }}%</span>
         </div>
@@ -203,7 +247,7 @@ const isDisabled = ref(false);
         <div class="size-row">
           <span class="size-tag mono">size="md"</span>
           <div class="size-slider-wrap">
-            <NanoSlider v-model="mdValue" size="md" :show-ticks="showTicks" />
+            <NanoSlider v-model="mdValue" size="md" :show-ticks="showTicks" :sound="resolvedLocalSound" />
           </div>
           <span class="value-badge mono">{{ mdValue }}%</span>
         </div>
@@ -211,7 +255,7 @@ const isDisabled = ref(false);
         <div class="size-row">
           <span class="size-tag mono">size="lg"</span>
           <div class="size-slider-wrap">
-            <NanoSlider v-model="lgValue" size="lg" :show-ticks="showTicks" />
+            <NanoSlider v-model="lgValue" size="lg" :show-ticks="showTicks" :sound="resolvedLocalSound" />
           </div>
           <span class="value-badge mono">{{ lgValue }}%</span>
         </div>
@@ -279,6 +323,11 @@ const isDisabled = ref(false);
   font-size: 0.88rem;
   font-weight: 600;
   cursor: pointer;
+  user-select: none;
+}
+
+.ctrl-item-static {
+  cursor: default;
 }
 
 .preview-grid {
