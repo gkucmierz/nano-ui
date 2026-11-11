@@ -1,6 +1,7 @@
 <script setup>
 import { ref, computed, onBeforeUnmount } from 'vue'
 import { clamp, countStepDecimals } from '../utils/math.js'
+import { playNanoUiSound } from '../utils/sound-controller.js'
 
 const props = defineProps({
   modelValue: {
@@ -97,6 +98,10 @@ const props = defineProps({
   name: {
     type: String,
     default: ''
+  },
+  sound: {
+    type: [Boolean, String, Object],
+    default: undefined
   }
 })
 
@@ -171,6 +176,13 @@ const stepBy = (multiplier = 1) => {
   if (props.disabled) return
   const base = Number.isFinite(props.modelValue) ? props.modelValue : 0
   const delta = (Number(props.step) || 1) * multiplier
+  const nextClean = clampAndRound(base + delta)
+  if (nextClean !== props.modelValue) {
+    playNanoUiSound(multiplier >= 0 ? 'stepperUp' : 'stepperDown', {
+      propSound: props.sound,
+      minIntervalMs: 22
+    })
+  }
   commitValue(base + delta)
 }
 
