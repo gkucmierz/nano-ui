@@ -170,6 +170,7 @@ import {
   computeLogoPerfectionScalar,
   computeFloating3DArtifacts,
   computeOrbitingMathTokens3D,
+  computeStagePointerField,
   computeBauhausPhiScene3D,
 } from './utils/bauhausPhiLogo.js';
 import {
@@ -564,6 +565,7 @@ export {
   computeLogoPerfectionScalar,
   computeFloating3DArtifacts,
   computeOrbitingMathTokens3D,
+  computeStagePointerField,
   computeBauhausPhiScene3D,
   MONTH_NAMES,
   MONTH_SHORT_NAMES,
