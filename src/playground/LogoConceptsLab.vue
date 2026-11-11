@@ -13,6 +13,7 @@ import {
   projectOrthographic3D,
   computeGoldenFlowAndCursorField,
   reanchorGoldenFlowAngle,
+  computeStagePointerField,
   computeBauhausPhiScene3D,
   sampleMonteCarloNShadow,
 } from '../utils/bauhausPhiLogo.js';
@@ -90,13 +91,14 @@ let dragStartY = 0;
 let dragBaseYaw = 0;
 let dragBasePitch = 0;
 
-const cachedSafeStageBounds = ref({ minX: -25.5, maxX: 57.5, minY: -10.5, maxY: 42.5 });
+const STAGE_OUTER_SAFE_BOUNDS = { minX: -24.2, maxX: 56.2, minY: -9.2, maxY: 41.2 };
+const cachedSafeStageBounds = ref({ ...STAGE_OUTER_SAFE_BOUNDS });
 
 const refreshSafeStageBounds = () => {
   cachedSafeStageBounds.value = measureSafeStageBounds(
     stage3DSvgRef.value || stage3DBoxRef.value,
     { minX: -26, minY: -11, width: 84, height: 54 },
-    { minX: -25.5, maxX: 57.5, minY: -10.5, maxY: 42.5 }
+    STAGE_OUTER_SAFE_BOUNDS
   );
 };
 
@@ -127,6 +129,10 @@ let smoothCursorEnergy = 0;
 let smoothCursorPresence = 0;
 let lastPointerNormX = 0;
 let lastPointerNormY = 0;
+let lastPointerClientX = Number.NaN;
+let lastPointerClientY = Number.NaN;
+let hasActiveStagePointer = false;
+let activeDragPointerType = 'mouse';
 let trailFrameTick = 0;
 
 const clearTimers = () => {
@@ -431,25 +437,60 @@ const toggleAutoOrbit = () => {
   startAutoOrbitLoop(true);
 };
 
+const releaseCursorPresence = () => {
+  hasActiveStagePointer = false;
+  cursorTargetX = 0;
+  cursorTargetY = 0;
+  cursorTargetPresence = 0;
+  if (!isAutoOrbiting.value && !isPointerDragging.value && !isConverging.value) {
+    cursorField.value = {
+      ...cursorField.value,
+      presence: 0,
+      energy: 0,
+    };
+  }
+};
+
 /**
- * Updates normalized cursor coordinates & kinetic energy from pointer hover/move
- * (works automatically without clicking or dragging!).
+ * Updates normalized cursor coordinates & kinetic energy strictly relative to the 3D SVG canvas
+ * (`stage3DSvgRef`), releasing presence when hovering headers/toolbars outside the 3D stage.
  */
-const updateCursorFieldFromEvent = (e, referenceEl) => {
-  const el = referenceEl || stage3DBoxRef.value || e.currentTarget;
-  if (!el || typeof el.getBoundingClientRect !== 'function') return;
+const updateCursorFieldFromEvent = (e, referenceEl, { fromScroll = false } = {}) => {
+  const el = stage3DSvgRef.value || referenceEl || stage3DBoxRef.value || e?.currentTarget;
+  if (!el || !(el.getBoundingClientRect instanceof Function)) return;
   const rect = el.getBoundingClientRect();
   if (!rect.width || !rect.height) return;
 
-  const nx = Math.max(-1, Math.min(1, ((e.clientX - rect.left) / rect.width) * 2 - 1));
-  const ny = Math.max(-1, Math.min(1, ((e.clientY - rect.top) / rect.height) * 2 - 1));
-  const vel = Math.hypot(nx - lastPointerNormX, ny - lastPointerNormY);
+  if (!fromScroll && Number.isFinite(e?.clientX) && Number.isFinite(e?.clientY)) {
+    lastPointerClientX = e.clientX;
+    lastPointerClientY = e.clientY;
+  }
+
+  const pointerField = computeStagePointerField({
+    clientX: lastPointerClientX,
+    clientY: lastPointerClientY,
+    stageRect: rect,
+    haloPx: 12,
+    isDragging: isPointerDragging.value,
+  });
+
+  if (!pointerField.inside && !isPointerDragging.value) {
+    releaseCursorPresence();
+    return;
+  }
+
+  hasActiveStagePointer = true;
+  const nx = pointerField.normX;
+  const ny = pointerField.normY;
+  const vel = fromScroll ? 0 : Math.hypot(nx - lastPointerNormX, ny - lastPointerNormY);
   lastPointerNormX = nx;
   lastPointerNormY = ny;
 
   cursorTargetX = nx;
   cursorTargetY = ny;
-  cursorTargetEnergy = Math.min(1, cursorTargetEnergy + vel * 2.8);
+  if (!fromScroll) {
+    cursorTargetEnergy = Math.min(1, cursorTargetEnergy + vel * 2.8);
+  }
   cursorTargetPresence = 1;
 
   // If auto-orbit was paused (e.g. after a manual preset), still apply gentle cursor parallax around anchor!
@@ -473,7 +514,9 @@ const updateCursorFieldFromEvent = (e, referenceEl) => {
     pitchDeg.value = Number(
       Math.max(-45, Math.min(45, anchorPitchDeg.value + flow.cursorPitchDelta)).toFixed(2)
     );
-    holoPhaseRad.value = Number((holoPhaseRad.value + 0.035).toFixed(3));
+    if (!fromScroll) {
+      holoPhaseRad.value = Number((holoPhaseRad.value + 0.035).toFixed(3));
+    }
     cursorField.value = {
       ...flow.cursorSvg,
       cursorYawDelta: flow.cursorYawDelta,
@@ -485,32 +528,34 @@ const updateCursorFieldFromEvent = (e, referenceEl) => {
   }
 };
 
+const syncPointerFieldOnScroll = () => {
+  refreshSafeStageBounds();
+  if (!hasActiveStagePointer || isPointerDragging.value) return;
+  updateCursorFieldFromEvent(null, stage3DSvgRef.value, { fromScroll: true });
+};
+
 const onDeckPointerMove = (e) => {
   if (!isFullscreenPresentation.value) return;
-  updateCursorFieldFromEvent(e, e.currentTarget);
+  updateCursorFieldFromEvent(e, stage3DSvgRef.value);
 };
 
 const onStagePointerLeave = () => {
-  cursorTargetX = 0;
-  cursorTargetY = 0;
-  cursorTargetPresence = 0;
-  if (!isAutoOrbiting.value && !isPointerDragging.value && !isConverging.value) {
-    cursorField.value = {
-      ...cursorField.value,
-      presence: 0,
-      energy: 0,
-    };
-  }
+  releaseCursorPresence();
 };
 
 const onStagePointerDown = (e) => {
   hasUserInteractedAudio.value = true;
+  activeDragPointerType = e?.pointerType || 'mouse';
   isPointerDragging.value = true;
   dragStartX = e.clientX;
   dragStartY = e.clientY;
   dragBaseYaw = yawDeg.value;
   dragBasePitch = pitchDeg.value;
-  if (e.currentTarget && typeof e.currentTarget.setPointerCapture === 'function') {
+  if (
+    activeDragPointerType !== 'touch' &&
+    e.currentTarget &&
+    e.currentTarget.setPointerCapture instanceof Function
+  ) {
     try {
       e.currentTarget.setPointerCapture(e.pointerId);
     } catch {
@@ -520,10 +565,21 @@ const onStagePointerDown = (e) => {
 };
 
 const onStagePointerMove = (e) => {
-  updateCursorFieldFromEvent(e, e.currentTarget);
+  updateCursorFieldFromEvent(e, stage3DSvgRef.value);
   if (!isPointerDragging.value) return;
   const dx = e.clientX - dragStartX;
   const dy = e.clientY - dragStartY;
+  if (activeDragPointerType === 'touch') {
+    // Allow natural vertical page scrolling on touch screens without launching pitchDeg to +45 deg
+    if (Math.abs(dy) >= Math.abs(dx)) {
+      return;
+    }
+    const nextYawTouch = Math.max(-65, Math.min(65, Number((dragBaseYaw + dx * 0.45).toFixed(3))));
+    reanchorAtCurrentFlowTime(nextYawTouch, dragBasePitch);
+    holoPhaseRad.value = Number((holoPhaseRad.value + 0.08).toFixed(3));
+    updateInteractive3DAudio(nextYawTouch, dragBasePitch, scene3D.value.perfection.scalar);
+    return;
+  }
   const nextYaw = Math.max(-65, Math.min(65, Number((dragBaseYaw + dx * 0.45).toFixed(3))));
   const nextPitch = Math.max(-45, Math.min(45, Number((dragBasePitch - dy * 0.35).toFixed(3))));
   reanchorAtCurrentFlowTime(nextYaw, nextPitch);
@@ -749,9 +805,10 @@ const onConceptsGridFocusOut = (ev) => {
 
 onMounted(() => {
   isMountedClient.value = true;
-  if (typeof window !== 'undefined') {
+  if (globalThis.window !== undefined) {
     window.addEventListener('keydown', onGlobalKeydown);
     window.addEventListener('resize', refreshSafeStageBounds);
+    window.addEventListener('scroll', syncPointerFieldOnScroll, { passive: true, capture: true });
     document.addEventListener('fullscreenchange', onFullscreenChange);
     refreshSafeStageBounds();
     const keys = getGlobalKeyController();
@@ -781,9 +838,10 @@ onUnmounted(() => {
     offKeyController();
     offKeyController = null;
   }
-  if (typeof window !== 'undefined') {
+  if (globalThis.window !== undefined) {
     window.removeEventListener('keydown', onGlobalKeydown);
     window.removeEventListener('resize', refreshSafeStageBounds);
+    window.removeEventListener('scroll', syncPointerFieldOnScroll, { capture: true });
     document.removeEventListener('fullscreenchange', onFullscreenChange);
   }
 });
@@ -967,7 +1025,7 @@ const concepts = [
               <div class="stage-3d-canvas-wrap">
                 <svg
                   ref="stage3DSvgRef"
-                  overflow="visible"
+                  overflow="hidden"
                   :viewBox="deviceViewport === 'mobile' ? '-2 -2 36 36' : '-26 -11 84 54'"
                   :width="deviceViewport === 'mobile' ? 320 : 480"
                   :height="deviceViewport === 'mobile' ? 320 : 308"
@@ -1041,10 +1099,10 @@ const concepts = [
 
                   <!-- Outer Holographic Space Backdrop -->
                   <rect
-                    :x="deviceViewport === 'mobile' ? -1.2 : -21"
-                    :y="deviceViewport === 'mobile' ? -1.2 : -6"
-                    :width="deviceViewport === 'mobile' ? 34.4 : 74"
-                    :height="deviceViewport === 'mobile' ? 34.4 : 44"
+                    :x="deviceViewport === 'mobile' ? -1.2 : -25.2"
+                    :y="deviceViewport === 'mobile' ? -1.2 : -10.2"
+                    :width="deviceViewport === 'mobile' ? 34.4 : 82.4"
+                    :height="deviceViewport === 'mobile' ? 34.4 : 52.4"
                     rx="4.5"
                     :fill="silhouetteMode ? '#09090b' : '#070b16'"
                     stroke="rgba(99, 102, 241, 0.32)"
@@ -2566,7 +2624,7 @@ const concepts = [
 .stage-box.is-interactive-3d {
   cursor: grab;
   user-select: none;
-  touch-action: none;
+  touch-action: pan-y;
 }
 
 .stage-box.is-interactive-3d.is-dragging {
@@ -2828,7 +2886,7 @@ const concepts = [
   z-index: 30;
   max-width: 100%;
   height: auto;
-  overflow: visible !important;
+  overflow: hidden;
 }
 
 .mono {
