@@ -11,7 +11,13 @@ import {
   detectMediaTypeFromPath,
   formatFileSizeBytes,
   parseUnifiedDiff,
+  PREVIEW_MEDIA_TYPES,
+  resolveEditorViewMode,
 } from '../utils/git-diff.js';
+import {
+  compileNsdPreview,
+  extractEmbeddedNsdSnippets,
+} from '../utils/nsd-preview.js';
 import { NANOSOUND_COMPLETIONS, GLSL_COMPLETIONS } from '../parsers/index.js';
 import { tooltipDirective as vTooltip } from '../directives/tooltip.js';
 import {
@@ -202,6 +208,14 @@ const props = defineProps({
     type: Object,
     default: null,
   },
+  /**
+   * Indicates that an asynchronous diff/file payload is currently in flight for `filePath`.
+   * Prevents transient mode/tab flicker while awaiting async HTTP diff/metadata responses.
+   */
+  loading: {
+    type: Boolean,
+    default: false,
+  },
 });
 
 let editorUidSeq = 0;
@@ -274,6 +288,7 @@ const internalMode = ref(
     ? props.mode
     : (props.diff ? 'diff' : 'code')
 );
+const userLockedMode = ref(null);
 const internalDiffStyle = ref(props.diffStyle || 'unified');
 const isWrapped = ref(props.defaultWrap);
 const copied = ref(false);
@@ -282,16 +297,6 @@ const textareaRef = ref(null);
 const highlightLayerRef = ref(null);
 const gutterRef = ref(null);
 let copyTimer = null;
-
-watch(() => props.mode, (val) => {
-  if (val && val !== 'auto') internalMode.value = val;
-});
-
-watch(() => props.diff, (val) => {
-  if (props.mode === 'auto') {
-    internalMode.value = val ? 'diff' : 'code';
-  }
-});
 
 watch(() => props.diffStyle, (val) => {
   if (val) internalDiffStyle.value = val;
@@ -306,9 +311,13 @@ const resolvedMediaType = computed(() => {
   return detectMediaTypeFromPath(props.filePath);
 });
 
+const fetchedMediaText = ref('');
+let customTextReqSeq = 0;
+let customTextAbortCtrl = null;
+
 const currentCode = computed(() => {
   if (props.modelValue !== undefined) return props.modelValue;
-  return props.code || '';
+  return props.code || fetchedMediaText.value || '';
 });
 
 const svgInlineDataUrl = computed(() => {
@@ -330,56 +339,199 @@ const effectiveMediaUrl = computed(() => {
   return props.mediaUrl || svgInlineDataUrl.value || '';
 });
 
+const embeddedNsdSnippets = computed(() => {
+  if (resolvedMediaType.value) return [];
+  const source = currentCode.value || props.diff || '';
+  if (!source) return [];
+  return extractEmbeddedNsdSnippets(source).map((snip) => ({
+    ...snip,
+    compiled: compileNsdPreview(snip.dsl, { sampleRate: 22050, waveformBins: 96 }),
+  }));
+});
+
+const hasEmbeddedNsd = computed(() => embeddedNsdSnippets.value.length > 0);
+
 const hasMediaPreview = computed(() => {
   const mt = resolvedMediaType.value;
   if (!mt) return false;
   if (mt === 'nsd' || mt === '7uaudio' || mt === 'meme') {
-    return Boolean(currentCode.value.trim() || props.diff.trim() || effectiveMediaUrl.value);
+    return Boolean(
+      currentCode.value.trim() ||
+      props.diff.trim() ||
+      effectiveMediaUrl.value ||
+      props.loading
+    );
   }
-  return Boolean(effectiveMediaUrl.value || props.beforeMediaUrl);
+  if (PREVIEW_MEDIA_TYPES.has(mt)) {
+    return Boolean(effectiveMediaUrl.value || props.beforeMediaUrl || props.loading);
+  }
+  return false;
 });
 
-const mediaBackdrop = ref('checker'); // 'checker' | 'dark' | 'light'
+const canShowPreviewTab = computed(() => hasMediaPreview.value || hasEmbeddedNsd.value);
+
+const mediaBgMode = ref('checker'); // 'checker' | 'dark' | 'light'
 const mediaZoom = ref(1);
 const mediaCompareMode = ref('after'); // 'after' | 'split' | 'before'
+const userLockedCompareMode = ref(false);
 const naturalImgWidth = ref(0);
 const naturalImgHeight = ref(0);
 const beforeImgWidth = ref(0);
 const beforeImgHeight = ref(0);
+const afterImgMissing = ref(false);
+const beforeImgMissing = ref(false);
 const mediaDurationSec = ref(0);
 const isPlayingCustomFormat = ref(false);
+const activePlayingSnippetId = ref('');
+const loadedFontFamily = ref('');
+let fontLoadSeq = 0;
 let customAudioCtx = null;
 let customPlaybackTimer = null;
 
-function resolveDefaultMode() {
-  if (props.mode && props.mode !== 'auto') return props.mode;
-  if (hasMediaPreview.value) {
-    const mt = resolvedMediaType.value;
-    if (mt === 'image' || mt === 'audio' || mt === 'video' || mt === 'pdf' || mt === '7uaudio' || mt === 'meme') {
-      return 'preview';
-    }
-  }
-  return props.diff ? 'diff' : 'code';
+function setMediaCompareMode(nextCompareMode) {
+  userLockedCompareMode.value = true;
+  mediaCompareMode.value = nextCompareMode;
 }
 
+function syncAutoMode() {
+  internalMode.value = resolveEditorViewMode({
+    propMode: props.mode,
+    userLockedMode: userLockedMode.value,
+    mediaType: resolvedMediaType.value,
+    hasMediaPreview: hasMediaPreview.value,
+    hasEmbeddedNsd: hasEmbeddedNsd.value,
+    hasDiff: Boolean(props.diff),
+    hasCode: Boolean(currentCode.value || props.modelValue !== undefined),
+    loading: props.loading,
+  });
+}
+
+// Reset per-file manual tab locks ONLY when switching to another filePath
 watch(
-  [() => props.filePath, () => props.mediaUrl, () => props.beforeMediaUrl, hasMediaPreview],
+  () => props.filePath,
+  () => {
+    userLockedMode.value = null;
+    userLockedCompareMode.value = false;
+    stopCustomFormatPlayback();
+  }
+);
+
+watch(
+  () => props.mode,
+  (val) => {
+    userLockedMode.value = null;
+    if (val && val !== 'auto') {
+      internalMode.value = val;
+    } else {
+      syncAutoMode();
+    }
+  }
+);
+
+// Reset image natural dimensions & zoom ONLY when primary file or mediaUrl changes
+watch(
+  [() => props.filePath, () => props.mediaUrl, () => props.mediaMeta?.exists],
   () => {
     naturalImgWidth.value = 0;
     naturalImgHeight.value = 0;
     beforeImgWidth.value = 0;
     beforeImgHeight.value = 0;
+    afterImgMissing.value = props.mediaMeta?.exists === false;
+    beforeImgMissing.value = false;
     mediaDurationSec.value = 0;
     mediaZoom.value = 1;
+    userLockedCompareMode.value = false;
     mediaCompareMode.value = props.beforeMediaUrl && effectiveMediaUrl.value ? 'split' : 'after';
-    if (props.mode === 'auto') {
-      internalMode.value = resolveDefaultMode();
+  },
+  { immediate: true }
+);
+
+// When async `beforeMediaUrl` resolves later (e.g. meta=1 HEAD check), promote to split view without resetting zoom or mode
+watch(
+  () => props.beforeMediaUrl,
+  (beforeUrl) => {
+    beforeImgWidth.value = 0;
+    beforeImgHeight.value = 0;
+    beforeImgMissing.value = false;
+    if (!userLockedCompareMode.value) {
+      mediaCompareMode.value = beforeUrl && effectiveMediaUrl.value ? 'split' : 'after';
+    }
+  }
+);
+
+// Fetch complete text for custom text-based RFC formats (.nsd, .7uaudio, .meme) when only diff/mediaUrl is provided
+watch(
+  [() => props.filePath, () => props.mediaUrl, resolvedMediaType, () => props.code, () => props.modelValue],
+  async ([_fp, mUrl, mt, explicitCode, modelVal]) => {
+    const seq = ++customTextReqSeq;
+    if (customTextAbortCtrl) {
+      customTextAbortCtrl.abort();
+      customTextAbortCtrl = null;
+    }
+    fetchedMediaText.value = '';
+    if (!mUrl || (mt !== 'nsd' && mt !== '7uaudio' && mt !== 'meme')) return;
+    if (explicitCode || modelVal !== undefined) return;
+    if (!globalThis.fetch) return;
+
+    const ctrl = new AbortController();
+    customTextAbortCtrl = ctrl;
+    try {
+      const res = await globalThis.fetch(mUrl, { signal: ctrl.signal });
+      if (seq !== customTextReqSeq || !res.ok) return;
+      const ctype = String(res.headers?.get?.('content-type') || '').toLowerCase();
+      if (ctype.startsWith('image/') || ctype.startsWith('audio/') || ctype.startsWith('video/')) return;
+      const txt = await res.text();
+      if (seq !== customTextReqSeq) return;
+      fetchedMediaText.value = txt;
+    } catch {
+      // Ignore AbortError or offline fetch failure; diff fallback still works
     }
   },
   { immediate: true }
 );
 
+// Dynamically load FontFace for .woff2 / .woff / .ttf / .otf font specimen previews
+watch(
+  [() => props.filePath, effectiveMediaUrl, resolvedMediaType],
+  async ([_fp, mUrl, mt]) => {
+    const seq = ++fontLoadSeq;
+    loadedFontFamily.value = '';
+    if (mt !== 'font' || !mUrl) return;
+    const win = globalThis.window;
+    const doc = globalThis.document;
+    if (!win || !win.FontFace || !doc || !doc.fonts) return;
+    const family = `nano-font-preview-${editorAutoId}-${seq}`;
+    try {
+      const face = new win.FontFace(family, `url(${JSON.stringify(mUrl)})`);
+      await face.load();
+      if (seq !== fontLoadSeq) return;
+      doc.fonts.add(face);
+      loadedFontFamily.value = family;
+    } catch {
+      // Keep system fallback if font binary fails to decode
+    }
+  },
+  { immediate: true }
+);
+
+// Single deterministic view-mode synchronization across sync & async prop updates
+watch(
+  [
+    () => props.filePath,
+    () => props.mode,
+    resolvedMediaType,
+    hasMediaPreview,
+    hasEmbeddedNsd,
+    () => Boolean(props.diff),
+    () => Boolean(currentCode.value || props.modelValue !== undefined),
+    () => props.loading,
+  ],
+  syncAutoMode,
+  { immediate: true }
+);
+
 function handleAfterImageLoad(e) {
+  afterImgMissing.value = false;
   const el = e?.target;
   if (el) {
     naturalImgWidth.value = el.naturalWidth || 0;
@@ -387,12 +539,21 @@ function handleAfterImageLoad(e) {
   }
 }
 
+function handleAfterImageError() {
+  afterImgMissing.value = true;
+}
+
 function handleBeforeImageLoad(e) {
+  beforeImgMissing.value = false;
   const el = e?.target;
   if (el) {
     beforeImgWidth.value = el.naturalWidth || 0;
     beforeImgHeight.value = el.naturalHeight || 0;
   }
+}
+
+function handleBeforeImageError() {
+  beforeImgMissing.value = true;
 }
 
 function handleMediaMetadataLoaded(e) {
@@ -441,6 +602,12 @@ function extractTextForCustomFormat() {
   }
   return '';
 }
+
+const parsedNsdPreview = computed(() => {
+  if (resolvedMediaType.value !== 'nsd') return null;
+  const raw = extractTextForCustomFormat();
+  return compileNsdPreview(raw);
+});
 
 const parsed7uAudio = computed(() => {
   if (resolvedMediaType.value !== '7uaudio') return null;
@@ -509,20 +676,67 @@ function stopCustomFormatPlayback() {
     customAudioCtx = null;
   }
   isPlayingCustomFormat.value = false;
+  activePlayingSnippetId.value = '';
+}
+
+function playNsdDslSnippet(dslText, snippetId = 'primary') {
+  if (isPlayingCustomFormat.value && activePlayingSnippetId.value === snippetId) {
+    stopCustomFormatPlayback();
+    return;
+  }
+  const win = globalThis.window;
+  if (!win) return;
+  const AudioCtx = win.AudioContext || win.webkitAudioContext;
+  if (!AudioCtx) return;
+
+  stopCustomFormatPlayback();
+  customAudioCtx = new AudioCtx();
+  const sr = customAudioCtx.sampleRate || 44100;
+  const compiled = compileNsdPreview(dslText, { sampleRate: sr });
+  if (!compiled.valid || compiled.pcm.length === 0) {
+    stopCustomFormatPlayback();
+    return;
+  }
+
+  isPlayingCustomFormat.value = true;
+  activePlayingSnippetId.value = snippetId;
+
+  const audioBuf = customAudioCtx.createBuffer(1, compiled.pcm.length, sr);
+  audioBuf.getChannelData(0).set(compiled.pcm);
+  const src = customAudioCtx.createBufferSource();
+  const masterGain = customAudioCtx.createGain();
+  masterGain.gain.value = 0.78;
+  src.buffer = audioBuf;
+  src.connect(masterGain);
+  masterGain.connect(customAudioCtx.destination);
+  src.start();
+
+  emit('run', { type: 'nsd', code: dslText, filePath: props.filePath });
+  customPlaybackTimer = setTimeout(() => {
+    stopCustomFormatPlayback();
+  }, Math.min(8000, compiled.durationMs + 140));
 }
 
 function playCustomFormatPreview() {
+  if (resolvedMediaType.value === 'nsd') {
+    const rawNsd = extractTextForCustomFormat();
+    playNsdDslSnippet(rawNsd, 'primary');
+    return;
+  }
+
   if (isPlayingCustomFormat.value) {
     stopCustomFormatPlayback();
     return;
   }
-  if (typeof window === 'undefined') return;
-  const AudioCtx = window.AudioContext || window.webkitAudioContext;
+  const win = globalThis.window;
+  if (!win) return;
+  const AudioCtx = win.AudioContext || win.webkitAudioContext;
   if (!AudioCtx) return;
 
   stopCustomFormatPlayback();
   customAudioCtx = new AudioCtx();
   isPlayingCustomFormat.value = true;
+  activePlayingSnippetId.value = 'primary';
   const now = customAudioCtx.currentTime;
 
   if (resolvedMediaType.value === '7uaudio' && parsed7uAudio.value) {
@@ -552,31 +766,7 @@ function playCustomFormatPreview() {
     customPlaybackTimer = setTimeout(() => {
       stopCustomFormatPlayback();
     }, Math.min(12500, Math.round(latestEnd * 1000) + 150));
-    return;
   }
-
-  // .nsd (NanoSound DSL) quick synth preview: parse frequencies / notes or play harmonic sweep
-  const rawNsd = extractTextForCustomFormat();
-  const freqMatches = [...rawNsd.matchAll(/(\d{3,4})\s*hz/gi)].map((m) => Number(m[1]));
-  const tones = freqMatches.length > 0 ? freqMatches.slice(0, 8) : [523.25, 659.25, 783.99, 1046.5];
-  tones.forEach((freq, idx) => {
-    const start = idx * 0.11;
-    const osc = customAudioCtx.createOscillator();
-    const gain = customAudioCtx.createGain();
-    osc.type = rawNsd.includes('saw') ? 'sawtooth' : rawNsd.includes('square') ? 'square' : 'sine';
-    osc.frequency.setValueAtTime(freq, now + start);
-    gain.gain.setValueAtTime(0.0001, now + start);
-    gain.gain.exponentialRampToValueAtTime(0.18, now + start + 0.015);
-    gain.gain.exponentialRampToValueAtTime(0.0001, now + start + 0.22);
-    osc.connect(gain);
-    gain.connect(customAudioCtx.destination);
-    osc.start(now + start);
-    osc.stop(now + start + 0.24);
-  });
-  emit('run', { type: 'nsd', code: rawNsd, filePath: props.filePath });
-  customPlaybackTimer = setTimeout(() => {
-    stopCustomFormatPlayback();
-  }, tones.length * 110 + 260);
 }
 
 const codeLines = computed(() => {
@@ -607,12 +797,12 @@ const parsedDiff = computed(() => {
 });
 
 const hasBothDiffAndCode = computed(() => {
-  return Boolean(props.diff && (props.code || props.modelValue !== undefined));
+  return Boolean(props.diff && (currentCode.value || props.modelValue !== undefined));
 });
 
 const containerMaxHeight = computed(() => {
   if (!props.maxHeight) return undefined;
-  return typeof props.maxHeight === 'number' ? `${props.maxHeight}px` : props.maxHeight;
+  return Number.isFinite(props.maxHeight) ? `${props.maxHeight}px` : props.maxHeight;
 });
 
 const saveEditorState = (extraDraft = undefined) => {
@@ -637,20 +827,20 @@ const loadEditorState = () => {
     mode: resolvedStorageMode.value,
     appPrefix: props.appPrefix || undefined,
   });
-  if (!saved || typeof saved !== 'object') return;
+  if (!saved || Object.prototype.toString.call(saved) !== '[object Object]') return;
 
   if (saved.diffStyle === 'unified' || saved.diffStyle === 'split') {
     internalDiffStyle.value = saved.diffStyle;
     emit('update:diffStyle', saved.diffStyle);
   }
-  if (typeof saved.syntaxTheme === 'string' && saved.syntaxTheme.trim()) {
+  if (Object.prototype.toString.call(saved.syntaxTheme) === '[object String]' && saved.syntaxTheme.trim()) {
     internalSyntaxTheme.value = saved.syntaxTheme.trim();
     emit('update:syntaxTheme', internalSyntaxTheme.value);
   }
-  if (typeof saved.wrap === 'boolean') {
+  if (saved.wrap === true || saved.wrap === false) {
     isWrapped.value = saved.wrap;
   }
-  if (props.persistDraft && props.editable && typeof saved.draft === 'string') {
+  if (props.persistDraft && props.editable && Object.prototype.toString.call(saved.draft) === '[object String]') {
     if (saved.draft !== currentCode.value) {
       emit('update:modelValue', saved.draft);
       emit('update:code', saved.draft);
@@ -659,6 +849,7 @@ const loadEditorState = () => {
 };
 
 const setMode = (m) => {
+  userLockedMode.value = m;
   internalMode.value = m;
   emit('update:mode', m);
 };
@@ -899,6 +1090,10 @@ watch(isWrapped, () => {
 
 onUnmounted(() => {
   stopCustomFormatPlayback();
+  if (customTextAbortCtrl) {
+    customTextAbortCtrl.abort();
+    customTextAbortCtrl = null;
+  }
   if (copyTimer) {
     clearTimeout(copyTimer);
     copyTimer = null;
@@ -989,15 +1184,15 @@ defineExpose({
         </div>
 
         <!-- Mode Toggle (Preview / Diff / Code) -->
-        <div v-if="hasMediaPreview || hasBothDiffAndCode" class="nce-seg-group">
+        <div v-if="canShowPreviewTab || hasBothDiffAndCode || diff" class="nce-seg-group">
           <button
-            v-if="hasMediaPreview && resolvedMediaType !== 'nsd'"
+            v-if="canShowPreviewTab"
             type="button"
             class="nce-seg-btn"
             :class="{ active: internalMode === 'preview' }"
             @click="setMode('preview')"
           >
-            Preview
+            {{ hasEmbeddedNsd && !resolvedMediaType ? `♪ .nsd (${embeddedNsdSnippets.length})` : 'Preview' }}
           </button>
           <button
             v-if="diff"
@@ -1009,7 +1204,7 @@ defineExpose({
             Diff
           </button>
           <button
-            v-if="code || modelValue !== undefined || !diff"
+            v-if="currentCode || modelValue !== undefined || (!diff && !hasMediaPreview)"
             type="button"
             class="nce-seg-btn"
             :class="{ active: internalMode === 'code' }"
@@ -1125,11 +1320,11 @@ defineExpose({
 
     <!-- 0. MEDIA & 7U RFC CUSTOM FORMAT PREVIEW MODE -->
     <div
-      v-if="internalMode === 'preview' && hasMediaPreview"
+      v-if="internalMode === 'preview' && canShowPreviewTab"
       class="nce-media-viewport nano-scrollbar"
       :style="{ maxHeight: containerMaxHeight }"
     >
-      <!-- IMAGE PREVIEW (PNG, JPG, WEBP, GIF, SVG, ICO, AVIF) -->
+      <!-- IMAGE PREVIEW (PNG, JPG, WEBP, GIF, SVG, ICO, AVIF, BMP) -->
       <template v-if="resolvedMediaType === 'image'">
         <div class="nce-media-toolbar">
           <div class="nce-media-toolbar-left">
@@ -1148,7 +1343,7 @@ defineExpose({
                 type="button"
                 class="nce-seg-btn"
                 :class="{ active: mediaCompareMode === 'split' }"
-                @click="mediaCompareMode = 'split'"
+                @click="setMediaCompareMode('split')"
               >
                 Split (Before / After)
               </button>
@@ -1156,7 +1351,7 @@ defineExpose({
                 type="button"
                 class="nce-seg-btn"
                 :class="{ active: mediaCompareMode === 'after' }"
-                @click="mediaCompareMode = 'after'"
+                @click="setMediaCompareMode('after')"
               >
                 After
               </button>
@@ -1164,7 +1359,7 @@ defineExpose({
                 type="button"
                 class="nce-seg-btn"
                 :class="{ active: mediaCompareMode === 'before' }"
-                @click="mediaCompareMode = 'before'"
+                @click="setMediaCompareMode('before')"
               >
                 Before
               </button>
@@ -1214,37 +1409,58 @@ defineExpose({
                 BEFORE
                 <span v-if="beforeImgWidth && beforeImgHeight">({{ beforeImgWidth }}×{{ beforeImgHeight }})</span>
               </figcaption>
+              <div v-if="beforeImgMissing" class="nce-media-missing-card">
+                <span class="nce-media-missing-pill">NEW FILE</span>
+                <span class="nce-media-missing-path">{{ filePath || 'Not present in parent revision' }}</span>
+              </div>
               <img
+                v-else
                 :src="beforeMediaUrl"
                 :alt="`Before ${filePath}`"
                 class="nce-preview-img"
                 :style="{ transform: `scale(${mediaZoom})` }"
                 @load="handleBeforeImageLoad"
+                @error="handleBeforeImageError"
               />
             </figure>
             <figure class="nce-media-figure">
-              <figcaption class="nce-media-caption is-after">
-                AFTER
-                <span v-if="naturalImgWidth && naturalImgHeight">({{ naturalImgWidth }}×{{ naturalImgHeight }})</span>
+              <figcaption class="nce-media-caption is-after" :class="{ 'is-deleted': afterImgMissing }">
+                {{ afterImgMissing ? 'AFTER · DELETED (0 B)' : 'AFTER' }}
+                <span v-if="!afterImgMissing && naturalImgWidth && naturalImgHeight">({{ naturalImgWidth }}×{{ naturalImgHeight }})</span>
               </figcaption>
+              <div v-if="afterImgMissing" class="nce-media-missing-card is-deleted">
+                <span class="nce-media-missing-pill is-deleted">USUNIĘTO DUPLIKAT / PLIK (0 B)</span>
+                <span class="nce-media-missing-path">{{ filePath }}</span>
+              </div>
               <img
+                v-else
                 :src="effectiveMediaUrl"
                 :alt="filePath || 'Image preview'"
                 class="nce-preview-img"
                 :style="{ transform: `scale(${mediaZoom})` }"
                 @load="handleAfterImageLoad"
+                @error="handleAfterImageError"
               />
             </figure>
           </div>
-          <figure v-else class="nce-media-figure">
+          <figure v-else-if="effectiveMediaUrl || beforeMediaUrl" class="nce-media-figure">
+            <div v-if="mediaCompareMode === 'after' && afterImgMissing && !beforeMediaUrl" class="nce-media-missing-card is-deleted">
+              <span class="nce-media-missing-pill is-deleted">USUNIĘTO PLIK (0 B)</span>
+              <span class="nce-media-missing-path">{{ filePath }}</span>
+            </div>
             <img
-              :src="mediaCompareMode === 'before' && beforeMediaUrl ? beforeMediaUrl : effectiveMediaUrl"
+              v-else
+              :src="(mediaCompareMode === 'before' || afterImgMissing) && beforeMediaUrl ? beforeMediaUrl : (effectiveMediaUrl || beforeMediaUrl)"
               :alt="filePath || 'Image preview'"
               class="nce-preview-img"
               :style="{ transform: `scale(${mediaZoom})` }"
               @load="handleAfterImageLoad"
+              @error="handleAfterImageError"
             />
           </figure>
+          <div v-else class="nce-empty">
+            {{ loading ? 'Loading image preview…' : 'Image preview unavailable.' }}
+          </div>
         </div>
       </template>
 
@@ -1299,10 +1515,95 @@ defineExpose({
         ></iframe>
       </template>
 
-      <!-- RFC-7U-0002: .7uaudio / .7jap PIANO ROLL & SYNTHESIZER PREVIEW -->
-      <template v-else-if="resolvedMediaType === '7uaudio' && parsed7uAudio">
+      <!-- FONT SPECIMEN PREVIEW (WOFF2, WOFF, TTF, OTF) -->
+      <template v-else-if="resolvedMediaType === 'font'">
         <div class="nce-rfc-stage">
-          <div class="nce-rfc-card">
+          <div class="nce-rfc-card nce-font-card">
+            <div class="nce-rfc-head">
+              <div>
+                <span class="nce-media-kind-pill">TYPOGRAPHY SPECIMEN</span>
+                <h4 class="nce-rfc-title">{{ filePath || 'Local WebFont' }}</h4>
+              </div>
+              <div class="nce-rfc-stats">
+                <span v-if="formattedMediaSize">{{ formattedMediaSize }}</span>
+                <span>{{ loadedFontFamily ? '✓ Loaded' : 'System Fallback' }}</span>
+              </div>
+            </div>
+            <div
+              class="nce-font-specimen-stage"
+              :style="loadedFontFamily ? { fontFamily: `'${loadedFontFamily}', sans-serif` } : undefined"
+            >
+              <p class="nce-font-sample-xl">Zażółć gęślą jaźń · 0123456789</p>
+              <p class="nce-font-sample-lg">ABCDEFGHIJKLMNOPQRSTUVWXYZ abcdefghijklmnopqrstuvwxyz</p>
+              <p class="nce-font-sample-sm">const f = (x) =&gt; x !== 0 ? Math.sin(x) * 440 : 0; // !@#$%^&amp;*()[]{}&lt;&gt;</p>
+            </div>
+          </div>
+        </div>
+      </template>
+
+      <!-- RFC-7U-0001: .nsd NANOSOUND ALGEBRAIC SYNTHESIZER & OSCILLOSCOPE PREVIEW -->
+      <template v-else-if="resolvedMediaType === 'nsd'">
+        <div class="nce-rfc-stage">
+          <div v-if="parsedNsdPreview && parsedNsdPreview.valid" class="nce-rfc-card">
+            <div class="nce-rfc-head">
+              <div>
+                <span class="nce-media-kind-pill">RFC-7U-0001 · NANOSOUND DSL</span>
+                <h4 class="nce-rfc-title">{{ filePath || 'NanoSound Patch (.nsd)' }}</h4>
+              </div>
+              <div class="nce-rfc-stats">
+                <span>{{ parsedNsdPreview.layers.length }} {{ parsedNsdPreview.layers.length === 1 ? 'voice' : 'voices' }}</span>
+                <span>· {{ parsedNsdPreview.durationMs }} ms</span>
+                <button
+                  type="button"
+                  class="nce-seg-btn nce-synth-play-btn"
+                  :class="{ active: isPlayingCustomFormat && activePlayingSnippetId === 'primary' }"
+                  @click="playCustomFormatPreview"
+                >
+                  {{ isPlayingCustomFormat && activePlayingSnippetId === 'primary' ? '⏹ Stop Synth' : '▶ Play WebAudio' }}
+                </button>
+              </div>
+            </div>
+
+            <svg class="nce-piano-roll-svg nce-nsd-osc-svg" viewBox="0 0 640 144" preserveAspectRatio="none">
+              <rect x="0" y="0" width="640" height="144" fill="rgba(9, 13, 22, 0.92)" rx="6" />
+              <line x1="0" y1="72" x2="640" y2="72" stroke="rgba(148, 163, 184, 0.22)" stroke-dasharray="4 4" stroke-width="1" />
+              <path v-if="parsedNsdPreview.svgAreaPath" :d="parsedNsdPreview.svgAreaPath" fill="rgba(52, 211, 153, 0.18)" />
+              <polyline
+                v-if="parsedNsdPreview.svgPoints"
+                :points="parsedNsdPreview.svgPoints"
+                fill="none"
+                stroke="#34d399"
+                stroke-width="1.6"
+                stroke-linejoin="round"
+              />
+            </svg>
+
+            <div class="nce-nsd-layers">
+              <span
+                v-for="layer in parsedNsdPreview.layers"
+                :key="layer.id"
+                class="nce-nsd-layer-pill"
+              >
+                <strong>{{ layer.wave }}</strong>
+                <span>{{ layer.freqStart === layer.freqEnd ? `${layer.freqStart}Hz` : `${layer.freqStart}→${layer.freqEnd}Hz` }}</span>
+                <span>τ={{ layer.decayMs }}ms</span>
+                <span v-if="layer.filterType">{{ layer.filterType }}({{ layer.cutoffHz }}Hz)</span>
+                <span>×{{ layer.gain }}</span>
+              </span>
+            </div>
+
+            <code class="nce-nsd-formula">{{ parsedNsdPreview.dsl }}</code>
+          </div>
+          <div v-else class="nce-empty">
+            {{ loading ? 'Synthesizing .nsd waveform…' : 'Empty or unparseable .nsd expression.' }}
+          </div>
+        </div>
+      </template>
+
+      <!-- RFC-7U-0002: .7uaudio / .7jap PIANO ROLL & SYNTHESIZER PREVIEW -->
+      <template v-else-if="resolvedMediaType === '7uaudio'">
+        <div class="nce-rfc-stage">
+          <div v-if="parsed7uAudio" class="nce-rfc-card">
             <div class="nce-rfc-head">
               <div>
                 <span class="nce-media-kind-pill">RFC-7U-0002 · {{ parsed7uAudio.protocol.toUpperCase() }} v{{ parsed7uAudio.version }}</span>
@@ -1338,19 +1639,28 @@ defineExpose({
               />
             </svg>
           </div>
+          <div v-else class="nce-empty">
+            {{ loading ? 'Loading .7uaudio sequence…' : 'Switch to Diff or Code to inspect raw .7uaudio content.' }}
+          </div>
         </div>
       </template>
 
       <!-- RFC-7U-0003: .meme DECLARATIVE MEME SPECIFICATION PREVIEW -->
-      <template v-else-if="resolvedMediaType === 'meme' && parsedMemeSpec">
+      <template v-else-if="resolvedMediaType === 'meme'">
         <div class="nce-rfc-stage">
-          <div class="nce-rfc-card nce-meme-card">
+          <div v-if="parsedMemeSpec" class="nce-rfc-card nce-meme-card">
             <div class="nce-rfc-head">
               <span class="nce-media-kind-pill">RFC-7U-0003 · {{ parsedMemeSpec.protocol.toUpperCase() }} v{{ parsedMemeSpec.version }}</span>
               <span class="nce-rfc-title">{{ parsedMemeSpec.title }}</span>
             </div>
             <div class="nce-meme-canvas">
               <div v-if="parsedMemeSpec.topCaption" class="nce-meme-caption is-top">{{ parsedMemeSpec.topCaption }}</div>
+              <img
+                v-if="parsedMemeSpec.imageUrl"
+                :src="parsedMemeSpec.imageUrl"
+                :alt="parsedMemeSpec.title"
+                class="nce-preview-img"
+              />
               <div v-if="parsedMemeSpec.panels.length > 0" class="nce-meme-panels">
                 <div v-for="(panel, pIdx) in parsedMemeSpec.panels" :key="pIdx" class="nce-meme-panel">
                   <span class="nce-meme-panel-idx">#{{ pIdx + 1 }}</span>
@@ -1359,6 +1669,54 @@ defineExpose({
               </div>
               <div v-if="parsedMemeSpec.bottomCaption" class="nce-meme-caption is-bottom">{{ parsedMemeSpec.bottomCaption }}</div>
             </div>
+          </div>
+          <div v-else-if="effectiveMediaUrl && mediaMeta?.mimeType?.startsWith('image/')" class="nce-media-stage is-bg-checker">
+            <img :src="effectiveMediaUrl" :alt="filePath || 'Meme preview'" class="nce-preview-img" />
+          </div>
+          <div v-else class="nce-empty">
+            {{ loading ? 'Loading .meme container…' : 'Switch to Diff or Code to inspect raw .meme payload.' }}
+          </div>
+        </div>
+      </template>
+
+      <!-- EMBEDDED NANOSOUND (.nsd) PRESETS RACK FOR SOURCE CODE FILES -->
+      <template v-else-if="hasEmbeddedNsd">
+        <div class="nce-rfc-stage">
+          <div
+            v-for="snip in embeddedNsdSnippets"
+            :key="snip.id"
+            class="nce-rfc-card nce-embedded-nsd-card"
+          >
+            <div class="nce-rfc-head">
+              <div>
+                <span class="nce-media-kind-pill">EMBEDDED .NSD</span>
+                <strong class="nce-nsd-snip-label">{{ snip.label }}</strong>
+              </div>
+              <div class="nce-rfc-stats">
+                <span>{{ snip.compiled.durationMs }} ms</span>
+                <button
+                  type="button"
+                  class="nce-seg-btn nce-synth-play-btn"
+                  :class="{ active: isPlayingCustomFormat && activePlayingSnippetId === snip.id }"
+                  @click="playNsdDslSnippet(snip.dsl, snip.id)"
+                >
+                  {{ isPlayingCustomFormat && activePlayingSnippetId === snip.id ? '⏹ Stop' : '▶ Play' }}
+                </button>
+              </div>
+            </div>
+            <svg class="nce-piano-roll-svg nce-nsd-osc-mini" viewBox="0 0 640 144" preserveAspectRatio="none">
+              <rect x="0" y="0" width="640" height="144" fill="rgba(9, 13, 22, 0.9)" rx="6" />
+              <line x1="0" y1="72" x2="640" y2="72" stroke="rgba(148, 163, 184, 0.18)" stroke-dasharray="4 4" stroke-width="1" />
+              <path v-if="snip.compiled.svgAreaPath" :d="snip.compiled.svgAreaPath" fill="rgba(129, 140, 248, 0.2)" />
+              <polyline
+                v-if="snip.compiled.svgPoints"
+                :points="snip.compiled.svgPoints"
+                fill="none"
+                stroke="#818cf8"
+                stroke-width="1.6"
+              />
+            </svg>
+            <code class="nce-nsd-formula">{{ snip.dsl }}</code>
           </div>
         </div>
       </template>
@@ -1371,7 +1729,7 @@ defineExpose({
       :style="{ maxHeight: containerMaxHeight }"
     >
       <div v-if="parsedDiff.lines.length === 0" class="nce-empty">
-        No diff changes to display.
+        {{ loading ? 'Loading file diff…' : 'No diff changes to display.' }}
       </div>
       <table v-else class="nce-diff-table">
         <tbody>
@@ -1403,7 +1761,7 @@ defineExpose({
       :style="{ maxHeight: containerMaxHeight }"
     >
       <div v-if="parsedDiff.splitRows.length === 0" class="nce-empty">
-        No diff changes to display.
+        {{ loading ? 'Loading file diff…' : 'No diff changes to display.' }}
       </div>
       <table v-else class="nce-diff-table is-split">
         <tbody>
@@ -2281,6 +2639,54 @@ td.is-empty {
   color: #6ee7b7;
 }
 
+.nce-media-caption.is-after.is-deleted {
+  background: rgba(244, 63, 94, 0.18);
+  color: #fda4af;
+}
+
+.nce-media-missing-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-width: 240px;
+  min-height: 150px;
+  padding: 20px 24px;
+  border-radius: 10px;
+  border: 1px dashed rgba(148, 163, 184, 0.35);
+  background: rgba(15, 23, 42, 0.72);
+  text-align: center;
+}
+
+.nce-media-missing-card.is-deleted {
+  border-color: rgba(244, 63, 94, 0.42);
+  background: rgba(30, 14, 24, 0.72);
+}
+
+.nce-media-missing-pill {
+  font-family: var(--nano-font-mono, monospace);
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: rgba(56, 189, 248, 0.16);
+  color: #7dd3fc;
+}
+
+.nce-media-missing-pill.is-deleted {
+  background: rgba(244, 63, 94, 0.2);
+  color: #fda4af;
+}
+
+.nce-media-missing-path {
+  font-family: var(--nano-font-mono, monospace);
+  font-size: 0.74rem;
+  color: var(--nano-text-muted, #94a3b8);
+  word-break: break-all;
+}
+
 .nce-preview-img {
   max-width: 100%;
   max-height: 62vh;
@@ -2433,5 +2839,84 @@ td.is-empty {
   margin: 4px 0 0;
   font-size: 0.8rem;
   color: #e2e8f0;
+}
+
+.nce-nsd-osc-svg {
+  height: 144px;
+}
+
+.nce-nsd-osc-mini {
+  height: 92px;
+}
+
+.nce-nsd-layers {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.nce-nsd-layer-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 8px;
+  border-radius: 5px;
+  background: rgba(30, 41, 59, 0.82);
+  border: 1px solid rgba(52, 211, 153, 0.24);
+  font-family: var(--nano-font-mono, monospace);
+  font-size: 0.72rem;
+  color: #cbd5e1;
+}
+
+.nce-nsd-layer-pill strong {
+  color: #34d399;
+}
+
+.nce-nsd-formula {
+  display: block;
+  padding: 8px 10px;
+  border-radius: 6px;
+  background: rgba(9, 13, 22, 0.85);
+  border: 1px solid rgba(148, 163, 184, 0.14);
+  font-family: var(--nano-font-mono, monospace);
+  font-size: 0.74rem;
+  color: #a5b4fc;
+  word-break: break-word;
+}
+
+.nce-nsd-snip-label {
+  margin-left: 8px;
+  font-family: var(--nano-font-mono, monospace);
+  font-size: 0.8rem;
+  color: #f8fafc;
+}
+
+.nce-font-specimen-stage {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 16px;
+  border-radius: 8px;
+  background: rgba(9, 13, 22, 0.88);
+  border: 1px solid rgba(148, 163, 184, 0.16);
+  color: #f8fafc;
+}
+
+.nce-font-sample-xl {
+  margin: 0;
+  font-size: 1.75rem;
+  line-height: 1.25;
+}
+
+.nce-font-sample-lg {
+  margin: 0;
+  font-size: 1.05rem;
+  color: #cbd5e1;
+}
+
+.nce-font-sample-sm {
+  margin: 0;
+  font-size: 0.82rem;
+  color: #94a3b8;
 }
 </style>
