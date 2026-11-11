@@ -1,10 +1,12 @@
 <script setup>
-import { ref, computed, watch, onUnmounted } from 'vue';
+import { ref, computed, watch, onMounted, onUnmounted } from 'vue';
 import {
   parseColor,
   formatHex,
   formatRgb,
   formatOklch,
+  oklchToRgb,
+  getMaxOklchChroma,
   getContrastTextColor,
   getWcagContrastRatio,
 } from '../utils/colors.js';
@@ -54,15 +56,27 @@ const chroma = ref(0.18);
 const hue = ref(250);
 const copied = ref(false);
 let copyTimer = null;
+let wheelRafId = 0;
+let lastEmittedModelValue = '';
 const discRef = ref(null);
+const wheelCanvasRef = ref(null);
 const isDraggingDisc = ref(false);
 
+const effectiveGamutMaxChroma = (lVal, hVal) => {
+  const gamutCap = getMaxOklchChroma(lVal, hVal, Math.max(0.4, props.maxChroma));
+  return Math.max(0.0001, Math.min(props.maxChroma, gamutCap));
+};
+
 const syncFromModel = (val) => {
+  if (isDraggingDisc.value || (val && val === lastEmittedModelValue)) return;
   const parsed = parseColor(val);
   if (!parsed) return;
-  lightness.value = clamp(parsed.l, 0, 1);
-  chroma.value = clamp(parsed.c, 0, props.maxChroma);
-  hue.value = normalizeAngle(parsed.h);
+  const nextL = clamp(parsed.l, 0, 1);
+  const nextH = parsed.c > 0.0005 ? normalizeAngle(parsed.h) : hue.value;
+  const maxC = effectiveGamutMaxChroma(nextL, nextH);
+  lightness.value = nextL;
+  hue.value = nextH;
+  chroma.value = clamp(parsed.c, 0, maxC);
 };
 
 watch(() => props.modelValue, (val) => {
@@ -114,7 +128,8 @@ const lightBadge = computed(() => getWcagBadge(wcagLightRatio.value));
 const darkBadge = computed(() => getWcagBadge(wcagDarkRatio.value));
 
 const markerStyle = computed(() => {
-  const radiusNorm = clamp(chroma.value / Math.max(0.01, props.maxChroma), 0, 1);
+  const maxC = effectiveGamutMaxChroma(lightness.value, hue.value);
+  const radiusNorm = clamp(chroma.value / maxC, 0, 1);
   const rad = (hue.value * Math.PI) / 180;
   const xPct = 50 + Math.cos(rad) * radiusNorm * 46;
   const yPct = 50 + Math.sin(rad) * radiusNorm * 46;
@@ -128,11 +143,87 @@ const markerStyle = computed(() => {
 const lightnessGradient = computed(() => {
   const c = Number(chroma.value.toFixed(3));
   const h = Number(hue.value.toFixed(1));
-  return `linear-gradient(to right, oklch(0 ${c} ${h}) 0%, oklch(0 ${c} ${h}) 2px, oklch(0.5 ${c} ${h}) 50%, oklch(1 ${c} ${h}) calc(100% - 2px), oklch(1 ${c} ${h}) 100%)`;
+  const stops = [0, 0.2, 0.4, 0.5, 0.65, 0.82, 1].map((lStop) => {
+    const safeC = Math.min(c, effectiveGamutMaxChroma(lStop, h));
+    const rgb = oklchToRgb(lStop, safeC, h);
+    const pct = Math.round(lStop * 100);
+    return `rgb(${rgb.r}, ${rgb.g}, ${rgb.b}) ${pct}%`;
+  });
+  return `linear-gradient(to right, ${stops.join(', ')})`;
+});
+
+const renderPolarWheelCanvas = () => {
+  wheelRafId = 0;
+  const canvas = wheelCanvasRef.value;
+  if (!canvas || typeof canvas.getContext !== 'function') return;
+  const ctx = canvas.getContext('2d');
+  if (!ctx) return;
+
+  const size = 160;
+  if (canvas.width !== size || canvas.height !== size) {
+    canvas.width = size;
+    canvas.height = size;
+  }
+
+  const img = ctx.createImageData(size, size);
+  const data = img.data;
+  const half = size * 0.5;
+  const radius = half - 0.5;
+  const curL = clamp(lightness.value, 0, 1);
+
+  // Precompute max sRGB-displayable chroma across 360 integer hue degrees for O(1) pixel lookup
+  const maxChromaLut = new Float32Array(360);
+  for (let deg = 0; deg < 360; deg++) {
+    maxChromaLut[deg] = effectiveGamutMaxChroma(curL, deg);
+  }
+
+  for (let py = 0; py < size; py++) {
+    const dy = py + 0.5 - half;
+    for (let px = 0; px < size; px++) {
+      const dx = px + 0.5 - half;
+      const dist = Math.hypot(dx, dy);
+      const offset = (py * size + px) * 4;
+      if (dist > radius + 1) {
+        data[offset + 3] = 0;
+        continue;
+      }
+      const normR = clamp(dist / (radius * 0.96), 0, 1);
+      const hueDeg = normalizeAngle((Math.atan2(dy, dx) * 180) / Math.PI);
+      const hIdx = Math.floor(hueDeg) % 360;
+      const hNext = (hIdx + 1) % 360;
+      const frac = hueDeg - Math.floor(hueDeg);
+      const maxC = maxChromaLut[hIdx] * (1 - frac) + maxChromaLut[hNext] * frac;
+      const rgb = oklchToRgb(curL, normR * maxC, hueDeg);
+      const edgeAlpha = dist > radius - 0.8 ? clamp(radius + 0.6 - dist, 0, 1) : 1;
+      data[offset] = rgb.r;
+      data[offset + 1] = rgb.g;
+      data[offset + 2] = rgb.b;
+      data[offset + 3] = Math.round(edgeAlpha * 255);
+    }
+  }
+  ctx.putImageData(img, 0, 0);
+};
+
+const scheduleWheelRender = () => {
+  if (typeof globalThis.requestAnimationFrame !== 'function') {
+    renderPolarWheelCanvas();
+    return;
+  }
+  if (wheelRafId) return;
+  wheelRafId = globalThis.requestAnimationFrame(renderPolarWheelCanvas);
+};
+
+onMounted(() => {
+  renderPolarWheelCanvas();
+});
+
+watch(() => [lightness.value, props.maxChroma], () => {
+  scheduleWheelRender();
 });
 
 const emitUpdate = () => {
   const out = formattedValue.value;
+  lastEmittedModelValue = out;
   emit('update:modelValue', out);
   emit('change', {
     value: out,
@@ -159,8 +250,10 @@ const updateFromPointer = (event) => {
   const dist = Math.sqrt(dx * dx + dy * dy);
   const normDist = clamp(dist / Math.max(1, maxR), 0, 1);
 
-  hue.value = normalizeAngle((Math.atan2(dy, dx) * 180) / Math.PI);
-  chroma.value = Number((normDist * props.maxChroma).toFixed(3));
+  const nextHue = normalizeAngle((Math.atan2(dy, dx) * 180) / Math.PI);
+  const maxC = effectiveGamutMaxChroma(lightness.value, nextHue);
+  hue.value = nextHue;
+  chroma.value = Number((normDist * maxC).toFixed(4));
   emitUpdate();
 };
 
@@ -221,7 +314,12 @@ const onLightnessInput = (event) => {
   if (props.disabled) return;
   const val = parseFloat(event.target.value);
   if (Number.isFinite(val)) {
-    lightness.value = clamp(val / 100, 0, 1);
+    const prevMaxC = effectiveGamutMaxChroma(lightness.value, hue.value);
+    const satRatio = clamp(chroma.value / prevMaxC, 0, 1);
+    const nextL = clamp(val / 100, 0, 1);
+    const nextMaxC = effectiveGamutMaxChroma(nextL, hue.value);
+    lightness.value = nextL;
+    chroma.value = Number((satRatio * nextMaxC).toFixed(4));
     emitUpdate();
   }
 };
@@ -267,6 +365,10 @@ onUnmounted(() => {
     clearTimeout(copyTimer);
     copyTimer = null;
   }
+  if (wheelRafId && typeof globalThis.cancelAnimationFrame === 'function') {
+    globalThis.cancelAnimationFrame(wheelRafId);
+    wheelRafId = 0;
+  }
 });
 const setOklch = (l, c, h) => {
   if (props.disabled) return;
@@ -308,7 +410,9 @@ defineExpose({
         @pointercancel="onDiscPointerUp"
         @keydown="onDiscKeyDown"
       >
-        <div class="nano-oklch-disc-wheel"></div>
+        <div class="nano-oklch-disc-wheel">
+          <canvas ref="wheelCanvasRef" class="nano-oklch-disc-canvas" aria-hidden="true"></canvas>
+        </div>
         <div class="nano-oklch-disc-marker" :style="markerStyle"></div>
       </div>
 
@@ -432,6 +536,7 @@ defineExpose({
   background: var(--nano-bg-card, rgba(255, 255, 255, 0.05));
   border: 1px solid var(--nano-border-card, rgba(255, 255, 255, 0.15));
   color: var(--nano-text-main, #f8fafc);
+  forced-color-adjust: none;
   user-select: none;
   -webkit-user-select: none;
 }
@@ -466,6 +571,7 @@ defineExpose({
 }
 
 .nano-oklch-disc-wheel {
+  position: relative;
   width: 100%;
   height: 100%;
   border-radius: 50%;
@@ -481,6 +587,14 @@ defineExpose({
       oklch(0.7 0.25 300),
       oklch(0.7 0.25 360)
     );
+}
+
+.nano-oklch-disc-canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  pointer-events: none;
 }
 
 .nano-oklch-disc-marker {
