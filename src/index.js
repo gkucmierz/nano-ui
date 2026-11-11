@@ -314,7 +314,13 @@ import {
   normalizeFileStatus,
   middleTruncatePath,
   parseUnifiedDiff,
+  PREVIEW_MEDIA_TYPES,
+  resolveEditorViewMode,
 } from './utils/git-diff.js';
+import {
+  compileNsdPreview,
+  extractEmbeddedNsdSnippets,
+} from './utils/nsd-preview.js';
 import { detectRenderedGridColumns } from './utils/grid.js';
 import {
   findSafeSelectMount,
@@ -660,6 +666,10 @@ export {
   normalizeFileStatus,
   middleTruncatePath,
   parseUnifiedDiff,
+  PREVIEW_MEDIA_TYPES,
+  resolveEditorViewMode,
+  compileNsdPreview,
+  extractEmbeddedNsdSnippets,
   detectRenderedGridColumns,
   findSafeSelectMount,
   findSafeAncestorMount,
