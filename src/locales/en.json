@@ -64,6 +64,8 @@
     "clickToCopy": "Click to copy",
     "toggleTheme": "Toggle Theme (T)",
     "toggleLang": "Switch Language (L)",
+    "toggleSoundOn": "Enable Global .nsd Audio",
+    "toggleSoundOff": "Mute Global .nsd Audio",
     "langCode": "EN",
     "deg": "deg",
     "rad": "rad",
