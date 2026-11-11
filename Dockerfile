@@ -6,7 +6,7 @@ WORKDIR /app
 # Install git system dependency explicitly missing from Alpine Core so NPM can resolve git origins
 RUN apk add --no-cache git
 
-COPY package*.json ./
+COPY package*.json .npmrc* ./
 RUN npm install --legacy-peer-deps
 
 COPY . .
