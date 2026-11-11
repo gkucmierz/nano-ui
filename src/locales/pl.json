@@ -64,6 +64,8 @@
     "clickToCopy": "Kliknij, aby skopiować",
     "toggleTheme": "Przełącz motyw (T)",
     "toggleLang": "Zmień język (L)",
+    "toggleSoundOn": "Włącz globalne audio .nsd",
+    "toggleSoundOff": "Wycisz globalne audio .nsd",
     "langCode": "PL",
     "deg": "stopnie",
     "rad": "radiany",
