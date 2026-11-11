@@ -11,7 +11,18 @@ import {
   quatNormalize,
   quatSlerp,
 } from './composables/useInertialStabilizer.js';
-import Ripple from './directives/ripple.js';
+import Ripple, { computeRippleGeometry } from './directives/ripple.js';
+import {
+  NANO_UI_SOUND_PRESETS,
+  configureNanoUiSound,
+  getNanoUiSoundConfig,
+  resetNanoUiSoundConfig,
+  useNanoUiSound,
+  resolveComponentSoundConfig,
+  playNanoUiSound,
+  computeKnobDetentCrossings,
+  computeSliderAcousticEvents,
+} from './utils/sound-controller.js';
 import { tooltipDirective } from './directives/tooltip.js';
 import { showTooltip, hideTooltip, tooltipState } from './composables/useTooltip.js';
 import {
@@ -245,6 +256,9 @@ import {
   getWcagContrastRatio,
   parseColor,
   rgbToOklch,
+  oklchToLinearRgb,
+  isOklchInSrgbGamut,
+  getMaxOklchChroma,
   oklchToRgb,
   formatHex,
   formatRgb,
@@ -310,8 +324,10 @@ import {
 import {
   detectLangFromPath,
   detectMediaTypeFromPath,
+  extractSvgIntrinsicDimensions,
   formatFileSizeBytes,
   normalizeFileStatus,
+  normalizeSvgPreviewMarkup,
   middleTruncatePath,
   parseUnifiedDiff,
   PREVIEW_MEDIA_TYPES,
@@ -393,6 +409,17 @@ import './style.css';
 
 export {
   Ripple,
+  Ripple as vRipple,
+  computeRippleGeometry,
+  NANO_UI_SOUND_PRESETS,
+  configureNanoUiSound,
+  getNanoUiSoundConfig,
+  resetNanoUiSoundConfig,
+  useNanoUiSound,
+  resolveComponentSoundConfig,
+  playNanoUiSound,
+  computeKnobDetentCrossings,
+  computeSliderAcousticEvents,
   tooltipDirective,
   tooltipDirective as vTooltip,
   showTooltip,
@@ -609,6 +636,9 @@ export {
   getWcagContrastRatio,
   parseColor,
   rgbToOklch,
+  oklchToLinearRgb,
+  isOklchInSrgbGamut,
+  getMaxOklchChroma,
   oklchToRgb,
   formatHex,
   formatRgb,
@@ -662,8 +692,10 @@ export {
   GLSL_COMPLETIONS,
   detectLangFromPath,
   detectMediaTypeFromPath,
+  extractSvgIntrinsicDimensions,
   formatFileSizeBytes,
   normalizeFileStatus,
+  normalizeSvgPreviewMarkup,
   middleTruncatePath,
   parseUnifiedDiff,
   PREVIEW_MEDIA_TYPES,
@@ -748,9 +780,12 @@ export const nanoCompilerOptions = {
 
 export default {
   version: pkg.version,
-  install(app, { directivePrefix = '', componentPrefix = '', appPrefix = '', storageMode } = {}) {
+  install(app, { directivePrefix = '', componentPrefix = '', appPrefix = '', storageMode, sound } = {}) {
     if (appPrefix || storageMode !== undefined) {
       configureGlobalStorage({ appPrefix, defaultMode: storageMode });
+    }
+    if (sound !== undefined) {
+      configureNanoUiSound(sound);
     }
     const dp = directivePrefix ? `${directivePrefix}-` : '';
     const cp = componentPrefix ? `${componentPrefix}` : '';
