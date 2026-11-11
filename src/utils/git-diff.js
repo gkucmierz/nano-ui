@@ -59,12 +59,16 @@ const IMAGE_EXTS = new Set([
   'ico',
   'avif',
   'bmp',
+  'apng',
+  'jfif',
+  'cur',
 ]);
 
 const AUDIO_EXTS = new Set([
   'mp3',
   'wav',
   'ogg',
+  'oga',
   'm4a',
   'flac',
   'aac',
@@ -81,14 +85,34 @@ const VIDEO_EXTS = new Set([
   'ogv',
 ]);
 
+const FONT_EXTS = new Set([
+  'woff2',
+  'woff',
+  'ttf',
+  'otf',
+]);
+
+export const PREVIEW_MEDIA_TYPES = new Set([
+  'image',
+  'audio',
+  'video',
+  'pdf',
+  'font',
+  'nsd',
+  '7uaudio',
+  'meme',
+]);
+
+const isStr = (val) => Object.prototype.toString.call(val) === '[object String]';
+
 /**
- * Detects whether a file path represents a visual/audio media asset or custom 7u RFC format.
- * Returns: 'image' | 'audio' | 'video' | 'pdf' | 'nsd' | '7uaudio' | 'meme' | null
+ * Detects whether a file path represents a visual/audio media asset, font, or custom 7u RFC format.
+ * Returns: 'image' | 'audio' | 'video' | 'pdf' | 'font' | 'nsd' | '7uaudio' | 'meme' | null
  * @param {string} [filePath='']
  * @returns {string|null}
  */
 export const detectMediaTypeFromPath = (filePath = '') => {
-  if (!filePath || typeof filePath !== 'string') return null;
+  if (!filePath || !isStr(filePath)) return null;
   const clean = filePath.split('?')[0].split('#')[0].trim().toLowerCase();
   const dotIdx = clean.lastIndexOf('.');
   if (dotIdx === -1) return null;
@@ -96,11 +120,70 @@ export const detectMediaTypeFromPath = (filePath = '') => {
   if (IMAGE_EXTS.has(ext)) return 'image';
   if (AUDIO_EXTS.has(ext)) return 'audio';
   if (VIDEO_EXTS.has(ext)) return 'video';
+  if (FONT_EXTS.has(ext)) return 'font';
   if (ext === 'pdf') return 'pdf';
   if (ext === 'nsd' || ext === 'nanosound') return 'nsd';
   if (ext === '7uaudio' || ext === '7jap') return '7uaudio';
   if (ext === 'meme') return 'meme';
   return null;
+};
+
+/**
+ * Deterministic view-mode state resolver for NanoCodeEditor ('preview' | 'diff' | 'code').
+ * Eliminates sync/async tab-clobbering races when `filePath`/`mediaUrl` bind synchronously at t=0ms
+ * and `diff` / `beforeMediaUrl` / `code` resolve asynchronously over HTTP at t>0ms.
+ *
+ * @param {{
+ *   propMode?: string,
+ *   userLockedMode?: string|null,
+ *   mediaType?: string|null,
+ *   hasMediaPreview?: boolean,
+ *   hasEmbeddedNsd?: boolean,
+ *   hasDiff?: boolean,
+ *   hasCode?: boolean,
+ *   loading?: boolean
+ * }} state
+ * @returns {'preview'|'diff'|'code'}
+ */
+export const resolveEditorViewMode = ({
+  propMode = 'auto',
+  userLockedMode = null,
+  mediaType = null,
+  hasMediaPreview = false,
+  hasEmbeddedNsd = false,
+  hasDiff = false,
+  hasCode = false,
+  loading = false,
+} = {}) => {
+  if (propMode && propMode !== 'auto') {
+    return propMode;
+  }
+
+  const canPreview = Boolean(
+    hasMediaPreview ||
+    hasEmbeddedNsd ||
+    (loading && mediaType && PREVIEW_MEDIA_TYPES.has(mediaType))
+  );
+
+  if (userLockedMode) {
+    if (userLockedMode === 'preview' && canPreview) return 'preview';
+    if (userLockedMode === 'diff' && (hasDiff || loading)) return 'diff';
+    if (userLockedMode === 'code') return 'code';
+  }
+
+  if (mediaType && PREVIEW_MEDIA_TYPES.has(mediaType) && canPreview) {
+    return 'preview';
+  }
+
+  if (hasDiff) {
+    return 'diff';
+  }
+
+  if (loading && !hasCode) {
+    return 'diff';
+  }
+
+  return 'code';
 };
 
 /**
@@ -126,7 +209,7 @@ export const detectLangFromPath = (filePath = '', explicitLang = '') => {
   if (explicitLang && explicitLang !== 'auto') {
     return String(explicitLang).toLowerCase().trim();
   }
-  if (!filePath || typeof filePath !== 'string') return '';
+  if (!filePath || !isStr(filePath)) return '';
   const clean = filePath.split('?')[0].split('#')[0].trim();
   const base = clean.split('/').pop() || '';
   const lowerBase = base.toLowerCase();
@@ -288,7 +371,7 @@ export const middleTruncatePath = (filePath, maxLength = 34) => {
  * }}
  */
 export const parseUnifiedDiff = (rawDiff = '', lang = '') => {
-  if (!rawDiff || typeof rawDiff !== 'string') {
+  if (!rawDiff || !isStr(rawDiff)) {
     return { lines: [], splitRows: [], additions: 0, deletions: 0 };
   }
 
