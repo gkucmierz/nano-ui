@@ -128,6 +128,98 @@ export const detectMediaTypeFromPath = (filePath = '') => {
   return null;
 };
 
+const parseSvgLengthPx = (rawAttr) => {
+  if (!rawAttr || !isStr(rawAttr)) return 0;
+  const trimmed = rawAttr.trim().toLowerCase();
+  if (!trimmed || trimmed.endsWith('%')) return 0;
+  const match = trimmed.match(/^([0-9]*\.?[0-9]+)(?:px)?$/);
+  if (!match) return 0;
+  const val = Number(match[1]);
+  return Number.isFinite(val) && val > 0 ? Math.round(val * 100) / 100 : 0;
+};
+
+/**
+ * Extracts intrinsic pixel/coordinate dimensions from raw `<svg>` markup,
+ * falling back from explicit `width`/`height` attributes to `viewBox="minX minY w h"`.
+ * Prevents `0×0` metadata and collapsed flex previews on `viewBox`-only SVG icons.
+ *
+ * @param {string} [svgText='']
+ * @returns {{ width: number, height: number, source: 'attributes'|'viewBox'|null }}
+ */
+export const extractSvgIntrinsicDimensions = (svgText = '') => {
+  if (!svgText || !isStr(svgText)) {
+    return { width: 0, height: 0, source: null };
+  }
+  const openTagMatch = svgText.match(/<svg\b[^>]*>/i);
+  if (!openTagMatch) {
+    return { width: 0, height: 0, source: null };
+  }
+  const tag = openTagMatch[0];
+  const widthMatch = tag.match(/\bwidth\s*=\s*["']([^"']+)["']/i);
+  const heightMatch = tag.match(/\bheight\s*=\s*["']([^"']+)["']/i);
+  const attrW = widthMatch ? parseSvgLengthPx(widthMatch[1]) : 0;
+  const attrH = heightMatch ? parseSvgLengthPx(heightMatch[1]) : 0;
+  if (attrW > 0 && attrH > 0) {
+    return { width: attrW, height: attrH, source: 'attributes' };
+  }
+
+  const viewBoxMatch = tag.match(/\bviewBox\s*=\s*["']([^"']+)["']/i);
+  if (viewBoxMatch) {
+    const nums = viewBoxMatch[1]
+      .trim()
+      .split(/[\s,]+/)
+      .map(Number);
+    if (nums.length === 4 && Number.isFinite(nums[2]) && Number.isFinite(nums[3]) && nums[2] > 0 && nums[3] > 0) {
+      return {
+        width: Math.round(nums[2] * 100) / 100,
+        height: Math.round(nums[3] * 100) / 100,
+        source: 'viewBox',
+      };
+    }
+  }
+
+  return { width: 0, height: 0, source: null };
+};
+
+/**
+ * Normalizes raw `<svg>` markup for `<img>` data-URL rendering:
+ * - Injects `xmlns="http://www.w3.org/2000/svg"` if missing
+ * - Backfills `width` and `height` from `viewBox` when omitted so `<img>` inside
+ *   shrink-wrapped flex containers never collapses to `0×0` px (`naturalWidth === 0`).
+ *
+ * @param {string} [svgText='']
+ * @returns {string}
+ */
+export const normalizeSvgPreviewMarkup = (svgText = '') => {
+  if (!svgText || !isStr(svgText)) return '';
+  const trimmed = svgText.trim();
+  const openTagMatch = trimmed.match(/<svg\b[^>]*>/i);
+  if (!openTagMatch) return '';
+
+  let tag = openTagMatch[0];
+  if (!/\bxmlns\s*=/i.test(tag)) {
+    tag = tag.replace(/^<svg\b/i, '<svg xmlns="http://www.w3.org/2000/svg"');
+  }
+
+  const dims = extractSvgIntrinsicDimensions(tag);
+  const hasExplicitWidth = /\bwidth\s*=\s*["'][^"']+["']/i.test(tag);
+  const hasExplicitHeight = /\bheight\s*=\s*["'][^"']+["']/i.test(tag);
+
+  if ((!hasExplicitWidth || !hasExplicitHeight) && dims.width > 0 && dims.height > 0) {
+    const injectAttrs = [
+      !hasExplicitWidth ? `width="${dims.width}"` : '',
+      !hasExplicitHeight ? `height="${dims.height}"` : '',
+    ]
+      .filter(Boolean)
+      .join(' ');
+    if (injectAttrs) {
+      tag = tag.replace(/\/?>$/, (ending) => ` ${injectAttrs}${ending}`);
+    }
+  }
+
+  return trimmed.slice(0, openTagMatch.index) + tag + trimmed.slice(openTagMatch.index + openTagMatch[0].length);
+};
+
 /**
  * Deterministic view-mode state resolver for NanoCodeEditor ('preview' | 'diff' | 'code').
  * Eliminates sync/async tab-clobbering races when `filePath`/`mediaUrl` bind synchronously at t=0ms
