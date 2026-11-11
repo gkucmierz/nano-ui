@@ -1,6 +1,6 @@
 {
   "name": "@gkucmierz/nano-ui",
-  "version": "1.8.18",
+  "version": "1.8.19",
   "license": "ISC",
   "author": "Grzegorz Kućmierz",
   "description": "High-performance, minimal footprint Vue 3 UI library, interactive 3D charts, and directives.",
@@ -65,7 +65,8 @@
     "vite": "^8.0.12",
     "vue": "^3.4.0",
     "vue-minisearch": "^1.0.0",
-    "vue-router": "^5.0.6"
+    "vue-router": "^5.0.6",
+    "vue-url-cleaner": "^1.0.0"
   },
   "repository": {
     "type": "git",
