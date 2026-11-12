@@ -153,7 +153,7 @@ const ecosystemTreeNodes = [
   {
     id: 'nano-ui',
     label: '@gkucmierz/nano-ui',
-    version: '1.8.20',
+    version: '1.8.21',
     icon: '🎨',
     badge: 'PUBLIC · MIT',
     badgeVariant: 'emerald',
