@@ -76,12 +76,12 @@ const toggle = (event) => {
     emit('update:indeterminate', false);
     emit('update:modelValue', true);
     emit('change', true, event);
-    playNanoUiSound('switchOn', { propSound: props.sound, minIntervalMs: 24 });
+    playNanoUiSound('switchOn', { propSound: props.sound, size: props.size, minIntervalMs: 24 });
   } else {
     const nextVal = !isChecked.value;
     emit('update:modelValue', nextVal);
     emit('change', nextVal, event);
-    playNanoUiSound(nextVal ? 'switchOn' : 'switchOff', { propSound: props.sound, minIntervalMs: 24 });
+    playNanoUiSound(nextVal ? 'switchOn' : 'switchOff', { propSound: props.sound, size: props.size, minIntervalMs: 24 });
   }
 };
 </script>
