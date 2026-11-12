@@ -822,6 +822,18 @@ onUnmounted(() => {
               <span v-if="searchQuery.trim()" class="nav-match-tag">{{ getComponentTag('/docs/coverflow') }}</span>
             </span>
           </router-link>
+          <router-link v-show="isRouteVisible('/docs/heatmap')" to="/docs/heatmap" class="nav-link" :class="{ 'kbd-selected': isKeyboardSelected('/docs/heatmap') }" active-class="active" v-tooltip="isNarrow ? t('nav.heatmap') : undefined">
+            <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <rect x="3" y="3" width="7" height="7" rx="1.5"/>
+              <rect x="14" y="3" width="7" height="7" rx="1.5"/>
+              <rect x="3" y="14" width="7" height="7" rx="1.5"/>
+              <rect x="14" y="14" width="7" height="7" rx="1.5"/>
+            </svg>
+            <span class="nav-label-group">
+              <span class="nav-label">{{ t('nav.heatmap') }}</span>
+              <span v-if="searchQuery.trim()" class="nav-match-tag">{{ getComponentTag('/docs/heatmap') }}</span>
+            </span>
+          </router-link>
           </div>
         </div>
 
