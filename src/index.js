@@ -25,6 +25,7 @@ import {
 } from './utils/sound-controller.js';
 import { tooltipDirective } from './directives/tooltip.js';
 import { showTooltip, hideTooltip, tooltipState } from './composables/useTooltip.js';
+import { buildTooltipBubbleGeometry } from './utils/tooltipGeometry.js';
 import {
   useDialog,
   showAlert,
@@ -211,6 +212,7 @@ import {
   latLonToViewportPoint,
   viewportPointToLatLon,
   buildVisibleTileGrid,
+  projectRetainedTilesToViewport,
   computeMapScaleBar,
   haversineDistanceKm,
   computePolylineDistanceKm,
@@ -426,6 +428,7 @@ export {
   showTooltip,
   hideTooltip,
   tooltipState,
+  buildTooltipBubbleGeometry,
   useDialog,
   showAlert,
   showConfirm,
@@ -600,6 +603,7 @@ export {
   latLonToViewportPoint,
   viewportPointToLatLon,
   buildVisibleTileGrid,
+  projectRetainedTilesToViewport,
   computeMapScaleBar,
   haversineDistanceKm,
   computePolylineDistanceKm,
