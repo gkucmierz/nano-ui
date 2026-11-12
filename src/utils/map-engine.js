@@ -234,8 +234,10 @@ export function buildVisibleTileGrid({
 
       tiles.push({
         key: `${layer?.id || 'tile'}-${tileZoom}-${tx}-${ty}`,
+        layerId: layer?.id || 'tile',
         z: tileZoom,
         x: wrappedX,
+        rawTx: tx,
         y: ty,
         url,
         left: width / 2 + offsetX,
@@ -250,6 +252,69 @@ export function buildVisibleTileGrid({
     zoomScale,
     tiles
   };
+}
+
+/**
+ * Re-projects previously decoded slippy tiles (`retainedTiles`) into the current
+ * viewport `{ centerLat, centerLon, zoom, width, height }` so rapid zoom/tab switches
+ * (e.g. `z=13.4` <-> `z=6.4`) render a continuous cartographic backdrop instead of
+ * flashing an empty/inverted canvas while new remote tiles fetch.
+ */
+export function projectRetainedTilesToViewport(
+  retainedTiles = [],
+  {
+    centerLat = 50.2991,
+    centerLon = 18.6749,
+    zoom = 13,
+    width = 600,
+    height = 320,
+    layerId = null,
+    activeTileZoom = null,
+    tileSize = 256
+  } = {}
+) {
+  if (!Array.isArray(retainedTiles) || retainedTiles.length === 0) return [];
+  const targetZoom = Number(zoom) || 13;
+  const projected = [];
+
+  for (const tile of retainedTiles) {
+    if (!tile || !Number.isFinite(tile.z) || !Number.isFinite(tile.y)) continue;
+    if (layerId && tile.layerId && tile.layerId !== layerId) continue;
+    if (activeTileZoom !== null && tile.z === activeTileZoom) continue;
+
+    // Limit extreme scale ratios so gigantic z=2 tiles or microscopic z=19 tiles don't thrash GPU memory
+    const zoomDiff = targetZoom - tile.z;
+    if (zoomDiff < -6 || zoomDiff > 4.5) continue;
+
+    const scale = Math.pow(2, zoomDiff);
+    const centerWorld = latLonToWorldPixel(centerLat, centerLon, tile.z, tileSize);
+    const tx = Number.isFinite(tile.rawTx) ? tile.rawTx : tile.x;
+    const left = width / 2 + (tx * tileSize - centerWorld.x) * scale;
+    const top = height / 2 + (tile.y * tileSize - centerWorld.y) * scale;
+    const size = tileSize * scale + 0.85;
+
+    // Frustum-cull tiles completely outside the current viewport
+    if (left + size < -32 || left > width + 32 || top + size < -32 || top > height + 32) {
+      continue;
+    }
+
+    projected.push({
+      key: `retained-${tile.key || `${tile.layerId || 'tile'}-${tile.z}-${tx}-${tile.y}`}`,
+      z: tile.z,
+      x: tile.x,
+      rawTx: tx,
+      y: tile.y,
+      url: tile.url,
+      left,
+      top,
+      size,
+      zoomDistance: Math.abs(zoomDiff)
+    });
+  }
+
+  // Paint coarser fallback tiles first and finer (closer-to-target-zoom) tiles on top
+  projected.sort((a, b) => b.zoomDistance - a.zoomDistance);
+  return projected;
 }
 
 const NICE_SCALE_STEPS_METERS = [
