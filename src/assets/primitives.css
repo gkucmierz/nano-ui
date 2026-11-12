@@ -856,11 +856,92 @@ textarea.nano-input,
   color: var(--nano-status-danger-text);
 }
 
-.nano-alert-info {
+.nano-alert-info,
+.nano-alert-note {
   background: var(--nano-status-info-bg);
   border: 1px solid var(--nano-status-info-border);
   color: var(--nano-status-info-text);
 }
+
+.nano-alert-tip {
+  background: var(--nano-callout-tip-bg, rgba(99, 102, 241, 0.12));
+  border: 1px solid var(--nano-callout-tip-border, rgba(99, 102, 241, 0.26));
+  color: var(--nano-callout-tip-title, #6366f1);
+}
+
+.nano-alert-important,
+.nano-alert-purple {
+  background: var(--nano-status-purple-bg);
+  border: 1px solid var(--nano-status-purple-border);
+  color: var(--nano-status-purple-text);
+}
+
+/* Soft Editorial Callout Cards (.nano-callout) */
+.nano-callout {
+  margin: 1em 0;
+  padding: 14px 18px;
+  border-radius: var(--nano-radius-lg, 12px);
+  border: 1px solid var(--nano-callout-tip-border, rgba(99, 102, 241, 0.24));
+  background: var(--nano-callout-tip-bg, rgba(99, 102, 241, 0.10));
+  color: var(--nano-text-main, inherit);
+  box-sizing: border-box;
+  width: 100%;
+  line-height: 1.62;
+}
+
+.nano-callout-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.76rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  line-height: 1.25;
+  margin-bottom: 8px;
+  color: var(--nano-callout-tip-title, #6366f1);
+}
+
+.nano-callout-header > svg {
+  display: inline-block;
+  flex-shrink: 0;
+  width: 16px;
+  height: 16px;
+  max-width: none;
+}
+
+.nano-callout-body > :first-child { margin-top: 0; }
+.nano-callout-body > :last-child { margin-bottom: 0; }
+
+.nano-callout-tip {
+  background: var(--nano-callout-tip-bg);
+  border-color: var(--nano-callout-tip-border);
+}
+.nano-callout-tip .nano-callout-header { color: var(--nano-callout-tip-title); }
+
+.nano-callout-note {
+  background: var(--nano-callout-note-bg);
+  border-color: var(--nano-callout-note-border);
+}
+.nano-callout-note .nano-callout-header { color: var(--nano-callout-note-title); }
+
+.nano-callout-important {
+  background: var(--nano-callout-important-bg);
+  border-color: var(--nano-callout-important-border);
+}
+.nano-callout-important .nano-callout-header { color: var(--nano-callout-important-title); }
+
+.nano-callout-warning {
+  background: var(--nano-callout-warning-bg);
+  border-color: var(--nano-callout-warning-border);
+}
+.nano-callout-warning .nano-callout-header { color: var(--nano-callout-warning-title); }
+
+.nano-callout-caution {
+  background: var(--nano-callout-caution-bg);
+  border-color: var(--nano-callout-caution-border);
+}
+.nano-callout-caution .nano-callout-header { color: var(--nano-callout-caution-title); }
 
 /* Alert Inner Structural Sub-Elements */
 .nano-alert-icon {
@@ -1126,5 +1207,147 @@ textarea.nano-input,
     animation: none;
   }
 }
+
+/* ==========================================================================
+   12. Semantic Fieldset & Legend Primitives (.nano-fieldset, .nano-legend)
+   Preserves native <fieldset> + first-child <legend> accessibility naming while
+   preventing long legends from overflowing rounded card borders.
+   ========================================================================== */
+.nano-fieldset {
+  min-inline-size: 0;
+  width: 100%;
+  box-sizing: border-box;
+  margin: 0;
+  padding: 12px 16px 16px;
+  border: 1px solid var(--nano-fieldset-border, var(--nano-border-card, rgba(148, 163, 184, 0.24)));
+  border-radius: var(--nano-fieldset-radius, var(--nano-radius-lg, 14px));
+  background: var(--nano-fieldset-bg, transparent);
+  color: var(--nano-text-main, inherit);
+}
+
+.nano-fieldset:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.nano-fieldset > legend,
+.nano-fieldset > .nano-legend {
+  box-sizing: border-box;
+  max-inline-size: calc(100% - 16px);
+  padding: 0 8px;
+  margin-inline-start: 4px;
+  font-size: 0.78rem;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  line-height: 1.38;
+  color: var(--nano-fieldset-legend-color, var(--nano-accent-primary, #6366f1));
+  white-space: normal;
+  overflow-wrap: anywhere;
+  text-wrap: balance;
+}
+
+/* Inset Card Variant: floats <legend> per WHATWG HTML §15.3.7 so it sits cleanly
+   inside filled card surfaces without straddling border-top or clipping corners */
+.nano-fieldset.nano-fieldset-inset {
+  padding: 14px 16px 16px;
+  background: var(--nano-fieldset-bg, var(--nano-bg-muted, rgba(255, 255, 255, 0.04)));
+}
+
+.nano-fieldset.nano-fieldset-inset > legend,
+.nano-fieldset.nano-fieldset-inset > .nano-legend {
+  float: left;
+  width: 100%;
+  max-inline-size: 100%;
+  margin: 0 0 10px;
+  padding: 0 0 9px;
+  border-bottom: 1px solid var(--nano-fieldset-divider, var(--nano-border-subtle, rgba(148, 163, 184, 0.18)));
+  text-wrap: pretty;
+}
+
+.nano-fieldset.nano-fieldset-inset > legend + *,
+.nano-fieldset-body {
+  clear: both;
+  width: 100%;
+  min-width: 0;
+}
+
+/* ==========================================================================
+   13. Native Top-Layer Lightbox Dialog (.nano-lightbox-dialog)
+   ========================================================================== */
+dialog.nano-lightbox-dialog {
+  margin: auto;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--nano-lightbox-fg, #f8fafc);
+  max-width: min(94vw, 1220px);
+  max-height: 92dvh;
+  overflow: auto;
+  outline: none;
+  opacity: 0;
+  transition-property: opacity, transform, display, overlay;
+  transition-duration: 0.24s;
+  transition-timing-function: cubic-bezier(0.2, 0, 0, 1);
+  transition-behavior: allow-discrete;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  dialog.nano-lightbox-dialog {
+    transform: scale(0.94);
+  }
+}
+
+dialog.nano-lightbox-dialog:modal {
+  overscroll-behavior: contain;
+}
+
+dialog.nano-lightbox-dialog::backdrop {
+  overflow: hidden;
+  overscroll-behavior: contain;
+  background-color: rgba(8, 11, 18, 0);
+  backdrop-filter: blur(0px) saturate(1);
+  -webkit-backdrop-filter: blur(0px) saturate(1);
+  transition-property: background-color, backdrop-filter, -webkit-backdrop-filter, display, overlay;
+  transition-duration: 0.24s;
+  transition-timing-function: cubic-bezier(0.2, 0, 0, 1);
+  transition-behavior: allow-discrete;
+}
+
+:is(dialog.nano-lightbox-dialog[open]):where(:not([data-closing])) {
+  opacity: 1;
+
+  @starting-style {
+    opacity: 0;
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    transform: scale(1);
+
+    @starting-style {
+      transform: scale(0.94);
+    }
+  }
+
+  &::backdrop {
+    background-color: var(--nano-lightbox-backdrop, rgba(8, 11, 18, 0.76));
+    backdrop-filter: blur(var(--nano-lightbox-blur, 20px)) saturate(1.22);
+    -webkit-backdrop-filter: blur(var(--nano-lightbox-blur, 20px)) saturate(1.22);
+
+    @starting-style {
+      background-color: rgba(8, 11, 18, 0);
+      backdrop-filter: blur(0px) saturate(1);
+      -webkit-backdrop-filter: blur(0px) saturate(1);
+    }
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  dialog.nano-lightbox-dialog,
+  dialog.nano-lightbox-dialog::backdrop {
+    transition-duration: 0.1s;
+  }
+}
+
 
 

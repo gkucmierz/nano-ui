@@ -77,6 +77,45 @@
   --nano-status-neutral-border: rgba(255, 255, 255, var(--nano-alpha-muted));
   --nano-status-neutral-text: #94a3b8;
 
+  /* Editorial Callout / GFM Alert Tokens - Dark Theme (VitePress / NanoUI Soft Cards) */
+  --nano-callout-tip-bg: rgba(99, 102, 241, 0.14);
+  --nano-callout-tip-border: rgba(129, 140, 248, 0.30);
+  --nano-callout-tip-title: #a5b4fc;
+  --nano-callout-tip-code-bg: rgba(15, 23, 42, 0.58);
+  --nano-callout-tip-code-fg: #c7d2fe;
+
+  --nano-callout-note-bg: rgba(56, 189, 248, 0.12);
+  --nano-callout-note-border: rgba(56, 189, 248, 0.28);
+  --nano-callout-note-title: #7dd3fc;
+  --nano-callout-note-code-bg: rgba(15, 23, 42, 0.58);
+  --nano-callout-note-code-fg: #bae6fd;
+
+  --nano-callout-important-bg: rgba(168, 85, 247, 0.13);
+  --nano-callout-important-border: rgba(192, 132, 252, 0.30);
+  --nano-callout-important-title: #d8b4fe;
+  --nano-callout-important-code-bg: rgba(15, 23, 42, 0.58);
+  --nano-callout-important-code-fg: #e9d5ff;
+
+  --nano-callout-warning-bg: rgba(245, 158, 11, 0.13);
+  --nano-callout-warning-border: rgba(251, 191, 36, 0.30);
+  --nano-callout-warning-title: #fcd34d;
+  --nano-callout-warning-code-bg: rgba(15, 23, 42, 0.58);
+  --nano-callout-warning-code-fg: #fde68a;
+
+  --nano-callout-caution-bg: rgba(244, 63, 94, 0.13);
+  --nano-callout-caution-border: rgba(251, 113, 133, 0.30);
+  --nano-callout-caution-title: #fda4af;
+  --nano-callout-caution-code-bg: rgba(15, 23, 42, 0.58);
+  --nano-callout-caution-code-fg: #fecdd3;
+
+  /* NanoLightbox Tokens - Dark Theme */
+  --nano-lightbox-backdrop: rgba(8, 11, 18, 0.76);
+  --nano-lightbox-blur: 20px;
+  --nano-lightbox-surface: rgba(18, 22, 34, 0.88);
+  --nano-lightbox-border: rgba(255, 255, 255, 0.16);
+  --nano-lightbox-fg: #f8fafc;
+  --nano-lightbox-muted: #cbd5e1;
+
   /* Metric Card Colors - Dark Theme */
   --nano-metric-cyan: var(--nano-state-active);
   --nano-metric-purple: #c084fc;
@@ -99,6 +138,7 @@
   --nano-preset-amber: #f59e0b;
   --nano-preset-orange: #f97316;
   --nano-preset-warn: var(--nano-status-warn, #facc15);
+  --nano-preset-slate: #94a3b8;
 
   /* Selection Tokens - Dark Theme */
   --nano-selection-bg: color-mix(in srgb, var(--nano-accent-primary) 35%, transparent);
@@ -201,6 +241,32 @@
   --nano-secret-badge-bg: rgba(16, 185, 129, 0.15);
   --nano-secret-badge-fg: #34d399;
   --nano-secret-prompt-fg: #34d399;
+
+  /* NanoSelect Tokens - Dark Theme */
+  --nano-select-bg: rgba(255, 255, 255, 0.05);
+  --nano-select-bg-hover: rgba(255, 255, 255, 0.08);
+  --nano-select-border: rgba(255, 255, 255, 0.16);
+  --nano-select-fg: #f8fafc;
+  --nano-select-placeholder: #94a3b8;
+  --nano-select-chevron: #94a3b8;
+  --nano-select-dropdown-bg: color-mix(in srgb, var(--nano-accent-primary, #6366f1) 4%, #18181b);
+  --nano-select-dropdown-border: color-mix(in srgb, var(--nano-accent-primary, #6366f1) 62%, rgba(255, 255, 255, 0.16));
+  --nano-select-dropdown-shadow: 0 14px 36px rgba(0, 0, 0, 0.48), 0 2px 8px rgba(0, 0, 0, 0.28);
+  --nano-select-dropdown-overlap-shadow: 0 18px 44px rgba(0, 0, 0, 0.58), 0 0 0 1px color-mix(in srgb, var(--nano-accent-primary, #6366f1) 45%, transparent);
+  --nano-select-search-bg: rgba(255, 255, 255, 0.04);
+  --nano-select-search-border: rgba(255, 255, 255, 0.12);
+  --nano-select-option-fg: #cbd5e1;
+  --nano-select-option-hover-bg: rgba(255, 255, 255, 0.08);
+  --nano-select-option-selected-bg: color-mix(in srgb, var(--nano-accent-primary, #6366f1) 16%, transparent);
+  --nano-select-option-selected-border: color-mix(in srgb, var(--nano-accent-primary, #6366f1) 38%, transparent);
+  --nano-select-check-bg: rgba(255, 255, 255, 0.04);
+  --nano-select-check-border: rgba(255, 255, 255, 0.22);
+  --nano-select-preset-emerald: #10b981;
+  --nano-select-preset-cyan: #06b6d4;
+  --nano-select-preset-amber: #f59e0b;
+  --nano-select-preset-rose: #f43f5e;
+  --nano-select-preset-violet: #a855f7;
+  --nano-select-preset-slate: #94a3b8;
 
   /* OS / Browser Viewport Simulator Tokens - Dark Theme */
   --nano-sim-frame-bg: #090d16;
@@ -444,6 +510,45 @@ html.light,
   --nano-status-neutral-border: rgba(15, 23, 42, 0.12);
   --nano-status-neutral-text: #334155;
 
+  /* Editorial Callout / GFM Alert Tokens - Light Theme (WCAG AA Soft Cards) */
+  --nano-callout-tip-bg: rgba(99, 102, 241, 0.095);
+  --nano-callout-tip-border: rgba(99, 102, 241, 0.22);
+  --nano-callout-tip-title: #3730a3;
+  --nano-callout-tip-code-bg: rgba(255, 255, 255, 0.82);
+  --nano-callout-tip-code-fg: #3730a3;
+
+  --nano-callout-note-bg: rgba(2, 132, 199, 0.085);
+  --nano-callout-note-border: rgba(2, 132, 199, 0.22);
+  --nano-callout-note-title: #075985;
+  --nano-callout-note-code-bg: rgba(255, 255, 255, 0.82);
+  --nano-callout-note-code-fg: #0369a1;
+
+  --nano-callout-important-bg: rgba(147, 51, 234, 0.085);
+  --nano-callout-important-border: rgba(147, 51, 234, 0.22);
+  --nano-callout-important-title: #6b21a8;
+  --nano-callout-important-code-bg: rgba(255, 255, 255, 0.82);
+  --nano-callout-important-code-fg: #6b21a8;
+
+  --nano-callout-warning-bg: rgba(217, 119, 6, 0.095);
+  --nano-callout-warning-border: rgba(217, 119, 6, 0.26);
+  --nano-callout-warning-title: #92400e;
+  --nano-callout-warning-code-bg: rgba(255, 255, 255, 0.82);
+  --nano-callout-warning-code-fg: #92400e;
+
+  --nano-callout-caution-bg: rgba(225, 29, 72, 0.085);
+  --nano-callout-caution-border: rgba(225, 29, 72, 0.24);
+  --nano-callout-caution-title: #9f1239;
+  --nano-callout-caution-code-bg: rgba(255, 255, 255, 0.82);
+  --nano-callout-caution-code-fg: #9f1239;
+
+  /* NanoLightbox Tokens - Light Theme */
+  --nano-lightbox-backdrop: rgba(15, 23, 42, 0.68);
+  --nano-lightbox-blur: 20px;
+  --nano-lightbox-surface: rgba(255, 255, 255, 0.92);
+  --nano-lightbox-border: rgba(15, 23, 42, 0.14);
+  --nano-lightbox-fg: #0f172a;
+  --nano-lightbox-muted: #475569;
+
   /* Metric Card Colors - Light Theme */
   --nano-metric-cyan: var(--nano-state-active);
   --nano-metric-purple: #7c3aed;
@@ -466,6 +571,7 @@ html.light,
   --nano-preset-amber: #d97706;
   --nano-preset-orange: #ea580c;
   --nano-preset-warn: var(--nano-status-warn, #ca8a04);
+  --nano-preset-slate: #475569;
 
   /* Selection Tokens - Light Theme */
   --nano-selection-bg: color-mix(in srgb, var(--nano-accent-primary) 20%, transparent);
@@ -568,6 +674,32 @@ html.light,
   --nano-secret-badge-bg: rgba(5, 150, 105, 0.12);
   --nano-secret-badge-fg: #047857;
   --nano-secret-prompt-fg: #047857;
+
+  /* NanoSelect Tokens - Light Theme (Crisp Elevated White Surface, WCAG 1.4.11 >= 3:1 Boundary & >= 4.5:1 Text) */
+  --nano-select-bg: #ffffff;
+  --nano-select-bg-hover: #f8fafc;
+  --nano-select-border: #64748b;
+  --nano-select-fg: #0f172a;
+  --nano-select-placeholder: #475569;
+  --nano-select-chevron: #475569;
+  --nano-select-dropdown-bg: #ffffff;
+  --nano-select-dropdown-border: color-mix(in srgb, var(--nano-accent-primary, #4f46e5) 42%, #94a3b8);
+  --nano-select-dropdown-shadow: 0 12px 32px rgba(15, 23, 42, 0.14), 0 2px 6px rgba(15, 23, 42, 0.08);
+  --nano-select-dropdown-overlap-shadow: 0 18px 42px rgba(15, 23, 42, 0.2), 0 0 0 1px color-mix(in srgb, var(--nano-accent-primary, #4f46e5) 38%, #94a3b8);
+  --nano-select-search-bg: #f8fafc;
+  --nano-select-search-border: #e2e8f0;
+  --nano-select-option-fg: #1e293b;
+  --nano-select-option-hover-bg: #f1f5f9;
+  --nano-select-option-selected-bg: color-mix(in srgb, var(--nano-accent-primary, #4f46e5) 11%, #ffffff);
+  --nano-select-option-selected-border: color-mix(in srgb, var(--nano-accent-primary, #4f46e5) 36%, transparent);
+  --nano-select-check-bg: #f8fafc;
+  --nano-select-check-border: #64748b;
+  --nano-select-preset-emerald: #047857;
+  --nano-select-preset-cyan: #0369a1;
+  --nano-select-preset-amber: #b45309;
+  --nano-select-preset-rose: #be123c;
+  --nano-select-preset-violet: #6d28d9;
+  --nano-select-preset-slate: #475569;
 
   /* OS / Browser Viewport Simulator Tokens - Light Theme (Crisp Native macOS / Safari Light Chrome) */
   --nano-sim-frame-bg: #f1f5f9;
