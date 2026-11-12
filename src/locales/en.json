@@ -49,6 +49,7 @@
     "tabs": "Nano Tabs (Docked & Segmented)",
     "coverFlow": "Nano CoverFlow (3D Shelf)",
     "dropzone": "Nano Dropzone (Upload & Hover)",
+    "heatmap": "Nano Heatmap (OKLCH & KDE)",
     "layoutDirectives": "Layout Directives, CSHR & Collapsible",
     "ripple": "v-ripple Directive",
     "tooltip": "v-tooltip Directive"
@@ -354,5 +355,29 @@
     "sizeSm": "Small (size=\"sm\" · 22px)",
     "sizeMd": "Medium (size=\"md\" · 32px)",
     "sizeLg": "Large (size=\"lg\" · 42px)"
+  },
+  "heatmapDoc": {
+    "title": "NanoHeatmap — Perceptual OKLCH Matrix & 2D KDE Density",
+    "desc": "Deterministic perceptual heatmap engine enforcing the Zero-Value Invariant, monotonic OKLCH lightness (L: 0.24 -> 0.86 dark, 0.93 -> 0.44 light), Pareto outlier resilience (log1p / p95), stationary crosshair hit-boxes (CLS = 0), and Coupled Selection Hover-Suppress-Rearm (CSHR).",
+    "matrixTitle": "1. Weekly Traffic Matrix (7 × 24) & Pareto Outlier Resilience",
+    "matrixDesc": "Toggle the 10,000-view viral spike on Tuesday 21:00 and compare linear vs. log1p / p95 scaling. Click any cell once to lock filter selection, and click the same cell again to immediately deselect with hover suppression until >= 3px pointer movement.",
+    "paletteLabel": "OKLCH Palette",
+    "scaleLabel": "Normalization Scale",
+    "bucketsLabel": "Discrete Buckets (0 = continuous)",
+    "outlierToggle": "Inject 10,000x Viral Spike (Tue · 21:00)",
+    "showValuesToggle": "Show Cell Values",
+    "showTotalsToggle": "Show Row / Col Totals (Σ)",
+    "zeroMatrixToggle": "All-Zero Matrix (Zero-Value Invariant)",
+    "selectedLabel": "Locked Selection (CSHR)",
+    "hoveredLabel": "Active Crosshair Hover",
+    "noneLabel": "None",
+    "densityTitle": "2. 2D Gaussian KDE Pointer Density (mode=\"density\")",
+    "densityDesc": "Click or drag across the viewport stage to record real empirical pointer coordinates in [0..1]. Clearing events renders a pure zero surface with zero fabricated blobs.",
+    "densityPaletteLabel": "Density Palette",
+    "densityRadiusLabel": "KDE Sigma Radius",
+    "loadEmpiricalBtn": "Load Recorded Sample",
+    "clearPointsBtn": "Clear Events (0)",
+    "densityEmptyLabel": "Waiting for real pointer events — click or drag on the stage",
+    "clickHint": "Click or drag on canvas to record real interaction events"
   }
 }
