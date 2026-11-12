@@ -436,8 +436,8 @@ export const PLAYGROUND_NAV_ITEMS = [
     navKey: 'nav.layoutDirectives',
     docFile: 'LayoutDirectivesDoc.vue',
     localeKeys: [],
-    componentTag: 'v-fill-height · v-fit-text · CSHR',
-    keywords: 'v-fill-height useFillHeight v-fit-text naturalSearch v-scroll-persist scrollElementToBoundedCenter useCoupledSelection CSHR NanoCollapsible NanoAccordion',
+    componentTag: 'v-fill-height · NanoFitText · CSHR',
+    keywords: 'v-fill-height useFillHeight v-fit-text NanoFitText computeFittedFontSize naturalSearch v-scroll-persist scrollElementToBoundedCenter useCoupledSelection CSHR NanoCollapsible NanoAccordion',
   },
 ];
 
