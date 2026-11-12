@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { buildTooltipBubbleGeometry } from '../../src/utils/tooltipGeometry.js';
+import { buildTooltipBubbleGeometry, computeTightTooltipWidth } from '../../src/utils/tooltipGeometry.js';
 import {
   DEFAULT_MAP_LAYERS,
   buildVisibleTileGrid,
@@ -65,12 +65,34 @@ describe('GlobalTooltip unified C¹ speech-bubble geometry & NanoMap zero-flicke
     assert.ok(geom.svgPathD.includes('A 9 9 0 0 1 170.5 35.5 L 9.5 35.5'));
   });
 
-  test('GlobalTooltip.vue uses unified SVG speech-bubble + glass clip-path instead of ::after rotated border square', () => {
+  test('GlobalTooltip.vue uses unified SVG speech-bubble + glass clip-path, post-wrap glyph shrink-fit, and inverted non-dazzling dark/light polarity', () => {
     const vueSrc = fs.readFileSync(path.join(ROOT, 'src/components/GlobalTooltip.vue'), 'utf8');
+    const colorsSrc = fs.readFileSync(path.join(ROOT, 'src/assets/colors.css'), 'utf8');
     assert.ok(vueSrc.includes('buildTooltipBubbleGeometry'));
+    assert.ok(vueSrc.includes('computeTightTooltipWidth'));
     assert.ok(vueSrc.includes('global-tooltip-bubble-svg'));
     assert.ok(vueSrc.includes('global-tooltip-glass'));
     assert.ok(!vueSrc.includes('.global-tooltip::after'), 'Legacy ::after seam square must be removed');
+    assert.ok(!/\btypeof\b/.test(vueSrc), 'GlobalTooltip.vue must not use raw type operator');
+
+    // Verify computeTightTooltipWidth eliminates dead side margins when text-wrap: balance splits text
+    assert.equal(
+      computeTightTooltipWidth({ naturalWidth: 260, glyphWidth: 168.2, padLeft: 10, padRight: 10 }),
+      190
+    );
+    // When natural width already hugs glyphs tightly, return null (no redundant inline width)
+    assert.equal(
+      computeTightTooltipWidth({ naturalWidth: 190, glyphWidth: 168.2, padLeft: 10, padRight: 10 }),
+      null
+    );
+
+    // Dark theme uses non-dazzling soft pearl-slate (#e2e8f0 / rgba(226, 232, 240, 0.96)) with dark #0f172a ink
+    assert.ok(colorsSrc.includes('--nano-tooltip-bg: rgba(226, 232, 240, 0.96);'));
+    assert.ok(colorsSrc.includes('--nano-tooltip-color: #0f172a;'));
+    // Light theme uses deep slate (#0f172a / rgba(15, 23, 42, 0.96)) with crisp #f8fafc ink
+    assert.ok(colorsSrc.includes('--nano-tooltip-bg: rgba(15, 23, 42, 0.96);'));
+    assert.ok(colorsSrc.includes('--nano-tooltip-padding: 5px 10px;'));
+    assert.ok(colorsSrc.includes('--nano-tooltip-max-width: 260px;'));
   });
 
   test('projectRetainedTilesToViewport re-projects decoded tiles across zoom/tab jumps without blank canvas flicker', () => {

@@ -1,5 +1,8 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import {
   resolveCollapsibleConfig,
   evaluateSplitterSnapCollapse,
@@ -7,6 +10,8 @@ import {
   resolveSplitterHitboxSizePx,
   computeSplitterProximityField,
 } from '../../src/utils/splitterCollapse.js';
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 describe('NanoSplitter Ergonomic Hitbox & 1D Voronoi Proximity Field (splitterCollapse.js)', () => {
   it('enforces a minimum 28px ergonomic capture band (±14px around splitter axis) regardless of narrow visual gap', () => {
@@ -85,5 +90,20 @@ describe('NanoSplitter Ergonomic Hitbox & 1D Voronoi Proximity Field (splitterCo
     });
     assert.strictEqual(snappedSecond.collapsedPane, 'second');
     assert.strictEqual(snappedSecond.snapped, true);
+  });
+
+  it('prevents synchronous v-model:collapsed-pane stale-prop persistence race in NanoSplitter.vue', () => {
+    const sfcPath = path.resolve(__dirname, '../../src/components/NanoSplitter.vue');
+    const sfc = fs.readFileSync(sfcPath, 'utf8');
+
+    // activeCollapsedPane, currentSize, and isLocked must read synchronous internal refs
+    // rather than stale pre-flush props so expandCollapsedPane() immediately persists `collapsedPane: null`
+    assert.ok(
+      !sfc.includes('props.collapsedPane !== undefined ? props.collapsedPane : internalCollapsedPane.value'),
+      'activeCollapsedPane must not read stale pre-tick props.collapsedPane ahead of internalCollapsedPane'
+    );
+    assert.ok(sfc.includes('persistState({ size: restored, collapsedPane: null })'));
+    assert.ok(sfc.includes('persistState({ collapsedPane: normalized })'));
+    assert.ok(sfc.includes('expandPane: expandCollapsedPane'));
   });
 });
