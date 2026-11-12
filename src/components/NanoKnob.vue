@@ -218,6 +218,7 @@ const updateAngle = (val) => {
     if (crossing.crossedCardinal) {
       playNanoUiSound('knobCardinal', {
         propSound: props.sound,
+        size: props.size,
         playbackRate: crossing.playbackRate,
         minIntervalMs: 18,
         throttleKey: knobSoundKey,
@@ -226,6 +227,7 @@ const updateAngle = (val) => {
     } else if (crossing.crossedTick) {
       playNanoUiSound('knobTick', {
         propSound: props.sound,
+        size: props.size,
         playbackRate: crossing.playbackRate,
         minIntervalMs: 18,
         throttleKey: knobSoundKey,
@@ -242,6 +244,7 @@ const handleReset = () => {
   if (props.modelValue !== props.defaultValue) {
     playNanoUiSound('knobReset', {
       propSound: props.sound,
+      size: props.size,
       minIntervalMs: 40,
       throttleKey: `${knobSoundKey}:reset`,
     });
