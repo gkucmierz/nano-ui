@@ -203,15 +203,15 @@ setLang('pl', { appPrefix: 'dashboard-app', storage: 'ls' });`;
   font-weight: 700;
   padding: 3px 10px;
   border-radius: 6px;
-  background: rgba(16, 185, 129, 0.12);
-  color: #10b981;
-  border: 1px solid rgba(16, 185, 129, 0.32);
+  background: var(--nano-status-success-bg, rgba(16, 185, 129, 0.12));
+  color: var(--nano-lab-accent-emerald, #10b981);
+  border: 1px solid var(--nano-status-success-border, rgba(16, 185, 129, 0.32));
   text-decoration: none;
-  transition: background-color 0.15s ease;
+  transition: border-color 0.15s ease, background-color 0.15s ease;
 }
 
 .showoff-route-pill:hover {
-  background: rgba(16, 185, 129, 0.22);
+  border-color: var(--nano-lab-accent-emerald, #10b981);
 }
 
 .doc-page h2 {
