@@ -14,6 +14,48 @@
 const fmt = (n) => Number(Number(n).toFixed(2));
 
 /**
+ * Computes the tight post-wrap outer width for `<GlobalTooltip>` when CSS `max-width` +
+ * `text-wrap: balance` wraps text into narrower balanced lines while leaving the outer box
+ * stretched at `max-width`.
+ *
+ * @param {Object} params
+ * @param {number} params.naturalWidth - Initial `el.offsetWidth` under `width: max-content; max-width: ...`
+ * @param {number} params.glyphWidth - Measured `Range.getBoundingClientRect().width` of the rendered text lines
+ * @param {number} [params.padLeft=10] - Computed `padding-left` in px
+ * @param {number} [params.padRight=10] - Computed `padding-right` in px
+ * @param {number} [params.borderLeft=0] - Computed `border-left-width` in px
+ * @param {number} [params.borderRight=0] - Computed `border-right-width` in px
+ * @param {number} [params.safetyBuffer=1.5] - Sub-pixel kerning safety margin in px
+ * @returns {number|null} Tight outer width in integer px when slack > 1.5px, else `null`
+ */
+export function computeTightTooltipWidth({
+  naturalWidth = 0,
+  glyphWidth = 0,
+  padLeft = 10,
+  padRight = 10,
+  borderLeft = 0,
+  borderRight = 0,
+  safetyBuffer = 1.5,
+} = {}) {
+  const natW = Number(naturalWidth) || 0;
+  const gW = Number(glyphWidth) || 0;
+  if (natW <= 0 || gW <= 0) return null;
+
+  const horizontalChrome =
+    (Number(padLeft) || 0) +
+    (Number(padRight) || 0) +
+    (Number(borderLeft) || 0) +
+    (Number(borderRight) || 0) +
+    (Number(safetyBuffer) || 0);
+
+  const tightOuter = Math.max(28, Math.ceil(gW + horizontalChrome));
+  if (tightOuter < natW - 1.5) {
+    return tightOuter;
+  }
+  return null;
+}
+
+/**
  * Computes the unified speech-bubble SVG geometry and CSS `clip-path: path(...)` string.
  *
  * @param {Object} params
