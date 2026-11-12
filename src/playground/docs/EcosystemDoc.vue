@@ -133,11 +133,19 @@ const firstPartyPackages = [
   },
   {
     name: '@gkucmierz/utils',
-    version: '5.4.0',
+    version: '5.4.1',
     acronym: 'UT',
     usedBy: 'Runtime Type Guards (is, same, of)',
     deps: '0 (Pure ES Module)',
     role: 'Strict prototype-safe type reflection and deep structural equality without raw typeof pitfalls.',
+  },
+  {
+    name: 'vue-url-cleaner',
+    version: '1.0.0',
+    acronym: 'UC',
+    usedBy: 'Playground Router, SPA URL Hygiene',
+    deps: '0 (Pure ES Module)',
+    role: 'Zero-reload History.replaceState tracking query stripper (fbclid, utm_*, gclid) with route meta.allowedQuery support.',
   },
 ];
 
@@ -145,7 +153,7 @@ const ecosystemTreeNodes = [
   {
     id: 'nano-ui',
     label: '@gkucmierz/nano-ui',
-    version: '1.14.0',
+    version: '1.8.20',
     icon: '🎨',
     badge: 'PUBLIC · MIT',
     badgeVariant: 'emerald',
@@ -190,11 +198,20 @@ const ecosystemTreeNodes = [
       {
         id: 'utils',
         label: '@gkucmierz/utils',
-        version: '5.4.0',
+        version: '5.4.1',
         icon: '🧬',
         badge: 'PUBLIC · MIT',
         badgeVariant: 'emerald',
         meta: '0 deps (is/same/of)',
+      },
+      {
+        id: 'vue-url-cleaner',
+        label: 'vue-url-cleaner',
+        version: '1.0.0',
+        icon: '🧹',
+        badge: 'PUBLIC · MIT',
+        badgeVariant: 'emerald',
+        meta: '0 deps (URL hygiene)',
       },
     ],
   },
