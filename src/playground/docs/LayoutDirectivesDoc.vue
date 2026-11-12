@@ -1,6 +1,7 @@
 <script setup>
 import { ref, onMounted, onBeforeUnmount } from 'vue';
 import NanoCollapsible from '../../components/NanoCollapsible.vue';
+import NanoFitText from '../../components/NanoFitText.vue';
 import NanoSlider from '../../components/NanoSlider.vue';
 import NanoSwitch from '../../components/NanoSwitch.vue';
 import NanoCodeBlock from '../../components/NanoCodeBlock.vue';
@@ -315,18 +316,17 @@ const codeTabs = createDocTabs({
           class="fit-stage-box"
           :style="{ width: `${fitContainerWidth}px`, maxWidth: '100%' }"
         >
-          <div
-            v-fit-text="{
-              minSize: 0.5,
-              maxSize: 24,
-              step: 0.05,
-              singleLine: true,
-              onFit: (px) => (actualFittedFontPx = px),
-            }"
+          <NanoFitText
+            tag="div"
+            :min-size="0.5"
+            :max-size="24"
+            :step="0.05"
+            mode="single-line"
             class="fit-stage-text"
+            @fit="(px) => (actualFittedFontPx = px)"
           >
             {{ fitSampleText }}
-          </div>
+          </NanoFitText>
         </div>
       </div>
 
