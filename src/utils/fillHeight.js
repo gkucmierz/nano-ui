@@ -164,6 +164,7 @@ export const useFillHeight = (elementRef, optionsOrExtraMargin = 0) => {
   };
 
   onMounted(() => {
+    updateHeight();
     nextTick(() => {
       updateHeight();
       attachObservers();
