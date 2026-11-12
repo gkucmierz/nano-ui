@@ -1,5 +1,6 @@
 <script setup>
 import { ref, computed, onMounted, onUnmounted } from 'vue';
+import pkg from '../../../package.json';
 import NanoCodeBlock from '../../components/NanoCodeBlock.vue';
 import NanoSwitch from '../../components/NanoSwitch.vue';
 import NanoTree from '../../components/NanoTree.vue';
@@ -153,7 +154,7 @@ const ecosystemTreeNodes = [
   {
     id: 'nano-ui',
     label: '@gkucmierz/nano-ui',
-    version: '1.8.21',
+    version: pkg.version,
     icon: '🎨',
     badge: 'PUBLIC · MIT',
     badgeVariant: 'emerald',
