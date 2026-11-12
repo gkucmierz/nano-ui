@@ -191,6 +191,8 @@ onUnmounted(() => {
       :style="{
         top: `${-bubbleGeometry.pad}px`,
         left: `${-bubbleGeometry.pad}px`,
+        width: `${bubbleGeometry.svgWidth}px`,
+        height: `${bubbleGeometry.svgHeight}px`,
       }"
     >
       <path class="global-tooltip-bubble-path" :d="bubbleGeometry.svgPathD" />
@@ -249,6 +251,8 @@ onUnmounted(() => {
   position: absolute;
   z-index: 1;
   display: block;
+  max-width: none;
+  max-height: none;
   overflow: visible;
   pointer-events: none;
   filter: drop-shadow(0 8px 22px rgba(0, 0, 0, 0.36));
