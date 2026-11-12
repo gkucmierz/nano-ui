@@ -5,6 +5,7 @@ import {
   DEFAULT_MAP_LAYERS,
   getMapLayerById,
   buildVisibleTileGrid,
+  projectRetainedTilesToViewport,
   latLonToViewportPoint,
   viewportPointToLatLon,
   computeMapScaleBar,
@@ -267,6 +268,63 @@ const tileGrid = computed(() => {
     height: viewportHeight.value,
     layer: currentLayerObj.value,
     buffer: 1
+  });
+});
+
+const MAX_RETAINED_TILES = 96;
+const loadedTileUrls = ref(new Set());
+const retainedTilePool = ref([]);
+
+function markTileLoaded(tile) {
+  if (!tile || !tile.url) return;
+  if (!loadedTileUrls.value.has(tile.url)) {
+    const nextUrls = new Set(loadedTileUrls.value);
+    if (nextUrls.size >= 384) {
+      const oldest = nextUrls.values().next().value;
+      if (oldest !== undefined) nextUrls.delete(oldest);
+    }
+    nextUrls.add(tile.url);
+    loadedTileUrls.value = nextUrls;
+  }
+
+  const pool = retainedTilePool.value;
+  const existingIdx = pool.findIndex((item) => item.key === tile.key);
+  const entry = {
+    key: tile.key,
+    layerId: tile.layerId || currentLayerObj.value?.id || 'tile',
+    z: tile.z,
+    x: tile.x,
+    rawTx: Number.isFinite(tile.rawTx) ? tile.rawTx : tile.x,
+    y: tile.y,
+    url: tile.url
+  };
+  if (existingIdx !== -1) {
+    const nextPool = pool.slice();
+    nextPool.splice(existingIdx, 1);
+    nextPool.push(entry);
+    retainedTilePool.value = nextPool;
+  } else {
+    const nextPool = pool.length >= MAX_RETAINED_TILES ? pool.slice(pool.length - MAX_RETAINED_TILES + 1) : pool.slice();
+    nextPool.push(entry);
+    retainedTilePool.value = nextPool;
+  }
+}
+
+const hasPendingViewportTiles = computed(() => {
+  const known = loadedTileUrls.value;
+  return tileGrid.value.tiles.some((t) => !known.has(t.url));
+});
+
+const retainedBackdropTiles = computed(() => {
+  if (!hasPendingViewportTiles.value || retainedTilePool.value.length === 0) return [];
+  return projectRetainedTilesToViewport(retainedTilePool.value, {
+    centerLat: internalCenter.value[0],
+    centerLon: internalCenter.value[1],
+    zoom: internalZoom.value,
+    width: viewportWidth.value,
+    height: viewportHeight.value,
+    layerId: currentLayerObj.value?.id || null,
+    activeTileZoom: tileGrid.value.tileZoom
   });
 });
 
@@ -709,8 +767,24 @@ defineExpose({
             : 'none'
         }"
       >
-        <!-- Slippy Tile Layer -->
+        <!-- Slippy Tile Layer (Retained LRU Backdrop + Incoming Decoded Gate = Zero Tab/Zoom Flicker) -->
         <div class="nano-map-tile-pane">
+          <img
+            v-for="rt in retainedBackdropTiles"
+            :key="rt.key"
+            :src="rt.url"
+            alt=""
+            aria-hidden="true"
+            draggable="false"
+            decoding="sync"
+            class="nano-map-tile nano-map-tile-retained is-loaded"
+            :style="{
+              left: `${rt.left.toFixed(2)}px`,
+              top: `${rt.top.toFixed(2)}px`,
+              width: `${rt.size.toFixed(2)}px`,
+              height: `${rt.size.toFixed(2)}px`
+            }"
+          />
           <img
             v-for="tile in tileGrid.tiles"
             :key="tile.key"
@@ -719,12 +793,14 @@ defineExpose({
             draggable="false"
             decoding="async"
             class="nano-map-tile"
+            :class="{ 'is-loaded': loadedTileUrls.has(tile.url) }"
             :style="{
               left: `${tile.left.toFixed(2)}px`,
               top: `${tile.top.toFixed(2)}px`,
               width: `${tile.size.toFixed(2)}px`,
               height: `${tile.size.toFixed(2)}px`
             }"
+            @load="markTileLoaded(tile)"
           />
         </div>
 
@@ -1018,11 +1094,23 @@ defineExpose({
 
 .nano-map-tile {
   position: absolute;
+  z-index: 1;
   display: block;
   pointer-events: none;
   user-select: none;
   -webkit-user-drag: none;
   backface-visibility: hidden;
+  opacity: 0;
+  transition: opacity 0.12s ease-out;
+}
+
+.nano-map-tile.is-loaded {
+  opacity: 1;
+}
+
+.nano-map-tile-retained {
+  z-index: 0;
+  transition: none;
 }
 
 .nano-map-vector-svg {
