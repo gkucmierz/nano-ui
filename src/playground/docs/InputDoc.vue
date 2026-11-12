@@ -2,7 +2,13 @@
 import { ref, computed, onUnmounted } from 'vue';
 import NanoCodeBlock from '../../components/NanoCodeBlock.vue';
 import NanoSwitch from '../../components/NanoSwitch.vue';
+import NanoFieldset from '../../components/NanoFieldset.vue';
+import NanoCheckbox from '../../components/NanoCheckbox.vue';
 import { t } from '../../locales.js';
+
+const fsCheckA = ref(true);
+const fsCheckB = ref(false);
+const fsCheckOutlined = ref(true);
 
 // Interactive Playground State
 const inputValue = ref('');
@@ -347,6 +353,23 @@ const cssApiDoc = `/* Nano UI Input Primitives & Form Controls */
           <input id="input-doc-size-lg" name="input-doc-size-lg" type="text" class="nano-input nano-input-lg matrix-input-demo" placeholder="Large input..." aria-label="Large input demo" />
         </div>
       </div>
+    </div>
+
+    <!-- Semantic Fieldset Grouping -->
+    <h3 class="section-title">Semantic Fieldset Grouping (NanoFieldset)</h3>
+    <div class="compositions-grid">
+      <NanoFieldset variant="inset" legend="INSET CARD LEGEND (LONG WRAPPING TITLE)">
+        <div style="display: flex; flex-direction: column; gap: 8px;">
+          <NanoCheckbox v-model="fsCheckA" color="amber">Primary grouped option</NanoCheckbox>
+          <NanoCheckbox v-model="fsCheckB" color="emerald">Secondary grouped option</NanoCheckbox>
+        </div>
+      </NanoFieldset>
+
+      <NanoFieldset variant="outlined" legend="OUTLINED LEGEND">
+        <div style="display: flex; flex-direction: column; gap: 8px;">
+          <NanoCheckbox v-model="fsCheckOutlined" color="indigo">Classic border-straddling legend</NanoCheckbox>
+        </div>
+      </NanoFieldset>
     </div>
 
     <!-- CSS Reference -->
