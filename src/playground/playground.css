@@ -716,21 +716,24 @@ pre {
 
 /* Playground Custom Tooltip Variants */
 .global-tooltip.tooltip-danger {
-  --nu-tooltip-bg: rgba(234, 88, 12, 0.95);
-  --nu-tooltip-border: 1px solid rgba(253, 186, 116, 0.3);
-  --nu-tooltip-arrow-border: rgba(253, 186, 116, 0.3);
+  --nu-tooltip-bg: rgba(234, 88, 12, 0.96);
+  --nu-tooltip-color: #ffffff;
+  --nu-tooltip-border: 1px solid rgba(253, 186, 116, 0.4);
+  --nu-tooltip-arrow-border: rgba(253, 186, 116, 0.4);
 }
 
 .global-tooltip.tooltip-error {
-  --nu-tooltip-bg: rgba(220, 38, 38, 0.95);
-  --nu-tooltip-border: 1px solid rgba(255, 100, 100, 0.3);
-  --nu-tooltip-arrow-border: rgba(255, 100, 100, 0.3);
+  --nu-tooltip-bg: rgba(220, 38, 38, 0.96);
+  --nu-tooltip-color: #ffffff;
+  --nu-tooltip-border: 1px solid rgba(252, 165, 165, 0.4);
+  --nu-tooltip-arrow-border: rgba(252, 165, 165, 0.4);
 }
 
 .global-tooltip.tooltip-success {
-  --nu-tooltip-bg: rgba(5, 150, 105, 0.95);
-  --nu-tooltip-border: 1px solid rgba(52, 211, 153, 0.3);
-  --nu-tooltip-arrow-border: rgba(52, 211, 153, 0.3);
+  --nu-tooltip-bg: rgba(5, 150, 105, 0.96);
+  --nu-tooltip-color: #ffffff;
+  --nu-tooltip-border: 1px solid rgba(110, 231, 183, 0.4);
+  --nu-tooltip-arrow-border: rgba(110, 231, 183, 0.4);
 }
 
 /* Responsive Collapsed Sidebar Design */

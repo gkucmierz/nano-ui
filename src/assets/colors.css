@@ -182,14 +182,15 @@
   --nano-scrub-hover-border: rgba(0, 229, 255, var(--nano-alpha-medium));
   --nano-scrub-progress-bg: rgba(0, 229, 255, var(--nano-alpha-muted));
 
-  /* Tooltip Tokens - Dark Theme */
-  --nano-tooltip-bg: rgba(15, 23, 42, var(--nano-alpha-glass));
-  --nano-tooltip-color: #f8fafc;
-  --nano-tooltip-radius: var(--nano-radius-md);
-  --nano-tooltip-padding: var(--nano-space-sm) var(--nano-space-md);
-  --nano-tooltip-shadow: 0 var(--nano-space-sm) var(--nano-space-lg) rgba(0, 0, 0, var(--nano-alpha-hover));
-  --nano-tooltip-border: var(--nano-border-width) solid rgba(255, 255, 255, var(--nano-alpha-muted));
-  --nano-tooltip-arrow-border: rgba(255, 255, 255, var(--nano-alpha-muted));
+  /* Tooltip Tokens - Dark Theme (Inverted Soft Pearl-Slate: crisp figure-ground contrast without glare) */
+  --nano-tooltip-bg: rgba(226, 232, 240, 0.96);
+  --nano-tooltip-color: #0f172a;
+  --nano-tooltip-radius: 7px;
+  --nano-tooltip-padding: 5px 10px;
+  --nano-tooltip-max-width: 260px;
+  --nano-tooltip-shadow: 0 6px 18px rgba(2, 6, 23, 0.46);
+  --nano-tooltip-border: var(--nano-border-width) solid rgba(148, 163, 184, 0.55);
+  --nano-tooltip-arrow-border: rgba(148, 163, 184, 0.62);
 
   /* TopologyRadar Tokens - Dark Theme */
   --nano-radar-grid-bg: rgba(15, 23, 42, var(--nano-alpha-glass));
@@ -615,14 +616,15 @@ html.light,
   --nano-scrub-hover-border: rgba(2, 132, 199, var(--nano-alpha-medium));
   --nano-scrub-progress-bg: rgba(2, 132, 199, var(--nano-alpha-muted));
 
-  /* Tooltip Tokens - Light Theme */
-  --nano-tooltip-bg: rgba(15, 23, 42, var(--nano-alpha-glass));
+  /* Tooltip Tokens - Light Theme (Inverted Deep Slate: crisp dark speech bubble on light surfaces) */
+  --nano-tooltip-bg: rgba(15, 23, 42, 0.96);
   --nano-tooltip-color: #f8fafc;
-  --nano-tooltip-radius: var(--nano-radius-md);
-  --nano-tooltip-padding: var(--nano-space-sm) var(--nano-space-md);
-  --nano-tooltip-shadow: 0 var(--nano-space-sm) var(--nano-space-lg) rgba(15, 23, 42, var(--nano-alpha-hover));
-  --nano-tooltip-border: var(--nano-border-width) solid rgba(255, 255, 255, var(--nano-alpha-muted));
-  --nano-tooltip-arrow-border: rgba(255, 255, 255, var(--nano-alpha-muted));
+  --nano-tooltip-radius: 7px;
+  --nano-tooltip-padding: 5px 10px;
+  --nano-tooltip-max-width: 260px;
+  --nano-tooltip-shadow: 0 6px 18px rgba(15, 23, 42, 0.24);
+  --nano-tooltip-border: var(--nano-border-width) solid rgba(51, 65, 85, 0.68);
+  --nano-tooltip-arrow-border: rgba(51, 65, 85, 0.72);
 
   /* TopologyRadar Tokens - Light Theme */
   --nano-radar-grid-bg: rgba(241, 245, 249, var(--nano-alpha-glass));
