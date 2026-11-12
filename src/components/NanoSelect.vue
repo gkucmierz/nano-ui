@@ -16,6 +16,11 @@ const normalizeSearchText = (str) => {
     .toLowerCase();
 };
 
+const isPlainOptionObject = (val) => val !== null && Object(val) === val && !Array.isArray(val);
+const isCallableFn = (fn) => Boolean(fn && fn.call && fn.apply);
+const hasDomWindow = () => Boolean(globalThis.window);
+const hasDomDocument = () => Boolean(globalThis.document);
+
 const props = defineProps({
   /**
    * Selected value (String | Number | null) or Array of values when `multiple` is true
@@ -174,6 +179,14 @@ const props = defineProps({
     type: String,
     default: '',
   },
+  /**
+   * Theme mode override ('auto' inherits document [data-theme] / .light / .dark; 'light' or 'dark' pins locally)
+   */
+  theme: {
+    type: String,
+    default: 'auto',
+    validator: (v) => v === 'auto' || v === 'light' || v === 'dark',
+  },
 });
 
 const emit = defineEmits(['update:modelValue', 'change', 'open', 'close', 'search', 'clear']);
@@ -224,7 +237,7 @@ const resolvedEmptyText = computed(() => {
 
 const normalizedOptions = computed(() => {
   return (props.options || []).map((item) => {
-    if (item !== null && typeof item === 'object') {
+    if (isPlainOptionObject(item)) {
       const val = item.value !== undefined ? item.value : item.id;
       const lbl = activeLang.value === 'pl'
         ? (item.labelPl || item.label || String(val ?? ''))
@@ -270,7 +283,7 @@ const filteredOptions = computed(() => {
   const rawQuery = filterText.value.trim();
   if (!rawQuery) return normalizedOptions.value;
 
-  if (typeof props.filterFn === 'function') {
+  if (isCallableFn(props.filterFn)) {
     return normalizedOptions.value.filter((opt) => props.filterFn(opt, rawQuery));
   }
 
@@ -284,12 +297,12 @@ const filteredOptions = computed(() => {
 });
 
 function updateDropdownPosition(measureActual = false) {
-  if (!isOpen.value || !rootRef.value || typeof window === 'undefined') return;
+  if (!isOpen.value || !rootRef.value || !hasDomWindow()) return;
 
   if (!props.smartPositioning) {
     mountTarget.value = null;
     const fallbackMaxH =
-      typeof props.maxDropdownHeight === 'number' && props.maxDropdownHeight > 0
+      Number.isFinite(props.maxDropdownHeight) && props.maxDropdownHeight > 0
         ? props.maxDropdownHeight
         : 480;
     dropdownLayout.value = {
@@ -309,7 +322,7 @@ function updateDropdownPosition(measureActual = false) {
 
   const naturalOptionsHeight = Math.max(46, filteredOptions.value.length * 42 + 12);
   const numericCap =
-    typeof props.maxDropdownHeight === 'number' && props.maxDropdownHeight > 0
+    Number.isFinite(props.maxDropdownHeight) && props.maxDropdownHeight > 0
       ? props.maxDropdownHeight
       : props.autoHeight
         ? naturalOptionsHeight
@@ -341,7 +354,7 @@ function updateDropdownPosition(measureActual = false) {
       top: rawRefRect.top + (refEl.clientTop || 0),
       left: rawRefRect.left + (refEl.clientLeft || 0),
     };
-    const isDocRoot = typeof document !== 'undefined' && refEl === document.documentElement;
+    const isDocRoot = hasDomDocument() && refEl === document.documentElement;
     mountScrollLeft = isDocRoot ? 0 : (refEl.scrollLeft || 0);
     mountScrollTop = isDocRoot ? 0 : (refEl.scrollTop || 0);
   }
@@ -408,13 +421,13 @@ function onWindowScrollOrResize(e) {
 }
 
 function attachViewportListeners() {
-  if (typeof window === 'undefined') return;
+  if (!hasDomWindow()) return;
   window.addEventListener('scroll', onWindowScrollOrResize, { capture: true, passive: true });
   window.addEventListener('resize', onWindowScrollOrResize, { passive: true });
 }
 
 function detachViewportListeners() {
-  if (typeof window === 'undefined') return;
+  if (!hasDomWindow()) return;
   window.removeEventListener('scroll', onWindowScrollOrResize, { capture: true });
   window.removeEventListener('resize', onWindowScrollOrResize);
 }
@@ -563,14 +576,14 @@ function onDocumentMouseDown(e) {
 }
 
 onMounted(() => {
-  if (typeof document !== 'undefined') {
+  if (hasDomDocument()) {
     document.addEventListener('mousedown', onDocumentMouseDown);
   }
 });
 
 onUnmounted(() => {
   detachViewportListeners();
-  if (typeof document !== 'undefined') {
+  if (hasDomDocument()) {
     document.removeEventListener('mousedown', onDocumentMouseDown);
   }
 });
@@ -600,6 +613,8 @@ defineExpose({
       `is-${status}`,
       `is-color-${color}`,
       {
+        'theme-light': theme === 'light',
+        'theme-dark': theme === 'dark',
         'is-open': isOpen,
         'is-disabled': disabled,
         'is-multiple': multiple,
@@ -676,6 +691,7 @@ defineExpose({
 
         <svg
           class="nano-select-chevron"
+          aria-hidden="true"
           width="15"
           height="15"
           viewBox="0 0 24 24"
@@ -700,7 +716,11 @@ defineExpose({
           :class="[
             `is-color-${color}`,
             `is-placement-${dropdownLayout.placement}`,
-            { 'is-teleported': Boolean(mountTarget) },
+            {
+              'theme-light': theme === 'light',
+              'theme-dark': theme === 'dark',
+              'is-teleported': Boolean(mountTarget),
+            },
           ]"
           :data-placement="dropdownLayout.placement"
           :data-color="color"
@@ -713,6 +733,7 @@ defineExpose({
           <div v-if="searchable" class="nano-select-search-bar">
             <svg
               class="nano-select-search-icon"
+              aria-hidden="true"
               width="14"
               height="14"
               viewBox="0 0 24 24"
@@ -731,6 +752,9 @@ defineExpose({
               v-model="filterText"
               :name="resolvedSearchId"
               type="text"
+              autocorrect="off"
+              autocapitalize="none"
+              spellcheck="false"
               class="nano-select-search-input"
               :placeholder="resolvedSearchPlaceholder"
               :aria-label="resolvedSearchPlaceholder"
@@ -752,7 +776,7 @@ defineExpose({
           <div
             ref="optionsListRef"
             class="nano-select-options nano-scrollbar"
-            :style="{ maxHeight: `${dropdownLayout.optionsMaxHeight || (typeof maxDropdownHeight === 'number' ? maxDropdownHeight : 480)}px` }"
+            :style="{ maxHeight: `${dropdownLayout.optionsMaxHeight || (Number.isFinite(maxDropdownHeight) ? maxDropdownHeight : 480)}px` }"
           >
             <button
               v-for="(opt, idx) in filteredOptions"
@@ -782,6 +806,7 @@ defineExpose({
                 >
                   <svg
                     v-if="isOptionSelected(opt.value)"
+                    aria-hidden="true"
                     width="12"
                     height="12"
                     viewBox="0 0 24 24"
@@ -844,35 +869,104 @@ defineExpose({
   font-family: var(--nano-font-sans, -apple-system, BlinkMacSystemFont, sans-serif);
 }
 
-/* Color Theme Presets (applied on both trigger wrapper & teleported dropdown) */
+/* Local Theme Overrides (when theme="light" or theme="dark" is passed explicitly) */
+.nano-select.theme-light,
+.nano-select-dropdown.theme-light {
+  --nano-accent-primary: #4f46e5;
+  --nano-select-bg: #ffffff;
+  --nano-select-bg-hover: #f8fafc;
+  --nano-select-border: #64748b;
+  --nano-select-fg: #0f172a;
+  --nano-select-placeholder: #475569;
+  --nano-select-chevron: #475569;
+  --nano-select-dropdown-bg: #ffffff;
+  --nano-select-dropdown-border: color-mix(in srgb, var(--nano-accent-primary, #4f46e5) 42%, #94a3b8);
+  --nano-select-dropdown-shadow: 0 12px 32px rgba(15, 23, 42, 0.14), 0 2px 6px rgba(15, 23, 42, 0.08);
+  --nano-select-dropdown-overlap-shadow: 0 18px 42px rgba(15, 23, 42, 0.2), 0 0 0 1px color-mix(in srgb, var(--nano-accent-primary, #4f46e5) 38%, #94a3b8);
+  --nano-select-search-bg: #f8fafc;
+  --nano-select-search-border: #e2e8f0;
+  --nano-select-option-fg: #1e293b;
+  --nano-select-option-hover-bg: #f1f5f9;
+  --nano-select-option-selected-bg: color-mix(in srgb, var(--nano-accent-primary, #4f46e5) 11%, #ffffff);
+  --nano-select-option-selected-border: color-mix(in srgb, var(--nano-accent-primary, #4f46e5) 36%, transparent);
+  --nano-select-check-bg: #f8fafc;
+  --nano-select-check-border: #64748b;
+  --nano-select-preset-emerald: #047857;
+  --nano-select-preset-cyan: #0369a1;
+  --nano-select-preset-amber: #b45309;
+  --nano-select-preset-rose: #be123c;
+  --nano-select-preset-violet: #6d28d9;
+  --nano-select-preset-slate: #475569;
+}
+
+.nano-select.theme-dark,
+.nano-select-dropdown.theme-dark {
+  --nano-accent-primary: #6366f1;
+  --nano-select-bg: rgba(255, 255, 255, 0.05);
+  --nano-select-bg-hover: rgba(255, 255, 255, 0.08);
+  --nano-select-border: rgba(255, 255, 255, 0.16);
+  --nano-select-fg: #f8fafc;
+  --nano-select-placeholder: #94a3b8;
+  --nano-select-chevron: #94a3b8;
+  --nano-select-dropdown-bg: color-mix(in srgb, var(--nano-accent-primary, #6366f1) 4%, #18181b);
+  --nano-select-dropdown-border: color-mix(in srgb, var(--nano-accent-primary, #6366f1) 62%, rgba(255, 255, 255, 0.16));
+  --nano-select-dropdown-shadow: 0 14px 36px rgba(0, 0, 0, 0.48), 0 2px 8px rgba(0, 0, 0, 0.28);
+  --nano-select-dropdown-overlap-shadow: 0 18px 44px rgba(0, 0, 0, 0.58), 0 0 0 1px color-mix(in srgb, var(--nano-accent-primary, #6366f1) 45%, transparent);
+  --nano-select-search-bg: rgba(255, 255, 255, 0.04);
+  --nano-select-search-border: rgba(255, 255, 255, 0.12);
+  --nano-select-option-fg: #cbd5e1;
+  --nano-select-option-hover-bg: rgba(255, 255, 255, 0.08);
+  --nano-select-option-selected-bg: color-mix(in srgb, var(--nano-accent-primary, #6366f1) 16%, transparent);
+  --nano-select-option-selected-border: color-mix(in srgb, var(--nano-accent-primary, #6366f1) 38%, transparent);
+  --nano-select-check-bg: rgba(255, 255, 255, 0.04);
+  --nano-select-check-border: rgba(255, 255, 255, 0.22);
+  --nano-select-preset-emerald: #10b981;
+  --nano-select-preset-cyan: #06b6d4;
+  --nano-select-preset-amber: #f59e0b;
+  --nano-select-preset-rose: #f43f5e;
+  --nano-select-preset-violet: #a855f7;
+  --nano-select-preset-slate: #94a3b8;
+}
+
+/* Color Theme Presets (theme-aware via --nano-select-preset-* SSoT tokens) */
 .nano-select.is-color-emerald,
 .nano-select-dropdown.is-color-emerald {
-  --nano-accent-primary: #10b981;
+  --nano-accent-primary: var(--nano-select-preset-emerald, #10b981);
 }
 
 .nano-select.is-color-cyan,
-.nano-select-dropdown.is-color-cyan {
-  --nano-accent-primary: #06b6d4;
+.nano-select.is-color-primary,
+.nano-select-dropdown.is-color-cyan,
+.nano-select-dropdown.is-color-primary {
+  --nano-accent-primary: var(--nano-select-preset-cyan, #06b6d4);
 }
 
 .nano-select.is-color-amber,
-.nano-select-dropdown.is-color-amber {
-  --nano-accent-primary: #f59e0b;
+.nano-select.is-color-gold,
+.nano-select-dropdown.is-color-amber,
+.nano-select-dropdown.is-color-gold {
+  --nano-accent-primary: var(--nano-select-preset-amber, #f59e0b);
 }
 
 .nano-select.is-color-rose,
-.nano-select-dropdown.is-color-rose {
-  --nano-accent-primary: #f43f5e;
+.nano-select.is-color-crimson,
+.nano-select.is-color-danger,
+.nano-select-dropdown.is-color-rose,
+.nano-select-dropdown.is-color-crimson,
+.nano-select-dropdown.is-color-danger {
+  --nano-accent-primary: var(--nano-select-preset-rose, #f43f5e);
 }
 
 .nano-select.is-color-violet,
-.nano-select-dropdown.is-color-violet {
-  --nano-accent-primary: #a855f7;
+.nano-select.is-color-purple,
+.nano-select-dropdown.is-color-violet,
+.nano-select-dropdown.is-color-purple {
+  --nano-accent-primary: var(--nano-select-preset-violet, #a855f7);
 }
 
 .nano-select.is-color-slate,
 .nano-select-dropdown.is-color-slate {
-  --nano-accent-primary: #94a3b8;
+  --nano-accent-primary: var(--nano-select-preset-slate, #94a3b8);
 }
 
 .nano-select-trigger {
@@ -883,15 +977,20 @@ defineExpose({
   justify-content: space-between;
   gap: 8px;
   padding: 5px 10px;
-  background: var(--nano-bg-muted, rgba(255, 255, 255, 0.05));
-  border: 1px solid var(--nano-border-card, rgba(255, 255, 255, 0.14));
+  background: var(--nano-select-bg, var(--nano-bg-muted, rgba(255, 255, 255, 0.05)));
+  border: 1px solid var(--nano-select-border, var(--nano-border-card, rgba(255, 255, 255, 0.16)));
   border-radius: var(--nano-radius-md, 8px);
-  color: var(--nano-text-main, #f8fafc);
+  color: var(--nano-select-fg, var(--nano-text-main, #f8fafc));
   font-size: 0.85rem;
   font-weight: 500;
   cursor: pointer;
   box-sizing: border-box;
   transition: border-color 0.15s ease, background 0.15s ease, box-shadow 0.15s ease;
+}
+
+.nano-select-trigger:focus-visible {
+  outline: 2px solid var(--nano-accent-primary, #4f46e5);
+  outline-offset: 2px;
 }
 
 .nano-select.is-sm .nano-select-trigger {
@@ -911,7 +1010,7 @@ defineExpose({
 .nano-select-trigger:hover:not([aria-disabled="true"]),
 .nano-select.is-open .nano-select-trigger {
   border-color: var(--nano-accent-primary, #6366f1);
-  background: var(--nano-bg-card, rgba(255, 255, 255, 0.07));
+  background: var(--nano-select-bg-hover, var(--nano-bg-card, rgba(255, 255, 255, 0.08)));
 }
 
 .nano-select.is-open .nano-select-trigger {
@@ -946,7 +1045,7 @@ defineExpose({
 }
 
 .nano-select-placeholder {
-  color: var(--nano-text-muted, #94a3b8);
+  color: var(--nano-select-placeholder, var(--nano-text-muted, #94a3b8));
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -969,15 +1068,15 @@ defineExpose({
   border-radius: 5px;
   font-size: 0.75rem;
   font-weight: 600;
-  background: color-mix(in srgb, var(--nano-accent-primary, #6366f1) 18%, transparent);
-  color: var(--nano-text-main, #f8fafc);
+  background: color-mix(in srgb, var(--nano-accent-primary, #6366f1) 16%, transparent);
+  color: var(--nano-select-fg, var(--nano-text-main, #f8fafc));
   border: 1px solid color-mix(in srgb, var(--nano-accent-primary, #6366f1) 35%, transparent);
 }
 
 .nano-select-pill-remove {
   border: none;
   background: transparent;
-  color: var(--nano-text-muted, #94a3b8);
+  color: var(--nano-select-placeholder, var(--nano-text-muted, #94a3b8));
   font-size: 0.85rem;
   line-height: 1;
   padding: 0 1px;
@@ -1000,8 +1099,8 @@ defineExpose({
   height: 18px;
   border-radius: 50%;
   border: none;
-  background: var(--nano-bg-hover, rgba(255, 255, 255, 0.1));
-  color: var(--nano-text-muted, #94a3b8);
+  background: var(--nano-select-option-hover-bg, var(--nano-bg-hover, rgba(255, 255, 255, 0.1)));
+  color: var(--nano-select-placeholder, var(--nano-text-muted, #94a3b8));
   font-size: 0.85rem;
   line-height: 1;
   display: inline-flex;
@@ -1012,12 +1111,12 @@ defineExpose({
 }
 
 .nano-select-clear:hover {
-  color: var(--nano-text-main, #f8fafc);
-  background: color-mix(in srgb, var(--nano-status-danger, #f87171) 25%, transparent);
+  color: var(--nano-select-fg, var(--nano-text-main, #f8fafc));
+  background: color-mix(in srgb, var(--nano-status-danger, #f87171) 22%, transparent);
 }
 
 .nano-select-chevron {
-  color: var(--nano-text-muted, #94a3b8);
+  color: var(--nano-select-chevron, var(--nano-text-muted, #94a3b8));
   transition: transform 0.18s ease, color 0.18s ease;
 }
 
@@ -1034,10 +1133,10 @@ defineExpose({
   width: max-content;
   max-width: min(360px, 90vw);
   z-index: 80;
-  background: color-mix(in srgb, var(--nano-accent-primary, #6366f1) 4%, var(--nano-bg-sidebar, #18181b));
-  border: 1px solid var(--nano-accent-primary, #6366f1);
+  background: var(--nano-select-dropdown-bg, color-mix(in srgb, var(--nano-accent-primary, #6366f1) 4%, var(--nano-bg-sidebar, #18181b)));
+  border: 1px solid var(--nano-select-dropdown-border, var(--nano-accent-primary, #6366f1));
   border-radius: var(--nano-radius-md, 10px);
-  box-shadow: var(--nano-shadow-elevated, 0 14px 34px rgba(0, 0, 0, 0.42));
+  box-shadow: var(--nano-select-dropdown-shadow, var(--nano-shadow-elevated, 0 14px 34px rgba(0, 0, 0, 0.42)));
   overflow: hidden;
   box-sizing: border-box;
   user-select: none;
@@ -1050,7 +1149,7 @@ defineExpose({
 }
 
 .nano-select-dropdown.is-placement-overlap {
-  box-shadow: 0 18px 44px rgba(0, 0, 0, 0.56), 0 0 0 1px color-mix(in srgb, var(--nano-accent-primary, #6366f1) 45%, transparent);
+  box-shadow: var(--nano-select-dropdown-overlap-shadow, 0 18px 44px rgba(0, 0, 0, 0.56));
 }
 
 .nano-select-search-bar {
@@ -1058,8 +1157,8 @@ defineExpose({
   align-items: center;
   gap: 8px;
   padding: 8px 10px;
-  background: var(--nano-bg-muted, rgba(255, 255, 255, 0.04));
-  border-bottom: 1px solid var(--nano-border-card, rgba(255, 255, 255, 0.1));
+  background: var(--nano-select-search-bg, var(--nano-bg-muted, rgba(255, 255, 255, 0.04)));
+  border-bottom: 1px solid var(--nano-select-search-border, var(--nano-border-card, rgba(255, 255, 255, 0.1)));
 }
 
 .nano-select-search-icon {
@@ -1072,7 +1171,7 @@ defineExpose({
   border: none;
   outline: none;
   background: transparent;
-  color: var(--nano-text-main, #f8fafc);
+  color: var(--nano-select-fg, var(--nano-text-main, #f8fafc));
   font-size: 0.82rem;
   font-family: inherit;
 }
@@ -1080,7 +1179,7 @@ defineExpose({
 .nano-select-search-clear {
   border: none;
   background: transparent;
-  color: var(--nano-text-muted, #94a3b8);
+  color: var(--nano-select-placeholder, var(--nano-text-muted, #94a3b8));
   cursor: pointer;
   font-size: 0.9rem;
   line-height: 1;
@@ -1104,7 +1203,7 @@ defineExpose({
   border: 1px solid transparent;
   border-radius: 7px;
   background: transparent;
-  color: var(--nano-text-secondary, #cbd5e1);
+  color: var(--nano-select-option-fg, var(--nano-text-secondary, #cbd5e1));
   font-size: 0.83rem;
   font-family: inherit;
   text-align: left;
@@ -1114,14 +1213,14 @@ defineExpose({
 
 .nano-select-option.is-focused,
 .nano-select-option:hover:not(.is-disabled) {
-  background: var(--nano-bg-hover, rgba(255, 255, 255, 0.08));
-  color: var(--nano-text-main, #f8fafc);
+  background: var(--nano-select-option-hover-bg, var(--nano-bg-hover, rgba(255, 255, 255, 0.08)));
+  color: var(--nano-select-fg, var(--nano-text-main, #f8fafc));
 }
 
 .nano-select-option.is-selected {
-  background: color-mix(in srgb, var(--nano-accent-primary, #6366f1) 14%, transparent);
-  border-color: color-mix(in srgb, var(--nano-accent-primary, #6366f1) 38%, transparent);
-  color: var(--nano-text-main, #f8fafc);
+  background: var(--nano-select-option-selected-bg, color-mix(in srgb, var(--nano-accent-primary, #6366f1) 14%, transparent));
+  border-color: var(--nano-select-option-selected-border, color-mix(in srgb, var(--nano-accent-primary, #6366f1) 38%, transparent));
+  color: var(--nano-select-fg, var(--nano-text-main, #f8fafc));
   font-weight: 600;
 }
 
@@ -1134,8 +1233,8 @@ defineExpose({
   width: 16px;
   height: 16px;
   border-radius: 4px;
-  border: 1px solid var(--nano-border-card, rgba(255, 255, 255, 0.2));
-  background: var(--nano-bg-muted, rgba(255, 255, 255, 0.04));
+  border: 1px solid var(--nano-select-check-border, var(--nano-border-card, rgba(255, 255, 255, 0.2)));
+  background: var(--nano-select-check-bg, var(--nano-bg-muted, rgba(255, 255, 255, 0.04)));
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -1156,7 +1255,7 @@ defineExpose({
 }
 
 .nano-select-opt-icon {
-  color: var(--nano-accent-primary, #818cf8);
+  color: var(--nano-accent-primary, #6366f1);
   flex-shrink: 0;
 }
 
@@ -1182,7 +1281,7 @@ defineExpose({
 
 .nano-select-opt-desc {
   font-size: 0.72rem;
-  color: var(--nano-text-muted, #94a3b8);
+  color: var(--nano-select-placeholder, var(--nano-text-muted, #94a3b8));
   font-weight: 400;
 }
 
@@ -1193,9 +1292,9 @@ defineExpose({
   text-transform: uppercase;
   padding: 1px 6px;
   border-radius: 4px;
-  background: color-mix(in srgb, var(--nano-accent-primary, #6366f1) 16%, transparent);
-  color: var(--nano-accent-primary, #818cf8);
-  border: 1px solid color-mix(in srgb, var(--nano-accent-primary, #6366f1) 30%, transparent);
+  background: color-mix(in srgb, var(--nano-accent-primary, #6366f1) 14%, transparent);
+  color: var(--nano-accent-primary, #6366f1);
+  border: 1px solid color-mix(in srgb, var(--nano-accent-primary, #6366f1) 32%, transparent);
   flex-shrink: 0;
 }
 
@@ -1203,7 +1302,7 @@ defineExpose({
   padding: 14px 10px;
   text-align: center;
   font-size: 0.8rem;
-  color: var(--nano-text-muted, #94a3b8);
+  color: var(--nano-select-placeholder, var(--nano-text-muted, #94a3b8));
 }
 
 .nano-select-pop-enter-active,
