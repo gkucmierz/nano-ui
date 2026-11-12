@@ -7,10 +7,12 @@ import { lockModalBackgroundScroll, unlockModalBackgroundScroll } from '../utils
 
 const nanoStorage = getScopedStorageController('nano-ui');
 const modalScrollLockToken = Symbol('nano-modal-scroll-lock');
+let modalInstanceCounter = 0;
 
 const isMounted = ref(false);
 const slots = useSlots();
 const instance = getCurrentInstance();
+const modalTitleId = `nano-modal-title-${++modalInstanceCounter}`;
 
 onMounted(() => {
   isMounted.value = true;
@@ -36,6 +38,8 @@ const props = defineProps({
 
   closeOnBackdrop: { type: Boolean, default: true },
   glassmorphism: { type: Boolean, default: false },
+  glassHeader: { type: Boolean, default: false },
+  glassFooter: { type: Boolean, default: false },
 
   draggable: { type: Boolean, default: false },
   resizable: { type: Boolean, default: false },
@@ -64,6 +68,8 @@ const computedShowFooter = computed(() => {
 
 const modalOverlay = ref(null);
 const modalWindow = ref(null);
+const cancelBtnRef = ref(null);
+const okBtnRef = ref(null);
 
 // State
 const posX = ref(null);
@@ -459,7 +465,9 @@ watch(isVisible, async (newVal) => {
       window.addEventListener('keydown', onGlobalKeyDown, { capture: true });
     }
     await nextTick();
-    if (modalOverlay.value) {
+    if (props.okVariant === 'danger' && props.showCancel && cancelBtnRef.value) {
+      cancelBtnRef.value.focus();
+    } else if (modalOverlay.value) {
       modalOverlay.value.focus();
     }
   } else {
@@ -539,16 +547,29 @@ defineExpose({
     <transition name="nano-modal-fade">
       <div v-if="isVisible" class="nano-modal-overlay" :class="{ 'nano-glass': glassmorphism }"
         @click.self="handleBackdropClick" @keydown.esc.stop="closeModal" tabindex="-1" ref="modalOverlay">
-        <div class="nano-modal-window" :class="{ 'is-dragging': isDragging, 'is-resizing': isResizing, 'is-maximized': isMaximized }"
-          :style="computedWindowStyle" ref="modalWindow">
+        <div
+          class="nano-modal-window"
+          :class="{ 'is-dragging': isDragging, 'is-resizing': isResizing, 'is-maximized': isMaximized }"
+          :style="computedWindowStyle"
+          role="dialog"
+          aria-modal="true"
+          :aria-labelledby="showHeader && title ? modalTitleId : undefined"
+          :aria-label="(!showHeader || !title) && title ? title : undefined"
+          ref="modalWindow"
+        >
 
           <!-- HEADER -->
-          <div v-if="showHeader" class="nano-modal-header" :class="{ 'is-draggable': draggable && !isMaximized }"
-            @mousedown="startDrag" @dblclick="handleHeaderDblClick">
+          <div
+            v-if="showHeader"
+            class="nano-modal-header"
+            :class="{ 'is-draggable': draggable && !isMaximized, 'nano-glass-header': glassHeader }"
+            @mousedown="startDrag"
+            @dblclick="handleHeaderDblClick"
+          >
             <slot name="header">
-              <h2 class="nano-modal-title">{{ title }}</h2>
+              <h2 :id="modalTitleId" class="nano-modal-title">{{ title }}</h2>
             </slot>
-            <button class="nano-modal-close-btn" @click.stop="closeModal" aria-label="Close" @mousedown.stop>
+            <button type="button" class="nano-modal-close-btn" @click.stop="closeModal" aria-label="Close" @mousedown.stop>
               <NanoIcon name="close" :size="20" />
             </button>
           </div>
@@ -561,13 +582,28 @@ defineExpose({
           </div>
 
           <!-- FOOTER -->
-          <div v-if="computedShowFooter" class="nano-modal-footer">
+          <div v-if="computedShowFooter" class="nano-modal-footer" :class="{ 'nano-glass-footer': glassFooter }">
             <slot name="footer">
               <div class="nano-modal-actions">
-                <button v-if="showCancel" class="nano-btn nano-btn-secondary" @click="handleCancel" v-ripple>
+                <button
+                  v-if="showCancel"
+                  ref="cancelBtnRef"
+                  type="button"
+                  class="nano-btn nano-btn-secondary"
+                  @click="handleCancel"
+                  v-ripple
+                >
                   {{ cancelText }}
                 </button>
-                <button v-if="showOk" class="nano-btn" :class="'nano-btn-' + okVariant" @click="handleOk" v-ripple>
+                <button
+                  v-if="showOk"
+                  ref="okBtnRef"
+                  type="button"
+                  class="nano-btn"
+                  :class="'nano-btn-' + okVariant"
+                  @click="handleOk"
+                  v-ripple
+                >
                   {{ okText }}
                 </button>
               </div>
@@ -657,6 +693,12 @@ defineExpose({
   flex-shrink: 0;
 }
 
+.nano-modal-header.nano-glass-header {
+  background: var(--nano-modal-glass-header-bg);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+}
+
 .nano-modal-header.is-draggable {
   cursor: grab;
 }
@@ -712,6 +754,12 @@ defineExpose({
   flex-shrink: 0;
 }
 
+.nano-modal-footer.nano-glass-footer {
+  background: var(--nano-modal-glass-footer-bg);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+}
+
 .nano-modal-actions {
   display: flex;
   gap: 12px;
@@ -746,10 +794,18 @@ defineExpose({
 }
 
 .nano-btn-danger {
-  background: var(--nano-state-danger, #ef4444);
+  background: var(--nano-modal-btn-danger, var(--nano-preset-danger, #ef4444));
 }
 
 .nano-btn-danger:hover {
+  filter: brightness(1.1);
+}
+
+.nano-btn-success {
+  background: var(--nano-modal-btn-success, var(--nano-preset-emerald, #16a34a));
+}
+
+.nano-btn-success:hover {
   filter: brightness(1.1);
 }
 
