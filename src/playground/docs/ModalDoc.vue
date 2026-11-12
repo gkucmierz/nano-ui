@@ -2,6 +2,7 @@
 import { ref, computed, onMounted, onUnmounted, watch } from 'vue';
 import NanoModal from '../../components/NanoModal.vue';
 import NanoDialog from '../../components/NanoDialog.vue';
+import NanoLightbox from '../../components/NanoLightbox.vue';
 import { useDialog } from '../../composables/useDialog.js';
 import NanoCodeBlock from '../../components/NanoCodeBlock.vue';
 import { getScopedStorageController } from '../../utils/storage-controller.js';
@@ -11,6 +12,22 @@ const { showAlert, showConfirm } = useDialog();
 const showBasic = ref(false);
 const showAdvanced = ref(false);
 const showCustom = ref(false);
+const showLightbox = ref(false);
+const lightboxIdx = ref(0);
+const demoLightboxItems = [
+  {
+    src: 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="960" height="600" viewBox="0 0 960 600"><rect width="960" height="600" fill="%23111827"/><circle cx="480" cy="300" r="160" fill="%236366f1" opacity="0.85"/><text x="480" y="312" text-anchor="middle" fill="%23f8fafc" font-family="sans-serif" font-size="34" font-weight="700">NanoLightbox Slide 1</text></svg>',
+    alt: 'NanoLightbox Slide 1',
+    caption: 'Top-layer native <dialog> lightbox with frosted backdrop-filter blur and keyboard navigation.',
+    badge: 'Studio Render',
+  },
+  {
+    src: 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="960" height="600" viewBox="0 0 960 600"><rect width="960" height="600" fill="%230f172a"/><rect x="260" y="140" width="440" height="320" rx="28" fill="%2310b981" opacity="0.85"/><text x="480" y="312" text-anchor="middle" fill="%23f8fafc" font-family="sans-serif" font-size="34" font-weight="700">NanoLightbox Slide 2</text></svg>',
+    alt: 'NanoLightbox Slide 2',
+    caption: 'Click outside or press Esc to light-dismiss; click image to toggle 1.75x zoom.',
+    badge: 'Color-Graded 5500K',
+  },
+];
 
 const advancedModalRef = ref(null);
 const storageMode = ref('ls');
@@ -344,6 +361,16 @@ const codeTabs = createDocTabs({
         </button>
       </div>
       <NanoDialog />
+    </div>
+
+    <div class="demo-section">
+      <h3>Blurred Backdrop Photo Lightbox (NanoLightbox)</h3>
+      <button class="demo-btn" @click="showLightbox = true">Open Photo Lightbox</button>
+      <NanoLightbox
+        v-model="showLightbox"
+        v-model:active-index="lightboxIdx"
+        :items="demoLightboxItems"
+      />
     </div>
 
     <NanoCodeBlock :tabs="codeTabs" />
