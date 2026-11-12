@@ -14,6 +14,8 @@ import {
 import Ripple, { computeRippleGeometry } from './directives/ripple.js';
 import {
   NANO_UI_SOUND_PRESETS,
+  CONTROL_ACOUSTIC_MASS_PROFILES,
+  resolveControlAcousticMass,
   configureNanoUiSound,
   getNanoUiSoundConfig,
   resetNanoUiSoundConfig,
@@ -417,6 +419,8 @@ export {
   Ripple as vRipple,
   computeRippleGeometry,
   NANO_UI_SOUND_PRESETS,
+  CONTROL_ACOUSTIC_MASS_PROFILES,
+  resolveControlAcousticMass,
   configureNanoUiSound,
   getNanoUiSoundConfig,
   resetNanoUiSoundConfig,
