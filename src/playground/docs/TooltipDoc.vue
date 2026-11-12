@@ -8,13 +8,14 @@ const codeError = `<button v-tooltip="{ text: '...', class: 'tooltip-error' }">.
 const codeSuccess = `<button v-tooltip="{ text: '...', class: 'tooltip-success' }">...</button>`;
 
 const cssVarsCode = `.global-tooltip {
+  /* Inverted-polarity SSoT: Soft Pearl (#e2e8f0) in Dark Mode, Deep Slate (#0f172a) in Light Mode */
   --nu-tooltip-bg: var(--nano-tooltip-bg);
   --nu-tooltip-color: var(--nano-tooltip-color);
-  --nu-tooltip-radius: var(--nano-radius-md); /* 8px */
-  --nu-tooltip-padding: var(--nano-space-sm) var(--nano-space-md); /* 8px 16px */
-  --nu-tooltip-shadow: 0 var(--nano-space-sm) var(--nano-space-lg) rgba(0, 0, 0, 0.3); /* 0 8px 24px */
-  --nu-tooltip-border: var(--nano-border-width) solid rgba(255, 255, 255, 0.1);
-  --nu-tooltip-arrow-border: rgba(255, 255, 255, 0.1);
+  --nu-tooltip-radius: var(--nano-tooltip-radius); /* 7px */
+  --nu-tooltip-padding: var(--nano-tooltip-padding); /* 5px 10px */
+  --nano-tooltip-max-width: 260px;
+  --nu-tooltip-shadow: var(--nano-tooltip-shadow);
+  --nu-tooltip-arrow-border: var(--nano-tooltip-arrow-border);
 }`;
 
 const copyCode = async (text) => {
