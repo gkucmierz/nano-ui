@@ -180,6 +180,7 @@ const stepBy = (multiplier = 1) => {
   if (nextClean !== props.modelValue) {
     playNanoUiSound(multiplier >= 0 ? 'stepperUp' : 'stepperDown', {
       propSound: props.sound,
+      size: props.size,
       minIntervalMs: 22
     })
   }
