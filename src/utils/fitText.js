@@ -1,11 +1,16 @@
 /**
  * Natural Search Font Auto-Fitting Engine (inspired by color-claim)
- * for both SVG (`getBBox()` / `getComputedTextLength()`) and HTML (`scrollWidth` / `scrollHeight`
- * with explicit handling of HTML auto-wrapping).
+ * for SVG (`getBBox()` / `getComputedTextLength()`), pure proportional/monospace math,
+ * and HTML (`scrollWidth` / `scrollHeight` with explicit handling of HTML auto-wrapping).
  *
  * Uses exponential galloping (`max *= 2`) followed by binary bisection (`mid = (min + max) >> 1`)
  * to find the exact transition boundary in O(log N) steps.
  */
+
+const objTag = (v) => Object.prototype.toString.call(v);
+const isFn = (v) => objTag(v) === '[object Function]';
+const isObj = (v) => v !== null && objTag(v) === '[object Object]';
+const isNum = (v) => objTag(v) === '[object Number]' && Number.isFinite(v);
 
 /**
  * Exponential galloping + binary bisection search over natural numbers N >= 1.
@@ -50,6 +55,76 @@ export const naturalSearch = (cond, retFirstTrue = true, maxCap = 2048) => {
   }
 };
 
+const NARROW_GLYPHS = new Set(['i', 'l', 'j', 't', 'f', 'r', 'I', '1', '.', ',', ':', ';', '!', '|', "'", ' ']);
+const WIDE_GLYPHS = new Set(['m', 'w', 'M', 'W', 'G', 'O', 'Q', 'D', 'H', 'N', 'U', '@', '%', '&']);
+
+/**
+ * Estimates proportional sans-serif glyph advance ratio (in `em` units) per character.
+ */
+export const estimateProportionalEmWidth = (text = '', { fontWeight = 400 } = {}) => {
+  const str = String(text || '');
+  if (!str) return 0;
+  const weightBoost = Number(fontWeight) >= 600 ? 1.065 : 1.0;
+  let totalEm = 0;
+  for (const ch of str) {
+    if (NARROW_GLYPHS.has(ch)) {
+      totalEm += ch === ' ' ? 0.31 : 0.34;
+    } else if (WIDE_GLYPHS.has(ch)) {
+      totalEm += ch === 'W' || ch === 'M' || ch === 'w' || ch === 'm' ? 0.86 : 0.74;
+    } else if (ch >= 'A' && ch <= 'Z') {
+      totalEm += 0.67;
+    } else if (ch >= '0' && ch <= '9') {
+      totalEm += 0.58;
+    } else {
+      totalEm += 0.55;
+    }
+  }
+  return totalEm * weightBoost;
+};
+
+/**
+ * Computes the optimal single-line font-size inside a bounded `maxWidth` (and optional `maxHeight`)
+ * using `naturalSearch` — works identically in Node SSR, SVG data-URIs, and browser contexts.
+ */
+export const computeFittedFontSize = (
+  text = '',
+  {
+    maxWidth = 260,
+    maxHeight = Infinity,
+    maxFontSize = 36,
+    minFontSize = 8,
+    step = 0.5,
+    monospace = false,
+    charWidthRatio = 0.615,
+    fontWeight = 700,
+    lineHeight = 1.15,
+    measureWidth = null,
+  } = {}
+) => {
+  const str = String(text || '');
+  if (!str || maxWidth <= 0) return maxFontSize;
+
+  const qStep = Math.max(0.01, Number(step) || 0.5);
+  const maxSteps = Math.max(2, Math.round((maxFontSize - minFontSize) / qStep) + 1);
+  const emSpan = monospace ? str.length * charWidthRatio : estimateProportionalEmWidth(str, { fontWeight });
+
+  const bestStep = naturalSearch(
+    (n) => {
+      if (n > maxSteps) return true;
+      const candidateSize = minFontSize + (n - 1) * qStep;
+      if (candidateSize > maxFontSize + 1e-6) return true;
+      const w = isFn(measureWidth) ? measureWidth(str, candidateSize) : emSpan * candidateSize;
+      const h = candidateSize * lineHeight;
+      return w > maxWidth || h > maxHeight;
+    },
+    false,
+    maxSteps + 2
+  );
+
+  const fitted = minFontSize + (Math.max(1, Math.min(maxSteps, bestStep)) - 1) * qStep;
+  return Number(Math.max(minFontSize, Math.min(maxFontSize, fitted)).toFixed(2));
+};
+
 /**
  * Computes the optimal single-line font-size for a monospace formula/label inside a fixed width
  * (e.g. inside an SVG viewBox card of width 52 units) using `naturalSearch` over quantized steps.
@@ -63,28 +138,16 @@ export const computeMonospaceFittedFontSize = (
     step = 0.05,
     charWidthRatio = 0.615,
   } = {}
-) => {
-  const str = String(text || '');
-  if (!str) return maxFontSize;
-
-  const qStep = Math.max(0.01, Number(step) || 0.05);
-  const maxSteps = Math.max(2, Math.round((maxFontSize - minFontSize) / qStep) + 1);
-
-  const bestStep = naturalSearch(
-    (n) => {
-      if (n > maxSteps) return true;
-      const candidateSize = minFontSize + (n - 1) * qStep;
-      if (candidateSize > maxFontSize + 1e-6) return true;
-      const estimatedWidth = str.length * candidateSize * charWidthRatio;
-      return estimatedWidth > maxWidth;
-    },
-    false,
-    maxSteps + 2
-  );
-
-  const fitted = minFontSize + (Math.max(1, Math.min(maxSteps, bestStep)) - 1) * qStep;
-  return Number(Math.max(minFontSize, Math.min(maxFontSize, fitted)).toFixed(2));
-};
+) =>
+  computeFittedFontSize(text, {
+    maxWidth,
+    maxFontSize,
+    minFontSize,
+    step,
+    monospace: true,
+    charWidthRatio,
+    lineHeight: 1,
+  });
 
 /**
  * Fits an SVG `<text>` element inside `maxWidth` (and optional `maxHeight`) using `naturalSearch`
@@ -109,11 +172,11 @@ export const fitSvgTextSize = (
 
   const measureWidth = () => {
     try {
-      if (typeof svgTextEl.getComputedTextLength === 'function') {
+      if (isFn(svgTextEl.getComputedTextLength)) {
         const len = svgTextEl.getComputedTextLength();
         if (Number.isFinite(len) && len > 0) return len;
       }
-      if (typeof svgTextEl.getBBox === 'function') {
+      if (isFn(svgTextEl.getBBox)) {
         const bbox = svgTextEl.getBBox();
         if (bbox && bbox.width > 0) return bbox.width;
       }
@@ -124,7 +187,7 @@ export const fitSvgTextSize = (
 
   const measureHeight = () => {
     try {
-      if (typeof svgTextEl.getBBox === 'function') {
+      if (isFn(svgTextEl.getBBox)) {
         const bbox = svgTextEl.getBBox();
         if (bbox && bbox.height > 0) return bbox.height;
       }
@@ -155,15 +218,6 @@ export const fitSvgTextSize = (
 
 /**
  * Fits an HTML element's `font-size` inside its available container space using `naturalSearch`.
- * Explicitly handles HTML's auto-wrapping and browser minimum font-size floors:
- * - `mode: 'single-line'` (or `singleLine: true`, default): Enforces `white-space: nowrap` so
- *   `scrollWidth` grows monotonically with `font-size` without wrapping onto a new line, shrinking
- *   down to fractional pixels (`minPx = 0.5`, `stepPx = 0.05`). If the browser enforces a minimum
- *   font-size floor (or the text still exceeds `availW` at `minPx`), seamlessly applies sub-pixel
- *   CSS `transform: scale(availW / scrollWidth)` from `left center` so the text never clips.
- * - `mode: 'box'`: Allows multi-line wrapping (`white-space: normal`) and checks both
- *   `scrollHeight > availableHeight` and `scrollWidth > availableWidth` (preventing horizontal
- *   single-word overflow and vertical multi-line overflow simultaneously).
  */
 export const fitHtmlTextSize = (el, opts = {}) => {
   const mode = opts.singleLine ? 'single-line' : opts.mode || 'single-line';
@@ -173,13 +227,13 @@ export const fitHtmlTextSize = (el, opts = {}) => {
   const maxWidth = opts.maxWidth ?? null;
   const maxHeight = opts.maxHeight ?? null;
   const allowScaleBelowMin = opts.allowScaleBelowMin !== false;
-  const onFit = typeof opts.onFit === 'function' ? opts.onFit : null;
+  const onFit = isFn(opts.onFit) ? opts.onFit : null;
 
-  if (!el || typeof window === 'undefined') return maxPx;
+  const win = globalThis.window;
+  if (!el || !win) return maxPx;
   const textContent = (el.textContent || '').trim();
   if (!textContent) return maxPx;
 
-  // Reset any previous sub-pixel scale before measuring natural layout widths
   if (el.style) {
     el.style.transform = '';
     el.style.transformOrigin = '';
@@ -190,8 +244,8 @@ export const fitHtmlTextSize = (el, opts = {}) => {
 
   const parent = el.parentElement;
   let parentInnerW = parent?.clientWidth || 0;
-  if (parentInnerW > 0 && typeof window.getComputedStyle === 'function') {
-    const cs = window.getComputedStyle(parent);
+  if (parentInnerW > 0 && isFn(win.getComputedStyle)) {
+    const cs = win.getComputedStyle(parent);
     const padL = parseFloat(cs?.paddingLeft) || 0;
     const padR = parseFloat(cs?.paddingRight) || 0;
     parentInnerW = Math.max(0, parentInnerW - padL - padR);
@@ -252,10 +306,9 @@ export const fitHtmlTextSize = (el, opts = {}) => {
     el.style.width = `${(100 / scale).toFixed(2)}%`;
   }
 
-  const renderedPx =
-    typeof window.getComputedStyle === 'function'
-      ? parseFloat(window.getComputedStyle(el)?.fontSize) || finalPx
-      : finalPx;
+  const renderedPx = isFn(win.getComputedStyle)
+    ? parseFloat(win.getComputedStyle(el)?.fontSize) || finalPx
+    : finalPx;
   const effectivePx = Number((renderedPx * scale).toFixed(2));
   if (el.dataset) {
     el.dataset.fittedFontPx = String(effectivePx);
@@ -275,9 +328,7 @@ export const fitHtmlTextSize = (el, opts = {}) => {
 
 /**
  * Fits a multi-element card container (`cardSurfaceEl`) into a bounded vertical height (`targetHeight`)
- * without vertical scrollbars using `naturalSearch` and CSS `transform: scale(s)` (with compensated
- * `width: (100 / s)%` and `height: (availH / s)px` from `transform-origin: top left` so the card
- * fills 100% of its surface box while scaling overflowing inner content cleanly).
+ * without vertical scrollbars using `naturalSearch` and CSS `transform: scale(s)`.
  */
 export const fitCardContentToHeight = (
   cardSurfaceEl,
@@ -288,7 +339,7 @@ export const fitCardContentToHeight = (
     step = 0.01,
   } = {}
 ) => {
-  if (!cardSurfaceEl || typeof window === 'undefined') return 1;
+  if (!cardSurfaceEl || !globalThis.window) return 1;
   const availH = Number(targetHeight) > 0 ? Number(targetHeight) : cardSurfaceEl.clientHeight || 0;
   if (availH <= 0) return 1;
 
@@ -313,7 +364,6 @@ export const fitCardContentToHeight = (
     }
   };
 
-  // Measure unscaled natural content height at width = 100%
   const measureNaturalScrollHeight = (candidateScale = 1) => {
     if (!contentRoot || !contentRoot.style) return cardSurfaceEl.scrollHeight || 0;
     const prevTransform = contentRoot.style.transform;
@@ -340,7 +390,6 @@ export const fitCardContentToHeight = (
     return naturalH * candidateScale;
   };
 
-  // Fast path: check if natural scale (1.0) already fits within targetHeight
   applyCssScale(1);
   if (measureNaturalScrollHeight(1) <= availH + 1) {
     return 1;
@@ -373,21 +422,16 @@ const FIT_STATE_SYM = Symbol('nanoFitTextState');
 /**
  * Vue Directive `v-fit-text`:
  * Automatically fits font size on both SVG `<text>` and HTML elements using `naturalSearch`.
- *
- * Usage:
- * - `<text v-fit-text="{ maxWidth: 51.5, minSize: 1.5, maxSize: 2.7 }">{{ expr }}</text>`
- * - `<div v-fit-text="{ minPx: 11, maxPx: 24, mode: 'single-line' }">{{ label }}</div>`
  */
 export const fitTextDirective = {
   mounted(el, binding) {
     const runFit = (force = false, activeBinding = el[FIT_STATE_SYM]?.binding || binding) => {
       const currentText = (el.textContent || '').trim();
-      const opts =
-        activeBinding && typeof activeBinding.value === 'object' && activeBinding.value !== null
-          ? activeBinding.value
-          : typeof activeBinding?.value === 'number'
-            ? { maxWidth: activeBinding.value }
-            : {};
+      const opts = isObj(activeBinding?.value)
+        ? activeBinding.value
+        : isNum(activeBinding?.value)
+          ? { maxWidth: activeBinding.value }
+          : {};
       const containerW = el.parentElement?.clientWidth || el.clientWidth || 0;
       const optsKey = `${containerW}:${opts.maxWidth ?? ''}:${opts.maxHeight ?? ''}:${opts.minSize ?? opts.minPx ?? ''}:${opts.maxSize ?? opts.maxPx ?? ''}:${opts.step ?? opts.stepPx ?? ''}:${opts.mode ?? opts.singleLine ?? ''}`;
       const st = el[FIT_STATE_SYM];
@@ -411,8 +455,9 @@ export const fitTextDirective = {
     el[FIT_STATE_SYM] = { runFit, ro: null, binding, lastText: '', lastOptsKey: '' };
     runFit(true, binding);
 
-    if (typeof ResizeObserver !== 'undefined' && el.parentElement) {
-      const ro = new ResizeObserver(() => runFit(true));
+    const RO = globalThis.ResizeObserver;
+    if (RO && el.parentElement) {
+      const ro = new RO(() => runFit(true));
       ro.observe(el.parentElement);
       if (el !== el.parentElement) {
         ro.observe(el);
@@ -422,7 +467,7 @@ export const fitTextDirective = {
   },
   updated(el, binding) {
     const st = el[FIT_STATE_SYM];
-    if (st && typeof st.runFit === 'function') {
+    if (st && isFn(st.runFit)) {
       st.binding = binding;
       st.runFit(false, binding);
     } else {
