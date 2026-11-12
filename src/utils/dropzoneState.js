@@ -27,22 +27,22 @@ export function matchesAcceptPattern(file, accept = '') {
   const rawAccept = String(accept || '').trim();
   if (!rawAccept || rawAccept === '*' || rawAccept === '*/*') return true;
 
-  const tokens = rawAccept
+  const entries = rawAccept
     .split(',')
     .map(t => t.trim().toLowerCase())
     .filter(Boolean);
-  if (tokens.length === 0) return true;
+  if (entries.length === 0) return true;
 
   const fileName = String(file.name || '').toLowerCase();
   const mimeType = String(file.type || '').toLowerCase();
 
-  return tokens.some((token) => {
-    if (token === '*' || token === '*/*') return true;
-    if (token.startsWith('.')) {
-      return fileName.endsWith(token);
+  return entries.some((entry) => {
+    if (entry === '*' || entry === '*/*') return true;
+    if (entry.startsWith('.')) {
+      return fileName.endsWith(entry);
     }
-    if (token.endsWith('/*')) {
-      const prefix = token.slice(0, -1); // e.g. 'video/'
+    if (entry.endsWith('/*')) {
+      const prefix = entry.slice(0, -1); // e.g. 'video/'
       if (mimeType.startsWith(prefix)) return true;
       // Fallback extension heuristic when OS/browser omits MIME type on drag
       if (prefix === 'video/') {
@@ -56,7 +56,7 @@ export function matchesAcceptPattern(file, accept = '') {
       }
       return false;
     }
-    return mimeType === token;
+    return mimeType === entry;
   });
 }
 
