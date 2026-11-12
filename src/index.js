@@ -69,6 +69,8 @@ import NanoCoverFlow from './components/NanoCoverFlow.vue';
 import NanoCollapsible from './components/NanoCollapsible.vue';
 import NanoDropzone from './components/NanoDropzone.vue';
 import NanoTree from './components/NanoTree.vue';
+import NanoFieldset from './components/NanoFieldset.vue';
+import NanoLightbox from './components/NanoLightbox.vue';
 import {
   UNIX_TREE_GLYPHS,
   matchesTreeNodeQuery,
@@ -493,6 +495,8 @@ export {
   validateDroppedFiles,
   createDropzoneStateMachine,
   NanoTree,
+  NanoFieldset,
+  NanoLightbox,
   UNIX_TREE_GLYPHS,
   matchesTreeNodeQuery,
   filterUnixTreeNodes,
@@ -846,5 +850,7 @@ export default {
     app.component(`${cp}NanoAccordion`, NanoCollapsible);
     app.component(`${cp}NanoDropzone`, NanoDropzone);
     app.component(`${cp}NanoTree`, NanoTree);
+    app.component(`${cp}NanoFieldset`, NanoFieldset);
+    app.component(`${cp}NanoLightbox`, NanoLightbox);
   },
 };
