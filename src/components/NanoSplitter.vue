@@ -256,16 +256,16 @@ const internalLocked = ref(props.locked !== undefined ? props.locked : false);
 const internalCollapsedPane = ref(props.collapsedPane !== undefined ? props.collapsedPane : null);
 
 const isLocked = computed(() => {
-  return props.locked !== undefined ? props.locked : internalLocked.value;
+  return Boolean(internalLocked.value);
 });
 
 const currentSize = computed(() => {
-  return props.modelValue !== undefined ? props.modelValue : internalSize.value;
+  return internalSize.value;
 });
 
 const activeCollapsedPane = computed(() => {
   if (!collapsibleConfig.value.enabled) return null;
-  const raw = props.collapsedPane !== undefined ? props.collapsedPane : internalCollapsedPane.value;
+  const raw = internalCollapsedPane.value;
   if (raw === 'first' && collapsibleConfig.value.allowFirst) return 'first';
   if (raw === 'second' && collapsibleConfig.value.allowSecond) return 'second';
   return null;
@@ -274,7 +274,7 @@ const activeCollapsedPane = computed(() => {
 watch(
   () => props.modelValue,
   (val) => {
-    if (val !== undefined) {
+    if (val !== undefined && val !== internalSize.value) {
       internalSize.value = val;
       if (!activeCollapsedPane.value && isWithinComfortableBounds(val)) {
         lastExpandedSize.value = val;
@@ -286,14 +286,20 @@ watch(
 watch(
   () => props.locked,
   (val) => {
-    if (val !== undefined) internalLocked.value = val;
+    if (val !== undefined && val !== internalLocked.value) {
+      internalLocked.value = val;
+      persistState({ locked: val });
+    }
   }
 );
 
 watch(
   () => props.collapsedPane,
   (val) => {
-    if (val !== undefined) internalCollapsedPane.value = val;
+    if (val !== undefined && val !== internalCollapsedPane.value) {
+      internalCollapsedPane.value = val;
+      persistState({ collapsedPane: val });
+    }
   }
 );
 
@@ -460,10 +466,16 @@ const effectiveStorageKey = computed(() => {
   });
 });
 
+function normalizeCollapsedTarget(raw) {
+  if (!collapsibleConfig.value.enabled) return null;
+  if (raw === 'first' && collapsibleConfig.value.allowFirst) return 'first';
+  if (raw === 'second' && collapsibleConfig.value.allowSecond) return 'second';
+  return null;
+}
+
 function setCollapsedPane(nextCollapsed) {
-  const normalized =
-    nextCollapsed === 'first' || nextCollapsed === 'second' ? nextCollapsed : null;
-  if (internalCollapsedPane.value === normalized) return;
+  const normalized = normalizeCollapsedTarget(nextCollapsed);
+  if (internalCollapsedPane.value === normalized && props.collapsedPane === normalized) return;
   internalCollapsedPane.value = normalized;
   approachingPane.value = null;
   emit('update:collapsedPane', normalized);
@@ -471,36 +483,43 @@ function setCollapsedPane(nextCollapsed) {
     collapsedPane: normalized,
     virtualAxis: virtualLayout.value.virtualDimensionAxis,
     collapsedSizePx: props.collapsedSize,
-    restoredSize: currentSize.value,
+    restoredSize: internalSize.value,
   });
 }
 
 function expandCollapsedPane() {
-  if (!activeCollapsedPane.value) return;
+  if (!activeCollapsedPane.value && !internalCollapsedPane.value) return;
   const restored = clampComfortableSize(lastExpandedSize.value ?? fallbackDefault.value);
   setCollapsedPane(null);
   updateSize(restored);
-  persistState();
+  persistState({ size: restored, collapsedPane: null });
 }
 
 function collapsePane(targetPane = 'first') {
-  if (!collapsibleConfig.value.enabled) return;
-  if (targetPane === 'first' && !collapsibleConfig.value.allowFirst) return;
-  if (targetPane === 'second' && !collapsibleConfig.value.allowSecond) return;
+  const normalized = normalizeCollapsedTarget(targetPane);
+  if (!normalized) return;
   lastExpandedSize.value = clampComfortableSize(currentSize.value);
-  setCollapsedPane(targetPane);
-  persistState();
+  setCollapsedPane(normalized);
+  persistState({ collapsedPane: normalized });
 }
 
-function persistState() {
+function persistState(overrides = {}) {
   const mode = resolvedStorageMode.value;
   if (!props.storageKey || mode === 'none') return;
+  const sizeToSave =
+    overrides.size !== undefined ? overrides.size : internalSize.value;
+  const lockedToSave =
+    overrides.locked !== undefined ? overrides.locked : internalLocked.value;
+  const rawCollapsed =
+    overrides.collapsedPane !== undefined
+      ? overrides.collapsedPane
+      : internalCollapsedPane.value;
   nanoStorage.set(
     props.storageKey,
     {
-      size: currentSize.value,
-      locked: isLocked.value,
-      collapsedPane: activeCollapsedPane.value,
+      size: sizeToSave,
+      locked: Boolean(lockedToSave),
+      collapsedPane: normalizeCollapsedTarget(rawCollapsed),
     },
     {
       mode,
@@ -571,7 +590,7 @@ function toggleLock() {
   const next = !isLocked.value;
   internalLocked.value = next;
   emit('update:locked', next);
-  persistState();
+  persistState({ locked: next });
 }
 
 function handleContainerPointerMove(e) {
@@ -641,18 +660,21 @@ function handleLockToggleMouseDown(e) {
 }
 
 /**
- * Allows dragging the collapsed bar directly (>= 4px movement) to pull the collapsed pane open,
- * while preserving normal single-click (< 4px) expansion.
+ * Allows dragging the collapsed bar outward (>= 14px in the expand direction) to pull the collapsed pane open,
+ * while ensuring normal clicks (even with slight pointer jitter) never enter drag mode and re-snap collapsed.
  */
 function handleCollapsedBarMouseDown(e) {
   if (e.button !== undefined && e.button !== 0) return;
   const startX = e.clientX;
   const startY = e.clientY;
+  const collapsedSide = activeCollapsedPane.value || internalCollapsedPane.value;
   let movedIntoDrag = false;
 
   const onMove = (moveEvt) => {
-    const dist = Math.hypot(moveEvt.clientX - startX, moveEvt.clientY - startY);
-    if (!movedIntoDrag && dist >= 4) {
+    const isVert = props.orientation === 'vertical';
+    const primaryDelta = isVert ? moveEvt.clientY - startY : moveEvt.clientX - startX;
+    const outwardDelta = collapsedSide === 'second' ? -primaryDelta : primaryDelta;
+    if (!movedIntoDrag && outwardDelta >= 14) {
       movedIntoDrag = true;
       window.removeEventListener('mousemove', onMove);
       window.removeEventListener('mouseup', onUp);
@@ -794,7 +816,6 @@ function handleKeyDown(e) {
 let resizeObserver = null;
 
 onMounted(() => {
-  restoreState();
   if (containerRef.value) {
     const rect = containerRef.value.getBoundingClientRect();
     containerSpanPx.value = props.orientation === 'vertical' ? rect.height : rect.width;
@@ -838,6 +859,7 @@ defineExpose({
   reset: resetToDefault,
   toggleLock,
   collapsePane,
+  expandPane: expandCollapsedPane,
   expandCollapsedPane,
   persistState,
   restoreState,
