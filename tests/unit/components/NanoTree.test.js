@@ -8,6 +8,7 @@ import {
   formatUnixAsciiTree,
   filterUnixTreeNodes,
 } from '../../../src/utils/unixTree.js';
+import { getWcagContrastRatio } from '../../../src/utils/colors.js';
 
 const sampleTree = [
   {
@@ -77,5 +78,55 @@ describe('NanoTree & unixTree.js — Unix tree(1) connectors, downward ┬ tee, 
     assert.ok(sfc.includes('role="tree"'));
     assert.ok(sfc.includes('nano-tree-root-tee'));
     assert.ok(sfc.includes('is-tee-down'));
+  });
+
+  it('supports theme="auto" | "light" | "dark" prop, .theme-light/.theme-dark local overrides, and WCAG AA light tokens in colors.css', () => {
+    const rootDir = path.resolve(import.meta.dirname, '../../..');
+    const sfc = fs.readFileSync(path.join(rootDir, 'src/components/NanoTree.vue'), 'utf8');
+    const colorsCss = fs.readFileSync(path.join(rootDir, 'src/assets/colors.css'), 'utf8');
+    const ecosystemDoc = fs.readFileSync(path.join(rootDir, 'src/playground/docs/EcosystemDoc.vue'), 'utf8');
+
+    // 1. Prop contract & scoped modifier classes without :global or raw typeof
+    assert.match(sfc, /theme:\s*\{\s*type:\s*String,\s*default:\s*'auto'/);
+    assert.match(sfc, /v\s*===\s*'auto'\s*\|\|\s*v\s*===\s*'light'\s*\|\|\s*v\s*===\s*'dark'/);
+    assert.ok(sfc.includes('.nano-tree.theme-light'));
+    assert.ok(sfc.includes('.nano-tree.theme-dark'));
+    assert.ok(sfc.includes('var(--nano-tree-bg,'));
+    assert.ok(sfc.includes('var(--nano-tree-badge-emerald-bg,'));
+    assert.doesNotMatch(sfc, /:global\(/);
+    assert.doesNotMatch(sfc, /\[data-v-/);
+    assert.doesNotMatch(sfc, /\btypeof\b/);
+
+    // 2. Dark & Light CSS custom properties in colors.css + WCAG AA contrast verification
+    const lightIdx = colorsCss.indexOf(':root[data-theme="light"]');
+    assert.ok(lightIdx > 0, 'Expected Light Theme block in colors.css');
+    const darkSection = colorsCss.slice(0, lightIdx);
+    const lightSection = colorsCss.slice(lightIdx);
+
+    for (const token of [
+      '--nano-tree-bg',
+      '--nano-tree-border',
+      '--nano-tree-fg',
+      '--nano-tree-muted',
+      '--nano-tree-line',
+      '--nano-tree-line-active',
+      '--nano-tree-accent',
+      '--nano-tree-badge-emerald-bg',
+      '--nano-tree-badge-emerald-fg',
+    ]) {
+      assert.ok(darkSection.includes(`${token}:`), `Missing dark token ${token} in colors.css`);
+      assert.ok(lightSection.includes(`${token}:`), `Missing light token ${token} in colors.css`);
+    }
+
+    assert.ok(getWcagContrastRatio('#0f172a', '#ffffff') >= 4.5, 'Primary label contrast >= 4.5:1');
+    assert.ok(getWcagContrastRatio('#475569', '#ffffff') >= 4.5, 'Secondary/muted contrast >= 4.5:1');
+    assert.ok(getWcagContrastRatio('#0369a1', '#ffffff') >= 4.5, 'Branch toggle accent contrast >= 4.5:1');
+    assert.ok(getWcagContrastRatio('#047857', '#ecfdf5') >= 4.5, 'MIT emerald badge contrast >= 4.5:1');
+    assert.ok(getWcagContrastRatio('#64748b', '#ffffff') >= 3.0, 'Tree connector line contrast >= 3.0:1');
+
+    // 3. EcosystemDoc tree versions updated to v1.8.20, utils v5.4.1, vue-url-cleaner v1.0.0
+    assert.ok(ecosystemDoc.includes("version: '1.8.20'"));
+    assert.ok(ecosystemDoc.includes("version: '5.4.1'"));
+    assert.ok(ecosystemDoc.includes("label: 'vue-url-cleaner'"));
   });
 });

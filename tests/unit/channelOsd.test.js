@@ -1,10 +1,13 @@
 import { describe, test } from 'node:test';
 import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import path from 'node:path';
 import {
   CHANNEL_OSD_SHAPES,
   resolveChannelOsdMaxDigits,
   resolveChannelOsdBox,
 } from '../../src/utils/channelOsdLayout.js';
+import { getWcagContrastRatio } from '../../src/utils/colors.js';
 
 describe('NanoChannelOsd naturalSearch Multi-Digit Geometry', () => {
   test('infers maxDigits from max with minimum of 2 unless explicitly overridden', () => {
@@ -74,5 +77,65 @@ describe('NanoChannelOsd naturalSearch Multi-Digit Geometry', () => {
 
     assert.equal(d1.widthPx, d2.widthPx);
     assert.equal(d2.widthPx, d3.widthPx);
+  });
+
+  test('NanoChannelOsd, NanoWelcomeHud, ChannelOsdDoc, and colors.css support Light Theme tokens and theme="auto|light|dark" prop', () => {
+    const rootDir = path.resolve(import.meta.dirname, '../..');
+    const osdSfc = fs.readFileSync(path.join(rootDir, 'src/components/NanoChannelOsd.vue'), 'utf8');
+    const hudSfc = fs.readFileSync(path.join(rootDir, 'src/components/NanoWelcomeHud.vue'), 'utf8');
+    const osdDoc = fs.readFileSync(path.join(rootDir, 'src/playground/docs/ChannelOsdDoc.vue'), 'utf8');
+    const colorsCss = fs.readFileSync(path.join(rootDir, 'src/assets/colors.css'), 'utf8');
+
+    for (const [name, sfc, clsPrefix, tokenPrefix] of [
+      ['NanoChannelOsd.vue', osdSfc, '.nano-channel-osd', '--nano-osd-'],
+      ['NanoWelcomeHud.vue', hudSfc, '.nano-welcome-hud', '--nano-welcome-hud-'],
+    ]) {
+      assert.match(sfc, /theme:\s*\{\s*type:\s*String,\s*default:\s*'auto'/, `${name} missing theme prop`);
+      assert.match(sfc, /v\s*===\s*'auto'\s*\|\|\s*v\s*===\s*'light'\s*\|\|\s*v\s*===\s*'dark'/, `${name} missing theme validator`);
+      assert.ok(sfc.includes(`${clsPrefix}.theme-light`), `${name} missing .theme-light rule`);
+      assert.ok(sfc.includes(`${clsPrefix}.theme-dark`), `${name} missing .theme-dark rule`);
+      assert.ok(sfc.includes(`var(${tokenPrefix}bg,`), `${name} missing ${tokenPrefix}bg CSS variable`);
+      assert.doesNotMatch(sfc, /:global\(/, `${name} must not use :global()`);
+      assert.doesNotMatch(sfc, /\[data-v-/, `${name} must not hardcode [data-v-*]`);
+      assert.doesNotMatch(sfc, /\btypeof\b/, `${name} must not use raw typeof`);
+    }
+
+    // Verify ChannelOsdDoc uses theme-reactive CSS custom properties for stage & static comparison previews
+    assert.ok(osdDoc.includes('var(--nano-osd-stage-bg)'));
+    assert.ok(osdDoc.includes('var(--nano-osd-comparison-bg)'));
+    assert.ok(osdDoc.includes('var(--nano-osd-bg)'));
+    assert.ok(osdDoc.includes('var(--nano-osd-fg)'));
+    assert.ok(osdDoc.includes('var(--nano-osd-subtitle-fg)'));
+    assert.doesNotMatch(osdDoc, /:global\(/);
+    assert.doesNotMatch(osdDoc, /\btypeof\b/);
+
+    // Verify colors.css defines both Dark and Light tokens for --nano-osd-* and --nano-welcome-hud-*
+    const lightIdx = colorsCss.indexOf(':root[data-theme="light"]');
+    assert.ok(lightIdx > 0);
+    const darkSection = colorsCss.slice(0, lightIdx);
+    const lightSection = colorsCss.slice(lightIdx);
+
+    for (const token of [
+      '--nano-osd-bg',
+      '--nano-osd-border',
+      '--nano-osd-fg',
+      '--nano-osd-subtitle-fg',
+      '--nano-osd-stage-bg',
+      '--nano-osd-comparison-bg',
+      '--nano-welcome-hud-bg',
+      '--nano-welcome-hud-border',
+      '--nano-welcome-hud-fg',
+      '--nano-welcome-hud-title-fg',
+      '--nano-welcome-hud-subtitle-fg',
+      '--nano-welcome-hud-kbd-bg',
+      '--nano-welcome-hud-kbd-fg',
+    ]) {
+      assert.ok(darkSection.includes(`${token}:`), `Missing dark token ${token}`);
+      assert.ok(lightSection.includes(`${token}:`), `Missing light token ${token}`);
+    }
+
+    assert.ok(getWcagContrastRatio('#0f172a', '#ffffff') >= 4.5, 'Light HUD primary digits/title contrast >= 4.5:1');
+    assert.ok(getWcagContrastRatio('#475569', '#ffffff') >= 4.5, 'Light HUD subtitle contrast >= 4.5:1');
+    assert.ok(getWcagContrastRatio('#0369a1', '#e0f2fe') >= 4.5, 'Light WelcomeHud kbd contrast >= 4.5:1');
   });
 });
