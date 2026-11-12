@@ -46,9 +46,9 @@ const version = pkg.version;
   font-weight: 700;
   padding: 3px 8px;
   border-radius: 6px;
-  background: rgba(16, 185, 129, 0.14);
-  color: #10b981;
-  border: 1px solid rgba(16, 185, 129, 0.32);
+  background: var(--nano-status-success-bg, rgba(16, 185, 129, 0.14));
+  color: var(--nano-lab-accent-emerald, #10b981);
+  border: 1px solid var(--nano-status-success-border, rgba(16, 185, 129, 0.32));
   margin-bottom: 0.75rem;
   letter-spacing: 0.5px;
 }
