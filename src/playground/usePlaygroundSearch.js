@@ -104,7 +104,7 @@ export const PLAYGROUND_NAV_ITEMS = [
     docFile: 'InputDoc.vue',
     localeKeys: [],
     componentTag: '.nano-input',
-    keywords: 'input pole tekstowe form formularz prefix suffix addon group validation search filtr',
+    keywords: 'input pole tekstowe form formularz prefix suffix addon group validation search filtr NanoFieldset fieldset legend',
   },
   {
     id: '/docs/select',
@@ -235,7 +235,7 @@ export const PLAYGROUND_NAV_ITEMS = [
     docFile: 'ModalDoc.vue',
     localeKeys: [],
     componentTag: 'NanoModal',
-    keywords: 'modal dialog okno popup overlay escape esc draggable shortcuts',
+    keywords: 'modal dialog okno popup overlay escape esc draggable shortcuts NanoLightbox lightbox backdrop blur zoom',
   },
   {
     id: '/docs/splitter',
