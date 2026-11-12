@@ -5,6 +5,8 @@ import NanoDialog from '../../components/NanoDialog.vue';
 import NanoLightbox from '../../components/NanoLightbox.vue';
 import { useDialog } from '../../composables/useDialog.js';
 import NanoCodeBlock from '../../components/NanoCodeBlock.vue';
+import NanoSwitch from '../../components/NanoSwitch.vue';
+import { computeFittedFontSize } from '../../utils/fitText.js';
 import { getScopedStorageController } from '../../utils/storage-controller.js';
 import { createDocTabs } from '../docSnippets.js';
 
@@ -13,21 +15,116 @@ const showBasic = ref(false);
 const showAdvanced = ref(false);
 const showCustom = ref(false);
 const showLightbox = ref(false);
+const glassHeaderDemo = ref(true);
+const glassFooterDemo = ref(false);
+const lastDialogOutcome = ref('Waiting for dialog interaction...');
 const lightboxIdx = ref(0);
+
+const slide1Label = 'NanoLightbox Slide 1';
+const slide1CircleRadius = 160;
+const slide1SafeChord = Math.floor(2 * Math.sqrt(slide1CircleRadius ** 2 - 12 ** 2) - 56);
+const slide1FontSize = computeFittedFontSize(slide1Label, {
+  maxWidth: slide1SafeChord,
+  minFontSize: 12,
+  maxFontSize: 38,
+  step: 0.5,
+  fontWeight: 700,
+});
+const slide1BaselineY = Math.round(300 + slide1FontSize * 0.35);
+
+const slide2Label = 'NanoLightbox Slide 2';
+const slide2FontSize = computeFittedFontSize(slide2Label, {
+  maxWidth: 440 - 64,
+  minFontSize: 12,
+  maxFontSize: 36,
+  step: 0.5,
+  fontWeight: 700,
+});
+const slide2BaselineY = Math.round(300 + slide2FontSize * 0.35);
+
+const slide3Label = 'Portrait 4:5 Aspect';
+const slide3FontSize = computeFittedFontSize(slide3Label, {
+  maxWidth: 420 - 56,
+  minFontSize: 12,
+  maxFontSize: 34,
+  step: 0.5,
+  fontWeight: 700,
+});
+const slide3BaselineY = Math.round(400 + slide3FontSize * 0.35);
+
 const demoLightboxItems = [
   {
-    src: 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="960" height="600" viewBox="0 0 960 600"><rect width="960" height="600" fill="%23111827"/><circle cx="480" cy="300" r="160" fill="%236366f1" opacity="0.85"/><text x="480" y="312" text-anchor="middle" fill="%23f8fafc" font-family="sans-serif" font-size="34" font-weight="700">NanoLightbox Slide 1</text></svg>',
-    alt: 'NanoLightbox Slide 1',
-    caption: 'Top-layer native <dialog> lightbox with frosted backdrop-filter blur and keyboard navigation.',
-    badge: 'Studio Render',
+    src: `data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="960" height="600" viewBox="0 0 960 600"><rect width="960" height="600" fill="%23111827"/><circle cx="480" cy="300" r="${slide1CircleRadius}" fill="%236366f1" opacity="0.88"/><text x="480" y="${slide1BaselineY}" text-anchor="middle" fill="%23f8fafc" font-family="sans-serif" font-size="${slide1FontSize}" font-weight="700">${slide1Label}</text></svg>`,
+    width: 960,
+    height: 600,
+    aspectRatio: '16/10',
+    alt: slide1Label,
+    caption: `Top-layer native <dialog> lightbox — circle label auto-fitted to ${slide1FontSize}px via naturalSearch (safe chord ${slide1SafeChord}px).`,
+    badge: 'Studio Render 16:10',
   },
   {
-    src: 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="960" height="600" viewBox="0 0 960 600"><rect width="960" height="600" fill="%230f172a"/><rect x="260" y="140" width="440" height="320" rx="28" fill="%2310b981" opacity="0.85"/><text x="480" y="312" text-anchor="middle" fill="%23f8fafc" font-family="sans-serif" font-size="34" font-weight="700">NanoLightbox Slide 2</text></svg>',
-    alt: 'NanoLightbox Slide 2',
-    caption: 'Click outside or press Esc to light-dismiss; click image to toggle 1.75x zoom.',
+    src: `data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="960" height="600" viewBox="0 0 960 600"><rect width="960" height="600" fill="%230f172a"/><rect x="260" y="140" width="440" height="320" rx="28" fill="%2310b981" opacity="0.88"/><text x="480" y="${slide2BaselineY}" text-anchor="middle" fill="%23f8fafc" font-family="sans-serif" font-size="${slide2FontSize}" font-weight="700">${slide2Label}</text></svg>`,
+    width: 960,
+    height: 600,
+    aspectRatio: '16/10',
+    alt: slide2Label,
+    caption: 'Click the + button (or image) to expand across the available screen while preserving margins and 16:10 aspect ratio.',
     badge: 'Color-Graded 5500K',
   },
+  {
+    src: `data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="640" height="800" viewBox="0 0 640 800"><rect width="640" height="800" fill="%23090d16"/><rect x="110" y="120" width="420" height="560" rx="32" fill="%23f59e0b" opacity="0.88"/><text x="320" y="${slide3BaselineY}" text-anchor="middle" fill="%230f172a" font-family="sans-serif" font-size="${slide3FontSize}" font-weight="700">${slide3Label}</text></svg>`,
+    width: 640,
+    height: 800,
+    aspectRatio: '4/5',
+    alt: slide3Label,
+    caption: 'Portrait 4:5 media — expanding (+) fills available screen height while respecting margins and 4:5 aspect ratio.',
+    badge: 'Portrait 4:5',
+  },
 ];
+
+const triggerInfoAlert = async () => {
+  await showAlert('Operation completed cleanly.', {
+    title: 'System Notice',
+    type: 'info',
+    glassHeader: glassHeaderDemo.value,
+    glassFooter: glassFooterDemo.value,
+  });
+  lastDialogOutcome.value = 'Alert (info) acknowledged -> true';
+};
+
+const triggerSuccessAlert = async () => {
+  await showAlert('Configuration snapshot exported and verified.', {
+    title: 'Export Complete',
+    type: 'success',
+    okText: 'Done',
+    glassHeader: glassHeaderDemo.value,
+    glassFooter: glassFooterDemo.value,
+  });
+  lastDialogOutcome.value = 'Alert (success) acknowledged -> true';
+};
+
+const triggerStandardConfirm = async () => {
+  const confirmed = await showConfirm('Proceed with configuration reset?', {
+    title: 'Confirm Action',
+    glassHeader: glassHeaderDemo.value,
+    glassFooter: glassFooterDemo.value,
+  });
+  lastDialogOutcome.value = `Confirm resolved -> ${confirmed}`;
+};
+
+const triggerDangerConfirm = async () => {
+  const confirmed = await showConfirm(
+    'This will permanently delete the selected workspace snapshot. Safe focus starts on Cancel.',
+    {
+      title: 'Delete Snapshot?',
+      dangerous: true,
+      okText: 'Delete Permanently',
+      glassHeader: glassHeaderDemo.value,
+      glassFooter: glassFooterDemo.value,
+    }
+  );
+  lastDialogOutcome.value = `Destructive confirm resolved -> ${confirmed}`;
+};
 
 const advancedModalRef = ref(null);
 const storageMode = ref('ls');
@@ -130,6 +227,8 @@ const codeTabs = createDocTabs({
         'storageKey: String (default: "") - Prop/modal key suffix persisted via @gkucmierz/storage-controller',
         'showHeader / showBody / showFooter: Boolean (default: true) - Toggle modal sections',
         'glassmorphism: Boolean (default: false) - Enable backdrop blur overlay',
+        'glassHeader / glassFooter: Boolean (default: false) - Frosted backdrop-filter blur on modal header / footer',
+        'okVariant: "primary" | "danger" | "success" (default: "primary") - Semantic OK button color & safe Cancel focus on danger',
       ],
     },
     {
@@ -352,12 +451,34 @@ const codeTabs = createDocTabs({
 
     <div class="demo-section">
       <h3>Promise-Based Alert &amp; Confirm (NanoDialog + useDialog)</h3>
+      <p class="section-subtitle">
+        Semantic variants (<code>info</code>, <code>success</code>, <code>confirm</code>, <code>danger</code>),
+        frosted <code>glassHeader</code> / <code>glassFooter</code> bars, and safe initial focus on <code>Cancel</code>
+        for destructive confirmations (<code>{ dangerous: true }</code>).
+      </p>
+      <div style="display: flex; gap: 1.25rem; flex-wrap: wrap; align-items: center; margin-bottom: 1rem;">
+        <label style="display: inline-flex; align-items: center; gap: 0.5rem; cursor: pointer; user-select: none;">
+          <NanoSwitch v-model="glassHeaderDemo" size="sm" />
+          <span class="field-label"><code>glassHeader</code></span>
+        </label>
+        <label style="display: inline-flex; align-items: center; gap: 0.5rem; cursor: pointer; user-select: none;">
+          <NanoSwitch v-model="glassFooterDemo" size="sm" />
+          <span class="field-label"><code>glassFooter</code></span>
+        </label>
+        <span class="status-pill is-active">{{ lastDialogOutcome }}</span>
+      </div>
       <div style="display: flex; gap: 0.75rem; flex-wrap: wrap;">
-        <button class="demo-btn" @click="showAlert('Operation completed cleanly.', 'System Notice')">
-          Trigger Alert
+        <button type="button" class="demo-btn" @click="triggerInfoAlert">
+          Trigger Alert (Info)
         </button>
-        <button class="demo-btn" @click="showConfirm('Proceed with configuration reset?', 'Confirm Action')">
+        <button type="button" class="demo-btn" style="background: #10b981;" @click="triggerSuccessAlert">
+          Trigger Success
+        </button>
+        <button type="button" class="demo-btn secondary-btn" @click="triggerStandardConfirm">
           Trigger Confirm
+        </button>
+        <button type="button" class="demo-btn" style="background: #ef4444;" @click="triggerDangerConfirm">
+          Trigger Destructive Confirm
         </button>
       </div>
       <NanoDialog />
