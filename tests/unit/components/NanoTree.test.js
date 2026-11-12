@@ -124,8 +124,8 @@ describe('NanoTree & unixTree.js — Unix tree(1) connectors, downward ┬ tee, 
     assert.ok(getWcagContrastRatio('#047857', '#ecfdf5') >= 4.5, 'MIT emerald badge contrast >= 4.5:1');
     assert.ok(getWcagContrastRatio('#64748b', '#ffffff') >= 3.0, 'Tree connector line contrast >= 3.0:1');
 
-    // 3. EcosystemDoc tree versions updated to v1.8.20, utils v5.4.1, vue-url-cleaner v1.0.0
-    assert.ok(ecosystemDoc.includes("version: '1.8.20'"));
+    // 3. EcosystemDoc tree versions updated to v1.8.21, utils v5.4.1, vue-url-cleaner v1.0.0
+    assert.ok(ecosystemDoc.includes("version: '1.8.21'"));
     assert.ok(ecosystemDoc.includes("version: '5.4.1'"));
     assert.ok(ecosystemDoc.includes("label: 'vue-url-cleaner'"));
   });

@@ -246,7 +246,7 @@ test('vue-url-cleaner integration strips fbclid, utm_*, and gclid on /showoff wh
   assert.ok(appFactorySrc.includes('createUrlCleaner('));
 
   const pkgJson = JSON.parse(fs.readFileSync(path.join(ROOT_DIR, 'package.json'), 'utf8'));
-  assert.equal(pkgJson.version, '1.8.20');
+  assert.equal(pkgJson.version, '1.8.21');
   assert.equal(pkgJson.devDependencies['vue-url-cleaner'], '^1.0.0');
   assert.equal(pkgJson.dependencies, undefined);
 });

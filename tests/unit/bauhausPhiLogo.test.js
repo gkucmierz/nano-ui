@@ -29,6 +29,7 @@ import {
   createKeyController,
   stepWrappedIndex,
 } from '../../src/utils/key-controller.js';
+import { getWcagContrastRatio } from '../../src/utils/colors.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -586,5 +587,108 @@ describe('Bauhaus Φ Tri-Primitive (□ + △ + ○) & Perfection Scalar L(Φ): 
     }
     assert.equal(xs.size, 12, 'Expected 12 distinct playhead X positions across 12 fine phase steps');
     assert.equal(ys.size, 12, 'Expected 12 distinct playhead Y positions across 12 fine phase steps');
+  });
+
+  it('defines 1:1 Dark & Light Mode --nano-lab-* token parity in colors.css with WCAG AA (>= 4.5:1) Light Mode contrast', () => {
+    const colorsCssPath = path.resolve(__dirname, '../../src/assets/colors.css');
+    const colorsCss = fs.readFileSync(colorsCssPath, 'utf8');
+    const lightSplitIdx = colorsCss.indexOf(':root[data-theme="light"]');
+    assert.ok(lightSplitIdx > 0, 'Expected :root[data-theme="light"] block in colors.css');
+
+    const rootDarkBlock = colorsCss.slice(0, lightSplitIdx);
+    const lightThemeBlock = colorsCss.slice(lightSplitIdx);
+
+    const parseLabTokens = (block) => {
+      const map = new Map();
+      const re = /(--nano-lab-[a-z0-9-]+)\s*:\s*([^;]+);/g;
+      let match;
+      while ((match = re.exec(block)) !== null) {
+        map.set(match[1], match[2].trim());
+      }
+      return map;
+    };
+
+    const darkTokens = parseLabTokens(rootDarkBlock);
+    const lightTokens = parseLabTokens(lightThemeBlock);
+
+    assert.ok(darkTokens.size >= 55, `Expected comprehensive --nano-lab-* token set, got ${darkTokens.size}`);
+
+    for (const key of darkTokens.keys()) {
+      assert.ok(
+        lightTokens.has(key),
+        `Missing Light Mode override in [data-theme="light"] for ${key}`
+      );
+    }
+    for (const key of lightTokens.keys()) {
+      assert.ok(
+        darkTokens.has(key),
+        `Orphan Light Mode token ${key} missing from :root Dark defaults`
+      );
+    }
+
+    assert.equal(darkTokens.get('--nano-lab-stage-bg'), '#070b16');
+    assert.equal(lightTokens.get('--nano-lab-stage-bg'), '#f1f5fb');
+
+    // Verify WCAG AA (>= 4.5:1) contrast for all Light Mode card text & semantic accent hex tokens
+    const textAndAccentKeys = [
+      '--nano-lab-card-text-primary',
+      '--nano-lab-card-text-expr',
+      '--nano-lab-card-text-muted',
+      '--nano-lab-accent-sky',
+      '--nano-lab-accent-indigo',
+      '--nano-lab-accent-teal',
+      '--nano-lab-accent-amber',
+      '--nano-lab-accent-violet',
+      '--nano-lab-accent-emerald',
+      '--nano-lab-accent-gold',
+      '--nano-lab-accent-pink',
+      '--nano-lab-accent-locked',
+    ];
+    for (const key of textAndAccentKeys) {
+      const hex = lightTokens.get(key);
+      assert.ok(hex && hex.startsWith('#'), `Expected hex color for Light Mode ${key}, got ${hex}`);
+      const ratioOnWhite = getWcagContrastRatio(hex, '#ffffff');
+      const ratioOnStage = getWcagContrastRatio(hex, '#f1f5fb');
+      assert.ok(
+        ratioOnWhite >= 4.5,
+        `Expected ${key} (${hex}) contrast >= 4.5:1 on #ffffff, got ${ratioOnWhite.toFixed(2)}`
+      );
+      assert.ok(
+        ratioOnStage >= 4.5,
+        `Expected ${key} (${hex}) contrast >= 4.5:1 on #f1f5fb, got ${ratioOnStage.toFixed(2)}`
+      );
+    }
+  });
+
+  it('wires semantic --nano-lab-* tokens in LogoConceptsLab.vue with zero :global( selectors and zero hardcoded #070b16 fills', () => {
+    const labVuePath = path.resolve(__dirname, '../../src/playground/LogoConceptsLab.vue');
+    const labVueSrc = fs.readFileSync(labVuePath, 'utf8');
+
+    assert.ok(labVueSrc.includes('var(--nano-lab-stage-bg)'));
+    assert.ok(labVueSrc.includes('var(--nano-lab-stage-border)'));
+    assert.ok(labVueSrc.includes('var(--nano-lab-tile-fill)'));
+    assert.ok(labVueSrc.includes('var(--nano-lab-card-bg-front)'));
+    assert.ok(labVueSrc.includes('var(--nano-lab-card-bg-back)'));
+    assert.ok(labVueSrc.includes('var(--nano-lab-card-bg-locked)'));
+    assert.ok(labVueSrc.includes('stop-color: var(--nano-lab-glow-indigo)'));
+    assert.ok(labVueSrc.includes('stop-color: var(--nano-lab-glow-cyan)'));
+
+    // Governance & Light Mode invariants: zero :global(, zero [data-v-, zero hardcoded #070b16 stage fill
+    assert.equal(labVueSrc.includes(':global('), false, 'Forbidden :global(...) selector in LogoConceptsLab.vue');
+    assert.equal(labVueSrc.includes('[data-v-'), false, 'Forbidden [data-v-*] selector in LogoConceptsLab.vue');
+    assert.equal(labVueSrc.toLowerCase().includes('#070b16'), false, 'Forbidden hardcoded #070b16 stage fill in LogoConceptsLab.vue');
+
+    // Preserve silhouetteMode (Mono 100%) 1-bit monochrome (#09090b / #ffffff)
+    assert.ok(labVueSrc.includes("silhouetteMode ? '#09090b' : 'var(--nano-lab-stage-bg)'"));
+    assert.ok(labVueSrc.includes("silhouetteMode ? '#09090b' : 'var(--nano-lab-tile-fill)'"));
+
+    // Verify floating artifacts & orbiting tokens emit CSS variables rather than hardcoded dark/pastel hexes
+    const scene = computeBauhausPhiScene3D(13.9, 4.9, 0.18, 0.4);
+    for (const art of scene.floatingArtifacts) {
+      assert.ok(art.color.startsWith('var(--nano-lab-accent-'), `Expected semantic CSS var on ${art.id}, got ${art.color}`);
+    }
+    for (const tok of scene.orbitTokens) {
+      assert.ok(tok.color.startsWith('var(--nano-lab-accent-'), `Expected semantic CSS var on ${tok.id}, got ${tok.color}`);
+    }
   });
 });
