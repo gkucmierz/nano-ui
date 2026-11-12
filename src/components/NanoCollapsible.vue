@@ -171,6 +171,7 @@ defineExpose({
 
 <style scoped>
 .nano-collapsible {
+  flex-shrink: 0;
   border: 1px solid var(--nano-border-card, var(--color-border, rgba(148, 163, 184, 0.22)));
   border-radius: 10px;
   background: var(--nano-bg-muted, var(--nano-bg-card, rgba(15, 23, 42, 0.55)));
