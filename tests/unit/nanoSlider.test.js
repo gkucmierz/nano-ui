@@ -51,4 +51,83 @@ describe('NanoSlider Component & Playground Integration', () => {
     assert.ok(sliderSfc.includes('--_slider-safe-left'));
     assert.ok(sliderSfc.includes('--_slider-safe-right'));
   });
+
+  it('enforces ACOUSTIC-MASS-01: thicker controls (lg) emit deeper, lower-pitched, heavier .nsd audio than md and sm across NanoSlider and all sized sound controls', async () => {
+    const { readdirSync } = await import('node:fs');
+    const {
+      resolveControlAcousticMass,
+      computeSliderAcousticEvents,
+      configureNanoUiSound,
+      resetNanoUiSoundConfig,
+      playNanoUiSound,
+    } = await import('../../src/utils/sound-controller.js');
+
+    const xs = resolveControlAcousticMass('xs');
+    const sm = resolveControlAcousticMass('sm');
+    const md = resolveControlAcousticMass('md');
+    const lg = resolveControlAcousticMass('lg');
+    const xl = resolveControlAcousticMass('xl');
+
+    assert.ok(
+      xl.pitchScale < lg.pitchScale &&
+        lg.pitchScale < md.pitchScale &&
+        md.pitchScale < sm.pitchScale &&
+        sm.pitchScale < xs.pitchScale,
+      'Expected strict monotonic pitch ordering: xl < lg < md < sm < xs'
+    );
+    assert.ok(
+      xs.gainScale < sm.gainScale &&
+        sm.gainScale < md.gainScale &&
+        md.gainScale < lg.gainScale &&
+        lg.gainScale < xl.gainScale,
+      'Expected ISO-226 loudness compensation ordering: xs < sm < md < lg < xl'
+    );
+
+    // Numeric pixel diameters (e.g. NanoKnob 36px vs 56px vs 96px)
+    const knobSmall = resolveControlAcousticMass(36);
+    const knobDefault = resolveControlAcousticMass(56);
+    const knobLarge = resolveControlAcousticMass(96);
+    assert.ok(knobLarge.pitchScale < knobDefault.pitchScale && knobDefault.pitchScale < knobSmall.pitchScale);
+
+    // Slider drag swish & quartile crossings scale monotonically by size
+    const evSm = computeSliderAcousticEvents(20, 28, { size: 'sm' });
+    const evMd = computeSliderAcousticEvents(20, 28, { size: 'md' });
+    const evLg = computeSliderAcousticEvents(20, 28, { size: 'lg' });
+    assert.ok(evLg.swishPitch < evMd.swishPitch && evMd.swishPitch < evSm.swishPitch);
+    assert.ok(evLg.quartilePitch < evMd.quartilePitch && evMd.quartilePitch < evSm.quartilePitch);
+
+    // Verify playNanoUiSound selects dedicated low-register sliderSwishLg preset for size="lg"
+    const captured = [];
+    configureNanoUiSound({
+      enabled: true,
+      volume: 0.5,
+      player: (dsl, meta) => captured.push({ dsl, meta }),
+    });
+    try {
+      playNanoUiSound('sliderSwish', { size: 'sm', throttleKey: 't-sm', nowMs: 100 });
+      playNanoUiSound('sliderSwish', { size: 'md', throttleKey: 't-md', nowMs: 100 });
+      playNanoUiSound('sliderSwish', { size: 'lg', throttleKey: 't-lg', nowMs: 100 });
+      assert.equal(captured.length, 3);
+      assert.equal(captured[0].meta.preset, 'sliderSwishSm');
+      assert.equal(captured[1].meta.preset, 'sliderSwish');
+      assert.equal(captured[2].meta.preset, 'sliderSwishLg');
+      assert.ok(captured[2].meta.playbackRate < captured[1].meta.playbackRate);
+      assert.ok(captured[1].meta.playbackRate < captured[0].meta.playbackRate);
+      assert.ok(captured[2].meta.volume > captured[0].meta.volume);
+    } finally {
+      resetNanoUiSoundConfig();
+    }
+
+    // Repository governance: every SFC in src/components/ with both `size:` prop and `playNanoUiSound` must wire `size: props.size`
+    const compDir = resolve(__dirname, '../../src/components');
+    for (const file of readdirSync(compDir).filter((f) => f.endsWith('.vue'))) {
+      const src = readFileSync(resolve(compDir, file), 'utf8');
+      if (src.includes('playNanoUiSound(') && /\bsize:\s*\{/.test(src)) {
+        assert.ok(
+          src.includes('size: props.size'),
+          `${file} defines both size prop and playNanoUiSound() — must wire size: props.size per ACOUSTIC-MASS-01`
+        );
+      }
+    }
+  });
 });
