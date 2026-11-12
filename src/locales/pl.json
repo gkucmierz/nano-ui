@@ -49,6 +49,7 @@
     "tabs": "Nano Tabs (Dokowane & Segmenty)",
     "coverFlow": "Nano CoverFlow (Karty 3D)",
     "dropzone": "Nano Dropzone (Upload & Hover)",
+    "heatmap": "Nano Heatmap (OKLCH & KDE)",
     "layoutDirectives": "Dyrektywy Układu, CSHR & Collapsible",
     "ripple": "Dyrektywa v-ripple",
     "tooltip": "Dyrektywa v-tooltip"
@@ -354,5 +355,29 @@
     "sizeSm": "Mały (size=\"sm\" · 22px)",
     "sizeMd": "Średni (size=\"md\" · 32px)",
     "sizeLg": "Duży (size=\"lg\" · 42px)"
+  },
+  "heatmapDoc": {
+    "title": "NanoHeatmap — Percepcyjna Macierz OKLCH i Mapa Gęstości KDE 2D",
+    "desc": "Deterministyczny silnik map cieplnych egzekwujący Inwariant Zera (Zero-Value Invariant), monotoniczną jasność OKLCH (L: 0.24 -> 0.86 dark, 0.93 -> 0.44 light), odporność na piki Pareto (log1p / p95), stacjonarny celownik osi (CLS = 0) oraz protokół zaznaczenia CSHR.",
+    "matrixTitle": "1. Tygodniowa Macierz Ruchu (7 × 24) i Odporność na Outliery",
+    "matrixDesc": "Przełącz wiralowy pik 10 000 odsłon (Wtorek · 21:00) i porównaj skalę linear ze skalami log1p / p95. Pierwszy klik blokuje filtr komórki, a drugi klik w tę samą komórkę natychmiast odznacza z wygaszeniem hovera do ruchu kursora >= 3px.",
+    "paletteLabel": "Paleta OKLCH",
+    "scaleLabel": "Skala Normalizacji",
+    "bucketsLabel": "Kwantyzacja (0 = płynna)",
+    "outlierToggle": "Wstrzyknij pik 10 000x (Wt · 21:00)",
+    "showValuesToggle": "Liczby w komórkach",
+    "showTotalsToggle": "Sumy wierszy i kolumn (Σ)",
+    "zeroMatrixToggle": "Macierz samych zer (Inwariant Zera)",
+    "selectedLabel": "Zablokowany filtr (CSHR)",
+    "hoveredLabel": "Aktywny celownik (Hover)",
+    "noneLabel": "Brak",
+    "densityTitle": "2. Mapa Gęstości Kliknięć KDE 2D (mode=\"density\")",
+    "densityDesc": "Klikaj lub przeciągaj kursor po obszarze roboczym, aby rejestrować rzeczywiste zdarzenia w [0..1]. Wyczyszczenie punktów zwraca czystą powierzchnię zerową bez zmyślonych plam.",
+    "densityPaletteLabel": "Paleta gęstości",
+    "densityRadiusLabel": "Promień sigmy KDE",
+    "loadEmpiricalBtn": "Wczytaj zapisaną próbkę",
+    "clearPointsBtn": "Wyczyść zdarzenia (0)",
+    "densityEmptyLabel": "Oczekiwanie na rzeczywiste zdarzenia — kliknij lub przeciągnij na płótnie",
+    "clickHint": "Klikaj lub rysuj kursorem po płótnie, aby rejestrować zdarzenia"
   }
 }
