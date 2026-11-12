@@ -1,6 +1,8 @@
 /* Nano UI - Color Palette & Theming Tokens (SSoT) */
 
-:root {
+:root,
+[data-theme="dark"],
+.dark {
   /* --- 5 Strict Discrete Opacity / Alpha Levels SSoT --- */
   --nano-alpha-1: 0.05;   /* Level 1 (Subtle): Faint card fills & tints (5%) */
   --nano-alpha-2: 0.15;   /* Level 2 (Muted): Borders, chips, soft active fills (15%) */
@@ -230,10 +232,93 @@
   --nano-sim-btn-ghost-fg: #e2e8f0;
   --nano-sim-backdrop-2nd: rgba(9, 13, 22, 0.76);
   --nano-sim-card-2nd-bg: #1e293b;
+
+  /* NanoTree Tokens - Dark Theme */
+  --nano-tree-bg: rgba(10, 15, 28, 0.86);
+  --nano-tree-border: rgba(148, 163, 184, 0.2);
+  --nano-tree-fg: #e2e8f0;
+  --nano-tree-label-fg: #f8fafc;
+  --nano-tree-muted: #94a3b8;
+  --nano-tree-subtle-fg: #64748b;
+  --nano-tree-line: rgba(148, 163, 184, 0.52);
+  --nano-tree-line-active: rgba(56, 189, 248, 0.85);
+  --nano-tree-accent: #38bdf8;
+  --nano-tree-accent-hover: #7dd3fc;
+  --nano-tree-leaf-dot: #475569;
+  --nano-tree-toolbar-bg: rgba(15, 23, 42, 0.9);
+  --nano-tree-toolbar-border: rgba(148, 163, 184, 0.16);
+  --nano-tree-footer-bg: rgba(15, 23, 42, 0.75);
+  --nano-tree-footer-border: rgba(148, 163, 184, 0.14);
+  --nano-tree-root-title-fg: #38bdf8;
+  --nano-tree-root-title-bg: rgba(56, 189, 248, 0.1);
+  --nano-tree-root-title-border: rgba(56, 189, 248, 0.25);
+  --nano-tree-input-bg: rgba(2, 6, 23, 0.65);
+  --nano-tree-input-border: rgba(148, 163, 184, 0.26);
+  --nano-tree-input-fg: #f8fafc;
+  --nano-tree-input-focus-border: rgba(56, 189, 248, 0.65);
+  --nano-tree-btn-bg: rgba(30, 41, 59, 0.7);
+  --nano-tree-btn-border: rgba(148, 163, 184, 0.24);
+  --nano-tree-btn-fg: #cbd5e1;
+  --nano-tree-btn-hover-bg: rgba(51, 65, 85, 0.85);
+  --nano-tree-btn-hover-border: rgba(56, 189, 248, 0.45);
+  --nano-tree-btn-hover-fg: #f8fafc;
+  --nano-tree-copied-bg: rgba(16, 185, 129, 0.18);
+  --nano-tree-copied-border: rgba(16, 185, 129, 0.5);
+  --nano-tree-copied-fg: #34d399;
+  --nano-tree-row-hover-bg: rgba(56, 189, 248, 0.09);
+  --nano-tree-row-selected-bg: rgba(56, 189, 248, 0.16);
+  --nano-tree-row-selected-bar: #38bdf8;
+  --nano-tree-row-cycle-bg: rgba(244, 63, 94, 0.12);
+  --nano-tree-badge-bg: rgba(30, 41, 59, 0.75);
+  --nano-tree-badge-border: rgba(148, 163, 184, 0.28);
+  --nano-tree-badge-fg: #cbd5e1;
+  --nano-tree-badge-emerald-bg: rgba(16, 185, 129, 0.14);
+  --nano-tree-badge-emerald-border: rgba(16, 185, 129, 0.42);
+  --nano-tree-badge-emerald-fg: #34d399;
+  --nano-tree-badge-amber-bg: rgba(245, 158, 11, 0.14);
+  --nano-tree-badge-amber-border: rgba(245, 158, 11, 0.42);
+  --nano-tree-badge-amber-fg: #fbbf24;
+  --nano-tree-badge-cyan-bg: rgba(6, 182, 212, 0.14);
+  --nano-tree-badge-cyan-border: rgba(6, 182, 212, 0.42);
+  --nano-tree-badge-cyan-fg: #22d3ee;
+  --nano-tree-badge-indigo-bg: rgba(99, 102, 241, 0.16);
+  --nano-tree-badge-indigo-border: rgba(99, 102, 241, 0.45);
+  --nano-tree-badge-indigo-fg: #a5b4fc;
+  --nano-tree-badge-rose-bg: rgba(244, 63, 94, 0.18);
+  --nano-tree-badge-rose-border: rgba(244, 63, 94, 0.5);
+  --nano-tree-badge-rose-fg: #fb7185;
+
+  /* NanoChannelOsd Tokens - Dark Theme */
+  --nano-osd-bg: rgba(10, 14, 24, 0.46);
+  --nano-osd-border: rgba(255, 255, 255, 0.14);
+  --nano-osd-fg: #ffffff;
+  --nano-osd-subtitle-fg: rgba(255, 255, 255, 0.84);
+  --nano-osd-shadow: 0 8px 32px rgba(0, 0, 0, 0.28);
+  --nano-osd-text-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
+  --nano-osd-stage-bg: radial-gradient(circle at 50% 40%, rgba(56, 189, 248, 0.14), rgba(15, 23, 42, 0.9));
+  --nano-osd-comparison-bg: linear-gradient(135deg, rgba(30, 41, 59, 0.92), rgba(15, 23, 42, 0.96));
+
+  /* NanoWelcomeHud Tokens - Dark Theme */
+  --nano-welcome-hud-bg: rgba(10, 14, 24, 0.56);
+  --nano-welcome-hud-border: rgba(251, 113, 133, 0.38);
+  --nano-welcome-hud-fg: #ffffff;
+  --nano-welcome-hud-title-fg: #f8fafc;
+  --nano-welcome-hud-subtitle-fg: rgba(226, 232, 240, 0.88);
+  --nano-welcome-hud-shadow: 0 16px 48px rgba(0, 0, 0, 0.42), 0 0 32px rgba(225, 29, 72, 0.18);
+  --nano-welcome-hud-text-shadow: 0 2px 8px rgba(0, 0, 0, 0.38);
+  --nano-welcome-hud-hover-bg: rgba(13, 20, 36, 0.68);
+  --nano-welcome-hud-hover-border: rgba(56, 189, 248, 0.65);
+  --nano-welcome-hud-hover-shadow: 0 18px 52px rgba(0, 0, 0, 0.48), 0 0 36px rgba(56, 189, 248, 0.25);
+  --nano-welcome-hud-icon-glow: rgba(251, 113, 133, 0.45);
+  --nano-welcome-hud-kbd-bg: rgba(56, 189, 248, 0.18);
+  --nano-welcome-hud-kbd-fg: #38bdf8;
+  --nano-welcome-hud-kbd-border: rgba(56, 189, 248, 0.45);
 }
 
 :root[data-theme="light"],
 html[data-theme="light"],
+[data-theme="light"],
+html.light,
 .light {
   /* --- Light Theme (High Contrast, Deep Slate Text) --- */
   --nano-bg-app: #f8fafc;
@@ -450,4 +535,85 @@ html[data-theme="light"],
   --nano-sim-btn-ghost-fg: #1e293b;
   --nano-sim-backdrop-2nd: rgba(15, 23, 42, 0.42);
   --nano-sim-card-2nd-bg: #ffffff;
+
+  /* NanoTree Tokens - Light Theme (WCAG AA High Contrast) */
+  --nano-tree-bg: #ffffff;
+  --nano-tree-border: #cbd5e1;
+  --nano-tree-fg: #0f172a;
+  --nano-tree-label-fg: #0f172a;
+  --nano-tree-muted: #475569;
+  --nano-tree-subtle-fg: #475569;
+  --nano-tree-line: #64748b;
+  --nano-tree-line-active: #0284c7;
+  --nano-tree-accent: #0369a1;
+  --nano-tree-accent-hover: #0284c7;
+  --nano-tree-leaf-dot: #64748b;
+  --nano-tree-toolbar-bg: #f8fafc;
+  --nano-tree-toolbar-border: #cbd5e1;
+  --nano-tree-footer-bg: #f8fafc;
+  --nano-tree-footer-border: #e2e8f0;
+  --nano-tree-root-title-fg: #0369a1;
+  --nano-tree-root-title-bg: #f0f9ff;
+  --nano-tree-root-title-border: #7dd3fc;
+  --nano-tree-input-bg: #ffffff;
+  --nano-tree-input-border: #94a3b8;
+  --nano-tree-input-fg: #0f172a;
+  --nano-tree-input-focus-border: #0284c7;
+  --nano-tree-btn-bg: #ffffff;
+  --nano-tree-btn-border: #94a3b8;
+  --nano-tree-btn-fg: #1e293b;
+  --nano-tree-btn-hover-bg: #f1f5f9;
+  --nano-tree-btn-hover-border: #0284c7;
+  --nano-tree-btn-hover-fg: #0f172a;
+  --nano-tree-copied-bg: #ecfdf5;
+  --nano-tree-copied-border: #10b981;
+  --nano-tree-copied-fg: #047857;
+  --nano-tree-row-hover-bg: rgba(2, 132, 199, 0.08);
+  --nano-tree-row-selected-bg: rgba(2, 132, 199, 0.14);
+  --nano-tree-row-selected-bar: #0284c7;
+  --nano-tree-row-cycle-bg: rgba(225, 29, 72, 0.1);
+  --nano-tree-badge-bg: #f1f5f9;
+  --nano-tree-badge-border: #94a3b8;
+  --nano-tree-badge-fg: #334155;
+  --nano-tree-badge-emerald-bg: #ecfdf5;
+  --nano-tree-badge-emerald-border: #10b981;
+  --nano-tree-badge-emerald-fg: #047857;
+  --nano-tree-badge-amber-bg: #fffbeb;
+  --nano-tree-badge-amber-border: #d97706;
+  --nano-tree-badge-amber-fg: #b45309;
+  --nano-tree-badge-cyan-bg: #ecfeff;
+  --nano-tree-badge-cyan-border: #0891b2;
+  --nano-tree-badge-cyan-fg: #0e7490;
+  --nano-tree-badge-indigo-bg: #eef2ff;
+  --nano-tree-badge-indigo-border: #6366f1;
+  --nano-tree-badge-indigo-fg: #4338ca;
+  --nano-tree-badge-rose-bg: #fff1f2;
+  --nano-tree-badge-rose-border: #e11d48;
+  --nano-tree-badge-rose-fg: #be123c;
+
+  /* NanoChannelOsd Tokens - Light Theme (Frosted Slate-White Glass) */
+  --nano-osd-bg: rgba(255, 255, 255, 0.88);
+  --nano-osd-border: #cbd5e1;
+  --nano-osd-fg: #0f172a;
+  --nano-osd-subtitle-fg: #475569;
+  --nano-osd-shadow: 0 10px 32px rgba(15, 23, 42, 0.12), 0 1px 3px rgba(15, 23, 42, 0.08);
+  --nano-osd-text-shadow: none;
+  --nano-osd-stage-bg: radial-gradient(circle at 50% 40%, rgba(2, 132, 199, 0.12), #f1f5f9 78%);
+  --nano-osd-comparison-bg: linear-gradient(135deg, #e2e8f0, #f8fafc);
+
+  /* NanoWelcomeHud Tokens - Light Theme (Frosted Slate-White Glass) */
+  --nano-welcome-hud-bg: rgba(255, 255, 255, 0.9);
+  --nano-welcome-hud-border: rgba(225, 29, 72, 0.38);
+  --nano-welcome-hud-fg: #0f172a;
+  --nano-welcome-hud-title-fg: #0f172a;
+  --nano-welcome-hud-subtitle-fg: #475569;
+  --nano-welcome-hud-shadow: 0 16px 40px rgba(15, 23, 42, 0.12), 0 0 24px rgba(225, 29, 72, 0.1);
+  --nano-welcome-hud-text-shadow: none;
+  --nano-welcome-hud-hover-bg: rgba(255, 255, 255, 0.96);
+  --nano-welcome-hud-hover-border: #0284c7;
+  --nano-welcome-hud-hover-shadow: 0 18px 44px rgba(15, 23, 42, 0.16), 0 0 28px rgba(2, 132, 199, 0.16);
+  --nano-welcome-hud-icon-glow: rgba(225, 29, 72, 0.28);
+  --nano-welcome-hud-kbd-bg: #e0f2fe;
+  --nano-welcome-hud-kbd-fg: #0369a1;
+  --nano-welcome-hud-kbd-border: #0284c7;
 }
