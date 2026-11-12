@@ -1,6 +1,7 @@
 <script setup>
 import { ref, computed, watch, nextTick, onMounted, onBeforeUnmount } from 'vue';
 import vRipple from '../directives/ripple.js';
+import { computeLightboxStageGeometry } from '../utils/lightboxGeometry.js';
 
 const props = defineProps({
   modelValue: {
@@ -27,6 +28,10 @@ const props = defineProps({
     type: String,
     default: '',
   },
+  aspectRatio: {
+    type: [Number, String],
+    default: undefined,
+  },
   activeIndex: {
     type: Number,
     default: 0,
@@ -49,11 +54,11 @@ const props = defineProps({
   },
   zoomInLabel: {
     type: String,
-    default: 'Powiększ zdjęcie',
+    default: 'Powiększ na dostępny ekran',
   },
   zoomOutLabel: {
     type: String,
-    default: 'Dopasuj zdjęcie do ekranu',
+    default: 'Przywróć rozmiar kompaktowy',
   },
 });
 
@@ -61,11 +66,55 @@ const emit = defineEmits(['update:modelValue', 'update:activeIndex', 'close']);
 
 const dialogRef = ref(null);
 const frameRef = ref(null);
+const imgRef = ref(null);
 const currentIndex = ref(0);
 const isZoomed = ref(false);
+const viewportSize = ref({
+  width: Number(globalThis.window?.innerWidth) || 1440,
+  height: Number(globalThis.window?.innerHeight) || 900,
+});
+const measuredMedia = ref({
+  src: '',
+  width: 0,
+  height: 0,
+});
+
 let pressedOutside = false;
 let isClosing = false;
 let supportsDisplayTransition;
+
+const syncViewportMetrics = () => {
+  const win = globalThis.window;
+  if (!win) return;
+  const vw = Number(win.visualViewport?.width || win.innerWidth) || 1440;
+  const vh = Number(win.visualViewport?.height || win.innerHeight) || 900;
+  viewportSize.value = { width: Math.round(vw), height: Math.round(vh) };
+};
+
+const syncImageIntrinsicDimensions = () => {
+  const el = imgRef.value;
+  const itemSrc = activeItem.value?.src || '';
+  if (el && el.complete && Number(el.naturalWidth) > 0 && Number(el.naturalHeight) > 0) {
+    measuredMedia.value = {
+      src: itemSrc,
+      width: Number(el.naturalWidth),
+      height: Number(el.naturalHeight),
+    };
+  }
+};
+
+const handleImageLoad = (event) => {
+  const target = event?.currentTarget || imgRef.value;
+  const nw = Number(target?.naturalWidth) || 0;
+  const nh = Number(target?.naturalHeight) || 0;
+  if (nw > 0 && nh > 0) {
+    measuredMedia.value = {
+      src: activeItem.value?.src || '',
+      width: nw,
+      height: nh,
+    };
+  }
+};
 
 const normalizedItems = computed(() => {
   if (Array.isArray(props.items) && props.items.length > 0) {
@@ -78,6 +127,7 @@ const normalizedItems = computed(() => {
         alt: props.alt || props.caption || props.ariaLabel,
         caption: props.caption,
         badge: props.badge,
+        aspectRatio: props.aspectRatio,
       },
     ];
   }
@@ -93,6 +143,91 @@ const resolvedAriaLabel = computed(
 );
 
 const hasMultiple = computed(() => normalizedItems.value.length > 1);
+const hasFooter = computed(() => Boolean(activeItem.value?.caption || hasMultiple.value));
+
+const resolvedNaturalDimensions = computed(() => {
+  const item = activeItem.value;
+  if (!item) return { width: 0, height: 0 };
+  if (measuredMedia.value.src === item.src && measuredMedia.value.width > 0 && measuredMedia.value.height > 0) {
+    return {
+      width: measuredMedia.value.width,
+      height: measuredMedia.value.height,
+    };
+  }
+  return {
+    width: Number(item.width) || 0,
+    height: Number(item.height) || 0,
+  };
+});
+
+const stageGeometry = computed(() =>
+  computeLightboxStageGeometry({
+    viewportWidth: viewportSize.value.width,
+    viewportHeight: viewportSize.value.height,
+    zoomed: isZoomed.value,
+    aspectRatio: activeItem.value?.aspectRatio ?? props.aspectRatio,
+    naturalWidth: resolvedNaturalDimensions.value.width,
+    naturalHeight: resolvedNaturalDimensions.value.height,
+    hasFooter: hasFooter.value,
+  })
+);
+
+const dialogCssVars = computed(() => ({
+  '--nano-lightbox-margin-x': `${stageGeometry.value.marginX}px`,
+  '--nano-lightbox-margin-y': `${stageGeometry.value.marginY}px`,
+}));
+
+const frameDynamicStyle = computed(() => {
+  const g = stageGeometry.value;
+  if (!isZoomed.value) {
+    return undefined;
+  }
+  return {
+    maxWidth: `${g.frameMaxWidth}px`,
+  };
+});
+
+const viewportDynamicStyle = computed(() => {
+  const g = stageGeometry.value;
+  if (!isZoomed.value) {
+    return {
+      maxHeight: `${g.availHeight}px`,
+    };
+  }
+  if (g.mediaWidth && g.mediaHeight) {
+    return {
+      width: `${g.mediaWidth}px`,
+      height: `${g.mediaHeight}px`,
+      maxHeight: `${g.availHeight}px`,
+      aspectRatio: g.aspectRatio ? `${g.aspectRatio}` : undefined,
+    };
+  }
+  return {
+    width: `${g.availWidth}px`,
+    maxHeight: `${g.availHeight}px`,
+  };
+});
+
+const imgDynamicStyle = computed(() => {
+  const g = stageGeometry.value;
+  if (!isZoomed.value) {
+    return {
+      maxWidth: `${g.availWidth}px`,
+      maxHeight: `${g.availHeight}px`,
+    };
+  }
+  if (g.mediaWidth && g.mediaHeight) {
+    return {
+      width: `${g.mediaWidth}px`,
+      height: `${g.mediaHeight}px`,
+      aspectRatio: g.aspectRatio ? `${g.aspectRatio}` : undefined,
+    };
+  }
+  return {
+    maxWidth: `${g.availWidth}px`,
+    maxHeight: `${g.availHeight}px`,
+  };
+});
 
 function canTransitionDisplay() {
   if (supportsDisplayTransition !== undefined) return supportsDisplayTransition;
@@ -121,13 +256,13 @@ const selectIndex = (idx) => {
   if (count <= 0) return;
   const wrapped = ((idx % count) + count) % count;
   currentIndex.value = wrapped;
-  isZoomed.value = false;
   emit('update:activeIndex', wrapped);
 };
 
 const stepPrev = () => selectIndex(currentIndex.value - 1);
 const stepNext = () => selectIndex(currentIndex.value + 1);
 const toggleZoom = () => {
+  syncViewportMetrics();
   isZoomed.value = !isZoomed.value;
 };
 
@@ -217,6 +352,7 @@ const onDialogKeydown = (event) => {
     stepNext();
   } else if (event.key === '+' || event.key === '=') {
     event.preventDefault();
+    syncViewportMetrics();
     isZoomed.value = true;
   } else if (event.key === '-') {
     event.preventDefault();
@@ -229,6 +365,8 @@ const syncOpenState = async (shouldOpen) => {
   const dlg = dialogRef.value;
   if (!dlg) return;
   if (shouldOpen) {
+    syncViewportMetrics();
+    syncImageIntrinsicDimensions();
     dlg.removeAttribute('data-closing');
     isClosing = false;
     if (!dlg.open && dlg.showModal instanceof Function) {
@@ -250,6 +388,14 @@ watch(
 );
 
 watch(
+  () => activeItem.value?.src,
+  async () => {
+    await nextTick();
+    syncImageIntrinsicDimensions();
+  }
+);
+
+watch(
   () => props.modelValue,
   (open) => {
     if (open) {
@@ -264,12 +410,23 @@ watch(
 );
 
 onMounted(() => {
+  syncViewportMetrics();
+  const win = globalThis.window;
+  if (win) {
+    win.addEventListener('resize', syncViewportMetrics, { passive: true });
+    win.visualViewport?.addEventListener('resize', syncViewportMetrics, { passive: true });
+  }
   if (props.modelValue) {
     syncOpenState(true);
   }
 });
 
 onBeforeUnmount(() => {
+  const win = globalThis.window;
+  if (win) {
+    win.removeEventListener('resize', syncViewportMetrics);
+    win.visualViewport?.removeEventListener('resize', syncViewportMetrics);
+  }
   const dlg = dialogRef.value;
   if (dlg?.open) {
     dlg.close();
@@ -281,6 +438,8 @@ onBeforeUnmount(() => {
   <dialog
     ref="dialogRef"
     class="nano-lightbox-dialog"
+    :class="{ 'is-zoomed': isZoomed }"
+    :style="dialogCssVars"
     closedby="any"
     :aria-label="resolvedAriaLabel"
     @cancel="handleCancel"
@@ -289,7 +448,13 @@ onBeforeUnmount(() => {
     @pointerdown="onDialogPointerDown"
     @pointerup="onDialogPointerUp"
   >
-    <div v-if="activeItem" ref="frameRef" class="nano-lightbox-frame">
+    <div
+      v-if="activeItem"
+      ref="frameRef"
+      class="nano-lightbox-frame"
+      :class="{ 'is-zoomed': isZoomed }"
+      :style="frameDynamicStyle"
+    >
       <div class="nano-lightbox-toolbar">
         <div class="nano-lightbox-meta">
           <span v-if="hasMultiple" class="nano-lightbox-counter">
@@ -305,6 +470,7 @@ onBeforeUnmount(() => {
             v-ripple
             type="button"
             class="nano-lightbox-icon-btn"
+            :class="{ 'is-active': isZoomed }"
             :aria-label="isZoomed ? zoomOutLabel : zoomInLabel"
             :aria-pressed="isZoomed"
             @click="toggleZoom"
@@ -349,9 +515,13 @@ onBeforeUnmount(() => {
         </div>
       </div>
 
-      <div class="nano-lightbox-viewport" :class="{ 'is-zoomed': isZoomed }">
+      <div
+        class="nano-lightbox-viewport"
+        :class="{ 'is-zoomed': isZoomed }"
+        :style="viewportDynamicStyle"
+      >
         <button
-          v-if="hasMultiple && !isZoomed"
+          v-if="hasMultiple"
           v-ripple
           type="button"
           class="nano-lightbox-nav nano-lightbox-prev"
@@ -370,17 +540,20 @@ onBeforeUnmount(() => {
         </button>
 
         <img
+          ref="imgRef"
           class="nano-lightbox-img"
           :class="{ 'is-zoomed': isZoomed }"
+          :style="imgDynamicStyle"
           :src="activeItem.src"
           :alt="activeItem.alt || activeItem.caption || ariaLabel"
           :width="activeItem.width || undefined"
           :height="activeItem.height || undefined"
+          @load="handleImageLoad"
           @click="toggleZoom"
         />
 
         <button
-          v-if="hasMultiple && !isZoomed"
+          v-if="hasMultiple"
           v-ripple
           type="button"
           class="nano-lightbox-nav nano-lightbox-next"
@@ -399,7 +572,7 @@ onBeforeUnmount(() => {
         </button>
       </div>
 
-      <div v-if="activeItem.caption || hasMultiple" class="nano-lightbox-footer">
+      <div v-if="hasFooter" class="nano-lightbox-footer">
         <p v-if="activeItem.caption" class="nano-lightbox-caption">
           {{ activeItem.caption }}
         </p>
@@ -435,7 +608,12 @@ onBeforeUnmount(() => {
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
   box-sizing: border-box;
-  max-width: min(94vw, 1200px);
+  max-width: min(94dvw, 1200px);
+  transition: max-width 0.22s cubic-bezier(0.2, 0, 0, 1);
+}
+
+.nano-lightbox-frame.is-zoomed {
+  max-width: calc(100dvw - var(--nano-lightbox-margin-x, 32px) * 2);
 }
 
 .nano-lightbox-toolbar {
@@ -494,12 +672,19 @@ onBeforeUnmount(() => {
   box-sizing: border-box;
   transition:
     background-color 0.15s ease,
-    border-color 0.15s ease;
+    border-color 0.15s ease,
+    color 0.15s ease;
 }
 
 .nano-lightbox-icon-btn:hover {
   background: rgba(148, 163, 184, 0.22);
   border-color: var(--nano-accent-primary, #6366f1);
+}
+
+.nano-lightbox-icon-btn.is-active {
+  background: color-mix(in srgb, var(--nano-accent-primary, #6366f1) 18%, transparent);
+  border-color: var(--nano-accent-primary, #6366f1);
+  color: var(--nano-accent-primary, #6366f1);
 }
 
 .nano-lightbox-icon-btn > svg {
@@ -513,22 +698,24 @@ onBeforeUnmount(() => {
   display: flex;
   align-items: center;
   justify-content: center;
+  align-self: center;
   border-radius: 14px;
   overflow: hidden;
   background: rgba(0, 0, 0, 0.22);
   max-height: min(74dvh, 820px);
+  transition:
+    width 0.22s cubic-bezier(0.2, 0, 0, 1),
+    height 0.22s cubic-bezier(0.2, 0, 0, 1),
+    max-height 0.22s cubic-bezier(0.2, 0, 0, 1);
 }
 
 .nano-lightbox-viewport.is-zoomed {
-  overflow: auto;
-  align-items: flex-start;
-  justify-content: flex-start;
-  overscroll-behavior: contain;
+  max-height: calc(100dvh - var(--nano-lightbox-margin-y, 28px) * 2 - 124px);
 }
 
 .nano-lightbox-img {
   display: block;
-  max-width: min(88vw, 1140px);
+  max-width: min(88dvw, 1140px);
   max-height: min(74dvh, 820px);
   width: auto;
   height: auto;
@@ -536,13 +723,16 @@ onBeforeUnmount(() => {
   border-radius: 12px;
   cursor: zoom-in;
   user-select: none;
-  transition: transform 0.2s ease;
+  transition:
+    width 0.22s cubic-bezier(0.2, 0, 0, 1),
+    height 0.22s cubic-bezier(0.2, 0, 0, 1),
+    max-width 0.22s cubic-bezier(0.2, 0, 0, 1),
+    max-height 0.22s cubic-bezier(0.2, 0, 0, 1);
 }
 
 .nano-lightbox-img.is-zoomed {
-  max-width: none;
-  max-height: none;
-  width: min(155vw, 1760px);
+  max-width: 100%;
+  max-height: 100%;
   cursor: zoom-out;
 }
 
@@ -603,7 +793,7 @@ onBeforeUnmount(() => {
   line-height: 1.45;
   color: var(--nano-lightbox-fg, #f8fafc);
   text-wrap: pretty;
-  flex: 1 1 280px;
+  flex: 1 1 260px;
 }
 
 .nano-lightbox-pills {
