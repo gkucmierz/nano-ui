@@ -46,12 +46,25 @@ const props = defineProps({
     type: Number,
     default: 320,
   },
+  theme: {
+    type: String,
+    default: 'auto',
+    validator: (v) => v === 'auto' || v === 'light' || v === 'dark',
+  },
 });
 
 const emit = defineEmits(['activate', 'dismiss', 'shown']);
 
 const isVisible = ref(false);
 let hideTimer = null;
+
+const themeClass = computed(() =>
+  props.theme === 'light'
+    ? 'theme-light'
+    : props.theme === 'dark'
+      ? 'theme-dark'
+      : ''
+);
 
 const hudStyle = computed(() => {
   const w = Math.max(220, Number(props.width) || 320);
@@ -63,18 +76,20 @@ const hudStyle = computed(() => {
 
 function hasVisitedBefore() {
   if (!props.onlyFirstVisit || props.forceShow) return false;
-  if (typeof window === 'undefined' || !window.localStorage) return false;
+  const storage = globalThis.window?.localStorage;
+  if (!storage) return false;
   try {
-    return window.localStorage.getItem(props.storageKey) === '1';
+    return storage.getItem(props.storageKey) === '1';
   } catch {
     return false;
   }
 }
 
 function markVisited() {
-  if (typeof window === 'undefined' || !window.localStorage || !props.storageKey) return;
+  const storage = globalThis.window?.localStorage;
+  if (!storage || !props.storageKey) return;
   try {
-    window.localStorage.setItem(props.storageKey, '1');
+    storage.setItem(props.storageKey, '1');
   } catch {}
 }
 
@@ -139,16 +154,12 @@ onMounted(() => {
   if (!hasVisitedBefore()) {
     showHud();
   }
-  if (typeof window !== 'undefined') {
-    window.addEventListener('keydown', onGlobalKeyDown);
-  }
+  globalThis.window?.addEventListener('keydown', onGlobalKeyDown);
 });
 
 onUnmounted(() => {
   clearHideTimer();
-  if (typeof window !== 'undefined') {
-    window.removeEventListener('keydown', onGlobalKeyDown);
-  }
+  globalThis.window?.removeEventListener('keydown', onGlobalKeyDown);
 });
 
 defineExpose({
@@ -166,7 +177,7 @@ defineExpose({
       v-if="isVisible"
       type="button"
       class="nano-welcome-hud"
-      :class="{ 'is-fixed': fixed }"
+      :class="[{ 'is-fixed': fixed }, themeClass]"
       :style="hudStyle"
       role="status"
       aria-live="polite"
@@ -190,11 +201,11 @@ defineExpose({
   transform: translate(-50%, -50%) scale(1);
   padding: 24px 26px 20px;
   border-radius: 24px;
-  background: rgba(10, 14, 24, 0.56);
+  background: var(--nano-welcome-hud-bg, rgba(10, 14, 24, 0.56));
   backdrop-filter: blur(18px);
   -webkit-backdrop-filter: blur(18px);
-  border: 1px solid rgba(251, 113, 133, 0.38);
-  color: #ffffff;
+  border: 1px solid var(--nano-welcome-hud-border, rgba(251, 113, 133, 0.38));
+  color: var(--nano-welcome-hud-fg, #ffffff);
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -202,25 +213,65 @@ defineExpose({
   gap: 8px;
   cursor: pointer;
   z-index: 5000;
-  box-shadow:
+  box-shadow: var(
+    --nano-welcome-hud-shadow,
     0 16px 48px rgba(0, 0, 0, 0.42),
-    0 0 32px rgba(225, 29, 72, 0.18);
-  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.38);
+    0 0 32px rgba(225, 29, 72, 0.18)
+  );
+  text-shadow: var(--nano-welcome-hud-text-shadow, 0 2px 8px rgba(0, 0, 0, 0.38));
   user-select: none;
   box-sizing: border-box;
   text-align: center;
   transition:
-    border-color 0.2s ease,
-    background 0.2s ease,
-    box-shadow 0.2s ease;
+    border-color var(--nano-duration-medium, 250ms) ease,
+    background var(--nano-duration-medium, 250ms) ease,
+    box-shadow var(--nano-duration-medium, 250ms) ease;
+}
+
+.nano-welcome-hud.theme-light {
+  color-scheme: light;
+  --nano-welcome-hud-bg: rgba(255, 255, 255, 0.9);
+  --nano-welcome-hud-border: rgba(225, 29, 72, 0.38);
+  --nano-welcome-hud-fg: #0f172a;
+  --nano-welcome-hud-title-fg: #0f172a;
+  --nano-welcome-hud-subtitle-fg: #475569;
+  --nano-welcome-hud-shadow: 0 16px 40px rgba(15, 23, 42, 0.12), 0 0 24px rgba(225, 29, 72, 0.1);
+  --nano-welcome-hud-text-shadow: none;
+  --nano-welcome-hud-hover-bg: rgba(255, 255, 255, 0.96);
+  --nano-welcome-hud-hover-border: #0284c7;
+  --nano-welcome-hud-hover-shadow: 0 18px 44px rgba(15, 23, 42, 0.16), 0 0 28px rgba(2, 132, 199, 0.16);
+  --nano-welcome-hud-icon-glow: rgba(225, 29, 72, 0.28);
+  --nano-welcome-hud-kbd-bg: #e0f2fe;
+  --nano-welcome-hud-kbd-fg: #0369a1;
+  --nano-welcome-hud-kbd-border: #0284c7;
+}
+
+.nano-welcome-hud.theme-dark {
+  color-scheme: dark;
+  --nano-welcome-hud-bg: rgba(10, 14, 24, 0.56);
+  --nano-welcome-hud-border: rgba(251, 113, 133, 0.38);
+  --nano-welcome-hud-fg: #ffffff;
+  --nano-welcome-hud-title-fg: #f8fafc;
+  --nano-welcome-hud-subtitle-fg: rgba(226, 232, 240, 0.88);
+  --nano-welcome-hud-shadow: 0 16px 48px rgba(0, 0, 0, 0.42), 0 0 32px rgba(225, 29, 72, 0.18);
+  --nano-welcome-hud-text-shadow: 0 2px 8px rgba(0, 0, 0, 0.38);
+  --nano-welcome-hud-hover-bg: rgba(13, 20, 36, 0.68);
+  --nano-welcome-hud-hover-border: rgba(56, 189, 248, 0.65);
+  --nano-welcome-hud-hover-shadow: 0 18px 52px rgba(0, 0, 0, 0.48), 0 0 36px rgba(56, 189, 248, 0.25);
+  --nano-welcome-hud-icon-glow: rgba(251, 113, 133, 0.45);
+  --nano-welcome-hud-kbd-bg: rgba(56, 189, 248, 0.18);
+  --nano-welcome-hud-kbd-fg: #38bdf8;
+  --nano-welcome-hud-kbd-border: rgba(56, 189, 248, 0.45);
 }
 
 .nano-welcome-hud:hover {
-  border-color: rgba(56, 189, 248, 0.65);
-  background: rgba(13, 20, 36, 0.68);
-  box-shadow:
+  border-color: var(--nano-welcome-hud-hover-border, rgba(56, 189, 248, 0.65));
+  background: var(--nano-welcome-hud-hover-bg, rgba(13, 20, 36, 0.68));
+  box-shadow: var(
+    --nano-welcome-hud-hover-shadow,
     0 18px 52px rgba(0, 0, 0, 0.48),
-    0 0 36px rgba(56, 189, 248, 0.25);
+    0 0 36px rgba(56, 189, 248, 0.25)
+  );
 }
 
 .nano-welcome-hud.is-fixed {
@@ -230,7 +281,7 @@ defineExpose({
 .nano-welcome-hud-icon {
   font-size: 46px;
   line-height: 1;
-  filter: drop-shadow(0 4px 12px rgba(251, 113, 133, 0.45));
+  filter: drop-shadow(0 4px 12px var(--nano-welcome-hud-icon-glow, rgba(251, 113, 133, 0.45)));
   animation: nano-hud-pulse 1.15s ease-in-out infinite;
 }
 
@@ -239,14 +290,14 @@ defineExpose({
   font-size: 1.28rem;
   font-weight: 800;
   letter-spacing: -0.02em;
-  color: #f8fafc;
+  color: var(--nano-welcome-hud-title-fg, #f8fafc);
 }
 
 .nano-welcome-hud-subtitle {
   font-size: 0.78rem;
   font-weight: 600;
   line-height: 1.45;
-  color: rgba(226, 232, 240, 0.88);
+  color: var(--nano-welcome-hud-subtitle-fg, rgba(226, 232, 240, 0.88));
   max-width: 96%;
 }
 
@@ -268,9 +319,9 @@ defineExpose({
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
   font-size: 0.72rem;
   font-weight: 800;
-  background: rgba(56, 189, 248, 0.18);
-  color: #38bdf8;
-  border: 1px solid rgba(56, 189, 248, 0.45);
+  background: var(--nano-welcome-hud-kbd-bg, rgba(56, 189, 248, 0.18));
+  color: var(--nano-welcome-hud-kbd-fg, #38bdf8);
+  border: 1px solid var(--nano-welcome-hud-kbd-border, rgba(56, 189, 248, 0.45));
 }
 
 @keyframes nano-hud-pulse {
