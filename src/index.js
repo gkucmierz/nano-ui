@@ -73,6 +73,11 @@ import NanoDropzone from './components/NanoDropzone.vue';
 import NanoTree from './components/NanoTree.vue';
 import NanoFieldset from './components/NanoFieldset.vue';
 import NanoLightbox from './components/NanoLightbox.vue';
+import NanoFitText from './components/NanoFitText.vue';
+import {
+  parseLightboxAspectRatio,
+  computeLightboxStageGeometry,
+} from './utils/lightboxGeometry.js';
 import {
   UNIX_TREE_GLYPHS,
   matchesTreeNodeQuery,
@@ -356,6 +361,8 @@ import {
 } from './utils/selectPositioning.js';
 import {
   naturalSearch,
+  estimateProportionalEmWidth,
+  computeFittedFontSize,
   computeMonospaceFittedFontSize,
   fitSvgTextSize,
   fitHtmlTextSize,
@@ -501,6 +508,9 @@ export {
   NanoTree,
   NanoFieldset,
   NanoLightbox,
+  NanoFitText,
+  parseLightboxAspectRatio,
+  computeLightboxStageGeometry,
   UNIX_TREE_GLYPHS,
   matchesTreeNodeQuery,
   filterUnixTreeNodes,
@@ -728,6 +738,8 @@ export {
   getSliderThumbOverhangPx,
   resolveSliderSafeInsets,
   naturalSearch,
+  estimateProportionalEmWidth,
+  computeFittedFontSize,
   computeMonospaceFittedFontSize,
   fitSvgTextSize,
   fitHtmlTextSize,
@@ -856,5 +868,6 @@ export default {
     app.component(`${cp}NanoTree`, NanoTree);
     app.component(`${cp}NanoFieldset`, NanoFieldset);
     app.component(`${cp}NanoLightbox`, NanoLightbox);
+    app.component(`${cp}NanoFitText`, NanoFitText);
   },
 };
