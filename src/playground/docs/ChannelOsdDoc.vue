@@ -73,24 +73,18 @@ const triggerDigit = (d) => {
 const previewChannelSample = (channelNum) => {
   const clamped = Math.min(maxChannel.value, Math.max(1, channelNum));
   activeChannel.value = clamped;
-  if (osdRef.value && typeof osdRef.value.showOsd === 'function') {
-    osdRef.value.showOsd(String(clamped).padStart(effectiveDigits.value, '0'));
-  }
+  osdRef.value?.showOsd?.(String(clamped).padStart(effectiveDigits.value, '0'));
 };
 
 const applyChannelPreset = (nextMax, sampleCh) => {
   maxChannel.value = nextMax;
   activeChannel.value = sampleCh;
-  if (osdRef.value && typeof osdRef.value.showOsd === 'function') {
-    const digits = resolveChannelOsdMaxDigits({ max: nextMax });
-    osdRef.value.showOsd(String(sampleCh).padStart(digits, '0'));
-  }
+  const digits = resolveChannelOsdMaxDigits({ max: nextMax });
+  osdRef.value?.showOsd?.(String(sampleCh).padStart(digits, '0'));
 };
 
 const replayWelcomeHud = () => {
-  if (welcomeHudRef.value && typeof welcomeHudRef.value.showHud === 'function') {
-    welcomeHudRef.value.showHud();
-  }
+  welcomeHudRef.value?.showHud?.();
 };
 
 const codeTabs = createDocTabs({
@@ -119,6 +113,7 @@ const codeTabs = createDocTabs({
         'subtitle: String (default: "") - Optional single-line channel title rendered beneath digits',
         'timeout: Number (default: 550) - Auto-dismiss & sequence reset timeout in milliseconds',
         'size: Number (default: 140) - Base HUD height / 2-digit square side in pixels',
+        "theme: 'auto' | 'light' | 'dark' (default: 'auto') - Follows global theme tokens by default or forces explicit light/dark glass palette",
         'listenKeyboard: Boolean (default: true) - Listen for global 0-9 keydown events',
       ],
     },
@@ -327,7 +322,7 @@ const codeTabs = createDocTabs({
             Replay NanoWelcomeHud
           </button>
         </div>
-        <div style="margin-top: 14px; display: flex; justify-content: center;">
+        <div class="welcome-stage">
           <NanoWelcomeHud
             ref="welcomeHudRef"
             storage-key="nano_ui_playground_welcome_demo"
@@ -381,7 +376,7 @@ const codeTabs = createDocTabs({
   min-height: 300px;
   border-radius: var(--nano-radius-lg, 12px);
   border: 1px solid var(--nano-border-card);
-  background: radial-gradient(circle at 50% 40%, rgba(56, 189, 248, 0.14), rgba(15, 23, 42, 0.9));
+  background: var(--nano-osd-stage-bg);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -395,7 +390,7 @@ const codeTabs = createDocTabs({
   align-items: center;
   gap: 12px;
   text-align: center;
-  color: rgba(226, 232, 240, 0.85);
+  color: var(--nano-text-secondary);
   font-size: 0.9rem;
 }
 
@@ -409,15 +404,16 @@ const codeTabs = createDocTabs({
 .active-channel-pill {
   padding: 6px 14px;
   border-radius: 999px;
-  background: rgba(56, 189, 248, 0.16);
-  border: 1px solid rgba(56, 189, 248, 0.38);
-  color: #f8fafc;
+  background: var(--nano-status-info-bg);
+  border: 1px solid var(--nano-status-info-border);
+  color: var(--nano-text-main);
   font-size: 0.84rem;
 }
 
 .active-channel-pill.is-muted {
-  background: rgba(15, 23, 42, 0.65);
-  border-color: rgba(148, 163, 184, 0.32);
+  background: var(--nano-bg-card);
+  border-color: var(--nano-border-card);
+  color: var(--nano-text-secondary);
 }
 
 .preset-row {
@@ -431,9 +427,9 @@ const codeTabs = createDocTabs({
   height: 36px;
   padding: 0 12px;
   border-radius: 8px;
-  border: 1px solid rgba(148, 163, 184, 0.32);
-  background: rgba(15, 23, 42, 0.65);
-  color: #e2e8f0;
+  border: 1px solid var(--nano-border-card);
+  background: var(--nano-bg-card);
+  color: var(--nano-text-secondary);
   font-size: 0.82rem;
   font-weight: 600;
   cursor: pointer;
@@ -441,12 +437,22 @@ const codeTabs = createDocTabs({
   align-items: center;
   box-sizing: border-box;
   line-height: 1;
+  transition:
+    background var(--nano-duration-fast, 150ms) ease,
+    border-color var(--nano-duration-fast, 150ms) ease,
+    color var(--nano-duration-fast, 150ms) ease;
+}
+
+.preset-btn:hover {
+  background: var(--nano-bg-hover);
+  border-color: var(--nano-border-hover);
+  color: var(--nano-text-main);
 }
 
 .preset-btn.is-active {
-  border-color: rgba(56, 189, 248, 0.65);
-  background: rgba(56, 189, 248, 0.2);
-  color: #ffffff;
+  border-color: var(--nano-state-active);
+  background: var(--nano-status-info-bg);
+  color: var(--nano-text-main);
 }
 
 .keypad-row {
@@ -520,8 +526,8 @@ const codeTabs = createDocTabs({
 }
 
 .shape-seg-btn.is-selected {
-  border-color: var(--nano-primary, #38bdf8);
-  background: rgba(56, 189, 248, 0.14);
+  border-color: var(--nano-state-active);
+  background: var(--nano-status-info-bg);
   color: var(--nano-text-main);
 }
 
@@ -579,7 +585,7 @@ const codeTabs = createDocTabs({
   border: 1px solid var(--nano-border-card);
   border-radius: 10px;
   padding: 14px;
-  background: rgba(15, 23, 42, 0.35);
+  background: var(--nano-bg-muted);
   display: flex;
   flex-direction: column;
   gap: 12px;
@@ -601,7 +607,8 @@ const codeTabs = createDocTabs({
 .comparison-stage {
   min-height: 250px;
   border-radius: 8px;
-  background: linear-gradient(135deg, rgba(30, 41, 59, 0.92), rgba(15, 23, 42, 0.96));
+  border: 1px solid var(--nano-border-subtle);
+  background: var(--nano-osd-comparison-bg);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -610,19 +617,19 @@ const codeTabs = createDocTabs({
 }
 
 .osd-static-preview {
-  background: rgba(10, 14, 24, 0.56);
+  background: var(--nano-osd-bg);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
-  border: 1px solid rgba(255, 255, 255, 0.16);
-  color: #ffffff;
+  border: 1px solid var(--nano-osd-border);
+  color: var(--nano-osd-fg);
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   box-sizing: border-box;
   padding: 0 12px;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.32);
-  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
+  box-shadow: var(--nano-osd-shadow);
+  text-shadow: var(--nano-osd-text-shadow);
   user-select: none;
 }
 
@@ -639,10 +646,23 @@ const codeTabs = createDocTabs({
   margin-top: 6px;
   font-size: 0.75rem;
   font-weight: 600;
-  color: rgba(255, 255, 255, 0.84);
+  color: var(--nano-osd-subtitle-fg);
   max-width: calc(100% - 8px);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+.welcome-stage {
+  position: relative;
+  margin-top: 14px;
+  min-height: 230px;
+  border-radius: var(--nano-radius-md, 10px);
+  border: 1px solid var(--nano-border-card);
+  background: var(--nano-osd-stage-bg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
 }
 </style>

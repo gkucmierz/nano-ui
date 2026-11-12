@@ -51,6 +51,11 @@ const props = defineProps({
     type: Boolean,
     default: false,
   },
+  theme: {
+    type: String,
+    default: 'auto',
+    validator: (v) => v === 'auto' || v === 'light' || v === 'dark',
+  },
 });
 
 const emit = defineEmits(['update:modelValue', 'select']);
@@ -76,6 +81,14 @@ const osdMetrics = computed(() =>
     shape: props.shape,
     stabilizeCapacity: props.stabilizeCapacity,
   })
+);
+
+const themeClass = computed(() =>
+  props.theme === 'light'
+    ? 'theme-light'
+    : props.theme === 'dark'
+      ? 'theme-dark'
+      : ''
 );
 
 const osdStyle = computed(() => {
@@ -159,16 +172,12 @@ const handleKeyDown = (e) => {
 };
 
 onMounted(() => {
-  if (typeof window !== 'undefined') {
-    window.addEventListener('keydown', handleKeyDown);
-  }
+  globalThis.window?.addEventListener('keydown', handleKeyDown);
 });
 
 onUnmounted(() => {
   clearOsdTimer();
-  if (typeof window !== 'undefined') {
-    window.removeEventListener('keydown', handleKeyDown);
-  }
+  globalThis.window?.removeEventListener('keydown', handleKeyDown);
 });
 
 defineExpose({
@@ -190,6 +199,7 @@ defineExpose({
       :class="[
         { 'is-fixed': fixed },
         osdMetrics.shape === 'square' ? 'is-shape-square' : 'is-shape-rect',
+        themeClass,
       ]"
       :style="osdStyle"
       role="status"
@@ -207,11 +217,11 @@ defineExpose({
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
-  background: rgba(10, 14, 24, 0.46);
+  background: var(--nano-osd-bg, rgba(10, 14, 24, 0.46));
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
-  border: 1px solid rgba(255, 255, 255, 0.14);
-  color: #ffffff;
+  border: 1px solid var(--nano-osd-border, rgba(255, 255, 255, 0.14));
+  color: var(--nano-osd-fg, #ffffff);
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -220,9 +230,29 @@ defineExpose({
   padding: 0 12px;
   pointer-events: none;
   z-index: 5000;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.28);
-  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
+  box-shadow: var(--nano-osd-shadow, 0 8px 32px rgba(0, 0, 0, 0.28));
+  text-shadow: var(--nano-osd-text-shadow, 0 2px 8px rgba(0, 0, 0, 0.35));
   user-select: none;
+}
+
+.nano-channel-osd.theme-light {
+  color-scheme: light;
+  --nano-osd-bg: rgba(255, 255, 255, 0.88);
+  --nano-osd-border: #cbd5e1;
+  --nano-osd-fg: #0f172a;
+  --nano-osd-subtitle-fg: #475569;
+  --nano-osd-shadow: 0 10px 32px rgba(15, 23, 42, 0.12), 0 1px 3px rgba(15, 23, 42, 0.08);
+  --nano-osd-text-shadow: none;
+}
+
+.nano-channel-osd.theme-dark {
+  color-scheme: dark;
+  --nano-osd-bg: rgba(10, 14, 24, 0.46);
+  --nano-osd-border: rgba(255, 255, 255, 0.14);
+  --nano-osd-fg: #ffffff;
+  --nano-osd-subtitle-fg: rgba(255, 255, 255, 0.84);
+  --nano-osd-shadow: 0 8px 32px rgba(0, 0, 0, 0.28);
+  --nano-osd-text-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
 }
 
 .nano-channel-osd.is-fixed {
@@ -243,7 +273,7 @@ defineExpose({
   margin-top: 6px;
   font-size: 0.75rem;
   font-weight: 600;
-  color: rgba(255, 255, 255, 0.84);
+  color: var(--nano-osd-subtitle-fg, rgba(255, 255, 255, 0.84));
   max-width: calc(100% - 8px);
   white-space: nowrap;
   overflow: hidden;
@@ -252,7 +282,9 @@ defineExpose({
 
 .nano-osd-fade-enter-active,
 .nano-osd-fade-leave-active {
-  transition: opacity 0.18s ease-out, transform 0.18s ease-out;
+  transition:
+    opacity var(--nano-duration-fast, 150ms) ease-out,
+    transform var(--nano-duration-fast, 150ms) ease-out;
 }
 
 .nano-osd-fade-enter-from,
