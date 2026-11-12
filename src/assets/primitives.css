@@ -1281,7 +1281,7 @@ dialog.nano-lightbox-dialog {
   border: 0;
   background: transparent;
   color: var(--nano-lightbox-fg, #f8fafc);
-  max-width: min(94vw, 1220px);
+  max-width: min(94dvw, 1220px);
   max-height: 92dvh;
   overflow: auto;
   outline: none;
@@ -1290,6 +1290,12 @@ dialog.nano-lightbox-dialog {
   transition-duration: 0.24s;
   transition-timing-function: cubic-bezier(0.2, 0, 0, 1);
   transition-behavior: allow-discrete;
+}
+
+dialog.nano-lightbox-dialog.is-zoomed {
+  max-width: calc(100dvw - var(--nano-lightbox-margin-x, 32px) * 2);
+  max-height: calc(100dvh - var(--nano-lightbox-margin-y, 28px) * 2);
+  overflow: hidden;
 }
 
 @media (prefers-reduced-motion: no-preference) {
