@@ -57,6 +57,11 @@ const props = defineProps({
     type: Boolean,
     default: true,
   },
+  theme: {
+    type: String,
+    default: 'auto',
+    validator: (v) => v === 'auto' || v === 'light' || v === 'dark',
+  },
 });
 
 const emit = defineEmits(['update:selectedId', 'update:searchQuery', 'select', 'toggle']);
@@ -88,6 +93,14 @@ watch(
 );
 
 const effectiveSearch = computed(() => String(internalSearch.value || '').trim());
+
+const themeClass = computed(() =>
+  props.theme === 'light'
+    ? 'theme-light'
+    : props.theme === 'dark'
+      ? 'theme-dark'
+      : ''
+);
 
 const filteredNodes = computed(() =>
   filterUnixTreeNodes(props.nodes, effectiveSearch.value)
@@ -154,8 +167,9 @@ async function copyAsciiToClipboard() {
     expandedIds: activeExpandedIds.value,
   });
   try {
-    if (typeof navigator !== 'undefined' && navigator.clipboard) {
-      await navigator.clipboard.writeText(ascii);
+    const clipboard = globalThis.navigator?.clipboard;
+    if (clipboard) {
+      await clipboard.writeText(ascii);
       copiedAscii.value = true;
       if (copyTimer) clearTimeout(copyTimer);
       copyTimer = setTimeout(() => {
@@ -187,17 +201,17 @@ function onRowKeydown(event, row, index) {
   } else if (event.key === 'ArrowDown') {
     event.preventDefault();
     const nextEl = event.currentTarget?.parentElement?.children?.[index + 1];
-    if (nextEl && typeof nextEl.focus === 'function') nextEl.focus();
+    nextEl?.focus?.();
   } else if (event.key === 'ArrowUp') {
     event.preventDefault();
     const prevEl = event.currentTarget?.parentElement?.children?.[index - 1];
-    if (prevEl && typeof prevEl.focus === 'function') prevEl.focus();
+    prevEl?.focus?.();
   }
 }
 </script>
 
 <template>
-  <div class="nano-tree">
+  <div class="nano-tree" :class="themeClass">
     <div v-if="showToolbar" class="nano-tree-toolbar">
       <div class="nano-tree-root-head">
         <span v-if="rootIcon" class="nano-tree-root-icon" aria-hidden="true">{{ rootIcon }}</span>
@@ -342,16 +356,134 @@ function onRowKeydown(event, row, index) {
 <style scoped>
 .nano-tree {
   --tree-col-w: 28px;
-  --tree-line-color: rgba(148, 163, 184, 0.52);
-  --tree-line-active: rgba(56, 189, 248, 0.85);
+  --tree-line-color: var(--nano-tree-line, rgba(148, 163, 184, 0.52));
+  --tree-line-active: var(--nano-tree-line-active, rgba(56, 189, 248, 0.85));
   display: flex;
   flex-direction: column;
   border-radius: 14px;
-  background: rgba(10, 15, 28, 0.86);
-  border: 1px solid rgba(148, 163, 184, 0.2);
+  background: var(--nano-tree-bg, rgba(10, 15, 28, 0.86));
+  border: 1px solid var(--nano-tree-border, rgba(148, 163, 184, 0.2));
   font-family: 'JetBrains Mono', 'Fira Code', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-  color: #e2e8f0;
+  color: var(--nano-tree-fg, #e2e8f0);
   overflow: hidden;
+}
+
+.nano-tree.theme-light {
+  color-scheme: light;
+  --nano-tree-bg: #ffffff;
+  --nano-tree-border: #cbd5e1;
+  --nano-tree-fg: #0f172a;
+  --nano-tree-label-fg: #0f172a;
+  --nano-tree-muted: #475569;
+  --nano-tree-subtle-fg: #475569;
+  --nano-tree-line: #64748b;
+  --nano-tree-line-active: #0284c7;
+  --nano-tree-accent: #0369a1;
+  --nano-tree-accent-hover: #0284c7;
+  --nano-tree-leaf-dot: #64748b;
+  --nano-tree-toolbar-bg: #f8fafc;
+  --nano-tree-toolbar-border: #cbd5e1;
+  --nano-tree-footer-bg: #f8fafc;
+  --nano-tree-footer-border: #e2e8f0;
+  --nano-tree-root-title-fg: #0369a1;
+  --nano-tree-root-title-bg: #f0f9ff;
+  --nano-tree-root-title-border: #7dd3fc;
+  --nano-tree-input-bg: #ffffff;
+  --nano-tree-input-border: #94a3b8;
+  --nano-tree-input-fg: #0f172a;
+  --nano-tree-input-focus-border: #0284c7;
+  --nano-tree-btn-bg: #ffffff;
+  --nano-tree-btn-border: #94a3b8;
+  --nano-tree-btn-fg: #1e293b;
+  --nano-tree-btn-hover-bg: #f1f5f9;
+  --nano-tree-btn-hover-border: #0284c7;
+  --nano-tree-btn-hover-fg: #0f172a;
+  --nano-tree-copied-bg: #ecfdf5;
+  --nano-tree-copied-border: #10b981;
+  --nano-tree-copied-fg: #047857;
+  --nano-tree-row-hover-bg: rgba(2, 132, 199, 0.08);
+  --nano-tree-row-selected-bg: rgba(2, 132, 199, 0.14);
+  --nano-tree-row-selected-bar: #0284c7;
+  --nano-tree-row-cycle-bg: rgba(225, 29, 72, 0.1);
+  --nano-tree-badge-bg: #f1f5f9;
+  --nano-tree-badge-border: #94a3b8;
+  --nano-tree-badge-fg: #334155;
+  --nano-tree-badge-emerald-bg: #ecfdf5;
+  --nano-tree-badge-emerald-border: #10b981;
+  --nano-tree-badge-emerald-fg: #047857;
+  --nano-tree-badge-amber-bg: #fffbeb;
+  --nano-tree-badge-amber-border: #d97706;
+  --nano-tree-badge-amber-fg: #b45309;
+  --nano-tree-badge-cyan-bg: #ecfeff;
+  --nano-tree-badge-cyan-border: #0891b2;
+  --nano-tree-badge-cyan-fg: #0e7490;
+  --nano-tree-badge-indigo-bg: #eef2ff;
+  --nano-tree-badge-indigo-border: #6366f1;
+  --nano-tree-badge-indigo-fg: #4338ca;
+  --nano-tree-badge-rose-bg: #fff1f2;
+  --nano-tree-badge-rose-border: #e11d48;
+  --nano-tree-badge-rose-fg: #be123c;
+  --tree-line-color: var(--nano-tree-line);
+  --tree-line-active: var(--nano-tree-line-active);
+}
+
+.nano-tree.theme-dark {
+  color-scheme: dark;
+  --nano-tree-bg: rgba(10, 15, 28, 0.86);
+  --nano-tree-border: rgba(148, 163, 184, 0.2);
+  --nano-tree-fg: #e2e8f0;
+  --nano-tree-label-fg: #f8fafc;
+  --nano-tree-muted: #94a3b8;
+  --nano-tree-subtle-fg: #64748b;
+  --nano-tree-line: rgba(148, 163, 184, 0.52);
+  --nano-tree-line-active: rgba(56, 189, 248, 0.85);
+  --nano-tree-accent: #38bdf8;
+  --nano-tree-accent-hover: #7dd3fc;
+  --nano-tree-leaf-dot: #475569;
+  --nano-tree-toolbar-bg: rgba(15, 23, 42, 0.9);
+  --nano-tree-toolbar-border: rgba(148, 163, 184, 0.16);
+  --nano-tree-footer-bg: rgba(15, 23, 42, 0.75);
+  --nano-tree-footer-border: rgba(148, 163, 184, 0.14);
+  --nano-tree-root-title-fg: #38bdf8;
+  --nano-tree-root-title-bg: rgba(56, 189, 248, 0.1);
+  --nano-tree-root-title-border: rgba(56, 189, 248, 0.25);
+  --nano-tree-input-bg: rgba(2, 6, 23, 0.65);
+  --nano-tree-input-border: rgba(148, 163, 184, 0.26);
+  --nano-tree-input-fg: #f8fafc;
+  --nano-tree-input-focus-border: rgba(56, 189, 248, 0.65);
+  --nano-tree-btn-bg: rgba(30, 41, 59, 0.7);
+  --nano-tree-btn-border: rgba(148, 163, 184, 0.24);
+  --nano-tree-btn-fg: #cbd5e1;
+  --nano-tree-btn-hover-bg: rgba(51, 65, 85, 0.85);
+  --nano-tree-btn-hover-border: rgba(56, 189, 248, 0.45);
+  --nano-tree-btn-hover-fg: #f8fafc;
+  --nano-tree-copied-bg: rgba(16, 185, 129, 0.18);
+  --nano-tree-copied-border: rgba(16, 185, 129, 0.5);
+  --nano-tree-copied-fg: #34d399;
+  --nano-tree-row-hover-bg: rgba(56, 189, 248, 0.09);
+  --nano-tree-row-selected-bg: rgba(56, 189, 248, 0.16);
+  --nano-tree-row-selected-bar: #38bdf8;
+  --nano-tree-row-cycle-bg: rgba(244, 63, 94, 0.12);
+  --nano-tree-badge-bg: rgba(30, 41, 59, 0.75);
+  --nano-tree-badge-border: rgba(148, 163, 184, 0.28);
+  --nano-tree-badge-fg: #cbd5e1;
+  --nano-tree-badge-emerald-bg: rgba(16, 185, 129, 0.14);
+  --nano-tree-badge-emerald-border: rgba(16, 185, 129, 0.42);
+  --nano-tree-badge-emerald-fg: #34d399;
+  --nano-tree-badge-amber-bg: rgba(245, 158, 11, 0.14);
+  --nano-tree-badge-amber-border: rgba(245, 158, 11, 0.42);
+  --nano-tree-badge-amber-fg: #fbbf24;
+  --nano-tree-badge-cyan-bg: rgba(6, 182, 212, 0.14);
+  --nano-tree-badge-cyan-border: rgba(6, 182, 212, 0.42);
+  --nano-tree-badge-cyan-fg: #22d3ee;
+  --nano-tree-badge-indigo-bg: rgba(99, 102, 241, 0.16);
+  --nano-tree-badge-indigo-border: rgba(99, 102, 241, 0.45);
+  --nano-tree-badge-indigo-fg: #a5b4fc;
+  --nano-tree-badge-rose-bg: rgba(244, 63, 94, 0.18);
+  --nano-tree-badge-rose-border: rgba(244, 63, 94, 0.5);
+  --nano-tree-badge-rose-fg: #fb7185;
+  --tree-line-color: var(--nano-tree-line);
+  --tree-line-active: var(--nano-tree-line-active);
 }
 
 .nano-tree-toolbar {
@@ -360,8 +492,8 @@ function onRowKeydown(event, row, index) {
   justify-content: space-between;
   gap: 12px;
   padding: 10px 14px;
-  background: rgba(15, 23, 42, 0.9);
-  border-bottom: 1px solid rgba(148, 163, 184, 0.16);
+  background: var(--nano-tree-toolbar-bg, rgba(15, 23, 42, 0.9));
+  border-bottom: 1px solid var(--nano-tree-toolbar-border, rgba(148, 163, 184, 0.16));
   flex-wrap: wrap;
 }
 
@@ -380,16 +512,16 @@ function onRowKeydown(event, row, index) {
 .nano-tree-root-title {
   font-size: 0.86rem;
   font-weight: 700;
-  color: #38bdf8;
-  background: rgba(56, 189, 248, 0.1);
-  border: 1px solid rgba(56, 189, 248, 0.25);
+  color: var(--nano-tree-root-title-fg, #38bdf8);
+  background: var(--nano-tree-root-title-bg, rgba(56, 189, 248, 0.1));
+  border: 1px solid var(--nano-tree-root-title-border, rgba(56, 189, 248, 0.25));
   padding: 3px 8px;
   border-radius: 6px;
 }
 
 .nano-tree-root-sub {
   font-size: 0.76rem;
-  color: #94a3b8;
+  color: var(--nano-tree-muted, #94a3b8);
 }
 
 .nano-tree-actions {
@@ -404,9 +536,9 @@ function onRowKeydown(event, row, index) {
   min-width: 210px;
   padding: 0 11px;
   border-radius: 8px;
-  border: 1px solid rgba(148, 163, 184, 0.26);
-  background: rgba(2, 6, 23, 0.65);
-  color: #f8fafc;
+  border: 1px solid var(--nano-tree-input-border, rgba(148, 163, 184, 0.26));
+  background: var(--nano-tree-input-bg, rgba(2, 6, 23, 0.65));
+  color: var(--nano-tree-input-fg, #f8fafc);
   font-family: inherit;
   font-size: 0.78rem;
   box-sizing: border-box;
@@ -414,16 +546,16 @@ function onRowKeydown(event, row, index) {
 }
 
 .nano-tree-search:focus {
-  border-color: rgba(56, 189, 248, 0.65);
+  border-color: var(--nano-tree-input-focus-border, rgba(56, 189, 248, 0.65));
 }
 
 .nano-tree-btn {
   height: 36px;
   padding: 0 11px;
   border-radius: 8px;
-  border: 1px solid rgba(148, 163, 184, 0.24);
-  background: rgba(30, 41, 59, 0.7);
-  color: #cbd5e1;
+  border: 1px solid var(--nano-tree-btn-border, rgba(148, 163, 184, 0.24));
+  background: var(--nano-tree-btn-bg, rgba(30, 41, 59, 0.7));
+  color: var(--nano-tree-btn-fg, #cbd5e1);
   font-family: inherit;
   font-size: 0.76rem;
   font-weight: 600;
@@ -433,19 +565,22 @@ function onRowKeydown(event, row, index) {
   cursor: pointer;
   box-sizing: border-box;
   line-height: 1;
-  transition: background 0.14s ease, border-color 0.14s ease, color 0.14s ease;
+  transition:
+    background var(--nano-duration-fast, 150ms) ease,
+    border-color var(--nano-duration-fast, 150ms) ease,
+    color var(--nano-duration-fast, 150ms) ease;
 }
 
 .nano-tree-btn:hover {
-  background: rgba(51, 65, 85, 0.85);
-  color: #f8fafc;
-  border-color: rgba(56, 189, 248, 0.45);
+  background: var(--nano-tree-btn-hover-bg, rgba(51, 65, 85, 0.85));
+  color: var(--nano-tree-btn-hover-fg, #f8fafc);
+  border-color: var(--nano-tree-btn-hover-border, rgba(56, 189, 248, 0.45));
 }
 
 .nano-tree-btn-copy.is-copied {
-  background: rgba(16, 185, 129, 0.18);
-  border-color: rgba(16, 185, 129, 0.5);
-  color: #34d399;
+  background: var(--nano-tree-copied-bg, rgba(16, 185, 129, 0.18));
+  border-color: var(--nano-tree-copied-border, rgba(16, 185, 129, 0.5));
+  color: var(--nano-tree-copied-fg, #34d399);
 }
 
 .nano-tree-viewport {
@@ -497,7 +632,7 @@ function onRowKeydown(event, row, index) {
 .nano-tree-empty {
   padding: 20px;
   text-align: center;
-  color: #64748b;
+  color: var(--nano-tree-subtle-fg, #64748b);
   font-size: 0.82rem;
 }
 
@@ -510,22 +645,22 @@ function onRowKeydown(event, row, index) {
   cursor: pointer;
   user-select: none;
   white-space: nowrap;
-  transition: background 0.1s ease;
+  transition: background var(--nano-duration-fast, 150ms) ease;
   outline: none;
 }
 
 .nano-tree-row:hover,
 .nano-tree-row:focus-visible {
-  background: rgba(56, 189, 248, 0.09);
+  background: var(--nano-tree-row-hover-bg, rgba(56, 189, 248, 0.09));
 }
 
 .nano-tree-row.is-selected {
-  background: rgba(56, 189, 248, 0.16);
-  box-shadow: inset 2px 0 0 #38bdf8;
+  background: var(--nano-tree-row-selected-bg, rgba(56, 189, 248, 0.16));
+  box-shadow: inset 2px 0 0 var(--nano-tree-row-selected-bar, #38bdf8);
 }
 
 .nano-tree-row.is-cycle {
-  background: rgba(244, 63, 94, 0.12);
+  background: var(--nano-tree-row-cycle-bg, rgba(244, 63, 94, 0.12));
 }
 
 /* Seamless full-height CSS geometric box-drawing columns (0px gaps between rows!) */
@@ -641,7 +776,7 @@ function onRowKeydown(event, row, index) {
 .nano-tree-toggle {
   border: none;
   background: transparent;
-  color: #38bdf8;
+  color: var(--nano-tree-accent, #38bdf8);
   font-family: inherit;
   font-size: 0.78rem;
   font-weight: 700;
@@ -651,11 +786,11 @@ function onRowKeydown(event, row, index) {
 }
 
 .nano-tree-toggle:hover {
-  color: #7dd3fc;
+  color: var(--nano-tree-accent-hover, #7dd3fc);
 }
 
 .nano-tree-leaf-dot {
-  color: #475569;
+  color: var(--nano-tree-leaf-dot, #475569);
   padding: 0 8px 0 4px;
   font-weight: 700;
 }
@@ -668,13 +803,13 @@ function onRowKeydown(event, row, index) {
 .nano-tree-label {
   font-size: 0.84rem;
   font-weight: 700;
-  color: #f8fafc;
+  color: var(--nano-tree-label-fg, #f8fafc);
 }
 
 .nano-tree-version {
   margin-left: 7px;
   font-size: 0.74rem;
-  color: #94a3b8;
+  color: var(--nano-tree-muted, #94a3b8);
 }
 
 .nano-tree-badge {
@@ -684,48 +819,48 @@ function onRowKeydown(event, row, index) {
   font-size: 0.68rem;
   font-weight: 700;
   letter-spacing: 0.02em;
-  border: 1px solid rgba(148, 163, 184, 0.28);
-  background: rgba(30, 41, 59, 0.75);
-  color: #cbd5e1;
+  border: 1px solid var(--nano-tree-badge-border, rgba(148, 163, 184, 0.28));
+  background: var(--nano-tree-badge-bg, rgba(30, 41, 59, 0.75));
+  color: var(--nano-tree-badge-fg, #cbd5e1);
 }
 
 .nano-tree-badge.emerald,
 .nano-tree-badge.public {
-  background: rgba(16, 185, 129, 0.14);
-  border-color: rgba(16, 185, 129, 0.42);
-  color: #34d399;
+  background: var(--nano-tree-badge-emerald-bg, rgba(16, 185, 129, 0.14));
+  border-color: var(--nano-tree-badge-emerald-border, rgba(16, 185, 129, 0.42));
+  color: var(--nano-tree-badge-emerald-fg, #34d399);
 }
 
 .nano-tree-badge.amber,
 .nano-tree-badge.private {
-  background: rgba(245, 158, 11, 0.14);
-  border-color: rgba(245, 158, 11, 0.42);
-  color: #fbbf24;
+  background: var(--nano-tree-badge-amber-bg, rgba(245, 158, 11, 0.14));
+  border-color: var(--nano-tree-badge-amber-border, rgba(245, 158, 11, 0.42));
+  color: var(--nano-tree-badge-amber-fg, #fbbf24);
 }
 
 .nano-tree-badge.cyan {
-  background: rgba(6, 182, 212, 0.14);
-  border-color: rgba(6, 182, 212, 0.42);
-  color: #22d3ee;
+  background: var(--nano-tree-badge-cyan-bg, rgba(6, 182, 212, 0.14));
+  border-color: var(--nano-tree-badge-cyan-border, rgba(6, 182, 212, 0.42));
+  color: var(--nano-tree-badge-cyan-fg, #22d3ee);
 }
 
 .nano-tree-badge.indigo {
-  background: rgba(99, 102, 241, 0.16);
-  border-color: rgba(99, 102, 241, 0.45);
-  color: #a5b4fc;
+  background: var(--nano-tree-badge-indigo-bg, rgba(99, 102, 241, 0.16));
+  border-color: var(--nano-tree-badge-indigo-border, rgba(99, 102, 241, 0.45));
+  color: var(--nano-tree-badge-indigo-fg, #a5b4fc);
 }
 
 .nano-tree-badge.rose,
 .nano-tree-badge.danger {
-  background: rgba(244, 63, 94, 0.18);
-  border-color: rgba(244, 63, 94, 0.5);
-  color: #fb7185;
+  background: var(--nano-tree-badge-rose-bg, rgba(244, 63, 94, 0.18));
+  border-color: var(--nano-tree-badge-rose-border, rgba(244, 63, 94, 0.5));
+  color: var(--nano-tree-badge-rose-fg, #fb7185);
 }
 
 .nano-tree-meta {
   margin-left: 9px;
   font-size: 0.74rem;
-  color: #94a3b8;
+  color: var(--nano-tree-muted, #94a3b8);
 }
 
 .nano-tree-footer {
@@ -734,19 +869,19 @@ function onRowKeydown(event, row, index) {
   justify-content: space-between;
   gap: 12px;
   padding: 8px 14px;
-  background: rgba(15, 23, 42, 0.75);
-  border-top: 1px solid rgba(148, 163, 184, 0.14);
+  background: var(--nano-tree-footer-bg, rgba(15, 23, 42, 0.75));
+  border-top: 1px solid var(--nano-tree-footer-border, rgba(148, 163, 184, 0.14));
   font-size: 0.74rem;
-  color: #94a3b8;
+  color: var(--nano-tree-muted, #94a3b8);
   flex-wrap: wrap;
 }
 
 .nano-tree-footer code {
-  color: #38bdf8;
+  color: var(--nano-tree-accent, #38bdf8);
   font-weight: 700;
 }
 
 .nano-tree-hint {
-  color: #64748b;
+  color: var(--nano-tree-subtle-fg, #64748b);
 }
 </style>
