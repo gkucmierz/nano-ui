@@ -408,6 +408,16 @@ export const PLAYGROUND_NAV_ITEMS = [
     componentTag: 'NanoCoverFlow',
     keywords: 'coverflow 3d shelf polka ksiazka kurtyna teatr carousel karuzela karty osx finder',
   },
+  {
+    id: '/docs/heatmap',
+    to: '/docs/heatmap',
+    sectionKey: 'nav.advanced3dViz',
+    navKey: 'nav.heatmap',
+    docFile: 'HeatmapDoc.vue',
+    localeKeys: ['heatmapDoc'],
+    componentTag: 'NanoHeatmap',
+    keywords: 'heatmap mapa cieplna oklch viridis cyan-ruby log1p p95 pareto kde density gestosc matrix macierz cshr',
+  },
   // Directives
   {
     id: '/docs/tooltip',
