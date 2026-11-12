@@ -1,24 +1,61 @@
 <script setup>
 import { tooltipState } from '../composables/useTooltip.js';
-import { ref, watch, nextTick, onMounted, onUnmounted } from 'vue';
+import { buildTooltipBubbleGeometry } from '../utils/tooltipGeometry.js';
+import { ref, computed, watch, nextTick, onMounted, onUnmounted } from 'vue';
 
 const tooltipRef = ref(null);
 const x = ref(0);
 const y = ref(0);
 const arrowX = ref(0);
+const boxWidth = ref(160);
+const boxHeight = ref(36);
+const boxRadius = ref(9);
 const isBottom = ref(false);
 const isPositioned = ref(false);
 
 const GAP = 12;
+const BUBBLE_PAD = 8;
+
+let resizeObserver = null;
+
+const syncBoxDimensions = () => {
+  const el = tooltipRef.value;
+  if (!el) return false;
+  const w = el.offsetWidth || el.getBoundingClientRect().width;
+  const h = el.offsetHeight || el.getBoundingClientRect().height;
+  if (w <= 0 || h <= 0) return false;
+  boxWidth.value = Math.round(w * 2) / 2;
+  boxHeight.value = Math.round(h * 2) / 2;
+  if (typeof window !== 'undefined' && typeof window.getComputedStyle === 'function') {
+    const cs = window.getComputedStyle(el);
+    const parsedRadius = parseFloat(cs.getPropertyValue('--nu-tooltip-radius')) || parseFloat(cs.borderTopLeftRadius);
+    if (Number.isFinite(parsedRadius) && parsedRadius >= 0) {
+      boxRadius.value = parsedRadius;
+    }
+  }
+  return true;
+};
+
+const bubbleGeometry = computed(() =>
+  buildTooltipBubbleGeometry({
+    width: boxWidth.value,
+    height: boxHeight.value,
+    radius: boxRadius.value,
+    arrowX: arrowX.value,
+    arrowHalfWidth: 6.5,
+    arrowHeight: 6,
+    isBottom: isBottom.value,
+    pad: BUBBLE_PAD,
+  })
+);
 
 const computePlacementFromElement = () => {
   if (!tooltipState.isVisible || !tooltipRef.value || !tooltipState.targetRect) return false;
+  if (!syncBoxDimensions()) return false;
 
   const rect = tooltipState.targetRect;
-  const el = tooltipRef.value;
-  const tooltipWidth = el.offsetWidth || el.getBoundingClientRect().width;
-  const tooltipHeight = el.offsetHeight || el.getBoundingClientRect().height;
-  if (tooltipWidth <= 0 && tooltipHeight <= 0) return false;
+  const tooltipWidth = boxWidth.value;
+  const tooltipHeight = boxHeight.value;
 
   const viewportWidth = window.innerWidth;
   const viewportHeight = window.innerHeight;
@@ -44,8 +81,8 @@ const computePlacementFromElement = () => {
   }
 
   // Horizontal positioning
-  const idealCenter = rect.left + (rect.width / 2);
-  const left = idealCenter - (tooltipWidth / 2);
+  const idealCenter = rect.left + rect.width / 2;
+  const left = idealCenter - tooltipWidth / 2;
 
   // Bounds checking for left/right
   const minLeft = 8;
@@ -53,11 +90,11 @@ const computePlacementFromElement = () => {
   const actualLeft = Math.max(minLeft, Math.min(maxLeft, left));
 
   // Difference between ideal target center and actual tooltip box center
-  const calculatedArrowX = idealCenter - (actualLeft + (tooltipWidth / 2));
+  const calculatedArrowX = idealCenter - (actualLeft + tooltipWidth / 2);
 
-  // Safe inset = arrowHalfWidth (7px) + cornerRadius (10px) + padding (2px) = 19px
+  // Safe inset = arrowHalfWidth (6.5px) + shoulderRounding (1px) + cornerRadius (9px) + margin (2.5px) = 19px
   const arrowSafeInset = 19;
-  const maxArrowOffset = Math.max(0, (tooltipWidth / 2) - arrowSafeInset);
+  const maxArrowOffset = Math.max(0, tooltipWidth / 2 - arrowSafeInset);
   const clampedArrowX = Math.max(-maxArrowOffset, Math.min(maxArrowOffset, calculatedArrowX));
 
   arrowX.value = clampedArrowX;
@@ -95,29 +132,71 @@ watch(
 
 onMounted(() => {
   window.addEventListener('resize', updatePosition, { passive: true });
+  if (typeof ResizeObserver !== 'undefined' && tooltipRef.value) {
+    resizeObserver = new ResizeObserver(() => {
+      if (tooltipState.isVisible) {
+        computePlacementFromElement();
+      }
+    });
+    resizeObserver.observe(tooltipRef.value);
+  }
 });
 
 onUnmounted(() => {
   window.removeEventListener('resize', updatePosition);
+  if (resizeObserver) {
+    resizeObserver.disconnect();
+    resizeObserver = null;
+  }
 });
 </script>
 
 <template>
   <div
     ref="tooltipRef"
+    role="tooltip"
     :class="[
       'global-tooltip',
       {
-        'visible': tooltipState.isVisible && isPositioned,
-        'tooltip-bottom': isBottom
+        visible: tooltipState.isVisible && isPositioned,
+        'tooltip-bottom': isBottom,
       },
-      tooltipState.customClass
+      tooltipState.customClass,
     ]"
     :style="{
       transform: `translate3d(${x}px, ${y}px, 0)`,
-      '--arrow-offset': `${arrowX}px`
+      '--arrow-offset': `${bubbleGeometry.clampedArrowX}px`,
     }"
   >
+    <!-- Layer 1: Unified Glassmorphic Backdrop Blur clipped to exact speech-bubble + arrow contour -->
+    <div
+      class="global-tooltip-glass"
+      aria-hidden="true"
+      :style="{
+        top: `${-bubbleGeometry.pad}px`,
+        left: `${-bubbleGeometry.pad}px`,
+        width: `${bubbleGeometry.svgWidth}px`,
+        height: `${bubbleGeometry.svgHeight}px`,
+        clipPath: `path('${bubbleGeometry.clipPathD}')`,
+      }"
+    ></div>
+
+    <!-- Layer 2: Single Continuous C¹ Vector Speech-Bubble Fill + 1px Perimeter Stroke (zero base line under arrow) -->
+    <svg
+      class="global-tooltip-bubble-svg"
+      aria-hidden="true"
+      :width="bubbleGeometry.svgWidth"
+      :height="bubbleGeometry.svgHeight"
+      :viewBox="bubbleGeometry.viewBox"
+      :style="{
+        top: `${-bubbleGeometry.pad}px`,
+        left: `${-bubbleGeometry.pad}px`,
+      }"
+    >
+      <path class="global-tooltip-bubble-path" :d="bubbleGeometry.svgPathD" />
+    </svg>
+
+    <!-- Layer 3: Clamped Balanced Text Copy -->
     <span class="global-tooltip-text">{{ tooltipState.text }}</span>
   </div>
 </template>
@@ -125,22 +204,21 @@ onUnmounted(() => {
 <style scoped>
 .global-tooltip {
   /* Generic Styling Variables */
-  --nu-tooltip-bg: var(--nano-tooltip-bg, #0f172a);
+  --nu-tooltip-bg: var(--nano-tooltip-bg, rgba(15, 23, 42, 0.92));
   --nu-tooltip-color: var(--nano-tooltip-color, #f8fafc);
   --nu-tooltip-radius: var(--nano-tooltip-radius, var(--nano-radius-md, 9px));
   --nu-tooltip-padding: var(--nano-tooltip-padding, 8px 14px);
   --nu-tooltip-shadow: var(--nano-tooltip-shadow, 0 10px 28px rgba(0, 0, 0, 0.45));
   --nu-tooltip-border: var(--nano-tooltip-border, 1px solid rgba(148, 163, 184, 0.24));
-  --nu-tooltip-arrow-border: var(--nano-tooltip-arrow-border, rgba(148, 163, 184, 0.24));
+  --nu-tooltip-arrow-border: var(--nano-tooltip-arrow-border, rgba(148, 163, 184, 0.28));
 
   position: fixed;
   top: 0;
   left: 0;
   z-index: 99999;
   box-sizing: border-box;
-  background: var(--nu-tooltip-bg);
-  backdrop-filter: blur(var(--nano-blur-md, 10px));
-  -webkit-backdrop-filter: blur(var(--nano-blur-md, 10px));
+  background: transparent;
+  border: none;
   color: var(--nu-tooltip-color);
   padding: var(--nu-tooltip-padding);
   border-radius: var(--nu-tooltip-radius);
@@ -153,15 +231,39 @@ onUnmounted(() => {
   white-space: normal;
   word-wrap: break-word;
   pointer-events: none;
-  box-shadow: var(--nu-tooltip-shadow);
-  border: var(--nu-tooltip-border);
   /* Transition ONLY opacity so singleton tooltip never slides diagonally across viewport from stale (x,y) */
   transition: opacity 0.14s ease;
   opacity: 0;
   visibility: hidden;
 }
 
+.global-tooltip-glass {
+  position: absolute;
+  z-index: 0;
+  pointer-events: none;
+  backdrop-filter: blur(var(--nano-blur-md, 10px));
+  -webkit-backdrop-filter: blur(var(--nano-blur-md, 10px));
+}
+
+.global-tooltip-bubble-svg {
+  position: absolute;
+  z-index: 1;
+  display: block;
+  overflow: visible;
+  pointer-events: none;
+  filter: drop-shadow(0 8px 22px rgba(0, 0, 0, 0.36));
+}
+
+.global-tooltip-bubble-path {
+  fill: var(--nu-tooltip-bg);
+  stroke: var(--nu-tooltip-arrow-border);
+  stroke-width: 1px;
+  vector-effect: non-scaling-stroke;
+}
+
 .global-tooltip-text {
+  position: relative;
+  z-index: 2;
   display: -webkit-box;
   -webkit-box-orient: vertical;
   -webkit-line-clamp: var(--nano-tooltip-max-lines, 4);
@@ -171,35 +273,6 @@ onUnmounted(() => {
   text-overflow: ellipsis;
   word-break: break-word;
   text-wrap: balance;
-}
-
-.global-tooltip::after {
-  content: '';
-  position: absolute;
-  left: calc(50% + var(--arrow-offset, 0px));
-  bottom: -5.5px;
-  margin-left: -5px;
-  width: 10px;
-  height: 10px;
-  box-sizing: border-box;
-  background: var(--nu-tooltip-bg);
-  border-right: 1px solid var(--nu-tooltip-arrow-border);
-  border-bottom: 1px solid var(--nu-tooltip-arrow-border);
-  transform: rotate(45deg);
-  border-radius: 0 0 2px 0;
-  /* Extend 1px above diagonal so arrow masks the 1px bottom border of .global-tooltip seamlessly */
-  clip-path: polygon(100% -1px, 100% 100%, -1px 100%);
-}
-
-.global-tooltip.tooltip-bottom::after {
-  bottom: auto;
-  top: -5.5px;
-  border-right: none;
-  border-bottom: none;
-  border-left: 1px solid var(--nu-tooltip-arrow-border);
-  border-top: 1px solid var(--nu-tooltip-arrow-border);
-  border-radius: 2px 0 0 0;
-  clip-path: polygon(-1px -1px, 100% -1px, -1px 100%);
 }
 
 .global-tooltip.visible {
