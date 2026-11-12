@@ -503,7 +503,7 @@ export function computeFloating3DArtifacts(
       wing: 'right',
       wingSlot: 'top',
       tag: 'Φ SWEEP',
-      color: '#38bdf8',
+      color: 'var(--nano-lab-accent-sky)',
       pos3D: [
         39.5 + Math.cos(phaseRad * 0.65) * 1.8,
         4.6 + Math.sin(phaseRad * 0.65) * 1.1,
@@ -520,7 +520,7 @@ export function computeFloating3DArtifacts(
       wing: 'left',
       wingSlot: 'top',
       tag: '□ FILAR φ⁻³',
-      color: '#818cf8',
+      color: 'var(--nano-lab-accent-indigo)',
       pos3D: [
         -7.5 + Math.sin(phaseRad * 0.55) * 1.8,
         5.4 + Math.cos(phaseRad * 0.55) * 1.1,
@@ -537,7 +537,7 @@ export function computeFloating3DArtifacts(
       wing: 'right',
       wingSlot: 'bottom',
       tag: '△ KLIN φ⁻¹',
-      color: '#2dd4bf',
+      color: 'var(--nano-lab-accent-teal)',
       pos3D: [
         39.5 + Math.sin(phaseRad * 0.72 + 1.4) * 1.8,
         26.8 + Math.cos(phaseRad * 0.72 + 1.4) * 1.1,
@@ -554,7 +554,7 @@ export function computeFloating3DArtifacts(
       wing: 'left',
       wingSlot: 'bottom',
       tag: '○ SONIC .NSD',
-      color: '#f59e0b',
+      color: 'var(--nano-lab-accent-amber)',
       pos3D: [
         -7.5 + Math.cos(phaseRad * 0.8 + 2.2) * 1.8,
         26.6 + Math.sin(phaseRad * 0.8 + 2.2) * 1.1,
@@ -708,12 +708,12 @@ export function computeOrbitingMathTokens3D(
   stageBounds = { minX: -21, maxX: 53, minY: -6, maxY: 38 }
 ) {
   const tokens = [
-    { id: 'tok-1', text: 'Math.sqrt(5)', color: '#38bdf8' },
-    { id: 'tok-2', text: 'φ⁻¹ = 0.618', color: '#a78bfa' },
-    { id: 'tok-3', text: 'π_XY(x,y,z)', color: '#34d399' },
-    { id: 'tok-4', text: '432·φ² Hz', color: '#fbbf24' },
-    { id: 'tok-5', text: 'cos(π/5)=φ/2', color: '#f472b6' },
-    { id: 'tok-6', text: 'L(Φ) ≤ 10⁻⁹', color: '#2dd4bf' },
+    { id: 'tok-1', text: 'Math.sqrt(5)', color: 'var(--nano-lab-accent-sky)' },
+    { id: 'tok-2', text: 'φ⁻¹ = 0.618', color: 'var(--nano-lab-accent-violet)' },
+    { id: 'tok-3', text: 'π_XY(x,y,z)', color: 'var(--nano-lab-accent-emerald)' },
+    { id: 'tok-4', text: '432·φ² Hz', color: 'var(--nano-lab-accent-gold)' },
+    { id: 'tok-5', text: 'cos(π/5)=φ/2', color: 'var(--nano-lab-accent-pink)' },
+    { id: 'tok-6', text: 'L(Φ) ≤ 10⁻⁹', color: 'var(--nano-lab-accent-teal)' },
   ];
 
   return tokens
@@ -830,8 +830,8 @@ export function computeSpherePlanetoidBelt3D(
       spinSpeed: 2.6,
       radialBand: 1.0,
       baseR: 0.34,
-      color: '#67e8f9',
-      highlight: '#ecfeff',
+      color: 'var(--nano-lab-accent-sky)',
+      highlight: 'var(--nano-lab-planetoid-facet)',
       radii: [1.22, 0.74, 1.1, 0.68, 1.15, 0.78, 0.92],
     },
     {
@@ -841,8 +841,8 @@ export function computeSpherePlanetoidBelt3D(
       spinSpeed: -3.1,
       radialBand: 1.07,
       baseR: 0.27,
-      color: '#38bdf8',
-      highlight: '#bae6fd',
+      color: 'var(--nano-lab-accent-sky)',
+      highlight: 'var(--nano-lab-planetoid-facet)',
       radii: [1.16, 0.72, 1.18, 0.76, 1.04, 0.8],
     },
     {
@@ -852,8 +852,8 @@ export function computeSpherePlanetoidBelt3D(
       spinSpeed: 2.2,
       radialBand: 0.94,
       baseR: 0.31,
-      color: '#a78bfa',
-      highlight: '#ede9fe',
+      color: 'var(--nano-lab-accent-violet)',
+      highlight: 'var(--nano-lab-planetoid-facet)',
       radii: [1.24, 0.78, 1.05, 0.66, 1.14, 0.74, 0.9],
     },
     {
@@ -863,8 +863,8 @@ export function computeSpherePlanetoidBelt3D(
       spinSpeed: -2.4,
       radialBand: 1.03,
       baseR: 0.25,
-      color: '#2dd4bf',
-      highlight: '#ccfbf1',
+      color: 'var(--nano-lab-accent-teal)',
+      highlight: 'var(--nano-lab-planetoid-facet)',
       radii: [1.18, 0.7, 1.12, 0.78, 1.08, 0.74],
     },
     {
@@ -874,8 +874,8 @@ export function computeSpherePlanetoidBelt3D(
       spinSpeed: 2.9,
       radialBand: 0.97,
       baseR: 0.33,
-      color: '#67e8f9',
-      highlight: '#cffafe',
+      color: 'var(--nano-lab-accent-sky)',
+      highlight: 'var(--nano-lab-planetoid-facet)',
       radii: [1.2, 0.72, 1.15, 0.69, 1.1, 0.82, 0.88],
     },
     {
@@ -885,8 +885,8 @@ export function computeSpherePlanetoidBelt3D(
       spinSpeed: -2.7,
       radialBand: 1.06,
       baseR: 0.24,
-      color: '#818cf8',
-      highlight: '#e0e7ff',
+      color: 'var(--nano-lab-accent-indigo)',
+      highlight: 'var(--nano-lab-planetoid-facet)',
       radii: [1.15, 0.76, 1.2, 0.71, 1.05, 0.79],
     },
     {
@@ -896,8 +896,8 @@ export function computeSpherePlanetoidBelt3D(
       spinSpeed: 3.3,
       radialBand: 0.99,
       baseR: 0.29,
-      color: '#34d399',
-      highlight: '#d1fae5',
+      color: 'var(--nano-lab-accent-emerald)',
+      highlight: 'var(--nano-lab-planetoid-facet)',
       radii: [1.21, 0.73, 1.09, 0.67, 1.16, 0.77, 0.91],
     },
   ];
@@ -1678,27 +1678,27 @@ export function sampleMonteCarloNShadow(numSamples = 320, phaseOffset = 0) {
     const inRightStemCorridor = x >= 20.75 && x <= 25 && y >= 7 && y <= 25;
 
     let zone = 'void';
-    let color = 'rgba(148, 163, 184, 0.26)';
+    let color = 'var(--nano-lab-mc-void)';
     let r = 0.22;
 
     if (inPillar) {
       zone = 'pillar';
-      color = '#818cf8';
+      color = 'var(--nano-lab-accent-indigo)';
       r = 0.36;
       pillarHits++;
     } else if (inWedge) {
       zone = 'wedge';
-      color = '#22d3ee';
+      color = 'var(--nano-lab-accent-sky)';
       r = 0.36;
       wedgeHits++;
     } else if (inSphere) {
       zone = 'sphere';
-      color = '#38bdf8';
+      color = 'var(--nano-lab-accent-teal)';
       r = 0.38;
       sphereHits++;
     } else if (inRightStemCorridor) {
       zone = 'n-corridor';
-      color = '#10b981';
+      color = 'var(--nano-lab-accent-emerald)';
       r = 0.28;
       nBridgeHits++;
     }
