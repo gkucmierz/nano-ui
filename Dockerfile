@@ -1,5 +1,5 @@
 # Stage 1: Build the application playground
-FROM node:lts-alpine as build-stage
+FROM node:22-alpine AS build-stage
 
 WORKDIR /app
 
@@ -15,7 +15,7 @@ COPY . .
 RUN npm run build:ssg
 
 # Stage 2: Serve the application with Nginx
-FROM nginx:stable-alpine as production-stage
+FROM nginx:stable-alpine AS production-stage
 
 COPY --from=build-stage /app/dist-ssg /usr/share/nginx/html
 COPY nginx.conf /etc/nginx/conf.d/default.conf

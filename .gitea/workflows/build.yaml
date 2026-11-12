@@ -1,4 +1,4 @@
-name: Deploy Playground & Publish Package (nano-ui)
+name: Deploy Playground & Publish Package (@gkucmierz/nano-ui)
 
 on:
   push:
@@ -10,123 +10,24 @@ on:
 
 jobs:
   publish:
-    name: Test, Sanitize & Dual-Publish Package (Gitea + NPM)
-    runs-on: self-hosted-pl
-    steps:
-      - name: Check out repository code
-        uses: actions/checkout@v4
-
-      - name: Install dependencies, build library & run unit tests
-        run: |
-          if [ -f package-lock.json ]; then
-            sed -i 's|http://gitea:3000/api/packages/|https://gitea.7u.pl/api/packages/|g' package-lock.json
-          fi
-          npm install --legacy-peer-deps --registry=https://registry.npmjs.org/ --@gkucmierz:registry=https://gitea.7u.pl/api/packages/gkucmierz/npm/
-          npm run build
-          npm test
-
-      - name: Publish to Internal Registry (Gitea Packages + Auto-Link)
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.LOCAL_PACKAGE_REGISTRY || secrets.GITEA_TOKEN || secrets.GITHUB_TOKEN }}
-        run: |
-          if [ -z "$NODE_AUTH_TOKEN" ]; then
-            echo "⚠️ LOCAL_PACKAGE_REGISTRY is not set, skipping Gitea Packages publish."
-            exit 0
-          fi
-          TMP_NPMRC=$(mktemp)
-          trap 'rm -f "$TMP_NPMRC"' EXIT
-          NAME=$(node --input-type=module -e 'import fs from "node:fs"; console.log(JSON.parse(fs.readFileSync("./package.json", "utf8")).name)')
-          VER=$(node --input-type=module -e 'import fs from "node:fs"; console.log(JSON.parse(fs.readFileSync("./package.json", "utf8")).version)')
-          REG="https://gitea.7u.pl/api/packages/gkucmierz/npm/"
-          printf "@gkucmierz:registry=%s\nregistry=%s\n//gitea.7u.pl/api/packages/gkucmierz/npm/:_authToken=%s\nalways-auth=true\n" "$REG" "$REG" "$NODE_AUTH_TOKEN" > "$TMP_NPMRC"
-          if NPM_CONFIG_USERCONFIG="$TMP_NPMRC" npm view "${NAME}@${VER}" --registry="$REG" version >/dev/null 2>&1; then
-            echo "ℹ️ ${NAME}@${VER} already published to Gitea Packages — skipping upload."
-          else
-            NPM_CONFIG_USERCONFIG="$TMP_NPMRC" npm publish --registry="$REG" || echo "ℹ️ Gitea Packages publish skipped."
-          fi
-          node --input-type=module -e '
-            const token = process.env.NODE_AUTH_TOKEN || "";
-            if (token) {
-              const url = "https://gitea.7u.pl/api/v1/packages/gkucmierz/npm/%40gkucmierz%2Fnano-ui/-/link/nano-ui";
-              const res = await fetch(url, { method: "POST", headers: { Authorization: `token ${token}` } });
-              console.log(`🔗 [Gitea Package Link] Linked @gkucmierz/nano-ui -> gkucmierz/nano-ui (HTTP ${res.status})`);
-            }
-          '
-
-      - name: Publish to Public NPM Registry (Blocked if UNLICENSED or Repo Private)
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_AUTH_TOKEN }}
-        run: |
-          ALLOW_PUBLIC=$(node --input-type=module -e '
-            import fs from "node:fs";
-            const pkg = JSON.parse(fs.readFileSync("./package.json", "utf8"));
-            const lic = String(pkg.license || "").trim().toUpperCase();
-            if (pkg.private === true || !lic || lic === "UNLICENSED" || lic === "PROPRIETARY") {
-              console.error(`🔒 [Privacy Gate] package.json declares license="${pkg.license || "NONE"}" — strictly blocking public npmjs.org publish.`);
-              console.log("BLOCK");
-              process.exit(0);
-            }
-            try {
-              const r = await fetch("https://gitea.7u.pl/api/v1/repos/gkucmierz/nano-ui");
-              if (r.status !== 200) {
-                console.error(`🔒 [Privacy Gate] Repository gkucmierz/nano-ui is PRIVATE on Gitea (HTTP ${r.status}) — strictly blocking public npmjs.org publish.`);
-                console.log("BLOCK");
-              } else {
-                console.log("ALLOW");
-              }
-            } catch {
-              console.log("ALLOW");
-            }
-          ')
-          if [ "$ALLOW_PUBLIC" != "ALLOW" ] || [ -z "$NODE_AUTH_TOKEN" ]; then
-            exit 0
-          fi
-          TMP_NPMRC=$(mktemp)
-          cp package.json package.json.bak
-          trap 'mv -f package.json.bak package.json 2>/dev/null || true; rm -f "$TMP_NPMRC"' EXIT
-          printf "@gkucmierz:registry=https://registry.npmjs.org/\nregistry=https://registry.npmjs.org/\n//registry.npmjs.org/:_authToken=%s\n" "$NODE_AUTH_TOKEN" > "$TMP_NPMRC"
-          NPM_CONFIG_USERCONFIG="$TMP_NPMRC" npm publish --registry="https://registry.npmjs.org/" --access public || echo "⚠️ Public npmjs.org publish (@gkucmierz/nano-ui) skipped."
-          node --input-type=module -e '
-            import fs from "node:fs";
-            const pkg = JSON.parse(fs.readFileSync("package.json.bak", "utf8"));
-            pkg.name = "nano-ui";
-            fs.writeFileSync("package.json", JSON.stringify(pkg, null, 2) + "\n");
-          '
-          NPM_CONFIG_USERCONFIG="$TMP_NPMRC" npm publish --registry="https://registry.npmjs.org/" --access public --ignore-scripts || echo "⚠️ Unscoped public npmjs.org mirror (nano-ui) skipped or blocked by similarity filter."
-          mv -f package.json.bak package.json
+    uses: gkucmierz/ci-workflows/.gitea/workflows/publish-package.yml@main
+    with:
+      runs_on: self-hosted-pl
+      run_tests: true
+      run_build: true
+      publish_private: true
+      publish_npmjs: true
+      gitea_owner: 'gkucmierz'
+      package_scope: '@gkucmierz'
+    secrets: inherit
 
   deploy-playground:
-    name: Zero-Downtime Playground Deploy (nano.7u.pl)
     needs: publish
-    runs-on: self-hosted-pl
-    steps:
-      - name: Check out repository code
-        uses: actions/checkout@v4
-
-      - name: Build & Zero-Downtime Hot-Swap Playground Container
-        run: |
-          docker network inspect npm_public >/dev/null 2>&1 || docker network create npm_public
-          if [ -f package-lock.json ]; then
-            sed -i 's|https://gitea.7u.pl/api/packages/|http://gitea:3000/api/packages/|g' package-lock.json
-          fi
-          if [ -f .npmrc ]; then
-            sed -i 's|https://gitea.7u.pl/api/packages/|http://gitea:3000/api/packages/|g' .npmrc
-          fi
-          DOCKER_BUILDKIT=0 docker build --network npm_public -t nano-ui:latest .
-          if docker ps --format '{{.Names}}' | grep -qx "nano-ui" && grep -q "/usr/share/nginx/html" Dockerfile; then
-            TMP_CID=$(docker create nano-ui:latest)
-            TMP_DIST=$(mktemp -d)
-            trap 'docker rm -f "$TMP_CID" >/dev/null 2>&1 || true; rm -rf "$TMP_DIST"' EXIT
-            docker cp "${TMP_CID}:/usr/share/nginx/html/." "$TMP_DIST/"
-            docker rm -f "$TMP_CID" >/dev/null 2>&1 || true
-            docker exec nano-ui sh -c 'mkdir -p /usr/share/nginx/html'
-            docker cp "$TMP_DIST/." "nano-ui:/usr/share/nginx/html/"
-            docker exec nano-ui nginx -s reload 2>/dev/null || true
-            rm -rf "$TMP_DIST"
-          else
-            docker compose up -d --build --force-recreate --remove-orphans
-            NPM_CONTAINER=$(docker ps --format '{{.Names}}' | grep -iE 'nginx-proxy-manager|npm-app|npm' | head -n 1 || true)
-            if [ -n "$NPM_CONTAINER" ]; then
-              docker exec "$NPM_CONTAINER" nginx -s reload 2>/dev/null || true
-            fi
-          fi
+    uses: gkucmierz/ci-workflows/.gitea/workflows/zero-downtime-deploy.yml@main
+    with:
+      container_name: nano-ui
+      runs_on: self-hosted-pl
+      hot_swap_static: true
+      wait_timeout_sec: 180
+      healthcheck_url: 'https://nano.7u.pl/'
+    secrets: inherit
