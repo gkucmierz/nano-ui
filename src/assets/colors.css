@@ -168,9 +168,13 @@
   --nano-modal-btn-primary-hover: #4f46e5;
   --nano-modal-btn-secondary: #27272a;
   --nano-modal-btn-secondary-hover: #3f3f46;
+  --nano-modal-btn-danger: #ef4444;
+  --nano-modal-btn-success: #16a34a;
   --nano-modal-shadow: 0 calc(var(--nano-unit) * 2.5) calc(var(--nano-unit) * 6) rgba(0, 0, 0, var(--nano-alpha-medium));
   --nano-modal-header-bg: rgba(0, 0, 0, var(--nano-alpha-muted));
   --nano-modal-footer-bg: rgba(0, 0, 0, var(--nano-alpha-muted));
+  --nano-modal-glass-header-bg: rgba(0, 0, 0, 0.28);
+  --nano-modal-glass-footer-bg: rgba(0, 0, 0, 0.28);
   --nano-modal-close-hover: rgba(255, 255, 255, var(--nano-alpha-muted));
   --nano-modal-close-color: #ffffff;
 
@@ -602,9 +606,13 @@ html.light,
   --nano-modal-btn-primary-hover: #4338ca;
   --nano-modal-btn-secondary: #f1f5f9;
   --nano-modal-btn-secondary-hover: #e2e8f0;
+  --nano-modal-btn-danger: #dc2626;
+  --nano-modal-btn-success: #16a34a;
   --nano-modal-shadow: 0 calc(var(--nano-unit) * 1.5) calc(var(--nano-unit) * 4) rgba(15, 23, 42, var(--nano-alpha-muted));
   --nano-modal-header-bg: rgba(15, 23, 42, var(--nano-alpha-subtle));
   --nano-modal-footer-bg: rgba(15, 23, 42, var(--nano-alpha-subtle));
+  --nano-modal-glass-header-bg: rgba(255, 255, 255, 0.76);
+  --nano-modal-glass-footer-bg: rgba(255, 255, 255, 0.76);
   --nano-modal-close-hover: rgba(15, 23, 42, var(--nano-alpha-muted));
   --nano-modal-close-color: #0f172a;
 
