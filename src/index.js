@@ -74,6 +74,27 @@ import NanoTree from './components/NanoTree.vue';
 import NanoFieldset from './components/NanoFieldset.vue';
 import NanoLightbox from './components/NanoLightbox.vue';
 import NanoFitText from './components/NanoFitText.vue';
+import NanoHeatmap from './components/NanoHeatmap.vue';
+import {
+  HEATMAP_SCALES,
+  HEATMAP_PALETTES,
+  HEATMAP_ZERO_COLOR_DARK,
+  HEATMAP_ZERO_COLOR_LIGHT,
+  HEATMAP_DARK_L_MIN,
+  HEATMAP_DARK_L_MAX,
+  HEATMAP_LIGHT_L_MAX,
+  HEATMAP_LIGHT_L_MIN,
+  isHeatmapZeroValue,
+  computeHeatmapScale,
+  resolveHeatmapCellOklch,
+  resolveHeatmapCellColor,
+  resolveHeatmapCellRgb,
+  resolveHeatmapTextColor,
+  buildHeatmapColorLut,
+  computeGaussianDensityGrid,
+  normalizeHeatmapMatrixData,
+  formatHeatmapCompactValue,
+} from './utils/heatmapScale.js';
 import {
   parseLightboxAspectRatio,
   computeLightboxStageGeometry,
@@ -509,6 +530,25 @@ export {
   NanoFieldset,
   NanoLightbox,
   NanoFitText,
+  NanoHeatmap,
+  HEATMAP_SCALES,
+  HEATMAP_PALETTES,
+  HEATMAP_ZERO_COLOR_DARK,
+  HEATMAP_ZERO_COLOR_LIGHT,
+  HEATMAP_DARK_L_MIN,
+  HEATMAP_DARK_L_MAX,
+  HEATMAP_LIGHT_L_MAX,
+  HEATMAP_LIGHT_L_MIN,
+  isHeatmapZeroValue,
+  computeHeatmapScale,
+  resolveHeatmapCellOklch,
+  resolveHeatmapCellColor,
+  resolveHeatmapCellRgb,
+  resolveHeatmapTextColor,
+  buildHeatmapColorLut,
+  computeGaussianDensityGrid,
+  normalizeHeatmapMatrixData,
+  formatHeatmapCompactValue,
   parseLightboxAspectRatio,
   computeLightboxStageGeometry,
   UNIX_TREE_GLYPHS,
@@ -869,5 +909,6 @@ export default {
     app.component(`${cp}NanoFieldset`, NanoFieldset);
     app.component(`${cp}NanoLightbox`, NanoLightbox);
     app.component(`${cp}NanoFitText`, NanoFitText);
+    app.component(`${cp}NanoHeatmap`, NanoHeatmap);
   },
 };

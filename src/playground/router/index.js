@@ -38,6 +38,7 @@ import SortableDoc from '../docs/SortableDoc.vue';
 import KineticAnimationsDoc from '../docs/KineticAnimationsDoc.vue';
 import CoverFlowDoc from '../docs/CoverFlowDoc.vue';
 import DropzoneDoc from '../docs/DropzoneDoc.vue';
+import HeatmapDoc from '../docs/HeatmapDoc.vue';
 import LayoutDirectivesDoc from '../docs/LayoutDirectivesDoc.vue';
 import NotFoundDoc from '../docs/NotFoundDoc.vue';
 
@@ -480,6 +481,17 @@ export const routes = [
       componentName: 'NanoDropzone',
       type: 'component',
       description: 'Unified drag-and-drop file upload box and anti-flicker full-container drag-hover overlay with MIME/extension and size validation.',
+    },
+  },
+  {
+    path: '/docs/heatmap',
+    name: 'Heatmap',
+    component: HeatmapDoc,
+    meta: {
+      title: 'NanoHeatmap (OKLCH Perceptual Matrix & 2D KDE) | Nano UI',
+      componentName: 'NanoHeatmap',
+      type: 'component',
+      description: 'Perceptual OKLCH matrix and 2D KDE canvas heatmap with Zero-Value Invariant, log1p/p95 Pareto outlier scaling, and Coupled Selection (CSHR).',
     },
   },
   {
