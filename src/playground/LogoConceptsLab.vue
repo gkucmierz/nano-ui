@@ -1068,16 +1068,23 @@ const concepts = [
                       <stop offset="100%" stop-color="#0284c7" />
                     </linearGradient>
 
-                    <radialGradient id="holoSpaceGlow" cx="50%" cy="50%" r="55%">
-                      <stop offset="0%" stop-color="rgba(56, 189, 248, 0.16)" />
-                      <stop offset="60%" stop-color="rgba(99, 102, 241, 0.07)" />
-                      <stop offset="100%" stop-color="rgba(7, 11, 22, 0)" />
+                    <!-- Theme-Reactive Ambient Radial Glows (Styled via CSS stop-color / stop-opacity for Safari + Chrome SVG) -->
+                    <radialGradient id="stageGlowIndigo" cx="26%" cy="28%" r="58%">
+                      <stop offset="0%" class="lab-stop-glow-indigo-start" />
+                      <stop offset="58%" class="lab-stop-glow-indigo-mid" />
+                      <stop offset="100%" class="lab-stop-glow-indigo-end" />
+                    </radialGradient>
+
+                    <radialGradient id="stageGlowCyan" cx="74%" cy="70%" r="58%">
+                      <stop offset="0%" class="lab-stop-glow-cyan-start" />
+                      <stop offset="58%" class="lab-stop-glow-cyan-mid" />
+                      <stop offset="100%" class="lab-stop-glow-cyan-end" />
                     </radialGradient>
 
                     <radialGradient id="cursorHoloGlow" cx="50%" cy="50%" r="50%">
-                      <stop offset="0%" stop-color="rgba(103, 232, 249, 0.34)" />
-                      <stop offset="55%" stop-color="rgba(129, 140, 248, 0.14)" />
-                      <stop offset="100%" stop-color="rgba(15, 23, 42, 0)" />
+                      <stop offset="0%" class="lab-stop-cursor-glow-start" />
+                      <stop offset="55%" class="lab-stop-cursor-glow-mid" />
+                      <stop offset="100%" class="lab-stop-cursor-glow-end" />
                     </radialGradient>
 
                     <!-- Continuous 3D Depth-Luminance Gradient across the Planetoid Orbital Ring (sin α = -1 back -> 0 tips -> +1 front) -->
@@ -1089,33 +1096,58 @@ const concepts = [
                       :x2="scene3D.sphere.ringGrad.x2"
                       :y2="scene3D.sphere.ringGrad.y2"
                     >
-                      <stop offset="0%" stop-color="#38bdf8" stop-opacity="0.20" />
-                      <stop offset="30%" stop-color="#67e8f9" stop-opacity="0.36" />
-                      <stop offset="50%" stop-color="#7dd3fc" stop-opacity="0.54" />
-                      <stop offset="75%" stop-color="#a5f3fc" stop-opacity="0.72" />
-                      <stop offset="100%" stop-color="#e0f2fe" stop-opacity="0.88" />
+                      <stop offset="0%" class="lab-stop-orbit-0" />
+                      <stop offset="30%" class="lab-stop-orbit-1" />
+                      <stop offset="50%" class="lab-stop-orbit-2" />
+                      <stop offset="75%" class="lab-stop-orbit-3" />
+                      <stop offset="100%" class="lab-stop-orbit-4" />
                     </linearGradient>
                   </defs>
 
-                  <!-- Outer Holographic Space Backdrop -->
+                  <!-- Outer Holographic / Architectural Blueprint Stage Backdrop -->
                   <rect
                     :x="deviceViewport === 'mobile' ? -1.2 : -25.2"
                     :y="deviceViewport === 'mobile' ? -1.2 : -10.2"
                     :width="deviceViewport === 'mobile' ? 34.4 : 82.4"
                     :height="deviceViewport === 'mobile' ? 34.4 : 52.4"
                     rx="4.5"
-                    :fill="silhouetteMode ? '#09090b' : '#070b16'"
-                    stroke="rgba(99, 102, 241, 0.32)"
+                    :fill="silhouetteMode ? '#09090b' : 'var(--nano-lab-stage-bg)'"
+                    :stroke="silhouetteMode ? '#ffffff' : 'var(--nano-lab-stage-border)'"
                     stroke-width="0.35"
                   />
-                  <circle cx="16" cy="16" r="21" fill="url(#holoSpaceGlow)" />
+                  <g v-if="!silhouetteMode" pointer-events="none">
+                    <ellipse cx="6" cy="9" rx="31" ry="22" fill="url(#stageGlowIndigo)" />
+                    <ellipse cx="26" cy="23" rx="31" ry="22" fill="url(#stageGlowCyan)" />
+                  </g>
+
+                  <!-- Subtle Architectural Drafting Grid Axes on Stage -->
+                  <g
+                    v-if="showGoldenGrid && !silhouetteMode"
+                    stroke="var(--nano-lab-grid-stroke)"
+                    stroke-width="0.16"
+                    stroke-dasharray="0.7 0.7"
+                    pointer-events="none"
+                  >
+                    <line
+                      :x1="deviceViewport === 'mobile' ? -0.5 : -24.2"
+                      y1="16"
+                      :x2="deviceViewport === 'mobile' ? 32.5 : 56.2"
+                      y2="16"
+                    />
+                    <line
+                      x1="16"
+                      :y1="deviceViewport === 'mobile' ? -0.5 : -9.2"
+                      x2="16"
+                      :y2="deviceViewport === 'mobile' ? 32.5 : 41.2"
+                    />
+                  </g>
 
                   <!-- 3D Orbital Halo Ring around (16, 16, 0) -->
                   <polyline
                     v-if="showMathArtifacts"
                     :points="scene3D.orbitRingPoints"
                     fill="none"
-                    stroke="rgba(56, 189, 248, 0.25)"
+                    :stroke="silhouetteMode ? 'rgba(255, 255, 255, 0.35)' : 'var(--nano-lab-orbit-ring-stroke)'"
                     stroke-width="0.24"
                     stroke-dasharray="0.8 0.55"
                   />
@@ -1130,8 +1162,8 @@ const concepts = [
                     >
                       <polygon
                         :points="tok.polygonPoints"
-                        :fill="tok.color"
-                        stroke="rgba(255, 255, 255, 0.55)"
+                        :fill="silhouetteMode ? '#ffffff' : tok.color"
+                        :stroke="silhouetteMode ? '#09090b' : 'var(--nano-lab-token-stroke)'"
                         stroke-width="0.08"
                         stroke-linejoin="round"
                       />
@@ -1139,7 +1171,7 @@ const concepts = [
                         v-if="deviceViewport !== 'mobile'"
                         x="0.7"
                         y="0.35"
-                        :fill="tok.color"
+                        :fill="silhouetteMode ? '#ffffff' : tok.color"
                         font-size="1.25"
                         font-weight="700"
                         font-family="ui-monospace, SFMono-Regular, monospace"
@@ -1161,7 +1193,7 @@ const concepts = [
                         :y1="art.y"
                         :x2="art.anchorX"
                         :y2="art.anchorY"
-                        :stroke="art.isLocked ? '#10b981' : art.color"
+                        :stroke="silhouetteMode ? '#ffffff' : art.isLocked ? 'var(--nano-lab-accent-locked)' : art.color"
                         stroke-width="0.2"
                         stroke-dasharray="0.45 0.45"
                         opacity="0.65"
@@ -1173,14 +1205,14 @@ const concepts = [
                           width="58"
                           height="25"
                           rx="2.8"
-                          fill="rgba(15, 23, 42, 0.9)"
-                          :stroke="art.isLocked ? '#10b981' : art.color"
+                          :fill="silhouetteMode ? '#09090b' : art.isLocked ? 'var(--nano-lab-card-bg-locked)' : 'var(--nano-lab-card-bg-back)'"
+                          :stroke="silhouetteMode ? '#ffffff' : art.isLocked ? 'var(--nano-lab-accent-locked)' : art.color"
                           stroke-width="0.75"
                         />
                         <text
                           x="-26"
                           y="-7.2"
-                          :fill="art.isLocked ? '#10b981' : art.color"
+                          :fill="silhouetteMode ? '#ffffff' : art.isLocked ? 'var(--nano-lab-accent-locked)' : art.color"
                           font-size="3.1"
                           font-weight="800"
                           font-family="ui-monospace, SFMono-Regular, monospace"
@@ -1188,7 +1220,7 @@ const concepts = [
                           {{ art.tag }}
                         </text>
                         <g
-                          :fill="art.isLocked ? '#10b981' : '#94a3b8'"
+                          :fill="silhouetteMode ? '#d4d4d8' : art.isLocked ? 'var(--nano-lab-accent-locked)' : 'var(--nano-lab-card-text-muted)'"
                           font-size="2.7"
                           font-weight="700"
                           font-family="ui-monospace, SFMono-Regular, monospace"
@@ -1206,7 +1238,7 @@ const concepts = [
                         <text
                           x="-26"
                           y="-2.4"
-                          fill="#e2e8f0"
+                          :fill="silhouetteMode ? '#ffffff' : 'var(--nano-lab-card-text-expr)'"
                           :font-size="art.exprFontSize || 2.7"
                           v-fit-text="{ maxWidth: 51.2, minSize: 1.5, maxSize: 2.7, step: 0.05 }"
                           font-weight="700"
@@ -1221,14 +1253,14 @@ const concepts = [
                             width="32"
                             height="10"
                             rx="1.2"
-                            fill="rgba(2, 6, 23, 0.85)"
-                            stroke="rgba(148, 163, 184, 0.24)"
+                            :fill="silhouetteMode ? '#09090b' : 'var(--nano-lab-minichart-bg)'"
+                            :stroke="silhouetteMode ? 'rgba(255, 255, 255, 0.35)' : 'var(--nano-lab-minichart-border)'"
                             stroke-width="0.35"
                           />
                           <g transform="scale(0.71, 0.74)">
                             <polygon
                               :points="art.areaPoints"
-                              :fill="art.isLocked ? 'rgba(16, 185, 129, 0.18)' : 'rgba(56, 189, 248, 0.15)'"
+                              :fill="silhouetteMode ? 'rgba(255, 255, 255, 0.14)' : art.isLocked ? 'var(--nano-lab-minichart-area-locked)' : 'var(--nano-lab-minichart-area)'"
                             />
                             <rect
                               v-for="(bar, bIdx) in art.bars"
@@ -1238,20 +1270,20 @@ const concepts = [
                               :width="bar.w"
                               :height="bar.h"
                               rx="0.6"
-                              :fill="art.color"
+                              :fill="silhouetteMode ? '#ffffff' : art.isLocked ? 'var(--nano-lab-accent-locked)' : art.color"
                               opacity="0.28"
                             />
                             <polyline
                               :points="art.secondaryPoints"
                               fill="none"
-                              stroke="rgba(255, 255, 255, 0.35)"
+                              :stroke="silhouetteMode ? 'rgba(255, 255, 255, 0.45)' : 'var(--nano-lab-wave-secondary)'"
                               stroke-width="0.7"
                               stroke-dasharray="1.2 1.2"
                             />
                             <polyline
                               :points="art.sparklinePoints"
                               fill="none"
-                              :stroke="art.isLocked ? '#10b981' : art.color"
+                              :stroke="silhouetteMode ? '#ffffff' : art.isLocked ? 'var(--nano-lab-accent-locked)' : art.color"
                               stroke-width="1.2"
                               stroke-linecap="round"
                               stroke-linejoin="round"
@@ -1260,14 +1292,14 @@ const concepts = [
                               :cx="art.cursorPoint.x"
                               :cy="art.cursorPoint.y"
                               r="1.45"
-                              fill="#ffffff"
-                              :stroke="art.isLocked ? '#10b981' : art.color"
+                              :fill="silhouetteMode ? '#09090b' : 'var(--nano-lab-point-fill)'"
+                              :stroke="silhouetteMode ? '#ffffff' : art.isLocked ? 'var(--nano-lab-accent-locked)' : art.color"
                               stroke-width="0.8"
                             />
                           </g>
                         </g>
                         <g
-                          :fill="art.isLocked ? '#10b981' : '#f8fafc'"
+                          :fill="silhouetteMode ? '#ffffff' : art.isLocked ? 'var(--nano-lab-accent-locked)' : 'var(--nano-lab-card-text-primary)'"
                           font-size="2.7"
                           font-weight="800"
                           font-family="ui-monospace, SFMono-Regular, monospace"
@@ -1293,15 +1325,15 @@ const concepts = [
                     width="30.4"
                     height="30.4"
                     rx="7.2"
-                    :fill="silhouetteMode ? '#09090b' : 'rgba(15, 23, 42, 0.88)'"
-                    stroke="rgba(148, 163, 184, 0.32)"
+                    :fill="silhouetteMode ? '#09090b' : 'var(--nano-lab-tile-fill)'"
+                    :stroke="silhouetteMode ? '#ffffff' : 'var(--nano-lab-tile-stroke)'"
                     stroke-width="0.45"
                   />
 
                   <!-- Orthographic Laser Rays from 3D Solids to 2D Shadow Plane + N-Bridge Axis -->
                   <g
                     v-if="showLaserRays && !scene3D.isOrthographicLock"
-                    stroke="#10b981"
+                    :stroke="silhouetteMode ? '#ffffff' : 'var(--nano-lab-accent-emerald)'"
                     stroke-width="0.24"
                     stroke-dasharray="0.55 0.55"
                     opacity="0.72"
@@ -1312,14 +1344,14 @@ const concepts = [
                       :y1="nSculpture3D.bridgeTopA.y"
                       :x2="nSculpture3D.bridgeTopB.x"
                       :y2="nSculpture3D.bridgeTopB.y"
-                      stroke="#818cf8"
+                      :stroke="silhouetteMode ? '#ffffff' : 'var(--nano-lab-accent-indigo)'"
                     />
                     <line
                       :x1="nSculpture3D.bridgeLowA.x"
                       :y1="nSculpture3D.bridgeLowA.y"
                       :x2="nSculpture3D.bridgeLowB.x"
                       :y2="nSculpture3D.bridgeLowB.y"
-                      stroke="#38bdf8"
+                      :stroke="silhouetteMode ? '#ffffff' : 'var(--nano-lab-accent-sky)'"
                     />
                     <line
                       :x1="nSculpture3D.sphereAxisA.x"
@@ -1335,8 +1367,20 @@ const concepts = [
                     <polygon
                       v-if="primId === 'floor' && !scene3D.isOrthographicLock"
                       :points="nSculpture3D.floorPoints"
-                      :fill="scene3D.floorOccludesSolids ? 'rgba(15, 23, 42, 0.76)' : 'rgba(56, 189, 248, 0.05)'"
-                      :stroke="scene3D.floorOccludesSolids ? 'rgba(129, 140, 248, 0.68)' : 'rgba(99, 102, 241, 0.24)'"
+                      :fill="
+                        silhouetteMode
+                          ? 'rgba(9, 9, 11, 0.82)'
+                          : scene3D.floorOccludesSolids
+                            ? 'var(--nano-lab-floor-fill-occluding)'
+                            : 'var(--nano-lab-floor-fill)'
+                      "
+                      :stroke="
+                        silhouetteMode
+                          ? 'rgba(255, 255, 255, 0.45)'
+                          : scene3D.floorOccludesSolids
+                            ? 'var(--nano-lab-floor-stroke-occluding)'
+                            : 'var(--nano-lab-floor-stroke)'
+                      "
                       :stroke-width="scene3D.floorOccludesSolids ? '0.28' : '0.22'"
                       stroke-dasharray="0.6 0.4"
                     />
@@ -1358,7 +1402,7 @@ const concepts = [
                       <polygon
                         :points="scene3D.prismBox.frontPoints"
                         :fill="silhouetteMode ? '#ffffff' : 'url(#pillarFront3D)'"
-                        stroke="rgba(199, 210, 254, 0.5)"
+                        :stroke="silhouetteMode ? '#ffffff' : 'var(--nano-lab-pillar-rim)'"
                         stroke-width="0.22"
                         stroke-linejoin="round"
                       />
@@ -1381,7 +1425,7 @@ const concepts = [
                       <polygon
                         :points="scene3D.wedgeTri.frontPoints"
                         :fill="silhouetteMode ? '#ffffff' : 'url(#wedgeFront3D)'"
-                        stroke="rgba(165, 243, 252, 0.55)"
+                        :stroke="silhouetteMode ? '#ffffff' : 'var(--nano-lab-wedge-rim)'"
                         stroke-width="0.22"
                         stroke-linejoin="round"
                       />
@@ -1397,7 +1441,7 @@ const concepts = [
                         v-if="!scene3D.isOrthographicLock"
                         :points="scene3D.sphere.backRingPoints"
                         fill="none"
-                        stroke="url(#sphereOrbitRingGrad)"
+                        :stroke="silhouetteMode ? 'rgba(255, 255, 255, 0.45)' : 'url(#sphereOrbitRingGrad)'"
                         stroke-width="0.22"
                         stroke-linecap="butt"
                         stroke-linejoin="round"
@@ -1413,7 +1457,7 @@ const concepts = [
                           <polygon
                             :points="pl.outerPoints"
                             :fill="silhouetteMode ? '#d4d4d8' : pl.color"
-                            :stroke="pl.rimStroke"
+                            :stroke="silhouetteMode ? pl.rimStroke : 'var(--nano-lab-planetoid-rim)'"
                             stroke-width="0.08"
                             stroke-linejoin="round"
                           />
@@ -1431,7 +1475,7 @@ const concepts = [
                         :cy="scene3D.sphere.y"
                         :r="scene3D.sphere.r"
                         :fill="silhouetteMode ? '#ffffff' : 'url(#labSphere3D)'"
-                        stroke="rgba(165, 243, 252, 0.65)"
+                        :stroke="silhouetteMode ? '#ffffff' : 'var(--nano-lab-sphere-rim)'"
                         stroke-width="0.2"
                       />
 
@@ -1440,7 +1484,7 @@ const concepts = [
                         v-if="!scene3D.isOrthographicLock"
                         :points="scene3D.sphere.frontRingPoints"
                         fill="none"
-                        stroke="url(#sphereOrbitRingGrad)"
+                        :stroke="silhouetteMode ? 'rgba(255, 255, 255, 0.72)' : 'url(#sphereOrbitRingGrad)'"
                         stroke-width="0.22"
                         stroke-linecap="butt"
                         stroke-linejoin="round"
@@ -1456,7 +1500,7 @@ const concepts = [
                           <polygon
                             :points="pl.outerPoints"
                             :fill="silhouetteMode ? '#ffffff' : pl.color"
-                            :stroke="pl.rimStroke"
+                            :stroke="silhouetteMode ? pl.rimStroke : 'var(--nano-lab-planetoid-rim)'"
                             stroke-width="0.08"
                             stroke-linejoin="round"
                           />
@@ -1482,7 +1526,7 @@ const concepts = [
                       :y1="cursorField.y"
                       :x2="scene3D.primitiveCenters.pillar.x"
                       :y2="scene3D.primitiveCenters.pillar.y"
-                      stroke="#818cf8"
+                      :stroke="silhouetteMode ? '#ffffff' : 'var(--nano-lab-accent-indigo)'"
                       stroke-width="0.2"
                       stroke-dasharray="0.55 0.45"
                       opacity="0.68"
@@ -1492,7 +1536,7 @@ const concepts = [
                       :y1="cursorField.y"
                       :x2="scene3D.primitiveCenters.wedge.x"
                       :y2="scene3D.primitiveCenters.wedge.y"
-                      stroke="#22d3ee"
+                      :stroke="silhouetteMode ? '#ffffff' : 'var(--nano-lab-accent-sky)'"
                       stroke-width="0.2"
                       stroke-dasharray="0.55 0.45"
                       opacity="0.68"
@@ -1502,7 +1546,7 @@ const concepts = [
                       :y1="cursorField.y"
                       :x2="scene3D.primitiveCenters.sphere.x"
                       :y2="scene3D.primitiveCenters.sphere.y"
-                      stroke="#34d399"
+                      :stroke="silhouetteMode ? '#ffffff' : 'var(--nano-lab-accent-emerald)'"
                       stroke-width="0.2"
                       stroke-dasharray="0.55 0.45"
                       opacity="0.68"
@@ -1515,12 +1559,19 @@ const concepts = [
                       :cx="pt.x"
                       :cy="pt.y"
                       :r="Math.max(0.18, pt.r * (1 - tIdx * 0.13))"
-                      :fill="tIdx % 2 === 0 ? '#38bdf8' : '#a78bfa'"
+                      :fill="
+                        silhouetteMode
+                          ? '#ffffff'
+                          : tIdx % 2 === 0
+                            ? 'var(--nano-lab-accent-sky)'
+                            : 'var(--nano-lab-accent-violet)'
+                      "
                       :opacity="Math.max(0.12, 0.62 - tIdx * 0.08)"
                     />
 
                     <!-- Concentric Golden-Ratio Phase Rings (r, r·φ, r·φ²) -->
                     <circle
+                      v-if="!silhouetteMode"
                       :cx="cursorField.x"
                       :cy="cursorField.y"
                       :r="cursorField.rPhi2 * 1.45"
@@ -1531,7 +1582,7 @@ const concepts = [
                       :cy="cursorField.y"
                       :r="cursorField.rPhi2"
                       fill="none"
-                      stroke="rgba(167, 139, 250, 0.44)"
+                      :stroke="silhouetteMode ? 'rgba(255, 255, 255, 0.45)' : 'var(--nano-lab-cursor-ring-outer)'"
                       stroke-width="0.18"
                       stroke-dasharray="0.65 0.45"
                     />
@@ -1540,29 +1591,29 @@ const concepts = [
                       :cy="cursorField.y"
                       :r="cursorField.rPhi"
                       fill="none"
-                      stroke="rgba(56, 189, 248, 0.68)"
+                      :stroke="silhouetteMode ? 'rgba(255, 255, 255, 0.72)' : 'var(--nano-lab-cursor-ring-mid)'"
                       stroke-width="0.22"
                     />
                     <circle
                       :cx="cursorField.x"
                       :cy="cursorField.y"
                       :r="cursorField.rInner"
-                      fill="rgba(56, 189, 248, 0.16)"
-                      stroke="#67e8f9"
+                      :fill="silhouetteMode ? 'rgba(255, 255, 255, 0.14)' : 'var(--nano-lab-cursor-ring-fill)'"
+                      :stroke="silhouetteMode ? '#ffffff' : 'var(--nano-lab-accent-sky)'"
                       stroke-width="0.26"
                     />
                     <circle
                       :cx="cursorField.x"
                       :cy="cursorField.y"
                       r="0.36"
-                      fill="#ffffff"
+                      :fill="silhouetteMode ? '#ffffff' : 'var(--nano-lab-point-fill)'"
                     />
                     <text
                       v-if="deviceViewport !== 'mobile'"
                       :x="cursorField.x"
                       :y="cursorField.y - cursorField.rPhi2 - 0.75"
                       text-anchor="middle"
-                      fill="#67e8f9"
+                      :fill="silhouetteMode ? '#ffffff' : 'var(--nano-lab-accent-sky)'"
                       font-size="1.22"
                       font-weight="800"
                       font-family="ui-monospace, SFMono-Regular, monospace"
@@ -1581,8 +1632,8 @@ const concepts = [
                     >
                       <polygon
                         :points="tok.polygonPoints"
-                        :fill="tok.color"
-                        stroke="rgba(255, 255, 255, 0.72)"
+                        :fill="silhouetteMode ? '#ffffff' : tok.color"
+                        :stroke="silhouetteMode ? '#09090b' : 'var(--nano-lab-token-stroke)'"
                         stroke-width="0.09"
                         stroke-linejoin="round"
                       />
@@ -1590,7 +1641,7 @@ const concepts = [
                         v-if="deviceViewport !== 'mobile'"
                         x="0.75"
                         y="0.38"
-                        :fill="tok.color"
+                        :fill="silhouetteMode ? '#ffffff' : tok.color"
                         font-size="1.3"
                         font-weight="800"
                         font-family="ui-monospace, SFMono-Regular, monospace"
@@ -1610,7 +1661,7 @@ const concepts = [
                           :y1="art.y"
                           :x2="art.anchorX"
                           :y2="art.anchorY"
-                          :stroke="art.isLocked ? '#10b981' : art.color"
+                          :stroke="silhouetteMode ? '#ffffff' : art.isLocked ? 'var(--nano-lab-accent-locked)' : art.color"
                           stroke-width="0.22"
                           stroke-dasharray="0.45 0.45"
                           opacity="0.85"
@@ -1619,7 +1670,7 @@ const concepts = [
                           :cx="art.anchorX"
                           :cy="art.anchorY"
                           r="0.45"
-                          :fill="art.isLocked ? '#10b981' : art.color"
+                          :fill="silhouetteMode ? '#ffffff' : art.isLocked ? 'var(--nano-lab-accent-locked)' : art.color"
                         />
 
                         <g :transform="`translate(${art.x}, ${art.y}) scale(${art.scale * 0.34})`">
@@ -1629,14 +1680,14 @@ const concepts = [
                             width="58"
                             height="25"
                             rx="2.8"
-                            fill="rgba(15, 23, 42, 0.94)"
-                            :stroke="art.isLocked ? '#10b981' : art.color"
+                            :fill="silhouetteMode ? '#09090b' : art.isLocked ? 'var(--nano-lab-card-bg-locked)' : 'var(--nano-lab-card-bg-front)'"
+                            :stroke="silhouetteMode ? '#ffffff' : art.isLocked ? 'var(--nano-lab-accent-locked)' : art.color"
                             stroke-width="0.88"
                           />
                           <text
                             x="-26"
                             y="-7.2"
-                            :fill="art.isLocked ? '#10b981' : art.color"
+                            :fill="silhouetteMode ? '#ffffff' : art.isLocked ? 'var(--nano-lab-accent-locked)' : art.color"
                             font-size="3.1"
                             font-weight="800"
                             font-family="ui-monospace, SFMono-Regular, monospace"
@@ -1644,7 +1695,7 @@ const concepts = [
                             {{ art.tag }}
                           </text>
                           <g
-                            :fill="art.isLocked ? '#10b981' : '#94a3b8'"
+                            :fill="silhouetteMode ? '#d4d4d8' : art.isLocked ? 'var(--nano-lab-accent-locked)' : 'var(--nano-lab-card-text-muted)'"
                             font-size="2.7"
                             font-weight="700"
                             font-family="ui-monospace, SFMono-Regular, monospace"
@@ -1662,7 +1713,7 @@ const concepts = [
                           <text
                             x="-26"
                             y="-2.4"
-                            fill="#f8fafc"
+                            :fill="silhouetteMode ? '#ffffff' : 'var(--nano-lab-card-text-expr)'"
                             :font-size="art.exprFontSize || 2.75"
                             v-fit-text="{ maxWidth: 51.2, minSize: 1.5, maxSize: 2.75, step: 0.05 }"
                             font-weight="700"
@@ -1678,14 +1729,14 @@ const concepts = [
                               width="32"
                               height="10"
                               rx="1.2"
-                              fill="rgba(2, 6, 23, 0.85)"
-                              stroke="rgba(148, 163, 184, 0.28)"
+                              :fill="silhouetteMode ? '#09090b' : 'var(--nano-lab-minichart-bg)'"
+                              :stroke="silhouetteMode ? 'rgba(255, 255, 255, 0.35)' : 'var(--nano-lab-minichart-border)'"
                               stroke-width="0.35"
                             />
                             <g transform="scale(0.71, 0.74)">
                               <polygon
                                 :points="art.areaPoints"
-                                :fill="art.isLocked ? 'rgba(16, 185, 129, 0.22)' : 'rgba(56, 189, 248, 0.18)'"
+                                :fill="silhouetteMode ? 'rgba(255, 255, 255, 0.14)' : art.isLocked ? 'var(--nano-lab-minichart-area-locked)' : 'var(--nano-lab-minichart-area)'"
                               />
                               <rect
                                 v-for="(bar, bIdx) in art.bars"
@@ -1695,20 +1746,20 @@ const concepts = [
                                 :width="bar.w"
                                 :height="bar.h"
                                 rx="0.6"
-                                :fill="art.color"
+                                :fill="silhouetteMode ? '#ffffff' : art.isLocked ? 'var(--nano-lab-accent-locked)' : art.color"
                                 opacity="0.32"
                               />
                               <polyline
                                 :points="art.secondaryPoints"
                                 fill="none"
-                                stroke="rgba(255, 255, 255, 0.38)"
+                                :stroke="silhouetteMode ? 'rgba(255, 255, 255, 0.45)' : 'var(--nano-lab-wave-secondary)'"
                                 stroke-width="0.7"
                                 stroke-dasharray="1.2 1.2"
                               />
                               <polyline
                                 :points="art.sparklinePoints"
                                 fill="none"
-                                :stroke="art.isLocked ? '#10b981' : art.color"
+                                :stroke="silhouetteMode ? '#ffffff' : art.isLocked ? 'var(--nano-lab-accent-locked)' : art.color"
                                 stroke-width="1.25"
                                 stroke-linecap="round"
                                 stroke-linejoin="round"
@@ -1717,15 +1768,15 @@ const concepts = [
                                 :cx="art.cursorPoint.x"
                                 :cy="art.cursorPoint.y"
                                 r="1.5"
-                                fill="#ffffff"
-                                :stroke="art.isLocked ? '#10b981' : art.color"
+                                :fill="silhouetteMode ? '#09090b' : 'var(--nano-lab-point-fill)'"
+                                :stroke="silhouetteMode ? '#ffffff' : art.isLocked ? 'var(--nano-lab-accent-locked)' : art.color"
                                 stroke-width="0.85"
                               />
                             </g>
                           </g>
 
                           <g
-                            :fill="art.isLocked ? '#10b981' : '#f8fafc'"
+                            :fill="silhouetteMode ? '#ffffff' : art.isLocked ? 'var(--nano-lab-accent-locked)' : 'var(--nano-lab-card-text-primary)'"
                             font-size="2.7"
                             font-weight="800"
                             font-family="ui-monospace, SFMono-Regular, monospace"
@@ -1750,14 +1801,23 @@ const concepts = [
                 <div
                   v-if="deviceViewport === 'mobile'"
                   class="mobile-pip-shadow"
-                  :class="{ 'is-locked': scene3D.isOrthographicLock }"
+                  :class="{ 'is-locked': scene3D.isOrthographicLock, 'is-mono': silhouetteMode }"
                   @click.stop="animateToAngles(0, 0); triggerConceptDemo('PHI')"
                 >
                   <svg viewBox="0 0 32 32" width="44" height="44">
-                    <rect x="1" y="1" width="30" height="30" rx="7" fill="#0f172a" stroke="#334155" stroke-width="1" />
-                    <rect x="7" y="7" width="4.25" height="18" rx="0.9" fill="#6366f1" />
-                    <polygon :points="BAUHAUS_PHI_2D_SPEC.triangle.svgPoints" fill="#06b6d4" />
-                    <circle cx="22.55" cy="9.45" r="2.45" fill="url(#labSphere2D)" stroke="#0284c7" stroke-width="0.3" />
+                    <rect
+                      x="1"
+                      y="1"
+                      width="30"
+                      height="30"
+                      rx="7"
+                      :fill="silhouetteMode ? '#09090b' : 'var(--nano-lab-tile-fill)'"
+                      :stroke="silhouetteMode ? '#ffffff' : 'var(--nano-lab-tile-stroke)'"
+                      stroke-width="1"
+                    />
+                    <rect x="7" y="7" width="4.25" height="18" rx="0.9" :fill="silhouetteMode ? '#ffffff' : '#6366f1'" />
+                    <polygon :points="BAUHAUS_PHI_2D_SPEC.triangle.svgPoints" :fill="silhouetteMode ? '#ffffff' : '#06b6d4'" />
+                    <circle cx="22.55" cy="9.45" r="2.45" :fill="silhouetteMode ? '#ffffff' : 'url(#labSphere2D)'" :stroke="silhouetteMode ? 'none' : '#0284c7'" stroke-width="0.3" />
                   </svg>
                   <span class="pip-caption mono">2D 1:1</span>
                 </div>
@@ -1791,15 +1851,30 @@ const concepts = [
                   width="30"
                   height="30"
                   rx="7.2"
-                  :fill="silhouetteMode ? '#09090b' : 'var(--nano-bg-card-elevated, #0f172a)'"
-                  stroke="var(--nano-border-card)"
+                  :fill="silhouetteMode ? '#09090b' : 'var(--nano-lab-tile-fill)'"
+                  :stroke="silhouetteMode ? '#ffffff' : 'var(--nano-lab-tile-stroke)'"
                   stroke-width="1"
                 />
 
                 <!-- Golden Ratio & Right-Stem N-Continuity Construction Guides -->
-                <g v-if="showGoldenGrid" class="phi-guides" stroke="#f59e0b" stroke-width="0.26" stroke-dasharray="0.7 0.7" opacity="0.72">
+                <g
+                  v-if="showGoldenGrid"
+                  class="phi-guides"
+                  :stroke="silhouetteMode ? 'rgba(255, 255, 255, 0.5)' : 'var(--nano-lab-accent-amber)'"
+                  stroke-width="0.26"
+                  stroke-dasharray="0.7 0.7"
+                  opacity="0.72"
+                >
                   <rect x="7" y="7" width="18" height="18" fill="none" />
-                  <rect x="20.75" y="7" width="4.25" height="18" fill="rgba(6, 182, 212, 0.06)" stroke="#06b6d4" stroke-width="0.22" />
+                  <rect
+                    x="20.75"
+                    y="7"
+                    width="4.25"
+                    height="18"
+                    :fill="silhouetteMode ? 'rgba(255, 255, 255, 0.06)' : 'var(--nano-lab-grid-corridor-fill)'"
+                    :stroke="silhouetteMode ? 'rgba(255, 255, 255, 0.4)' : 'var(--nano-lab-accent-sky)'"
+                    stroke-width="0.22"
+                  />
                   <line x1="5" y1="13.875" x2="27" y2="13.875" />
                   <line x1="11.25" y1="5" x2="11.25" y2="27" />
                   <circle cx="22.55" cy="9.45" r="3.25" fill="none" />
@@ -1842,7 +1917,7 @@ const concepts = [
                     :cx="pt.x"
                     :cy="pt.y"
                     :r="pt.r"
-                    :fill="pt.color"
+                    :fill="silhouetteMode ? '#ffffff' : pt.color"
                   />
                 </g>
 
@@ -1856,7 +1931,7 @@ const concepts = [
                     :cy="16 + cursorField.normY * 9.5"
                     :r="1.15 + cursorField.energy * 0.65"
                     fill="none"
-                    stroke="#38bdf8"
+                    :stroke="silhouetteMode ? '#ffffff' : 'var(--nano-lab-accent-sky)'"
                     stroke-width="0.28"
                     stroke-dasharray="0.5 0.4"
                   />
@@ -1864,7 +1939,7 @@ const concepts = [
                     :cx="16 + cursorField.normX * 9.5"
                     :cy="16 + cursorField.normY * 9.5"
                     r="0.35"
-                    fill="#38bdf8"
+                    :fill="silhouetteMode ? '#ffffff' : 'var(--nano-lab-accent-sky)'"
                   />
                 </g>
               </svg>
@@ -1881,14 +1956,14 @@ const concepts = [
               :class="{ 'is-locked': art.isLocked }"
             >
               <div class="mob-pill-top">
-                <span class="mob-pill-tag" :style="{ color: art.isLocked ? '#10b981' : art.color }">{{ art.tag }}</span>
+                <span class="mob-pill-tag" :style="{ color: art.isLocked ? 'var(--nano-lab-accent-locked)' : art.color }">{{ art.tag }}</span>
                 <span class="mob-pill-delta mono">{{ art.delta }}</span>
               </div>
               <div class="mob-pill-expr mono">{{ art.expr }}</div>
               <svg viewBox="0 0 44 13" width="100%" height="26" class="mob-pill-chart">
                 <polygon
                   :points="art.areaPoints"
-                  :fill="art.isLocked ? 'rgba(16, 185, 129, 0.2)' : 'rgba(56, 189, 248, 0.16)'"
+                  :fill="art.isLocked ? 'var(--nano-lab-minichart-area-locked)' : 'var(--nano-lab-minichart-area)'"
                 />
                 <rect
                   v-for="(bar, bIdx) in art.bars"
@@ -1898,21 +1973,20 @@ const concepts = [
                   :width="bar.w"
                   :height="bar.h"
                   rx="0.6"
-                  :fill="art.color"
+                  :fill="art.isLocked ? 'var(--nano-lab-accent-locked)' : art.color"
                   opacity="0.3"
                 />
                 <polyline
                   :points="art.secondaryPoints"
                   fill="none"
-                  stroke="var(--nano-text-muted)"
+                  stroke="var(--nano-lab-wave-secondary)"
                   stroke-width="0.7"
                   stroke-dasharray="1.2 1.2"
-                  opacity="0.45"
                 />
                 <polyline
                   :points="art.sparklinePoints"
                   fill="none"
-                  :stroke="art.isLocked ? '#10b981' : art.color"
+                  :stroke="art.isLocked ? 'var(--nano-lab-accent-locked)' : art.color"
                   stroke-width="1.2"
                   stroke-linecap="round"
                   stroke-linejoin="round"
@@ -1921,8 +1995,8 @@ const concepts = [
                   :cx="art.cursorPoint.x"
                   :cy="art.cursorPoint.y"
                   r="1.4"
-                  fill="var(--nano-bg-card)"
-                  :stroke="art.isLocked ? '#10b981' : art.color"
+                  fill="var(--nano-lab-point-fill)"
+                  :stroke="art.isLocked ? 'var(--nano-lab-accent-locked)' : art.color"
                   stroke-width="0.9"
                 />
               </svg>
@@ -2051,8 +2125,8 @@ const concepts = [
                   width="30"
                   height="30"
                   rx="7.2"
-                  :fill="silhouetteMode ? '#09090b' : 'var(--nano-bg-card-elevated, #0f172a)'"
-                  :stroke="silhouetteMode ? '#ffffff' : 'var(--nano-border-card, rgba(148,163,184,0.35))'"
+                  :fill="silhouetteMode ? '#09090b' : 'var(--nano-lab-tile-fill)'"
+                  :stroke="silhouetteMode ? '#ffffff' : 'var(--nano-lab-tile-stroke)'"
                   stroke-width="1"
                 />
                 <rect
@@ -2095,8 +2169,8 @@ const concepts = [
                   width="30"
                   height="30"
                   rx="7.2"
-                  :fill="silhouetteMode ? '#09090b' : 'var(--nano-bg-card-elevated, #0f172a)'"
-                  :stroke="silhouetteMode ? '#ffffff' : 'var(--nano-border-card, rgba(148,163,184,0.35))'"
+                  :fill="silhouetteMode ? '#09090b' : 'var(--nano-lab-tile-fill)'"
+                  :stroke="silhouetteMode ? '#ffffff' : 'var(--nano-lab-tile-stroke)'"
                   stroke-width="1"
                 />
                 <path
@@ -2131,8 +2205,8 @@ const concepts = [
                   width="30"
                   height="30"
                   rx="7.2"
-                  :fill="silhouetteMode ? '#09090b' : 'var(--nano-bg-card-elevated, #0f172a)'"
-                  :stroke="silhouetteMode ? '#ffffff' : 'var(--nano-border-card, rgba(148,163,184,0.35))'"
+                  :fill="silhouetteMode ? '#09090b' : 'var(--nano-lab-tile-fill)'"
+                  :stroke="silhouetteMode ? '#ffffff' : 'var(--nano-lab-tile-stroke)'"
                   stroke-width="1"
                 />
                 <rect
@@ -2175,6 +2249,77 @@ const concepts = [
 </template>
 
 <style scoped>
+/* SVG Gradient <stop> CSS Custom Property Bindings (Safari + Chromium Compatible) */
+.lab-stop-glow-indigo-start {
+  stop-color: var(--nano-lab-glow-indigo);
+  stop-opacity: var(--nano-lab-glow-indigo-opacity);
+}
+
+.lab-stop-glow-indigo-mid {
+  stop-color: var(--nano-lab-glow-indigo);
+  stop-opacity: var(--nano-lab-glow-indigo-mid-opacity);
+}
+
+.lab-stop-glow-indigo-end {
+  stop-color: var(--nano-lab-glow-indigo);
+  stop-opacity: 0;
+}
+
+.lab-stop-glow-cyan-start {
+  stop-color: var(--nano-lab-glow-cyan);
+  stop-opacity: var(--nano-lab-glow-cyan-opacity);
+}
+
+.lab-stop-glow-cyan-mid {
+  stop-color: var(--nano-lab-glow-cyan);
+  stop-opacity: var(--nano-lab-glow-cyan-mid-opacity);
+}
+
+.lab-stop-glow-cyan-end {
+  stop-color: var(--nano-lab-glow-cyan);
+  stop-opacity: 0;
+}
+
+.lab-stop-cursor-glow-start {
+  stop-color: var(--nano-lab-cursor-glow-inner);
+  stop-opacity: var(--nano-lab-cursor-glow-inner-opacity);
+}
+
+.lab-stop-cursor-glow-mid {
+  stop-color: var(--nano-lab-cursor-glow-mid);
+  stop-opacity: var(--nano-lab-cursor-glow-mid-opacity);
+}
+
+.lab-stop-cursor-glow-end {
+  stop-color: var(--nano-lab-cursor-glow-mid);
+  stop-opacity: 0;
+}
+
+.lab-stop-orbit-0 {
+  stop-color: var(--nano-lab-sphere-ring-0);
+  stop-opacity: 0.22;
+}
+
+.lab-stop-orbit-1 {
+  stop-color: var(--nano-lab-sphere-ring-1);
+  stop-opacity: 0.38;
+}
+
+.lab-stop-orbit-2 {
+  stop-color: var(--nano-lab-sphere-ring-2);
+  stop-opacity: 0.56;
+}
+
+.lab-stop-orbit-3 {
+  stop-color: var(--nano-lab-sphere-ring-3);
+  stop-opacity: 0.72;
+}
+
+.lab-stop-orbit-4 {
+  stop-color: var(--nano-lab-sphere-ring-4);
+  stop-opacity: 0.88;
+}
+
 .logo-lab-card {
   background: var(--nano-bg-card);
   border: 1px solid var(--nano-border-card);
@@ -2206,7 +2351,7 @@ const concepts = [
   flex-direction: column;
   justify-content: stretch;
   align-items: stretch;
-  background: var(--nano-bg-app, #090d16);
+  background: var(--nano-bg-app);
 }
 
 .logo-lab-card.is-fullscreen-deck .device-viewport-frame {
@@ -2341,13 +2486,13 @@ const concepts = [
 }
 
 .device-pill.is-fullscreen-btn {
-  color: #10b981;
-  border-color: rgba(16, 185, 129, 0.28);
-  background: rgba(16, 185, 129, 0.08);
+  color: var(--nano-lab-accent-emerald);
+  border-color: var(--nano-status-success-border);
+  background: var(--nano-status-success-bg);
 }
 
 .device-pill.is-fullscreen-btn:hover {
-  background: rgba(16, 185, 129, 0.16);
+  border-color: var(--nano-lab-accent-emerald);
 }
 
 .device-viewport-frame {
@@ -2434,8 +2579,8 @@ const concepts = [
 }
 
 .perfection-hud.is-converged {
-  border-color: #10b981;
-  background: rgba(16, 185, 129, 0.08);
+  border-color: var(--nano-lab-accent-emerald);
+  background: var(--nano-status-success-bg);
 }
 
 .hud-main {
@@ -2458,7 +2603,7 @@ const concepts = [
 }
 
 .perfection-hud.is-converged .hud-value {
-  color: #10b981;
+  color: var(--nano-lab-accent-emerald);
 }
 
 .hud-badge {
@@ -2472,9 +2617,9 @@ const concepts = [
 }
 
 .hud-badge.is-ok {
-  background: rgba(16, 185, 129, 0.18);
-  border-color: rgba(16, 185, 129, 0.45);
-  color: #10b981;
+  background: var(--nano-status-success-bg);
+  border-color: var(--nano-status-success-border);
+  color: var(--nano-lab-accent-emerald);
 }
 
 .hud-submetrics {
@@ -2539,8 +2684,9 @@ const concepts = [
   position: absolute;
   top: 10px;
   right: 10px;
-  background: rgba(15, 23, 42, 0.92);
-  border: 1.5px solid rgba(56, 189, 248, 0.55);
+  z-index: 35;
+  background: var(--nano-lab-pip-bg);
+  border: 1.5px solid var(--nano-lab-pip-border);
   border-radius: 10px;
   padding: 4px;
   display: flex;
@@ -2548,17 +2694,26 @@ const concepts = [
   align-items: center;
   gap: 2px;
   cursor: pointer;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.35);
+  box-shadow: var(--nano-lab-pip-shadow);
 }
 
 .mobile-pip-shadow.is-locked {
-  border-color: #10b981;
+  border-color: var(--nano-lab-accent-emerald);
+}
+
+.mobile-pip-shadow.is-mono {
+  background: #09090b;
+  border-color: #ffffff;
 }
 
 .pip-caption {
   font-size: 0.58rem;
   font-weight: 800;
-  color: #38bdf8;
+  color: var(--nano-lab-accent-sky);
+}
+
+.mobile-pip-shadow.is-mono .pip-caption {
+  color: #ffffff;
 }
 
 .mobile-math-ribbon {
@@ -2583,7 +2738,7 @@ const concepts = [
 }
 
 .mobile-math-pill.is-locked {
-  border-color: #10b981;
+  border-color: var(--nano-lab-accent-emerald);
 }
 
 .mob-pill-top {
@@ -2632,8 +2787,8 @@ const concepts = [
 }
 
 .stage-box.is-exact-match {
-  border-color: #10b981;
-  box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.22);
+  border-color: var(--nano-lab-accent-emerald);
+  box-shadow: 0 0 0 2px var(--nano-status-success-border);
 }
 
 .stage-box-head {
@@ -2725,14 +2880,19 @@ const concepts = [
 }
 
 .stage-btn.is-primary {
-  border-color: #10b981;
-  color: #10b981;
-  background: rgba(16, 185, 129, 0.08);
+  border-color: var(--nano-status-success-border);
+  color: var(--nano-lab-accent-emerald);
+  background: var(--nano-status-success-bg);
+}
+
+.stage-btn.is-primary:hover {
+  border-color: var(--nano-lab-accent-emerald);
 }
 
 .stage-btn.is-primary.is-converging-live {
-  background: rgba(16, 185, 129, 0.18);
-  box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.25);
+  border-color: var(--nano-lab-accent-emerald);
+  background: var(--nano-status-success-bg);
+  box-shadow: 0 0 0 2px var(--nano-status-success-border);
 }
 
 .stage-btn.is-active-orbit {
@@ -2834,9 +2994,9 @@ const concepts = [
   font-weight: 700;
   padding: 4px 10px;
   border-radius: 999px;
-  background: rgba(16, 185, 129, 0.16);
-  color: #10b981;
-  border: 1px solid rgba(16, 185, 129, 0.35);
+  background: var(--nano-status-success-bg);
+  color: var(--nano-lab-accent-emerald);
+  border: 1px solid var(--nano-status-success-border);
 }
 
 .concept-name {
@@ -2887,6 +3047,11 @@ const concepts = [
   max-width: 100%;
   height: auto;
   overflow: hidden;
+  border-radius: 10px;
+}
+
+.stage-3d-canvas-wrap .stage-svg {
+  box-shadow: var(--nano-lab-stage-shadow);
 }
 
 .mono {
@@ -2894,7 +3059,7 @@ const concepts = [
 }
 
 .vec-pulse {
-  filter: drop-shadow(0 0 5px rgba(56, 189, 248, 0.95));
+  filter: drop-shadow(0 0 5px var(--nano-lab-pulse-glow));
   transition: filter 0.08s ease;
 }
 
