@@ -1,19 +1,20 @@
 <script setup>
 import { tooltipState } from '../composables/useTooltip.js';
-import { buildTooltipBubbleGeometry } from '../utils/tooltipGeometry.js';
+import { buildTooltipBubbleGeometry, computeTightTooltipWidth } from '../utils/tooltipGeometry.js';
 import { ref, computed, watch, nextTick, onMounted, onUnmounted } from 'vue';
 
 const tooltipRef = ref(null);
+const textRef = ref(null);
 const x = ref(0);
 const y = ref(0);
 const arrowX = ref(0);
-const boxWidth = ref(160);
-const boxHeight = ref(36);
-const boxRadius = ref(9);
+const boxWidth = ref(140);
+const boxHeight = ref(28);
+const boxRadius = ref(7);
 const isBottom = ref(false);
 const isPositioned = ref(false);
 
-const GAP = 12;
+const GAP = 10;
 const BUBBLE_PAD = 8;
 
 let resizeObserver = null;
@@ -21,18 +22,66 @@ let resizeObserver = null;
 const syncBoxDimensions = () => {
   const el = tooltipRef.value;
   if (!el) return false;
-  const w = el.offsetWidth || el.getBoundingClientRect().width;
-  const h = el.offsetHeight || el.getBoundingClientRect().height;
-  if (w <= 0 || h <= 0) return false;
-  boxWidth.value = Math.round(w * 2) / 2;
-  boxHeight.value = Math.round(h * 2) / 2;
-  if (typeof window !== 'undefined' && typeof window.getComputedStyle === 'function') {
-    const cs = window.getComputedStyle(el);
-    const parsedRadius = parseFloat(cs.getPropertyValue('--nu-tooltip-radius')) || parseFloat(cs.borderTopLeftRadius);
+
+  // 1. Reset inline width so CSS lays out natural max-content up to --nano-tooltip-max-width
+  el.style.width = '';
+
+  const naturalW = el.offsetWidth || el.getBoundingClientRect().width;
+  const naturalH = el.offsetHeight || el.getBoundingClientRect().height;
+  if (naturalW <= 0 || naturalH <= 0) return false;
+
+  let padLeft = 10;
+  let padRight = 10;
+  let borderLeft = 0;
+  let borderRight = 0;
+
+  if (globalThis.window?.getComputedStyle) {
+    const cs = globalThis.window.getComputedStyle(el);
+    padLeft = parseFloat(cs.paddingLeft) || 0;
+    padRight = parseFloat(cs.paddingRight) || 0;
+    borderLeft = parseFloat(cs.borderLeftWidth) || 0;
+    borderRight = parseFloat(cs.borderRightWidth) || 0;
+    const parsedRadius =
+      parseFloat(cs.getPropertyValue('--nu-tooltip-radius')) || parseFloat(cs.borderTopLeftRadius);
     if (Number.isFinite(parsedRadius) && parsedRadius >= 0) {
       boxRadius.value = parsedRadius;
     }
   }
+
+  // 2. Shrink-wrap around post-wrap balanced glyph lines (eliminates dead side margins when max-width triggers text-wrap: balance)
+  if (textRef.value && globalThis.document?.createRange) {
+    const range = globalThis.document.createRange();
+    range.selectNodeContents(textRef.value);
+    const glyphRect = range.getBoundingClientRect();
+    const tightW = computeTightTooltipWidth({
+      naturalWidth: naturalW,
+      glyphWidth: glyphRect.width,
+      padLeft,
+      padRight,
+      borderLeft,
+      borderRight,
+    });
+    if (tightW !== null) {
+      el.style.width = `${tightW}px`;
+      const postH = el.offsetHeight || el.getBoundingClientRect().height;
+      if (postH > naturalH + 1) {
+        if (tightW + 3 < naturalW) {
+          el.style.width = `${tightW + 3}px`;
+          const retryH = el.offsetHeight || el.getBoundingClientRect().height;
+          if (retryH > naturalH + 1) {
+            el.style.width = '';
+          }
+        } else {
+          el.style.width = '';
+        }
+      }
+    }
+  }
+
+  const finalW = el.offsetWidth || el.getBoundingClientRect().width;
+  const finalH = el.offsetHeight || el.getBoundingClientRect().height;
+  boxWidth.value = Math.round(finalW * 2) / 2;
+  boxHeight.value = Math.round(finalH * 2) / 2;
   return true;
 };
 
@@ -42,8 +91,8 @@ const bubbleGeometry = computed(() =>
     height: boxHeight.value,
     radius: boxRadius.value,
     arrowX: arrowX.value,
-    arrowHalfWidth: 6.5,
-    arrowHeight: 6,
+    arrowHalfWidth: 5.5,
+    arrowHeight: 5,
     isBottom: isBottom.value,
     pad: BUBBLE_PAD,
   })
@@ -57,13 +106,13 @@ const computePlacementFromElement = () => {
   const tooltipWidth = boxWidth.value;
   const tooltipHeight = boxHeight.value;
 
-  const viewportWidth = window.innerWidth;
-  const viewportHeight = window.innerHeight;
+  const viewportWidth = globalThis.window.innerWidth;
+  const viewportHeight = globalThis.window.innerHeight;
 
   const spaceAbove = rect.top;
   const spaceBelow = viewportHeight - rect.bottom;
 
-  // Vertical positioning (prefer above with 12px gap so arrow tip has clean clearance above button border)
+  // Vertical positioning (prefer above with clean clearance above button border)
   let top = rect.top - tooltipHeight - GAP;
   isBottom.value = false;
 
@@ -92,8 +141,8 @@ const computePlacementFromElement = () => {
   // Difference between ideal target center and actual tooltip box center
   const calculatedArrowX = idealCenter - (actualLeft + tooltipWidth / 2);
 
-  // Safe inset = arrowHalfWidth (6.5px) + shoulderRounding (1px) + cornerRadius (9px) + margin (2.5px) = 19px
-  const arrowSafeInset = 19;
+  // Safe inset = arrowHalfWidth (5.5px) + shoulderRounding (1px) + cornerRadius (7px) + margin (2.5px) = 16px
+  const arrowSafeInset = 16;
   const maxArrowOffset = Math.max(0, tooltipWidth / 2 - arrowSafeInset);
   const clampedArrowX = Math.max(-maxArrowOffset, Math.min(maxArrowOffset, calculatedArrowX));
 
@@ -131,9 +180,9 @@ watch(
 );
 
 onMounted(() => {
-  window.addEventListener('resize', updatePosition, { passive: true });
-  if (typeof ResizeObserver !== 'undefined' && tooltipRef.value) {
-    resizeObserver = new ResizeObserver(() => {
+  globalThis.window.addEventListener('resize', updatePosition, { passive: true });
+  if (globalThis.ResizeObserver && tooltipRef.value) {
+    resizeObserver = new globalThis.ResizeObserver(() => {
       if (tooltipState.isVisible) {
         computePlacementFromElement();
       }
@@ -143,7 +192,7 @@ onMounted(() => {
 });
 
 onUnmounted(() => {
-  window.removeEventListener('resize', updatePosition);
+  globalThis.window.removeEventListener('resize', updatePosition);
   if (resizeObserver) {
     resizeObserver.disconnect();
     resizeObserver = null;
@@ -199,20 +248,20 @@ onUnmounted(() => {
     </svg>
 
     <!-- Layer 3: Clamped Balanced Text Copy -->
-    <span class="global-tooltip-text">{{ tooltipState.text }}</span>
+    <span ref="textRef" class="global-tooltip-text">{{ tooltipState.text }}</span>
   </div>
 </template>
 
 <style scoped>
 .global-tooltip {
-  /* Generic Styling Variables */
-  --nu-tooltip-bg: var(--nano-tooltip-bg, rgba(15, 23, 42, 0.92));
-  --nu-tooltip-color: var(--nano-tooltip-color, #f8fafc);
-  --nu-tooltip-radius: var(--nano-tooltip-radius, var(--nano-radius-md, 9px));
-  --nu-tooltip-padding: var(--nano-tooltip-padding, 8px 14px);
-  --nu-tooltip-shadow: var(--nano-tooltip-shadow, 0 10px 28px rgba(0, 0, 0, 0.45));
-  --nu-tooltip-border: var(--nano-tooltip-border, 1px solid rgba(148, 163, 184, 0.24));
-  --nu-tooltip-arrow-border: var(--nano-tooltip-arrow-border, rgba(148, 163, 184, 0.28));
+  /* Inverted-Polarity Compact Micro-Tooltip Tokens (Soft Pearl in Dark Mode, Deep Slate in Light Mode) */
+  --nu-tooltip-bg: var(--nano-tooltip-bg, rgba(226, 232, 240, 0.96));
+  --nu-tooltip-color: var(--nano-tooltip-color, #0f172a);
+  --nu-tooltip-radius: var(--nano-tooltip-radius, 7px);
+  --nu-tooltip-padding: var(--nano-tooltip-padding, 5px 10px);
+  --nu-tooltip-shadow: var(--nano-tooltip-shadow, 0 6px 18px rgba(2, 6, 23, 0.44));
+  --nu-tooltip-border: var(--nano-tooltip-border, 1px solid rgba(148, 163, 184, 0.55));
+  --nu-tooltip-arrow-border: var(--nano-tooltip-arrow-border, rgba(148, 163, 184, 0.62));
 
   position: fixed;
   top: 0;
@@ -224,12 +273,13 @@ onUnmounted(() => {
   color: var(--nu-tooltip-color);
   padding: var(--nu-tooltip-padding);
   border-radius: var(--nu-tooltip-radius);
-  font-size: 0.82rem;
+  font-size: var(--nano-tooltip-font-size, 0.78rem);
   font-weight: 500;
+  letter-spacing: -0.005em;
   width: max-content;
-  max-width: min(var(--nano-tooltip-max-width, 380px), calc(100vw - 24px));
+  max-width: min(var(--nano-tooltip-max-width, 260px), calc(100vw - 24px));
   text-align: center;
-  line-height: 1.42;
+  line-height: 1.36;
   white-space: normal;
   word-wrap: break-word;
   pointer-events: none;
@@ -237,6 +287,37 @@ onUnmounted(() => {
   transition: opacity 0.14s ease;
   opacity: 0;
   visibility: hidden;
+}
+
+/* Built-in Semantic Contextual Tooltip Variants (Guaranteed Contrast in Both Dark & Light Themes) */
+.global-tooltip.tooltip-danger {
+  --nu-tooltip-bg: rgba(234, 88, 12, 0.96);
+  --nu-tooltip-color: #ffffff;
+  --nu-tooltip-arrow-border: rgba(253, 186, 116, 0.42);
+}
+
+.global-tooltip.tooltip-error {
+  --nu-tooltip-bg: rgba(220, 38, 38, 0.96);
+  --nu-tooltip-color: #ffffff;
+  --nu-tooltip-arrow-border: rgba(252, 165, 165, 0.42);
+}
+
+.global-tooltip.tooltip-success {
+  --nu-tooltip-bg: rgba(5, 150, 105, 0.96);
+  --nu-tooltip-color: #ffffff;
+  --nu-tooltip-arrow-border: rgba(110, 231, 183, 0.42);
+}
+
+.global-tooltip.tooltip-dark {
+  --nu-tooltip-bg: rgba(15, 23, 42, 0.96);
+  --nu-tooltip-color: #f8fafc;
+  --nu-tooltip-arrow-border: rgba(51, 65, 85, 0.72);
+}
+
+.global-tooltip.tooltip-light {
+  --nu-tooltip-bg: rgba(226, 232, 240, 0.96);
+  --nu-tooltip-color: #0f172a;
+  --nu-tooltip-arrow-border: rgba(148, 163, 184, 0.62);
 }
 
 .global-tooltip-glass {
@@ -255,7 +336,7 @@ onUnmounted(() => {
   max-height: none;
   overflow: visible;
   pointer-events: none;
-  filter: drop-shadow(0 8px 22px rgba(0, 0, 0, 0.36));
+  filter: drop-shadow(var(--nu-tooltip-shadow));
 }
 
 .global-tooltip-bubble-path {
@@ -272,7 +353,7 @@ onUnmounted(() => {
   -webkit-box-orient: vertical;
   -webkit-line-clamp: var(--nano-tooltip-max-lines, 4);
   line-clamp: var(--nano-tooltip-max-lines, 4);
-  max-height: calc(1.42em * var(--nano-tooltip-max-lines, 4));
+  max-height: calc(1.36em * var(--nano-tooltip-max-lines, 4));
   overflow: hidden;
   text-overflow: ellipsis;
   word-break: break-word;
