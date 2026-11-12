@@ -46,8 +46,8 @@ const codeTabs = createDocTabs({
         'max: Number (default: 100) - Maximum value',
         'step: Number (default: 1) - Quantization step (supports fractional steps like 0.01)',
         'showTicks: Boolean (default: true) - Render quartile scale ticks (25% / 50% / 75%)',
-        'sound: Boolean | String | Object (default: undefined) - Optional .nsd aerodynamic drag swish & 25%/50%/75% quartile harmonic chimes (inherits global configureNanoUiSound when undefined)',
-        'size: String (default: "md") - Geometry preset ("sm" | "md" | "lg")',
+        'sound: Boolean | String | Object (default: undefined) - Optional .nsd aerodynamic drag swish & 25%/50%/75% quartile harmonic chimes scaled by size acoustic mass (inherits global configureNanoUiSound when undefined)',
+        'size: String (default: "md") - Geometry & psychoacoustic mass preset ("sm" crisp micro-fader | "md" balanced reference | "lg" deep low-register studio fader)',
         'disabled: Boolean (default: false) - Disable interaction',
         'ariaLabel: String (default: "Slider") - Accessible label',
       ],
@@ -230,9 +230,11 @@ const isDisabled = ref(false);
 
     <!-- CARD 3: Size Variants -->
     <div class="demo-section">
-      <h3>Size Variants (sm / md / lg)</h3>
+      <h3>Size Variants &amp; Acoustic Mass (sm / md / lg)</h3>
       <p class="demo-desc">
-        Three ergonomic track and thumb geometries for compact toolbar controls, standard forms, or prominent studio decks.
+        Three ergonomic track and thumb geometries coupled with psychoacoustic mass scaling (<code>resolveControlAcousticMass</code>):
+        <code>size="sm"</code> emits a crisp, high-register micro-fader tick; <code>size="md"</code> provides balanced mid-register timbre;
+        <code>size="lg"</code> resonates with a deeper, warmer, lower-pitched studio console fader body.
       </p>
 
       <div class="sizes-stack">

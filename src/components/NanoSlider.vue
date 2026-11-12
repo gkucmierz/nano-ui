@@ -91,11 +91,14 @@ const emitSliderSoundForTransition = (prevVal, nextVal, allowSwish = true) => {
 
   const events = computeSliderAcousticEvents(prevPct, nextPct, {
     quartiles: quartilesEnabled ? [25, 50, 75] : [],
+    size: props.size,
   });
 
   if (events.crossedQuartile !== null) {
     playNanoUiSound('sliderQuartile', {
       propSound: props.sound,
+      size: props.size,
+      applySizePitch: false,
       playbackRate: events.quartilePitch,
       minIntervalMs: 28,
       throttleKey: `${sliderSoundKey}:quartile`,
@@ -103,7 +106,9 @@ const emitSliderSoundForTransition = (prevVal, nextVal, allowSwish = true) => {
   } else if (events.hitBoundary !== null) {
     playNanoUiSound('sliderBoundary', {
       propSound: props.sound,
-      playbackRate: events.hitBoundary === 100 ? 1.18 : 0.92,
+      size: props.size,
+      applySizePitch: false,
+      playbackRate: events.boundaryPitch,
       minIntervalMs: 45,
       throttleKey: `${sliderSoundKey}:boundary`,
     });
@@ -112,6 +117,8 @@ const emitSliderSoundForTransition = (prevVal, nextVal, allowSwish = true) => {
   if (swishEnabled && Math.abs(events.deltaPct) >= 0.65) {
     playNanoUiSound('sliderSwish', {
       propSound: props.sound,
+      size: props.size,
+      applySizePitch: false,
       playbackRate: events.swishPitch,
       gain: 0.72,
       minIntervalMs: 44,
@@ -377,6 +384,7 @@ function onKeydown(e) {
       idx === 0
         ? [Math.min(nextVal, high), high]
         : [low, Math.max(nextVal, low)];
+    emitSliderSoundForTransition(cur, nextPair[idx], e.key !== 'Home' && e.key !== 'End');
     emit('update:modelValue', nextPair);
     emit('change', nextPair);
     return;
