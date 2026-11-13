@@ -12,6 +12,8 @@ import {
 import {
   computeVerticalBands,
   getDateWeekdayInfo,
+  normalizeAxisSide,
+  computeDualAxisBounds,
 } from '../utils/chart-bands.js';
 
 const props = defineProps({
@@ -21,6 +23,8 @@ const props = defineProps({
    *   id: string,
    *   label: string,
    *   color: string,
+   *   yAxis?: 'left' | 'right',
+   *   formatValue?: (val: number, series: object, point: object) => string,
    *   strokeWidth?: number,
    *   dash?: string,
    *   area?: boolean,
@@ -129,8 +133,50 @@ const props = defineProps({
     type: Boolean,
     default: false,
   },
+  rightZeroBaseline: {
+    type: Boolean,
+    default: false,
+  },
   /**
-   * Optional horizontal reference lines: [{ value: number, label?: string, color?: string, dash?: string }]
+   * Optional explicit Y-axis bounds overrides for Left (`yMin`/`yMax`) and Right (`rightYMin`/`rightYMax`) axes.
+   */
+  yMin: {
+    type: Number,
+    default: null,
+  },
+  yMax: {
+    type: Number,
+    default: null,
+  },
+  rightYMin: {
+    type: Number,
+    default: null,
+  },
+  rightYMax: {
+    type: Number,
+    default: null,
+  },
+  /**
+   * Optional compact axis title badges rendered above Left and Right Y-axes.
+   */
+  yAxisLabel: {
+    type: String,
+    default: '',
+  },
+  rightYAxisLabel: {
+    type: String,
+    default: '',
+  },
+  leftAxisColor: {
+    type: String,
+    default: '',
+  },
+  rightAxisColor: {
+    type: String,
+    default: '',
+  },
+  /**
+   * Optional horizontal reference lines: [{ value: number, yAxis?: 'left' | 'right', label?: string, color?: string, dash?: string }]
    */
   referenceLines: {
     type: Array,
@@ -168,11 +214,19 @@ const props = defineProps({
     type: Function,
     default: null,
   },
+  formatRightYLabel: {
+    type: Function,
+    default: null,
+  },
   formatXLabel: {
     type: Function,
     default: null,
   },
   formatValue: {
+    type: Function,
+    default: null,
+  },
+  formatRightValue: {
     type: Function,
     default: null,
   },
@@ -198,6 +252,10 @@ const props = defineProps({
     type: Function,
     default: null,
   },
+  computeRightBounds: {
+    type: Function,
+    default: null,
+  },
   /**
    * Accessible label for the SVG chart.
    */
@@ -218,10 +276,6 @@ const emit = defineEmits(['hover', 'leave', 'point-click']);
 
 const instanceUid = Math.random().toString(36).slice(2, 9);
 
-const plotW = computed(() => Math.max(10, props.width - props.padLeft - props.padRight));
-const plotH = computed(() => Math.max(10, props.height - props.padTop - props.padBottom));
-const groundY = computed(() => props.height - props.padBottom);
-
 // Normalize series list (supports either `series` array or single-series `points`)
 const normalizedSeries = computed(() => {
   if (Array.isArray(props.series) && props.series.length > 0) {
@@ -229,6 +283,9 @@ const normalizedSeries = computed(() => {
       id: String(s.id ?? `series-${sIdx}`),
       label: s.label ?? String(s.id ?? `Series ${sIdx + 1}`),
       color: s.color || '#6366f1',
+      yAxis: normalizeAxisSide(s.yAxis),
+      formatValue: typeof s.formatValue === 'function' ? s.formatValue : null,
+      forceSeriesRow: Boolean(s.forceSeriesRow),
       strokeWidth: s.strokeWidth ?? 2.5,
       dash: s.dash || '',
       area: s.area !== undefined ? Boolean(s.area) : (props.series.length === 1 && props.area !== false),
@@ -242,6 +299,9 @@ const normalizedSeries = computed(() => {
         id: 'primary',
         label: props.label || '',
         color: props.color || '#6366f1',
+        yAxis: 'left',
+        formatValue: null,
+        forceSeriesRow: false,
         strokeWidth: 2.6,
         dash: '',
         area: props.area !== false,
@@ -251,6 +311,48 @@ const normalizedSeries = computed(() => {
     ];
   }
   return [];
+});
+
+const dualBoundsState = computed(() =>
+  computeDualAxisBounds(normalizedSeries.value, props.referenceLines, {
+    zeroBaseline: props.zeroBaseline,
+    rightZeroBaseline: props.rightZeroBaseline,
+    yMin: props.yMin,
+    yMax: props.yMax,
+    rightYMin: props.rightYMin,
+    rightYMax: props.rightYMax,
+    computeBounds: props.computeBounds,
+    computeRightBounds: props.computeRightBounds,
+  })
+);
+
+const hasRightAxis = computed(() => dualBoundsState.value.hasRightAxis);
+
+const effectivePadRight = computed(() =>
+  hasRightAxis.value ? Math.max(props.padRight, 64) : props.padRight
+);
+
+const effectivePadTop = computed(() =>
+  props.yAxisLabel || (hasRightAxis.value && props.rightYAxisLabel)
+    ? Math.max(props.padTop, 30)
+    : props.padTop
+);
+
+const plotW = computed(() => Math.max(10, props.width - props.padLeft - effectivePadRight.value));
+const plotH = computed(() => Math.max(10, props.height - effectivePadTop.value - props.padBottom));
+const groundY = computed(() => props.height - props.padBottom);
+
+const resolvedLeftAxisColor = computed(() => {
+  if (props.leftAxisColor) return props.leftAxisColor;
+  if (!hasRightAxis.value) return '';
+  const firstLeft = normalizedSeries.value.find((s) => s.yAxis !== 'right');
+  return firstLeft?.color || '';
+});
+
+const resolvedRightAxisColor = computed(() => {
+  if (props.rightAxisColor) return props.rightAxisColor;
+  const firstRight = normalizedSeries.value.find((s) => s.yAxis === 'right');
+  return firstRight?.color || '';
 });
 
 const resolvePtKey = (pt, idx) => {
@@ -316,63 +418,25 @@ const xSpine = computed(() => {
   });
 });
 
-// Default positively-homogeneous Y-axis bounds calculator
-const defaultComputeBounds = (values) => {
-  const finite = values.filter((v) => typeof v === 'number' && Number.isFinite(v));
-  if (finite.length === 0) {
-    return { minVal: 0, maxVal: 10 };
-  }
-  let dataMin = Math.min(...finite);
-  let dataMax = Math.max(...finite);
-  if (props.zeroBaseline) {
-    dataMin = Math.min(dataMin, 0);
-    dataMax = Math.max(dataMax, 0);
-  }
-  const rawSpan = dataMax - dataMin;
-  const refMag = Math.max(Math.abs(dataMax), Math.abs(dataMin));
-  const effectiveSpan = Math.max(rawSpan, refMag * 0.04, 1e-9);
-  const pad = effectiveSpan * 0.14;
-  const minVal = dataMin >= 0 && !props.zeroBaseline ? Math.max(0, dataMin - pad) : dataMin - pad;
-  const maxVal = dataMax + pad;
-  return { minVal, maxVal };
-};
-
-const targetBounds = computed(() => {
-  const vals = [];
-  for (const s of normalizedSeries.value) {
-    for (const pt of s.points) {
-      const v = Number(pt?.value);
-      if (pt?.value !== null && pt?.value !== undefined && Number.isFinite(v)) {
-        vals.push(v);
-      }
-    }
-  }
-  for (const refLine of props.referenceLines) {
-    if (typeof refLine?.value === 'number' && Number.isFinite(refLine.value)) {
-      vals.push(refLine.value);
-    }
-  }
-  if (typeof props.computeBounds === 'function') {
-    const res = props.computeBounds(vals);
-    if (res && Number.isFinite(res.minVal) && Number.isFinite(res.maxVal)) {
-      return res;
-    }
-  }
-  return defaultComputeBounds(vals);
-});
+const targetBounds = computed(() => dualBoundsState.value.leftBounds);
+const targetRightBounds = computed(() => dualBoundsState.value.rightBounds);
 
 const valueToY = (val, minV, maxV) => {
   const span = Math.max(1e-9, maxV - minV);
-  return props.padTop + (1 - (val - minV) / span) * plotH.value;
+  return effectivePadTop.value + (1 - (val - minV) / span) * plotH.value;
 };
 
-// Target SVG coordinates per series
+// Target SVG coordinates per series (Left vs Right Y-Axis, shared X-Axis spine)
 const targetSeriesCoords = computed(() => {
   const spine = xSpine.value;
   const spineByKey = new Map(spine.map((item) => [item.key, item]));
-  const { minVal, maxVal } = targetBounds.value;
+  const { minVal: leftMin, maxVal: leftMax } = targetBounds.value;
+  const { minVal: rightMin, maxVal: rightMax } = targetRightBounds.value;
 
   return normalizedSeries.value.map((s) => {
+    const isRight = hasRightAxis.value && s.yAxis === 'right';
+    const minVal = isRight ? rightMin : leftMin;
+    const maxVal = isRight ? rightMax : leftMax;
     const pts = [];
     s.points.forEach((pt, idx) => {
       if (pt?.value === null || pt?.value === undefined || !Number.isFinite(Number(pt.value))) {
@@ -400,11 +464,13 @@ const targetSeriesCoords = computed(() => {
 });
 
 // ============================================================================
-// Kinetic Animation State (Multi-Series Points + Y-Bounds + Hover Crosshair)
+// Kinetic Animation State (Multi-Series Points + Dual Y-Bounds + Hover Crosshair)
 // ============================================================================
 const animatedSeriesMap = ref({});
 const animatedMin = ref(0);
 const animatedMax = ref(10);
+const animatedRightMin = ref(0);
+const animatedRightMax = ref(10);
 const animatedTooltipX = ref(props.padLeft);
 const animatedTooltipOpacity = ref(0);
 const hoveredSpineIndex = ref(null);
@@ -432,6 +498,26 @@ const maxController = createKineticTransition({
   timingMode: 'fixed',
   onUpdate: ({ value }) => {
     animatedMax.value = value;
+  },
+});
+
+const rightMinController = createKineticTransition({
+  initialValue: 0,
+  duration: props.kineticDuration,
+  shortestPath: false,
+  timingMode: 'fixed',
+  onUpdate: ({ value }) => {
+    animatedRightMin.value = value;
+  },
+});
+
+const rightMaxController = createKineticTransition({
+  initialValue: 10,
+  duration: props.kineticDuration,
+  shortestPath: false,
+  timingMode: 'fixed',
+  onUpdate: ({ value }) => {
+    animatedRightMax.value = value;
   },
 });
 
@@ -467,6 +553,8 @@ const tickKinematics = (timestamp) => {
   if (!hasNativeRaf) {
     minController.step(timestamp);
     maxController.step(timestamp);
+    rightMinController.step(timestamp);
+    rightMaxController.step(timestamp);
     tooltipXController.step(timestamp);
     tooltipOpacityController.step(timestamp);
   }
@@ -518,6 +606,14 @@ const syncKineticTargets = ({ forceImmediate = false } = {}) => {
     animatedMax.value = maxVal;
   }
 
+  const { minVal: rMin, maxVal: rMax } = targetRightBounds.value;
+  rightMinController.setTarget(rMin, { immediate: isImmediate });
+  rightMaxController.setTarget(rMax, { immediate: isImmediate });
+  if (isImmediate) {
+    animatedRightMin.value = rMin;
+    animatedRightMax.value = rMax;
+  }
+
   const activeIds = new Set();
   const nextMap = { ...animatedSeriesMap.value };
 
@@ -553,7 +649,7 @@ const syncKineticTargets = ({ forceImmediate = false } = {}) => {
 };
 
 watch(
-  [targetSeriesCoords, targetBounds, () => props.immediateKey],
+  [targetSeriesCoords, targetBounds, targetRightBounds, () => props.immediateKey],
   () => {
     syncKineticTargets();
   },
@@ -575,6 +671,8 @@ onUnmounted(() => {
   seriesControllers.clear();
   minController.destroy();
   maxController.destroy();
+  rightMinController.destroy();
+  rightMaxController.destroy();
   tooltipXController.destroy();
   tooltipOpacityController.destroy();
 });
@@ -657,13 +755,22 @@ const yGridLines = computed(() => {
   const minV = animatedMin.value;
   const maxV = animatedMax.value;
   const span = Math.max(1e-9, maxV - minV);
+  const rMinV = animatedRightMin.value;
+  const rMaxV = animatedRightMax.value;
+  const rSpan = Math.max(1e-9, rMaxV - rMinV);
   const lines = [];
   for (let i = 0; i <= steps; i++) {
     const ratio = i / steps;
     const val = maxV - ratio * span;
-    const y = props.padTop + ratio * plotH.value;
+    const rightVal = rMaxV - ratio * rSpan;
+    const y = effectivePadTop.value + ratio * plotH.value;
     const label = props.formatYLabel ? props.formatYLabel(val) : defaultFormatY(val);
-    lines.push({ y, val, label });
+    const rightLabel = hasRightAxis.value
+      ? props.formatRightYLabel
+        ? props.formatRightYLabel(rightVal)
+        : defaultFormatY(rightVal)
+      : '';
+    lines.push({ y, val, label, rightVal, rightLabel });
   }
   return lines;
 });
@@ -678,18 +785,38 @@ const zeroBaselineY = computed(() => {
   return null;
 });
 
+const rightZeroBaselineY = computed(() => {
+  if (!hasRightAxis.value || !props.rightZeroBaseline) return null;
+  const minV = animatedRightMin.value;
+  const maxV = animatedRightMax.value;
+  if (minV < 0 && maxV > 0) {
+    return valueToY(0, minV, maxV);
+  }
+  return null;
+});
+
 const renderedReferenceLines = computed(() => {
-  const minV = animatedMin.value;
-  const maxV = animatedMax.value;
+  const leftMin = animatedMin.value;
+  const leftMax = animatedMax.value;
+  const rightMin = animatedRightMin.value;
+  const rightMax = animatedRightMax.value;
   return props.referenceLines
-    .filter((r) => typeof r?.value === 'number' && r.value >= minV && r.value <= maxV)
-    .map((r, idx) => ({
-      key: r.key || `ref-${idx}`,
-      y: valueToY(r.value, minV, maxV),
-      label: r.label || '',
-      color: r.color || 'var(--nano-text-muted, #64748b)',
-      dash: r.dash || '4,4',
-    }));
+    .map((r, idx) => {
+      if (typeof r?.value !== 'number' || !Number.isFinite(r.value)) return null;
+      const side = hasRightAxis.value ? normalizeAxisSide(r.yAxis) : 'left';
+      const minV = side === 'right' ? rightMin : leftMin;
+      const maxV = side === 'right' ? rightMax : leftMax;
+      if (r.value < minV || r.value > maxV) return null;
+      return {
+        key: r.key || `ref-${idx}`,
+        yAxis: side,
+        y: valueToY(r.value, minV, maxV),
+        label: r.label || '',
+        color: r.color || 'var(--nano-text-muted, #64748b)',
+        dash: r.dash || '4,4',
+      };
+    })
+    .filter(Boolean);
 });
 
 const xTickLabels = computed(() => {
@@ -761,7 +888,7 @@ const computedBands = computed(() => {
   const spine = xSpine.value;
   if (!spine.length) return [];
   const leftBound = props.padLeft;
-  const rightBound = props.width - props.padRight;
+  const rightBound = props.width - effectivePadRight.value;
 
   let bandConfig = props.verticalBands;
   if (bandConfig === true || bandConfig === 'weekend') {
@@ -810,13 +937,23 @@ const activeHoverDots = computed(() => {
         : isSpline
           ? evaluateSplineY(s.pts, targetX, props.tension)
           : evaluateLinearY(s.pts, targetX);
-      const formattedVal = props.formatValue
-        ? props.formatValue(exactPt.value, s, exactPt)
-        : defaultFormatY(exactPt.value);
+      let formattedVal = '';
+      if (s.formatValue) {
+        formattedVal = s.formatValue(exactPt.value, s, exactPt);
+      } else if (hasRightAxis.value && s.yAxis === 'right' && props.formatRightValue) {
+        formattedVal = props.formatRightValue(exactPt.value, s, exactPt);
+      } else if (props.formatValue) {
+        formattedVal = props.formatValue(exactPt.value, s, exactPt);
+      } else if (hasRightAxis.value && s.yAxis === 'right' && props.formatRightYLabel) {
+        formattedVal = props.formatRightYLabel(exactPt.value);
+      } else {
+        formattedVal = defaultFormatY(exactPt.value);
+      }
       return {
         seriesId: s.id,
         label: s.label,
         color: s.color,
+        yAxis: s.yAxis,
         x: targetX,
         y,
         value: exactPt.value,
@@ -879,7 +1016,7 @@ const tooltipXPercent = computed(() => (animatedTooltipX.value / props.width) * 
 
 const tooltipAnchorY = computed(() => {
   const dots = activeHoverDots.value;
-  if (!dots || !dots.length) return props.padTop + plotH.value * 0.5;
+  if (!dots || !dots.length) return effectivePadTop.value + plotH.value * 0.5;
   let minY = dots[0].y;
   for (let i = 1; i < dots.length; i++) {
     if (dots[i].y < minY) minY = dots[i].y;
@@ -897,7 +1034,7 @@ const tooltipStyle = computed(() => {
     (activeHoverDots.value.length > 1 ? 168 : 124);
 
   const minLeftPct = (props.padLeft / props.width) * 100;
-  const maxRightPct = ((props.width - props.padRight) / props.width) * 100;
+  const maxRightPct = ((props.width - effectivePadRight.value) / props.width) * 100;
   const halfTipPct = Math.min(28, ((tipW * 0.5) / Math.max(1, svgW)) * 100);
 
   // Smooth C1-continuous edge deceleration:
@@ -1010,12 +1147,18 @@ const getBounds = () => ({
   maxVal: animatedMax.value,
   targetMin: targetBounds.value.minVal,
   targetMax: targetBounds.value.maxVal,
+  hasRightAxis: hasRightAxis.value,
+  rightMinVal: animatedRightMin.value,
+  rightMaxVal: animatedRightMax.value,
+  targetRightMin: targetRightBounds.value.minVal,
+  targetRightMax: targetRightBounds.value.maxVal,
 });
 
 defineExpose({
   setHoverIndex,
   clearHover,
   getBounds,
+  hasRightAxis,
   hoveredSpineIndex,
   activeSpineEntry,
   activeHoverDots,
@@ -1064,7 +1207,7 @@ defineExpose({
           <g v-for="band in computedBands" :key="`band-${band.key}`">
             <rect
               :x="band.x"
-              :y="padTop"
+              :y="effectivePadTop"
               :width="band.width"
               :height="plotH"
               class="nano-chart-band-rect"
@@ -1074,7 +1217,7 @@ defineExpose({
               v-for="(divX, dIdx) in band.dividers"
               :key="`div-${band.key}-${dIdx}`"
               :x1="divX"
-              :y1="padTop"
+              :y1="effectivePadTop"
               :x2="divX"
               :y2="height - padBottom"
               class="nano-chart-band-divider"
@@ -1083,7 +1226,7 @@ defineExpose({
             <g v-if="band.showLabel" class="nano-chart-band-badge">
               <rect
                 :x="band.labelX - band.pillWidth / 2"
-                :y="padTop + 4"
+                :y="effectivePadTop + 4"
                 :width="band.pillWidth"
                 height="13"
                 rx="3.5"
@@ -1091,7 +1234,7 @@ defineExpose({
               />
               <text
                 :x="band.labelX"
-                :y="padTop + 13"
+                :y="effectivePadTop + 13"
                 text-anchor="middle"
                 class="nano-chart-band-label"
               >
@@ -1101,13 +1244,36 @@ defineExpose({
           </g>
         </g>
 
-        <!-- 2. Horizontal Y-Axis Grid Lines & Labels -->
+        <!-- 2. Horizontal Y-Axis Grid Lines & Left/Right Axis Labels -->
+        <g v-if="yAxisLabel || (hasRightAxis && rightYAxisLabel)" class="nano-chart-axis-titles">
+          <text
+            v-if="yAxisLabel"
+            :x="padLeft"
+            :y="effectivePadTop - 9"
+            text-anchor="start"
+            class="nano-chart-axis-title"
+            :style="resolvedLeftAxisColor ? { fill: resolvedLeftAxisColor } : undefined"
+          >
+            {{ yAxisLabel }}
+          </text>
+          <text
+            v-if="hasRightAxis && rightYAxisLabel"
+            :x="width - effectivePadRight"
+            :y="effectivePadTop - 9"
+            text-anchor="end"
+            class="nano-chart-axis-title"
+            :style="resolvedRightAxisColor ? { fill: resolvedRightAxisColor } : undefined"
+          >
+            {{ rightYAxisLabel }}
+          </text>
+        </g>
+
         <g class="nano-chart-grid-y">
           <g v-for="(g, idx) in yGridLines" :key="`ygrid-${idx}`">
             <line
               :x1="padLeft"
               :y1="g.y"
-              :x2="width - padRight"
+              :x2="width - effectivePadRight"
               :y2="g.y"
               class="nano-chart-grid-line"
               stroke-dasharray="4 4"
@@ -1117,8 +1283,19 @@ defineExpose({
               :y="g.y + 4"
               text-anchor="end"
               class="nano-chart-axis-label"
+              :style="hasRightAxis && resolvedLeftAxisColor ? { fill: resolvedLeftAxisColor } : undefined"
             >
               {{ g.label }}
+            </text>
+            <text
+              v-if="hasRightAxis"
+              :x="width - effectivePadRight + 10"
+              :y="g.y + 4"
+              text-anchor="start"
+              class="nano-chart-axis-label nano-chart-axis-label-right"
+              :style="resolvedRightAxisColor ? { fill: resolvedRightAxisColor } : undefined"
+            >
+              {{ g.rightLabel }}
             </text>
           </g>
         </g>
@@ -1128,16 +1305,25 @@ defineExpose({
           v-if="zeroBaselineY !== null"
           :x1="padLeft"
           :y1="zeroBaselineY"
-          :x2="width - padRight"
+          :x2="width - effectivePadRight"
           :y2="zeroBaselineY"
           class="nano-chart-zero-line"
           stroke-dasharray="3 3"
+        />
+        <line
+          v-if="rightZeroBaselineY !== null"
+          :x1="padLeft"
+          :y1="rightZeroBaselineY"
+          :x2="width - effectivePadRight"
+          :y2="rightZeroBaselineY"
+          class="nano-chart-zero-line"
+          stroke-dasharray="2 4"
         />
         <g v-for="refLine in renderedReferenceLines" :key="refLine.key">
           <line
             :x1="padLeft"
             :y1="refLine.y"
-            :x2="width - padRight"
+            :x2="width - effectivePadRight"
             :y2="refLine.y"
             :stroke="refLine.color"
             :stroke-dasharray="refLine.dash"
@@ -1145,7 +1331,7 @@ defineExpose({
           />
           <text
             v-if="refLine.label"
-            :x="width - padRight - 4"
+            :x="width - effectivePadRight - 6"
             :y="refLine.y - 4"
             text-anchor="end"
             class="nano-chart-ref-label"
@@ -1198,7 +1384,7 @@ defineExpose({
         >
           <line
             :x1="animatedTooltipX"
-            :y1="padTop"
+            :y1="effectivePadTop"
             :x2="animatedTooltipX"
             :y2="height - padBottom"
             class="nano-chart-crosshair"
@@ -1341,6 +1527,20 @@ defineExpose({
   font-size: 11px;
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
   font-variant-numeric: tabular-nums;
+}
+
+.nano-chart-axis-label-right {
+  font-weight: 600;
+}
+
+.nano-chart-axis-title {
+  fill: var(--nano-text-muted, var(--text-muted, #94a3b8));
+  stroke: none;
+  font-size: 9.5px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
 }
 
 .nano-chart-ref-label {

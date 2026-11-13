@@ -14,6 +14,90 @@ const includeFriday = ref(false);
 const curveMode = ref('spline');
 const activePresetIdx = ref(0);
 
+// Independent Demo 2: Dual Independent Vertical Y-Axes (Left + Right) sharing 1 X-Axis
+const dualPresetIdx = ref(0);
+const dualShowSleepBands = ref(true);
+const dualCurveMode = ref('monotone');
+
+const dualAxisSlots = [
+  '11-09 09:00',
+  '11-09 15:00',
+  '11-09 21:00',
+  '11-10 03:00',
+  '11-10 09:00',
+  '11-10 15:00',
+  '11-10 21:00',
+  '11-11 03:00',
+  '11-11 09:00',
+  '11-11 15:00',
+  '11-11 21:00',
+  '11-12 09:00',
+];
+
+const dualAxisVariants = [
+  {
+    kpi: [92, 138, 84, 0, 186, 248, 164, 0, 198, 262, 176, 228],
+    depth: [62, 74, 51, 0, 88, 94, 72, 0, 86, 96, 78, 91],
+  },
+  {
+    kpi: [118, 165, 96, 0, 212, 192, 128, 0, 236, 210, 148, 194],
+    depth: [68, 79, 58, 0, 91, 84, 64, 0, 93, 87, 71, 85],
+  },
+];
+
+const dualAxisSeries = computed(() => {
+  const v = dualAxisVariants[dualPresetIdx.value % dualAxisVariants.length];
+  return [
+    {
+      id: 'kpi-velocity',
+      label: currentLang.value === 'pl' ? 'Ciąg KPI w impulsie (S%)' : 'Impulse KPI Velocity (S%)',
+      color: '#6366f1',
+      yAxis: 'left',
+      area: true,
+      areaOpacity: 0.22,
+      formatValue: (val) => `${Math.round(val)}%`,
+      points: dualAxisSlots.map((slot, idx) => ({
+        key: slot,
+        label: slot,
+        value: v.kpi[idx],
+        badge: v.kpi[idx] === 0 ? '💤 SEN' : '⚡ FLOW',
+        badgeHighlight: v.kpi[idx] === 0,
+      })),
+    },
+    {
+      id: 'cognitive-depth',
+      label: currentLang.value === 'pl' ? 'Głębokość poznawcza (0–100)' : 'Cognitive Depth (0–100)',
+      color: '#34d399',
+      yAxis: 'right',
+      dash: '4 3',
+      strokeWidth: 2.2,
+      area: false,
+      formatValue: (val) => `${Math.round(val)}/100`,
+      points: dualAxisSlots.map((slot, idx) => ({
+        key: slot,
+        label: slot,
+        value: v.depth[idx],
+      })),
+    },
+  ];
+});
+
+const dualAxisBands = [
+  { index: 3, label: '7.8h' },
+  { index: 7, label: '8.2h' },
+];
+
+const dualReferenceLines = [
+  {
+    key: 'norm-100',
+    yAxis: 'left',
+    value: 100,
+    label: currentLang.value === 'pl' ? 'Norma 100%' : 'Norm 100%',
+    color: 'rgba(245, 158, 11, 0.78)',
+    dash: '4,3',
+  },
+];
+
 // 1. Time-Series Domain (Multi-series with Weekend / Custom Day Vertical Bands)
 const timeSeriesVariants = [
   {
@@ -253,24 +337,44 @@ const bandConfig = {
     :show-vertical-bands="true"
     curve="spline"
   />
+
+  <!-- Dual Independent Y-Axes (yAxis: 'left' + yAxis: 'right') on 1 shared X-Axis -->
+  <NanoTrendChart
+    :series="[
+      { id: 'kpi', label: 'KPI Velocity (S%)', color: '#6366f1', yAxis: 'left', area: true, points: kpiPts },
+      { id: 'depth', label: 'Cognitive Depth (0–100)', color: '#34d399', yAxis: 'right', dash: '4 3', points: depthPts },
+    ]"
+    :y-min="0"
+    :right-y-min="0"
+    :right-y-max="100"
+    y-axis-label="KPI S%"
+    right-y-axis-label="DEPTH 0–100"
+    :format-y-label="(v) => Math.round(v) + '%'"
+    :format-right-y-label="(v) => Math.round(v) + '/100'"
+    curve="monotone"
+  />
 </template>`;
 const codeTabs = createDocTabs({
   componentName: 'NanoTrendChart',
   usageCode: usageSnippet,
   headlessImports: [
-    { symbols: ['computeVerticalBands', 'computeWeekendBands', 'getDateWeekdayInfo'], path: 'dist/utils/chart-bands.js' },
+    { symbols: ['computeVerticalBands', 'computeWeekendBands', 'getDateWeekdayInfo', 'computeDualAxisBounds'], path: 'dist/nano-ui.js' },
   ],
   apiSections: [
     {
       title: 'Props',
       items: [
-        'series: Array<{ id, label, color, area?: Boolean, width?: Number, dashed?: Boolean, points: Array<{ key, label, date?, value, subValue? }> }> (required)',
-        'verticalBands: Object | Array | Function (default: null) - Declarative band config ({ preset: "weekend", lang, days, mergeAdjacent }) or custom predicate',
+        'series: Array<{ id, label, color, yAxis?: "left" | "right", formatValue?: Function, area?: Boolean, strokeWidth?: Number, dash?: String, points: Array<{ key, label, date?, value, subValue? }> }>',
+        'yMin / yMax: Number | null - Optional explicit bounds for Left Y-axis',
+        'rightYMin / rightYMax: Number | null - Optional explicit bounds for Right Y-axis (when any series sets yAxis: "right")',
+        'yAxisLabel / rightYAxisLabel: String - Optional compact axis header captions above Left and Right Y-axes',
+        'formatYLabel / formatRightYLabel: Function - Independent tick formatters for Left and Right Y-axes',
+        'formatValue / formatRightValue: Function - Tooltip value formatters',
+        'verticalBands: Object | Array | Function (default: false) - Declarative band config ({ preset: "weekend", lang, days, mergeAdjacent }) or custom predicate',
         'showVerticalBands: Boolean (default: true) - Toggle vertical background bands and top pills',
-        'curve: String (default: "spline") - Path interpolation ("spline" C¹ Bezier | "linear")',
-        'zeroBaseline: Boolean (default: false) - Render horizontal Y=0 reference baseline',
-        'formatValue: Function (default: null) - Custom Y-axis and tooltip value formatter (val) => string',
-        'tooltipFooter: Function (default: null) - Custom footer aggregator ({ index, entry, items }) => string',
+        'curve: String (default: "spline") - Path interpolation ("spline" C¹ Bezier | "monotone" | "linear")',
+        'zeroBaseline / rightZeroBaseline: Boolean (default: false) - Render horizontal Y=0 reference baseline',
+        'tooltipFooter: Function (default: "") - Custom footer aggregator ({ index, key, label, items }) => string',
       ],
     },
     {
@@ -393,6 +497,70 @@ const codeTabs = createDocTabs({
       </div>
     </div>
 
+    <div class="demo-section dual-demo-section">
+      <h3>{{ t('trendChart.dualTitle') }}</h3>
+      <p>{{ t('trendChart.dualDesc') }}</p>
+
+      <div class="chart-toolbar">
+        <div class="ctrl-block">
+          <span class="ctrl-label">{{ t('trendChart.kineticTrigger') }}</span>
+          <button
+            type="button"
+            class="nano-btn nano-btn-primary nano-btn-sm"
+            @click="dualPresetIdx++"
+          >
+            ⚡ {{ t('trendChart.dualMorphBtn') }}
+          </button>
+        </div>
+
+        <div class="ctrl-block">
+          <span class="ctrl-label">{{ t('trendChart.curveMode') }}</span>
+          <div class="nano-btn-group">
+            <button
+              type="button"
+              class="nano-btn nano-btn-secondary nano-btn-sm"
+              :class="{ 'nano-btn-active': dualCurveMode === 'monotone' }"
+              @click="dualCurveMode = 'monotone'"
+            >
+              Monotone C¹
+            </button>
+            <button
+              type="button"
+              class="nano-btn nano-btn-secondary nano-btn-sm"
+              :class="{ 'nano-btn-active': dualCurveMode === 'linear' }"
+              @click="dualCurveMode = 'linear'"
+            >
+              Linear
+            </button>
+          </div>
+        </div>
+
+        <label class="toggle-item">
+          <NanoSwitch v-model="dualShowSleepBands" size="compact" color="amber" />
+          <span>{{ t('trendChart.dualSleepBands') }}</span>
+        </label>
+      </div>
+
+      <div class="chart-stage-card">
+        <NanoTrendChart
+          :series="dualAxisSeries"
+          :vertical-bands="dualAxisBands"
+          :show-vertical-bands="dualShowSleepBands"
+          :reference-lines="dualReferenceLines"
+          :curve="dualCurveMode"
+          :y-min="0"
+          :right-y-min="0"
+          :right-y-max="100"
+          y-axis-label="KPI S%"
+          right-y-axis-label="DEPTH 0–100"
+          :format-y-label="(val) => `${Math.round(val)}%`"
+          :format-right-y-label="(val) => `${Math.round(val)}/100`"
+          x-scale="index"
+          :lang="currentLang"
+        />
+      </div>
+    </div>
+
     <NanoCodeBlock :tabs="codeTabs" />
   </div>
 </template>
@@ -436,5 +604,18 @@ const codeTabs = createDocTabs({
   border-radius: 12px;
   background: var(--nano-bg-card);
   border: 1px solid var(--nano-border-card);
+}
+
+.dual-demo-section {
+  margin-top: 28px;
+}
+
+.dual-demo-section h3 {
+  margin: 0 0 6px;
+}
+
+.dual-demo-section > p {
+  margin: 0 0 14px;
+  color: var(--nano-text-muted);
 }
 </style>
