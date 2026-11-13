@@ -26,7 +26,16 @@ export const dialogState = ref({
  * Supports both positional `(message, 'Title', 'OK')` and options object
  * `(message, { title, type, dangerous, okText, okVariant, glassHeader, glassFooter, width })`.
  */
+const settlePendingDialog = () => {
+  const prevResolver = dialogState.value.resolve;
+  if (prevResolver) {
+    dialogState.value.resolve = null;
+    prevResolver(false);
+  }
+};
+
 export const showAlert = (message, options = {}, legacyOkText) => {
+  settlePendingDialog();
   const opts = isStr(options)
     ? { title: options, ...(isStr(legacyOkText) ? { okText: legacyOkText } : {}) }
     : isObj(options)
@@ -70,6 +79,7 @@ export const showConfirm = (
   legacyOkText,
   legacyCancelText
 ) => {
+  settlePendingDialog();
   const opts = isStr(options)
     ? {
       title: options,
