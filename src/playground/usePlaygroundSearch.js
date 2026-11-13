@@ -316,7 +316,7 @@ export const PLAYGROUND_NAV_ITEMS = [
     docFile: 'CodeEditorDoc.vue',
     localeKeys: ['codeEditor'],
     componentTag: 'NanoCodeEditor',
-    keywords: 'NanoFileList NanoCodeBlock git diff split unified syntax highlight parser edytor kodu commit nsd nanosound glsl wgsl hlsl shader fragment raymarching',
+    keywords: 'NanoFileList NanoCodeBlock git diff split unified syntax highlight parser edytor kodu commit nsd nanosound glsl wgsl hlsl shader fragment raymarching bpy blender bmesh python glb',
   },
   {
     id: '/docs/trend-chart',
