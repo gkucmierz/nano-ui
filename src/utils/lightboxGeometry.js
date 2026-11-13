@@ -92,9 +92,47 @@ export const parseSvgViewBoxDimensions = (svgMarkup = '') => {
  *    with `-${uniqueSuffix}` so `<marker>` arrowheads, gradients, and clipPaths never collide
  *    with inline `<svg>` instances on the underlying document.
  */
+/**
+ * Strips executable elements (`<script>`, `<iframe>`, `<object>`, `<embed>`, `<audio>`, `<video>`),
+ * inline event handlers (`on*`), dangerous SMIL attribute targets, and external/javascript: URLs
+ * from raw SVG markup before rendering via `v-html` (while preserving Mermaid `<foreignObject>` HTML labels safely).
+ */
+export const sanitizeLightboxSvgMarkup = (rawSvg = '') => {
+  if (!isStr(rawSvg) || !rawSvg.trim()) return '';
+  let clean = rawSvg
+    // Strip dangerous executable container tags with content
+    .replace(/<\s*(script|iframe|object|embed|applet|audio|video|portal|base|meta)\b[^>]*>[\s\S]*?<\s*\/\s*\1\s*>/gi, '')
+    // Strip self-closing or unclosed dangerous tags
+    .replace(/<\s*\/?\s*(script|iframe|object|embed|applet|audio|video|portal|base|meta)\b[^>]*\/?>/gi, '')
+    // Strip SMIL <set> / <animate*> tags that mutate href / xlink:href / on* attributes
+    .replace(/<\s*(?:set|animate|animateTransform|animateMotion)\b[^>]*\battributeName\s*=\s*(?:"\s*(?:(?:xlink:)?href|on\w+)\s*"|'\s*(?:(?:xlink:)?href|on\w+)\s*'|(?:xlink:)?href|on\w+)[^>]*\/?>/gi, '')
+    // Strip all inline event handler attributes (onload, onerror, onbegin, onclick, etc.)
+    .replace(/\s+(?<![-\w:])on[a-zA-Z0-9_-]+\s*=\s*(?:"[^"]*"|'[^']*'|[^\s>"'=]+)/gi, '')
+    // Neutralize javascript: / vbscript: / data:text/html inside href, xlink:href, src, action, formaction
+    .replace(
+      /\s+((?:xlink:)?href|src|action|formaction)\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s>"'=]+))/gi,
+      (full, attrName, dq, sq, bare) => {
+        const val = String(dq ?? sq ?? bare ?? '').trim();
+        const normalizedVal = val.replace(/[\x00-\x20]+/g, '').toLowerCase();
+        if (
+          normalizedVal.startsWith('javascript:') ||
+          normalizedVal.startsWith('vbscript:') ||
+          (normalizedVal.startsWith('data:') && !/^data:image\/(?:png|jpeg|jpg|webp|gif);base64,/i.test(normalizedVal))
+        ) {
+          return '';
+        }
+        return full;
+      }
+    )
+    // Neutralize CSS url(javascript:...) / expression(...) inside style attributes or <style>
+    .replace(/url\(\s*(['"]?)\s*(?:javascript|vbscript|data\s*:\s*text\/html)[^)]*\)/gi, 'url(#blocked)');
+  return clean;
+};
+
 export const normalizeLightboxSvgMarkup = (svgMarkup = '', uniqueSuffix = 'lb') => {
   if (!isStr(svgMarkup) || !svgMarkup.trim()) return '';
-  const openMatch = svgMarkup.match(ROOT_SVG_OPEN_TAG_RE);
+  const sanitizedInput = sanitizeLightboxSvgMarkup(svgMarkup);
+  const openMatch = sanitizedInput.match(ROOT_SVG_OPEN_TAG_RE);
   if (!openMatch) return '';
 
   let nextOpenTag = openMatch[0];
@@ -133,9 +171,9 @@ export const normalizeLightboxSvgMarkup = (svgMarkup = '', uniqueSuffix = 'lb') 
   nextOpenTag = setOrReplaceSvgTagAttr(nextOpenTag, 'preserveAspectRatio', 'xMidYMid meet');
 
   let normalized =
-    svgMarkup.slice(0, openMatch.index) +
+    sanitizedInput.slice(0, openMatch.index) +
     nextOpenTag +
-    svgMarkup.slice(openMatch.index + openMatch[0].length);
+    sanitizedInput.slice(openMatch.index + openMatch[0].length);
 
   const safeSuffix = isStr(uniqueSuffix)
     ? uniqueSuffix.trim().replace(/[^A-Za-z0-9_-]+/g, '-').replace(/^-+|-+$/g, '')
