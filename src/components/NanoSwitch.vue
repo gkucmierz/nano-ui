@@ -132,7 +132,7 @@ const toggle = (event) => {
   </label>
 </template>
 
-<style>
+<style scoped>
 .nano-switch,
 .nano-switch *,
 .nano-switch *::before,
