@@ -148,7 +148,12 @@ export const encodeEcosystemPrefsToken = (prefs = {}) => {
 };
 
 export const decodeEcosystemPrefsToken = (rawToken = '') => {
-  const clean = decodeURIComponent(String(rawToken || '').trim());
+  let clean = '';
+  try {
+    clean = decodeURIComponent(String(rawToken || '').trim());
+  } catch {
+    return null;
+  }
   if (!clean) return null;
 
   // Support compact dot format: v1.dark.pl.1.l.tr8k2
@@ -170,11 +175,14 @@ export const decodeEcosystemPrefsToken = (rawToken = '') => {
   // Also support key-value legacy spec format: v1:theme=dark:lang=pl:side=left
   if (clean.startsWith('v1:')) {
     const segments = clean.slice(3).split(':');
-    const kv = {};
+    const kv = Object.create(null);
     for (const seg of segments) {
       const eq = seg.indexOf('=');
       if (eq > 0) {
-        kv[seg.slice(0, eq)] = seg.slice(eq + 1);
+        const key = seg.slice(0, eq);
+        if (key !== '__proto__' && key !== 'prototype' && key !== 'constructor') {
+          kv[key] = seg.slice(eq + 1);
+        }
       }
     }
     if (!VALID_THEMES.has(kv.theme)) return null;
@@ -285,9 +293,12 @@ export const extractAndStripEcosystemHash = (rawUrlString = '') => {
     const rawHash = url.hash ? url.hash.slice(1) : '';
     if (rawHash) {
       const prefix = `${ECOSYSTEM_PREFS_HASH_PARAM}=`;
-      if (rawHash.startsWith(prefix) && !rawHash.includes('&')) {
-        extractedToken = rawHash.slice(prefix.length);
-        url.hash = '';
+      if (rawHash.startsWith(prefix)) {
+        const rest = rawHash.slice(prefix.length);
+        const amp = rest.indexOf('&');
+        extractedToken = amp >= 0 ? rest.slice(0, amp) : rest;
+        const cleanedHash = amp >= 0 ? rest.slice(amp + 1) : '';
+        url.hash = cleanedHash ? `#${cleanedHash}` : '';
       } else if (rawHash.includes(`&${prefix}`)) {
         const idx = rawHash.indexOf(`&${prefix}`);
         const rest = rawHash.slice(idx + 1 + prefix.length);
@@ -309,10 +320,13 @@ export const extractAndStripEcosystemHash = (rawUrlString = '') => {
 };
 
 export const buildEcosystemSyncBounceUrl = (returnUrl, { bridgeUrl = ECOSYSTEM_BRIDGE_URL } = {}) => {
-  if (!isTrustedEcosystemOrigin(returnUrl, { allowExternal: true })) {
+  const safeReturnUrl = Object.prototype.toString.call(returnUrl) === '[object String]'
+    ? returnUrl.trim()
+    : '';
+  if (!safeReturnUrl || !isTrustedEcosystemOrigin(safeReturnUrl, { allowExternal: true })) {
     return '';
   }
   const bridge = new URL(bridgeUrl);
-  bridge.searchParams.set('sync_return', String(returnUrl));
+  bridge.searchParams.set('sync_return', safeReturnUrl);
   return bridge.toString();
 };
