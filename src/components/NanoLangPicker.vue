@@ -2,6 +2,7 @@
 import { ref, computed, watch, nextTick, onMounted, onUnmounted, useId } from 'vue';
 import NanoFlag from './NanoFlag.vue';
 import { tooltipDirective as vTooltip } from '../directives/tooltip.js';
+import { hideTooltip } from '../composables/useTooltip.js';
 import { normalizeLangOptions, resolveLangMeta } from '../utils/langFlags.js';
 import {
   navigateGrid,
@@ -241,6 +242,7 @@ function focusOptionAt(idx) {
 
 function open() {
   if (props.disabled || !isMultiPicker.value) return;
+  hideTooltip(triggerBtnRef.value);
   syncViewportMetrics();
   syncDocumentThemeState();
   const curIdx = normalizedLanguages.value.findIndex(
@@ -259,6 +261,7 @@ function open() {
 function close({ restoreFocus = false } = {}) {
   if (!isOpen.value) return;
   isOpen.value = false;
+  hideTooltip(triggerBtnRef.value);
   emit('close');
   if (restoreFocus) {
     nextTick(() => {
@@ -267,14 +270,17 @@ function close({ restoreFocus = false } = {}) {
   }
 }
 
-function selectLanguage(code) {
+function selectLanguage(code, event = null) {
   if (props.disabled) return;
   const nextMeta =
     normalizedLanguages.value.find((item) => item.code === code) ||
     resolveLangMeta(code);
   emit('update:modelValue', nextMeta.code);
   emit('change', nextMeta.code);
-  close({ restoreFocus: true });
+  // Restore focus to trigger ONLY when activated via keyboard (detail === 0 or no pointer event);
+  // pointer clicks inside the teleported matrix must never pull focus/tooltip back to the header trigger.
+  const isPointerSelection = Boolean(event && Number(event.detail) > 0);
+  close({ restoreFocus: !isPointerSelection });
 }
 
 function cycle() {
@@ -507,7 +513,7 @@ defineExpose({
             :tabindex="idx === focusedIndex ? 0 : -1"
             @mouseenter="focusedIndex = idx"
             @focus="focusedIndex = idx"
-            @click.stop="selectLanguage(opt.code)"
+            @click.stop="selectLanguage(opt.code, $event)"
           >
             <span class="nano-lang-opt-top">
               <NanoFlag :lang="opt" :size="isMobileList ? 20 : 19" />
