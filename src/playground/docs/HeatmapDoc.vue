@@ -234,7 +234,8 @@ const codeTabs = createDocTabs({
             :min="0"
             :max="9"
             :step="1"
-            size="sm"
+            variant="split"
+            color="info"
           />
         </div>
       </div>
@@ -330,16 +331,22 @@ const codeTabs = createDocTabs({
             :min="1"
             :max="6"
             :step="0.4"
-            size="sm"
+            variant="split"
+            color="info"
           />
         </div>
 
         <div class="control-group actions-group">
-          <button type="button" class="nano-action-btn" @click="loadSamplePoints">
+          <button type="button" class="nano-action-btn is-accent" @click="loadSamplePoints">
             {{ t('heatmapDoc.loadEmpiricalBtn') }}
           </button>
-          <button type="button" class="nano-action-btn is-muted" @click="clearDensityPoints">
-            {{ t('heatmapDoc.clearPointsBtn') }}
+          <button
+            type="button"
+            class="nano-action-btn is-muted"
+            :disabled="densityPoints.length === 0"
+            @click="clearDensityPoints"
+          >
+            {{ t('heatmapDoc.clearPointsBtn') }} ({{ densityPoints.length }})
           </button>
         </div>
       </div>
@@ -419,10 +426,10 @@ const codeTabs = createDocTabs({
 
 .control-label {
   font-size: 11px;
-  font-weight: 600;
+  font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.04em;
-  opacity: 0.72;
+  color: var(--nano-text-muted, #64748b);
 }
 
 .pill-row {
@@ -439,27 +446,39 @@ const codeTabs = createDocTabs({
   height: 32px;
   padding: 0 11px;
   border-radius: 6px;
-  border: 1px solid rgba(148, 163, 184, 0.24);
-  background: rgba(15, 23, 42, 0.3);
-  color: inherit;
+  border: 1px solid var(--nano-border-card, rgba(148, 163, 184, 0.28));
+  background: var(--nano-bg-muted, rgba(255, 255, 255, 0.05));
+  color: var(--nano-text-secondary, #cbd5e1);
   font-size: 12px;
   font-weight: 600;
   line-height: 1;
   box-sizing: border-box;
   cursor: pointer;
+  user-select: none;
   transition: background-color 120ms ease, border-color 120ms ease, color 120ms ease;
 }
 
-.nano-pill-btn:hover,
-.nano-action-btn:hover {
-  border-color: rgba(56, 189, 248, 0.55);
-  background: rgba(56, 189, 248, 0.1);
+.nano-pill-btn:hover:not(:disabled),
+.nano-action-btn:hover:not(:disabled) {
+  border-color: color-mix(in srgb, var(--nano-status-info, #0284c7) 52%, var(--nano-border-card, #cbd5e1));
+  background: color-mix(in srgb, var(--nano-status-info, #0284c7) 10%, var(--nano-bg-muted, #f1f5f9));
+  color: var(--nano-text-main, #0f172a);
 }
 
 .nano-pill-btn.is-active {
-  border-color: #38bdf8;
-  background: rgba(56, 189, 248, 0.16);
-  color: #38bdf8;
+  border-color: var(--nano-status-info, #0284c7);
+  background: var(--nano-status-info-bg, rgba(2, 132, 199, 0.12));
+  color: var(--nano-status-info-text, #075985);
+}
+
+.nano-action-btn.is-accent {
+  border-color: color-mix(in srgb, var(--nano-status-info, #0284c7) 42%, var(--nano-border-card, #cbd5e1));
+  color: var(--nano-text-main, #0f172a);
+}
+
+.nano-action-btn:disabled {
+  opacity: 0.48;
+  cursor: not-allowed;
 }
 
 .toggles-row {
@@ -493,17 +512,19 @@ const codeTabs = createDocTabs({
   gap: 6px;
   padding: 6px 10px;
   border-radius: 6px;
-  background: rgba(15, 23, 42, 0.32);
-  border: 1px solid rgba(148, 163, 184, 0.16);
+  background: var(--nano-bg-muted, rgba(255, 255, 255, 0.05));
+  border: 1px solid var(--nano-border-subtle, rgba(148, 163, 184, 0.2));
+  color: var(--nano-text-secondary, #cbd5e1);
   font-variant-numeric: tabular-nums;
 }
 
 .readout-key {
-  opacity: 0.72;
+  color: var(--nano-text-muted, #64748b);
 }
 
 .readout-empty {
-  opacity: 0.55;
+  color: var(--nano-text-muted, #64748b);
+  opacity: 0.8;
 }
 
 .density-collector-wrap {
@@ -516,13 +537,23 @@ const codeTabs = createDocTabs({
   position: absolute;
   top: 10px;
   right: 10px;
-  padding: 4px 9px;
+  padding: 4px 10px;
   border-radius: 999px;
-  background: rgba(15, 23, 42, 0.72);
-  border: 1px solid rgba(148, 163, 184, 0.24);
-  color: #e2e8f0;
+  background: color-mix(in srgb, var(--nano-bg-card, #ffffff) 86%, transparent);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid var(--nano-border-card, rgba(148, 163, 184, 0.28));
+  color: var(--nano-text-secondary, #1e293b);
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.1);
   font-size: 11px;
   font-weight: 600;
   font-variant-numeric: tabular-nums;
+}
+
+@media (forced-colors: active) {
+  .nano-pill-btn.is-active {
+    outline: 2px solid SelectedItem;
+    outline-offset: -2px;
+  }
 }
 </style>

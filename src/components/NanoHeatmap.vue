@@ -263,11 +263,24 @@ const densityGrid = computed(() => {
   });
 });
 
+const DENSITY_VISIBILITY_FLOOR_RATIO = 0.008;
+
 const scaleStats = computed(() => {
-  const sourceValues =
-    props.mode === 'density'
-      ? densityGrid.value.cells
-      : normalizedMatrix.value.values2D;
+  let sourceValues;
+  if (props.mode === 'density') {
+    const kde = densityGrid.value;
+    const floor = kde.max * DENSITY_VISIBILITY_FLOOR_RATIO;
+    const visible = [];
+    if (kde.max > 0) {
+      for (let i = 0; i < kde.cells.length; i++) {
+        const v = kde.cells[i];
+        if (v > floor) visible.push(v);
+      }
+    }
+    sourceValues = visible;
+  } else {
+    sourceValues = normalizedMatrix.value.values2D;
+  }
   return computeHeatmapScale(sourceValues, {
     scale: localScale.value,
     clampPercentile: props.clampPercentile,
@@ -676,7 +689,7 @@ function redrawDensityCanvas() {
 
   const lut = buildHeatmapColorLut({ palette: pal, isDark: dark });
   const { cols, rows, cells } = kde;
-  const zeroCutoff = kde.max * 0.008;
+  const zeroCutoff = kde.max * DENSITY_VISIBILITY_FLOOR_RATIO;
 
   for (let py = 0; py < pixelHeight; py++) {
     const gy = rows <= 1 ? 0 : (py / Math.max(1, pixelHeight - 1)) * (rows - 1);
@@ -710,8 +723,9 @@ function redrawDensityCanvas() {
       } else {
         const normT = sc.normalize(val);
         const lutIdx = clamp(Math.round(normT * 255), 0, 255) * 3;
-        // Smooth transition near the outer halo edge into the structural zero surface
-        const edgeBlend = val < zeroCutoff * 3 ? (val - zeroCutoff) / (zeroCutoff * 2) : 1;
+        // Smoothstep feathering across the outer halo edge into the structural zero surface
+        const rawEdge = val < zeroCutoff * 4 ? (val - zeroCutoff) / (zeroCutoff * 3) : 1;
+        const edgeBlend = rawEdge * rawEdge * (3 - 2 * rawEdge);
         buf[outIdx] = Math.round(zeroRgb.r + (lut[lutIdx] - zeroRgb.r) * edgeBlend);
         buf[outIdx + 1] = Math.round(zeroRgb.g + (lut[lutIdx + 1] - zeroRgb.g) * edgeBlend);
         buf[outIdx + 2] = Math.round(zeroRgb.b + (lut[lutIdx + 2] - zeroRgb.b) * edgeBlend);
@@ -1061,13 +1075,13 @@ defineExpose({
 
 .nano-heatmap.is-light {
   --nano-heatmap-text: #0f172a;
-  --nano-heatmap-muted: #64748b;
-  --nano-heatmap-axis-active-bg: rgba(2, 132, 199, 0.12);
-  --nano-heatmap-axis-active-fg: #0284c7;
+  --nano-heatmap-muted: #475569;
+  --nano-heatmap-axis-active-bg: rgba(2, 132, 199, 0.13);
+  --nano-heatmap-axis-active-fg: #0369a1;
   --nano-heatmap-hover-ring: #0284c7;
   --nano-heatmap-select-ring: #d97706;
-  --nano-heatmap-cell-border: rgba(15, 23, 42, 0.09);
-  --nano-heatmap-surface: rgba(241, 245, 249, 0.8);
+  --nano-heatmap-cell-border: rgba(15, 23, 42, 0.13);
+  --nano-heatmap-surface: #f1f5f9;
 }
 
 .nano-heatmap-scroll {
@@ -1371,9 +1385,10 @@ defineExpose({
   }
 
   .nano-heatmap-cell.is-selected,
-  .nano-heatmap-cell.is-hover-active {
-    outline: 3px double SelectedItem;
-    outline-offset: -3px;
+  .nano-heatmap-cell.is-hover-active,
+  .nano-heatmap-scale-btn.is-active {
+    outline: 2px solid SelectedItem;
+    outline-offset: -2px;
   }
 }
 </style>
