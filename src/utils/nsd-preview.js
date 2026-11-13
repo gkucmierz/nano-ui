@@ -315,13 +315,13 @@ export const extractEmbeddedNsdSnippets = (sourceText = '') => {
   if (!raw || raw.length > 400000) return [];
   const results = [];
   const seen = new Set();
-  const quoteRe = /(?:(['"`])((?:(?!\1|\\).|\\.)*)\1)/g;
+  const quoteRe = /'([^'\\\r\n]*(?:\\.[^'\\\r\n]*)*)'|"([^"\\\r\n]*(?:\\.[^"\\\r\n]*)*)"|`([^`\\\r\n]*(?:\\.[^`\\\r\n]*)*)`/g;
   const nsdSignatureRe = /\b(sin|tri|saw|square|pulse|noise|pink)\s*\([^)]*(Hz|kHz|glide|ms)\b/i;
   const nsdEnvRe = /\b(expDecay|glide|lpf|hpf|bpf|delay)\s*\(/i;
 
   let match;
   while ((match = quoteRe.exec(raw)) !== null) {
-    const candidate = match[2].trim();
+    const candidate = (match[1] ?? match[2] ?? match[3] ?? '').trim();
     if (
       candidate.length >= 12 &&
       candidate.length <= 360 &&
