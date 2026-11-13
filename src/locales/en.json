@@ -298,7 +298,11 @@
     "curveMode": "Interpolation",
     "showBands": "Vertical Bands",
     "mergeAdjacent": "Merge Adjacent (e.g. SAT–SUN)",
-    "includeFriday": "Include Friday (FRI–SUN)"
+    "includeFriday": "Include Friday (FRI–SUN)",
+    "dualTitle": "2. Dual Independent Vertical Y-Axes (Shared X-Axis)",
+    "dualDesc": "Overlay two metrics with disparate magnitudes (e.g. impulse KPI velocity 0–265% on the left Y-axis and normalized Cognitive Depth 0–100 on the right Y-axis) while sharing a single X-axis timeline, sleep recovery bands, and unified crosshair tooltip.",
+    "dualMorphBtn": "Switch KPI / Sleep Profile",
+    "dualSleepBands": "Recovery Bands (Sleep)"
   },
   "kineticEngine": {
     "title": "Kinetic Animations Engine (Headless C¹ Hermite)",
