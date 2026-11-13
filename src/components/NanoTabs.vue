@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed, watch, onMounted } from 'vue';
+import { ref, computed, watch, onMounted, onUnmounted } from 'vue';
 import NanoIcon from './NanoIcon.vue';
 import {
   getScopedStorageController,
@@ -181,6 +181,10 @@ onMounted(() => {
   loadSavedTab();
 });
 
+onUnmounted(() => {
+  tabButtonRefs.value = [];
+});
+
 watch(
   () => [props.storageKey, props.storage, props.appPrefix],
   () => {
@@ -244,7 +248,7 @@ const handleKeydown = (e, index) => {
     <button
       v-for="(item, idx) in normalizedItems"
       :key="item.id"
-      :ref="(el) => { if (el) tabButtonRefs[idx] = el }"
+      :ref="(el) => { if (el) tabButtonRefs[idx] = el; else delete tabButtonRefs[idx]; }"
       type="button"
       role="tab"
       class="nano-tab-btn"
