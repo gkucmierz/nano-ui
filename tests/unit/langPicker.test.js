@@ -17,6 +17,10 @@ import {
   detectGridColumns,
   resolveAdaptiveMatrixColumns,
 } from '../../src/utils/grid.js';
+import {
+  clampFloatingBox2D,
+  computeAnchoredOverlayPosition,
+} from '../../src/utils/selectPositioning.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const rootDir = path.resolve(__dirname, '../..');
@@ -132,5 +136,60 @@ describe('NanoLangPicker & navigateGrid — Desktop 2D Matrix + Mobile Vertical 
     assert.ok(pickerSrc.includes(':lang="opt.code"'), 'Must apply BCP-47 :lang attribute to native endonyms');
     assert.ok(pickerSrc.includes('overscroll-behavior: contain'), 'Mobile list must contain scroll chaining');
     assert.ok(pickerSrc.includes('navigateGrid('), 'Must wire navigateGrid for 2D keyboard navigation');
+  });
+
+  it('computes finite non-NaN viewport coordinates for NanoLangPicker dropdowns and DOM-rect clampFloatingBox2D', () => {
+    const topRightPos = computeAnchoredOverlayPosition({
+      triggerRect: { left: 1080, right: 1168, top: 14, bottom: 50, width: 88, height: 36 },
+      panelWidth: 488,
+      panelHeight: 148,
+      viewportWidth: 1280,
+      viewportHeight: 800,
+      gapPx: 6,
+      paddingPx: 8,
+      align: 'end',
+    });
+    assert.ok(Number.isFinite(topRightPos.left), 'panelPosition.left must never be NaN');
+    assert.ok(Number.isFinite(topRightPos.top), 'panelPosition.top must never be NaN');
+    assert.equal(topRightPos.placement, 'bottom');
+    assert.equal(topRightPos.left, 1168 - 488);
+    assert.equal(topRightPos.top, 56);
+
+    // Near bottom of viewport: flips cleanly above trigger
+    const flippedPos = computeAnchoredOverlayPosition({
+      triggerRect: { left: 300, right: 388, top: 740, bottom: 776, width: 88, height: 36 },
+      panelWidth: 268,
+      panelHeight: 240,
+      viewportWidth: 390,
+      viewportHeight: 800,
+      gapPx: 6,
+      paddingPx: 8,
+      align: 'end',
+    });
+    assert.equal(flippedPos.placement, 'top');
+    assert.equal(flippedPos.top, 740 - 6 - 240);
+    assert.ok(flippedPos.left >= 8 && flippedPos.left + 268 <= 390 - 8);
+
+    // DOM-rect overload of clampFloatingBox2D returns finite { left, top } while preserving SVG { x, y } mode
+    const domClamped = clampFloatingBox2D(
+      { left: -24, top: 760, width: 200, height: 120 },
+      { left: 0, top: 0, right: 360, bottom: 800 },
+      8
+    );
+    assert.equal(domClamped.left, 8);
+    assert.equal(domClamped.top, 672);
+    assert.equal(domClamped.clampedLeft, true);
+    assert.equal(domClamped.clampedTop, true);
+
+    const svgClamped = clampFloatingBox2D({
+      x: 10,
+      y: 12,
+      halfWidth: 4,
+      halfHeight: 3,
+      bounds: { minX: -21, maxX: 53, minY: -6, maxY: 38 },
+      padding: 0.65,
+    });
+    assert.equal(svgClamped.x, 10);
+    assert.equal(svgClamped.y, 12);
   });
 });

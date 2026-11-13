@@ -249,6 +249,11 @@ test('vue-url-cleaner integration strips fbclid, utm_*, and gclid on /showoff wh
   assert.match(pkgJson.version, /^\d+\.\d+\.\d+$/);
   const [maj, min, pat] = pkgJson.version.split('.').map(Number);
   assert.ok(maj > 1 || (maj === 1 && (min > 8 || (min === 8 && pat >= 22))));
-  assert.equal(pkgJson.devDependencies['vue-url-cleaner'], '^1.0.0');
+  const urlCleanerSpec = pkgJson.devDependencies['vue-url-cleaner'];
+  assert.ok(
+    urlCleanerSpec === '^1.0.0' ||
+      /^file:\.\/vendor-tarballs\/vue-url-cleaner.*\.tgz$/.test(urlCleanerSpec),
+    `Expected vue-url-cleaner devDependency to be ^1.0.0 or Docker CI vendor tarball, got: ${urlCleanerSpec}`
+  );
   assert.equal(pkgJson.dependencies, undefined);
 });

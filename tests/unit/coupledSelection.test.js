@@ -154,4 +154,29 @@ describe('Coupled Selection & Hover-Suppress-Rearm (CSHR) State Machine', () => 
     assert.strictEqual(sel.selectPrev(), 'delta');
     assert.strictEqual(sel.stepSelection(-2), 'beta');
   });
+
+  it('prevents 1-tick snapback to selectedId across inter-item CSS gaps when bindCoupledCorridor is active', () => {
+    const sel = useCoupledSelection({
+      items: ['row-2', 'row-3', 'row-4', 'row-7'],
+      initialSelectedId: 'row-7',
+      keyboardNavigation: false,
+    });
+
+    const corridor = sel.bindCoupledCorridor();
+    corridor.onMouseenter();
+    sel.onPointerEnter('row-4');
+    assert.strictEqual(sel.effectiveActiveId.value, 'row-4');
+
+    // Leaving row-4 into the 6px CSS gap before entering row-3 MUST NOT snap back to row-7!
+    sel.onPointerLeave('row-4');
+    assert.strictEqual(sel.effectiveActiveId.value, 'row-4');
+
+    sel.onPointerEnter('row-3');
+    assert.strictEqual(sel.effectiveActiveId.value, 'row-3');
+
+    // Leaving the entire corridor container releases hover back to persistent selectedId ('row-7')
+    corridor.onMouseleave();
+    assert.strictEqual(sel.hoveredId.value, null);
+    assert.strictEqual(sel.effectiveActiveId.value, 'row-7');
+  });
 });

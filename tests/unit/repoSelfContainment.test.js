@@ -102,9 +102,12 @@ describe('Repository Self-Containment, Node 24 Headless Storage Isolation & Dual
     assert.equal(Number.isFinite(stab.tiltDeg.pitch), true);
   });
 
-  test('Gitea workflow healthcheck_url matches canonical nano-ui.7u.pl domain and Dual-Engine CDP resolves cleanly', () => {
-    const wf = fs.readFileSync(path.join(rootDir, '.gitea/workflows/build.yaml'), 'utf8');
-    assert.match(wf, /healthcheck_url:\s*['"]https:\/\/nano-ui\.7u\.pl\/['"]/);
+  test('Gitea workflow healthcheck_url matches canonical nano-ui.7u.pl domain (when present outside Docker) and Dual-Engine CDP resolves cleanly', () => {
+    const wfPath = path.join(rootDir, '.gitea/workflows/build.yaml');
+    if (fs.existsSync(wfPath)) {
+      const wf = fs.readFileSync(wfPath, 'utf8');
+      assert.match(wf, /healthcheck_url:\s*['"]https:\/\/nano-ui\.7u\.pl\/['"]/);
+    }
 
     const fallbackCfg = resolveDualEngineConfig({
       env: { E2E_ENGINE: 'obscura', PATH: '' },

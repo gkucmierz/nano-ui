@@ -7,6 +7,7 @@ import {
   MUTATING_HEADER_SPREAD_PRESETS,
   DEFAULT_HEADER_TIER_WIDTHS,
   resolveOptimalHeaderTier,
+  pickHeaderTierCandidate,
   pickAdaptiveHeaderLabel,
   normalizeHeaderSpread,
   parseFloatingVerticalMargins,
@@ -107,6 +108,16 @@ describe('MutatingHeader — Symmetric Centering, Inner Spread & Priority+ Compr
     assert.equal(pickAdaptiveHeaderLabel(ctaCandidates, 260).label, 'Domena na sprzedaż / wynajem');
     assert.equal(pickAdaptiveHeaderLabel(ctaCandidates, 150).label, 'Oferta domeny');
     assert.equal(pickAdaptiveHeaderLabel(ctaCandidates, 90).label, 'Oferta');
+
+    // Dual-signature support: positional (width, { requiredWidths, safetyGapPx }) + pickHeaderTierCandidate
+    const pos0 = resolveOptimalHeaderTier(1400, { requiredWidths: [1340, 1120, 910, 700], safetyGapPx: 16 });
+    assert.equal(pos0.tierIndex, 0);
+    const pos2 = resolveOptimalHeaderTier(960, { requiredWidths: [1340, 1120, 910, 700], safetyGapPx: 16 });
+    assert.equal(pos2.tierIndex, 2);
+    assert.equal(pickHeaderTierCandidate(ctaCandidates, 0), 'Domena na sprzedaż / wynajem');
+    assert.equal(pickHeaderTierCandidate(ctaCandidates, 2), 'Oferta');
+    assert.equal(pickHeaderTierCandidate(ctaCandidates, 99), 'Oferta');
+    assert.equal(pickHeaderTierCandidate([], 0), '');
   });
 
   test('MutatingHeader.vue should preserve margin-left: auto and margin-right: auto in both floating and is-stuck states', () => {
