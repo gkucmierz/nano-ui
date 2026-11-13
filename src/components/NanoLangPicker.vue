@@ -8,7 +8,7 @@ import {
   detectRenderedGridColumns,
   resolveAdaptiveMatrixColumns,
 } from '../utils/grid.js';
-import { clampFloatingBox2D } from '../utils/selectPositioning.js';
+import { computeAnchoredOverlayPosition } from '../utils/selectPositioning.js';
 
 const hasDomWindow = () => Boolean(globalThis.window);
 const hasDomDocument = () => Boolean(globalThis.document);
@@ -209,31 +209,20 @@ function updatePanelPosition() {
       ? Math.min(360, normalizedLanguages.value.length * 46 + 20)
       : Math.ceil(normalizedLanguages.value.length / resolvedMatrixColumns.value) * 60 + 28);
 
-  // Right-align to the trigger button by default (since language pills sit at top-right of headers)
-  const rawLeft = trigRect.right - actualWidth;
-  const preferAbove =
-    trigRect.bottom + 6 + actualHeight > vh - 8 && trigRect.top - 6 - actualHeight >= 8;
-  const rawTop = preferAbove ? trigRect.top - 6 - actualHeight : trigRect.bottom + 6;
-
-  const clamped = clampFloatingBox2D(
-    {
-      left: rawLeft,
-      top: rawTop,
-      width: actualWidth,
-      height: actualHeight,
-    },
-    {
-      left: 0,
-      top: 0,
-      right: vw,
-      bottom: vh,
-    },
-    8
-  );
+  const anchored = computeAnchoredOverlayPosition({
+    triggerRect: trigRect,
+    panelWidth: actualWidth,
+    panelHeight: actualHeight,
+    viewportWidth: vw,
+    viewportHeight: vh,
+    gapPx: 6,
+    paddingPx: 8,
+    align: 'end',
+  });
 
   panelPosition.value = {
-    left: Math.round(clamped.left),
-    top: Math.round(clamped.top),
+    left: anchored.left,
+    top: anchored.top,
   };
 }
 
