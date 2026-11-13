@@ -21,6 +21,11 @@ const props = defineProps({
     default: 'default', // 'default'/'md'/'lg' (44x24) | 'compact'/'sm' (38x20) | 'mini'/'xs' (30x16)
     validator: (v) => ['default', 'compact', 'mini', 'lg', 'md', 'sm', 'xs'].includes(v)
   },
+  shape: {
+    type: String,
+    default: 'pill', // 'pill' (capsule) | 'tactile' / 'square' (low-radius IDE rect: 5px track / 3.5px thumb)
+    validator: (v) => ['pill', 'tactile', 'square'].includes(v)
+  },
   color: {
     type: String,
     default: 'primary' // 'primary' | 'cyan' | 'purple' | 'emerald' | 'danger' | 'gold'
@@ -58,6 +63,10 @@ const normalizedSize = computed(() => {
   if (props.size === 'xs' || props.size === 'mini') return 'mini';
   return 'default';
 });
+const normalizedShape = computed(() => {
+  if (props.shape === 'tactile' || props.shape === 'square') return 'tactile';
+  return 'pill';
+});
 const resolvedSwitchColor = computed(() => {
   const c = (props.color || 'primary').trim();
   if (c === 'primary' || c === 'cyan') return undefined;
@@ -91,6 +100,7 @@ const toggle = (event) => {
     class="nano-switch"
     :class="[
       `size-${normalizedSize}`,
+      `shape-${normalizedShape}`,
       `color-${color}`,
       {
         'is-checked': isChecked,
@@ -266,6 +276,20 @@ const toggle = (event) => {
   top: 3px;
   border-radius: 4px;
   transform: translateX(4px);
+}
+
+/* --- Shape: Tactile / Low-Radius IDE Switch (5px track / 3.5px thumb) --- */
+.nano-switch.shape-tactile .nano-switch-slider {
+  border-radius: 5px;
+}
+.nano-switch.shape-tactile .nano-switch-slider::before {
+  border-radius: 3.5px;
+}
+.nano-switch.shape-tactile.size-mini .nano-switch-slider {
+  border-radius: 4px;
+}
+.nano-switch.shape-tactile.size-mini .nano-switch-slider::before {
+  border-radius: 2.5px;
 }
 
 /* --- Color Variants (SSoT via --nano-switch-accent / resolveNanoColor) --- */
