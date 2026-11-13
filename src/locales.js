@@ -71,18 +71,19 @@ const dictionaries = {
 };
 
 export const t = (path, params = {}) => {
+  if (!path || Object.prototype.toString.call(path) !== '[object String]') return '';
   const lang = currentLang.value;
   const keys = path.split('.');
-  let current = dictionaries[lang];
+  let current = Object.hasOwn(dictionaries, lang) ? dictionaries[lang] : undefined;
 
   for (const key of keys) {
-    if (current && current[key] !== undefined) {
+    if (current && typeof current === 'object' && Object.hasOwn(current, key)) {
       current = current[key];
     } else {
       // Fallback to English if key missing in current locale
       let fallback = dictionaries['en'];
       for (const fbKey of keys) {
-        if (fallback && fallback[fbKey] !== undefined) {
+        if (fallback && typeof fallback === 'object' && Object.hasOwn(fallback, fbKey)) {
           fallback = fallback[fbKey];
         } else {
           return path;
@@ -98,10 +99,11 @@ export const t = (path, params = {}) => {
     return path;
   }
 
-  // Parameter replacement e.g., {name}, {count}
+  // Parameter replacement e.g., {name}, {count} (literal callback avoids $& / $' expansion and RegExp injection)
   if (params && typeof params === 'object' && !Array.isArray(params)) {
     for (const [key, value] of Object.entries(params)) {
-      text = text.replace(new RegExp(`{${key}}`, 'g'), value !== undefined && value !== null ? value : '');
+      const replacement = value !== undefined && value !== null ? String(value) : '';
+      text = text.replaceAll(`{${key}}`, () => replacement);
     }
   }
 
