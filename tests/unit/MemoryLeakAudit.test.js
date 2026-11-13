@@ -6,13 +6,21 @@ import { fileURLToPath } from 'node:url';
 import { tooltipDirective } from '../../src/directives/tooltip.js';
 import { showTooltip, hideTooltip, tooltipState } from '../../src/composables/useTooltip.js';
 import Ripple from '../../src/directives/ripple.js';
+import { sanitizeLightboxSvgMarkup, normalizeLightboxSvgMarkup } from '../../src/utils/lightboxGeometry.js';
+import { showAlert, handleCancel } from '../../src/composables/useDialog.js';
+import {
+  decodeEcosystemPrefsToken,
+  extractAndStripEcosystemHash,
+  buildEcosystemSyncBounceUrl,
+} from '../../src/utils/ecosystemPrefs.js';
+import { resolveTranslation } from '../../src/utils/i18n-engine.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const srcDir = path.resolve(__dirname, '../../src');
 
 const readSrc = (relPath) => fs.readFileSync(path.join(srcDir, relPath), 'utf8');
 
-describe('Memory Leak & Lifecycle Cleanup Audit (@gkucmierz/nano-ui)', () => {
+describe('Whitebox OPSEC, Memory Leak & Lifecycle Cleanup Audit (@gkucmierz/nano-ui v1.8.37)', () => {
   it('PrecisionScrubber removes document mousemove/mouseup listeners on unmount', () => {
     const src = readSrc('components/PrecisionScrubber.vue');
     assert.match(src, /onUnmounted\(\(\)\s*=>\s*\{[\s\S]*removeEventListener\('mousemove',\s*handleScrubMove\)[\s\S]*removeEventListener\('mouseup',\s*stopScrubbing\)/);
@@ -36,14 +44,12 @@ describe('Memory Leak & Lifecycle Cleanup Audit (@gkucmierz/nano-ui)', () => {
     assert.ok(mockEl._handleMouseEnter);
     assert.ok(mockEl._tooltipOptions);
 
-    // Trigger touchstart & touchend to schedule _touchTimeout / _touchResetTimeout
     mockEl._handleTouchStart();
     assert.ok(mockEl._touchTimeout);
     mockEl._handleTouchEnd();
     assert.equal(mockEl._touchTimeout, null);
     assert.ok(mockEl._touchResetTimeout);
 
-    // Unmount while _touchResetTimeout is pending
     tooltipDirective.unmounted(mockEl);
     assert.equal(listeners.size, 0);
     assert.equal('_handleMouseEnter' in mockEl, false);
@@ -79,7 +85,6 @@ describe('Memory Leak & Lifecycle Cleanup Audit (@gkucmierz/nano-ui)', () => {
       querySelectorAll: () => [...rippleChildren],
     };
 
-    // Simulate an in-flight ripple span created right before route navigation
     let removed = false;
     const fakeSpan = {
       _rippleTimer: setTimeout(() => {}, 10000),
@@ -137,5 +142,66 @@ describe('Memory Leak & Lifecycle Cleanup Audit (@gkucmierz/nano-ui)', () => {
         );
       }
     }
+  });
+
+  it('SEC-02: sanitizeLightboxSvgMarkup strips <script>, event handlers, SMIL href mutators, and javascript: URIs while preserving Mermaid <foreignObject>', () => {
+    const maliciousSvg = `<svg viewBox="0 0 200 100" onload="alert(1)">
+      <script>window.pwned = true;</script>
+      <foreignObject width="120" height="40"><div onclick="evil()" xmlns="http://www.w3.org/1999/xhtml">Mermaid Node</div></foreignObject>
+      <a href="javascript:alert(2)" xlink:href="data:text/html,<script>x</script>"><rect width="10" height="10" /></a>
+      <set attributeName="href" to="javascript:alert(3)" />
+    </svg>`;
+    const clean = normalizeLightboxSvgMarkup(maliciousSvg, 'audit');
+    assert.ok(!clean.includes('<script'), 'Must strip <script> elements');
+    assert.ok(!clean.includes('onload='), 'Must strip onload attributes');
+    assert.ok(!clean.includes('onclick='), 'Must strip onclick inside <foreignObject>');
+    assert.ok(!clean.includes('javascript:'), 'Must block javascript: URIs');
+    assert.ok(!clean.includes('data:text/html'), 'Must block data:text/html URIs');
+    assert.ok(!clean.includes('<set'), 'Must strip SMIL <set> mutator');
+    assert.ok(clean.includes('Mermaid Node'), 'Must preserve valid Mermaid <foreignObject> label');
+    assert.equal(sanitizeLightboxSvgMarkup(''), '');
+  });
+
+  it('MEM-01..06 & SEC-03..08: verifies FontFace cleanup, splitter gesture teardown, fillHeight unmount guard, inertial disposal guard, and NanoSwitch scoped CSS', () => {
+    const editorSrc = readSrc('components/NanoCodeEditor.vue');
+    assert.match(editorSrc, /(?:document|doc)\.fonts\.delete\(activeFontFace\)/);
+    assert.match(editorSrc, /isSafePreviewUrl/);
+
+    const splitterSrc = readSrc('components/NanoSplitter.vue');
+    assert.match(splitterSrc, /cancelPendingGesture/);
+
+    const fillHeightSrc = readSrc('utils/fillHeight.js');
+    assert.match(fillHeightSrc, /isMounted = false/);
+
+    const inertialSrc = readSrc('composables/useInertialStabilizer.js');
+    assert.match(inertialSrc, /let isDisposed = false/);
+
+    const coverFlowSrc = readSrc('components/NanoCoverFlow.vue');
+    assert.match(coverFlowSrc, /coverFlowStorage\.get\(/);
+    assert.match(coverFlowSrc, /formatSafeCoverFlowImageCss/);
+
+    const switchSrc = readSrc('components/NanoSwitch.vue');
+    assert.match(switchSrc, /<style scoped>/);
+  });
+
+  it('useDialog settles any superseded open dialog Promise instead of leaking unresolvable Promises', async () => {
+    const firstPromise = showAlert('First alert');
+    const secondPromise = showAlert('Second alert');
+    assert.equal(await firstPromise, false);
+    handleCancel();
+    assert.equal(await secondPromise, false);
+  });
+
+  it('ecosystemPrefs & i18n-engine harden malformed percent-encoding, compound hashes, non-string URLs, and prototype keys', () => {
+    assert.equal(decodeEcosystemPrefsToken('%E0%A4%A'), null);
+    assert.equal(decodeEcosystemPrefsToken('v1:__proto__=polluted:theme=dark')?.theme, 'dark');
+
+    const stripped = extractAndStripEcosystemHash('https://serce.app/guide#7u_p=v1.light.en.1.l.abc&section=intro');
+    assert.equal(stripped.prefs?.theme, 'light');
+    assert.equal(stripped.cleanUrl, '/guide#section=intro');
+
+    assert.equal(buildEcosystemSyncBounceUrl({ origin: 'https://7u.pl', toString: () => 'https://evil.example' }), '');
+    assert.equal(resolveTranslation({ en: { msg: 'Pay {amount} now' } }, 'en', 'msg', { amount: '$&100' }), 'Pay $&100 now');
+    assert.equal(resolveTranslation({ en: {} }, 'en', 'constructor.prototype'), 'constructor.prototype');
   });
 });
