@@ -1629,7 +1629,27 @@ const updateGeometryImmediate = () => {
   animThickness.value = props.thickness ?? 0.5
 }
 
+let isChartUnmounted = false
+
+const pruneStaleSliceTransitions = () => {
+  const activeIds = new Set(processedData.value.map((d) => d.id))
+  for (const [id, trans] of extrusionTransitions.entries()) {
+    if (!activeIds.has(id)) {
+      trans.destroy()
+      extrusionTransitions.delete(id)
+    }
+  }
+  for (const [id, trans] of dimTransitions.entries()) {
+    if (!activeIds.has(id)) {
+      trans.destroy()
+      dimTransitions.delete(id)
+    }
+  }
+}
+
 const animateChart = (opts = {}) => {
+  if (isChartUnmounted) return
+  pruneStaleSliceTransitions()
   const duration = typeof opts === 'number' ? opts : (opts.duration !== undefined ? opts.duration : (props.animationDuration ?? 350))
   const shouldAnimateData = typeof opts === 'object' && opts.animateData === true
 
@@ -1921,13 +1941,15 @@ watch(() => props.animationDuration, (newDur) => {
 })
 
 onMounted(() => {
+  isChartUnmounted = false
   document.addEventListener('click', handleDocumentClick)
   nextTick(() => {
-    animateChart()
+    if (!isChartUnmounted) animateChart()
   })
 })
 
 onUnmounted(() => {
+  isChartUnmounted = true
   document.removeEventListener('click', handleDocumentClick)
   if (currentAnimationId) {
     cancelAnimationFrame(currentAnimationId)
