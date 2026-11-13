@@ -624,20 +624,40 @@ function handleContainerPointerLeave() {
  * Disambiguates between a stationary click (< 3px, toggles lock) and a drag gesture (>= 3px, drags splitter)
  * when the user grabs the glowing edge triangle tab directly.
  */
+let cancelPendingGesture = null;
+let isSplitterUnmounted = false;
+
+function clearPendingGesture() {
+  if (cancelPendingGesture) {
+    cancelPendingGesture();
+    cancelPendingGesture = null;
+  }
+}
+
 function handleLockToggleMouseDown(e) {
   if (e.button !== undefined && e.button !== 0) return;
   e.stopPropagation();
   e.preventDefault();
+  clearPendingGesture();
   const startX = e.clientX;
   const startY = e.clientY;
   let movedIntoDrag = false;
 
+  const cleanup = () => {
+    window.removeEventListener('mousemove', onMove);
+    window.removeEventListener('mouseup', onUp);
+    if (cancelPendingGesture === cleanup) cancelPendingGesture = null;
+  };
+
   const onMove = (moveEvt) => {
+    if (isSplitterUnmounted) {
+      cleanup();
+      return;
+    }
     const dist = Math.hypot(moveEvt.clientX - startX, moveEvt.clientY - startY);
     if (!movedIntoDrag && dist >= 3) {
       movedIntoDrag = true;
-      window.removeEventListener('mousemove', onMove);
-      window.removeEventListener('mouseup', onUp);
+      cleanup();
       if (isLocked.value) {
         internalLocked.value = false;
         emit('update:locked', false);
@@ -648,13 +668,13 @@ function handleLockToggleMouseDown(e) {
   };
 
   const onUp = () => {
-    window.removeEventListener('mousemove', onMove);
-    window.removeEventListener('mouseup', onUp);
-    if (!movedIntoDrag) {
+    cleanup();
+    if (!movedIntoDrag && !isSplitterUnmounted) {
       toggleLock();
     }
   };
 
+  cancelPendingGesture = cleanup;
   window.addEventListener('mousemove', onMove);
   window.addEventListener('mouseup', onUp);
 }
@@ -665,19 +685,29 @@ function handleLockToggleMouseDown(e) {
  */
 function handleCollapsedBarMouseDown(e) {
   if (e.button !== undefined && e.button !== 0) return;
+  clearPendingGesture();
   const startX = e.clientX;
   const startY = e.clientY;
   const collapsedSide = activeCollapsedPane.value || internalCollapsedPane.value;
   let movedIntoDrag = false;
 
+  const cleanup = () => {
+    window.removeEventListener('mousemove', onMove);
+    window.removeEventListener('mouseup', onUp);
+    if (cancelPendingGesture === cleanup) cancelPendingGesture = null;
+  };
+
   const onMove = (moveEvt) => {
+    if (isSplitterUnmounted) {
+      cleanup();
+      return;
+    }
     const isVert = props.orientation === 'vertical';
     const primaryDelta = isVert ? moveEvt.clientY - startY : moveEvt.clientX - startX;
     const outwardDelta = collapsedSide === 'second' ? -primaryDelta : primaryDelta;
     if (!movedIntoDrag && outwardDelta >= 14) {
       movedIntoDrag = true;
-      window.removeEventListener('mousemove', onMove);
-      window.removeEventListener('mouseup', onUp);
+      cleanup();
       if (isLocked.value) {
         internalLocked.value = false;
         emit('update:locked', false);
@@ -688,10 +718,10 @@ function handleCollapsedBarMouseDown(e) {
   };
 
   const onUp = () => {
-    window.removeEventListener('mousemove', onMove);
-    window.removeEventListener('mouseup', onUp);
+    cleanup();
   };
 
+  cancelPendingGesture = cleanup;
   window.addEventListener('mousemove', onMove);
   window.addEventListener('mouseup', onUp);
 }
@@ -834,6 +864,8 @@ onMounted(() => {
 });
 
 onUnmounted(() => {
+  isSplitterUnmounted = true;
+  clearPendingGesture();
   stopDrag();
   if (resizeObserver) {
     resizeObserver.disconnect();
