@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from '../dualEngineCdp.js';
 
 test.describe('Theme persistence E2E Tests', () => {
   test.beforeEach(async ({ page }) => {
