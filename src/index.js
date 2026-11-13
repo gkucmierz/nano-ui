@@ -427,6 +427,7 @@ import {
   computeAdaptiveCardExpansion,
   getPositionedReferenceEl,
   clampFloatingBox2D,
+  computeAnchoredOverlayPosition,
   measureSafeStageBounds,
 } from './utils/selectPositioning.js';
 import {
@@ -468,6 +469,7 @@ import {
   MUTATING_HEADER_SPREAD_PRESETS,
   DEFAULT_HEADER_TIER_WIDTHS,
   resolveOptimalHeaderTier,
+  pickHeaderTierCandidate,
   pickAdaptiveHeaderLabel,
   normalizeHeaderSpread,
   parseFloatingVerticalMargins,
@@ -536,6 +538,7 @@ export {
   MUTATING_HEADER_SPREAD_PRESETS,
   DEFAULT_HEADER_TIER_WIDTHS,
   resolveOptimalHeaderTier,
+  pickHeaderTierCandidate,
   pickAdaptiveHeaderLabel,
   normalizeHeaderSpread,
   parseFloatingVerticalMargins,
@@ -861,6 +864,7 @@ export {
   computeAdaptiveCardExpansion,
   getPositionedReferenceEl,
   clampFloatingBox2D,
+  computeAnchoredOverlayPosition,
   measureSafeStageBounds,
   SLIDER_THUMB_OVERHANG_BY_SIZE,
   getSliderThumbOverhangPx,
