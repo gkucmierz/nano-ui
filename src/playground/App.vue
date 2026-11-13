@@ -209,6 +209,7 @@ onMounted(() => {
     'Meta+K': focusSearchInput,
     t: toggleTheme,
     l: toggleLang,
+    m: toggleGlobalSound,
     ArrowLeft: {
       handler: () => {
         const stepped = stepInteractiveDomGroup(mainContentRef.value, -1, lastInteractedGroupEl);
