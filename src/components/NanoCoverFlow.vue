@@ -159,14 +159,25 @@ const props = defineProps({
 
 const emit = defineEmits(['update:modelValue', 'change', 'select']);
 
-const storageCtrl = computed(() =>
-  getScopedStorageController(props.storageKey, props.storageMode)
-);
+const coverFlowStorage = getScopedStorageController('nano-coverflow');
+
+const formatSafeCoverFlowImageCss = (rawImage) => {
+  const s = String(rawImage || '').trim();
+  if (!s) return undefined;
+  const compact = s.replace(/[\x00-\x20]+/g, '').toLowerCase();
+  if (compact.startsWith('javascript:') || compact.startsWith('vbscript:') || compact.startsWith('data:text/html')) {
+    return undefined;
+  }
+  return `url(${JSON.stringify(s)})`;
+};
 
 const initialIdx = (() => {
-  if (storageCtrl.value.enabled) {
-    const saved = storageCtrl.value.load('index', null);
-    if (Number.isFinite(Number(saved))) {
+  if (props.storageKey && props.storageMode !== 'none') {
+    const saved = coverFlowStorage.get(props.storageKey, {
+      mode: props.storageMode || 'session',
+      fallback: null,
+    });
+    if (saved !== null && saved !== undefined && Number.isFinite(Number(saved))) {
       return clampCoverFlowIndex(Number(saved), props.items.length || 1);
     }
   }
@@ -468,8 +479,10 @@ function setActiveIndex(nextIdx, { immediate = false } = {}) {
   const clamped = clampCoverFlowIndex(nextIdx, props.items.length);
   internalIndex.value = clamped;
   driveToIndex(clamped, immediate);
-  if (storageCtrl.value.enabled) {
-    storageCtrl.value.save('index', clamped);
+  if (props.storageKey && props.storageMode !== 'none') {
+    coverFlowStorage.set(props.storageKey, clamped, {
+      mode: props.storageMode || 'session',
+    });
   }
   emit('update:modelValue', clamped);
   emit('change', {
@@ -673,9 +686,9 @@ defineExpose({
               <!-- Default Card / Image Presentation -->
               <div class="nano-cf-default-card">
                 <div
-                  v-if="entry.raw?.image"
+                  v-if="entry.raw?.image && formatSafeCoverFlowImageCss(entry.raw.image)"
                   class="nano-cf-media"
-                  :style="{ backgroundImage: `url(${entry.raw.image})` }"
+                  :style="{ backgroundImage: formatSafeCoverFlowImageCss(entry.raw.image) }"
                 >
                   <span v-if="entry.raw?.badge" class="nano-cf-badge">
                     {{ entry.raw.badge }}
