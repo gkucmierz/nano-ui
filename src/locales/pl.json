@@ -298,7 +298,11 @@
     "curveMode": "Interpolacja",
     "showBands": "Pasma pionowe",
     "mergeAdjacent": "Łącz sąsiednie (np. SB–ND)",
-    "includeFriday": "Uwzględnij Piątek (PT–ND)"
+    "includeFriday": "Uwzględnij Piątek (PT–ND)",
+    "dualTitle": "2. Dwie Niezależne Osie Pionowe Y (Wspólna Oś X)",
+    "dualDesc": "Nakładanie dwóch wielkości o nieporównywalnych skalach (np. impulsowy ciąg KPI 0–265% na lewej osi Y oraz znormalizowany indeks głębokości poznawczej 0–100 na prawej osi Y) przy zachowaniu wspólnej osi czasu, pasm regeneracji i jednego celownika.",
+    "dualMorphBtn": "Przełącz profil KPI / Snu",
+    "dualSleepBands": "Pasma regeneracji (Sen)"
   },
   "kineticEngine": {
     "title": "Silnik Animacji Kinetycznych (Headless C¹ Hermite)",
