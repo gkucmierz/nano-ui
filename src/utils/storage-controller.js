@@ -346,8 +346,13 @@ const resolveWebStorageBackend = (mode, customAdapters = {}, env = globalThis) =
     // Private browsing / sandboxed iframe fallback
   }
 
+  const fallbackAdapter =
+    mode === STORAGE_MODES.SS
+      ? customAdapters.memorySession || customAdapters.memory || createMemoryStorageAdapter()
+      : customAdapters.memoryLocal || customAdapters.memory || createMemoryStorageAdapter();
+
   return {
-    adapter: customAdapters.memory || createMemoryStorageAdapter(),
+    adapter: fallbackAdapter,
     backendName: 'memory',
     isFallbackMemory: true,
   };
@@ -367,10 +372,16 @@ export const createStorageController = (options = {}) => {
   let defaultMode = normalizeStorageMode(options.defaultMode ?? options.mode, STORAGE_MODES.LS);
 
   const memoryFallbackStore = options.memoryStorage || createMemoryStorageAdapter();
+  const memoryLocalFallbackStore =
+    options.memoryLocalStorage || options.memoryStorage || createMemoryStorageAdapter();
+  const memorySessionFallbackStore =
+    options.memorySessionStorage || createMemoryStorageAdapter();
   const customAdapters = {
     localStorage: options.localStorage || null,
     sessionStorage: options.sessionStorage || null,
     memory: memoryFallbackStore,
+    memoryLocal: memoryLocalFallbackStore,
+    memorySession: memorySessionFallbackStore,
   };
 
   const listeners = new Set();
@@ -744,6 +755,8 @@ export const createStorageController = (options = {}) => {
       localStorage: customAdapters.localStorage,
       sessionStorage: customAdapters.sessionStorage,
       memoryStorage: memoryFallbackStore,
+      memoryLocalStorage: memoryLocalFallbackStore,
+      memorySessionStorage: memorySessionFallbackStore,
       ...childOptions,
       appPrefix: isString(childOptions.appPrefix) ? childOptions.appPrefix : '',
       scopePrefix: mergedScope,
