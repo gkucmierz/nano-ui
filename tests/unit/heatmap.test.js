@@ -24,6 +24,15 @@ import {
   normalizeHeatmapMatrixData,
   formatHeatmapCompactValue,
 } from '../../src/utils/heatmapScale.js';
+import { tooltipDirective } from '../../src/directives/tooltip.js';
+import {
+  tooltipState,
+  showTooltip,
+  hideTooltip,
+  isActiveTooltipTarget,
+  getActiveTooltipSource,
+  recordTooltipPointerDown,
+} from '../../src/composables/useTooltip.js';
 import {
   parseColor,
   isOklchInSrgbGamut,
@@ -336,5 +345,66 @@ describe('NanoHeatmap SFC, Package Exports & CSS-HOVER-01 Stationary Invariant',
 
     assert.match(appSrc, /\bm:\s*toggleGlobalSound\b/, 'Playground App.vue must bind M shortcut to toggleGlobalSound');
     assert.ok(plJson.includes('(M)') && enJson.includes('(M)'), 'Sound toggle locale labels must advertise (M) shortcut');
+  });
+
+  it('prevents non-active focused sibling cells from hijacking singleton tooltip on VNode update and wires CSHR corridor', () => {
+    const heatmapSrc = fs.readFileSync(path.join(rootDir, 'src/components/NanoHeatmap.vue'), 'utf8');
+    assert.ok(heatmapSrc.includes('onGridCorridorEnter'), 'NanoHeatmap must bind CSHR corridor enter');
+    assert.ok(heatmapSrc.includes('onGridCorridorLeave'), 'NanoHeatmap must bind CSHR corridor leave');
+    assert.ok(heatmapSrc.includes('onGridNonCellEnter'), 'NanoHeatmap headers/totals must clear transient corridor gracefully');
+
+    const makeMockCell = (left, top) => {
+      const listeners = new Map();
+      return {
+        isConnected: true,
+        addEventListener(type, fn) {
+          listeners.set(type, fn);
+        },
+        removeEventListener(type) {
+          listeners.delete(type);
+        },
+        matches(sel) {
+          if (sel === ':focus-visible') return false;
+          return false;
+        },
+        contains() {
+          return false;
+        },
+        hasAttribute() {
+          return false;
+        },
+        setAttribute() {},
+        getBoundingClientRect() {
+          return { left, top, right: left + 30, bottom: top + 24, width: 30, height: 24 };
+        },
+      };
+    };
+
+    const cellFocused = makeMockCell(200, 140);
+    const cellHovered = makeMockCell(60, 80);
+
+    tooltipDirective.mounted(cellFocused, { value: 'Thu × 17 · 86' });
+    tooltipDirective.mounted(cellHovered, { value: 'Tue × 08 · 42' });
+
+    // Simulate pointer click focusing cellFocused (without :focus-visible)
+    recordTooltipPointerDown(Date.now());
+    showTooltip(cellFocused, 'Thu × 17 · 86', 'pointer');
+    cellFocused._handleFocus();
+    assert.equal(getActiveTooltipSource(), 'pointer');
+
+    // Now hover moves to cellHovered while cellFocused still retains DOM focus
+    showTooltip(cellHovered, 'Tue × 08 · 42', 'pointer');
+    assert.equal(isActiveTooltipTarget(cellHovered), true);
+    assert.equal(tooltipState.text, 'Tue × 08 · 42');
+
+    // Re-rendering cellFocused via directive.updated MUST NOT hijack tooltip back to Thu × 17
+    tooltipDirective.updated(cellFocused, { value: 'Thu × 17 · 86' });
+    assert.equal(isActiveTooltipTarget(cellHovered), true);
+    assert.equal(tooltipState.text, 'Tue × 08 · 42');
+    assert.equal(tooltipState.targetRect.left, 60);
+
+    hideTooltip();
+    tooltipDirective.unmounted(cellFocused);
+    tooltipDirective.unmounted(cellHovered);
   });
 });

@@ -8,6 +8,9 @@ import {
   createWeekdayBandConfig,
   computeWeekendBands,
   getDateWeekdayInfo,
+  normalizeAxisSide,
+  computeAxisBounds,
+  computeDualAxisBounds,
 } from '../../src/utils/chart-bands.js';
 import {
   evaluateSplineY,
@@ -244,5 +247,59 @@ describe('.nano-btn-group Active Border Preservation on Next-Sibling Hover', () 
     assert.ok(css.includes('.nano-btn-group > .nano-btn:hover:not(:disabled)'), 'must define hover z-index rule');
     assert.ok(css.includes('.nano-btn-group > .nano-btn.nano-btn-active'), 'must elevate active button above hovered sibling');
     assert.ok(css.includes('z-index: 2;'), 'active button must have z-index: 2 > hover z-index: 1');
+  });
+});
+
+describe('NanoTrendChart Dual Independent Vertical Y-Axes (Shared X-Axis)', () => {
+  test('partitions left and right Y-axes independently while preserving backward-compatible single-axis mode', () => {
+    assert.equal(normalizeAxisSide(), 'left');
+    assert.equal(normalizeAxisSide('left'), 'left');
+    assert.equal(normalizeAxisSide('right'), 'right');
+    assert.equal(normalizeAxisSide('y2'), 'right');
+
+    const singleOnly = computeDualAxisBounds([
+      { id: 'kpi', points: [{ key: 't1', value: 120 }, { key: 't2', value: 240 }] },
+      { id: 'norm', points: [{ key: 't1', value: 90 }, { key: 't2', value: 110 }] },
+    ]);
+    assert.equal(singleOnly.hasRightAxis, false);
+    assert.ok(singleOnly.leftBounds.maxVal > 240);
+
+    const dual = computeDualAxisBounds(
+      [
+        {
+          id: 'kpi-velocity',
+          yAxis: 'left',
+          points: [{ key: 't1', value: 0 }, { key: 't2', value: 262.2 }],
+        },
+        {
+          id: 'cognitive-depth',
+          yAxis: 'right',
+          points: [{ key: 't1', value: 18 }, { key: 't2', value: 78 }],
+        },
+      ],
+      [{ key: 'norm-100', yAxis: 'left', value: 100 }],
+      {
+        yMin: 0,
+        rightYMin: 0,
+        rightYMax: 100,
+      }
+    );
+
+    assert.equal(dual.hasRightAxis, true);
+    assert.equal(dual.leftBounds.minVal, 0);
+    assert.ok(dual.leftBounds.maxVal > 262.2, 'left Y-axis scales freely to KPI peak');
+    assert.equal(dual.rightBounds.minVal, 0);
+    assert.equal(dual.rightBounds.maxVal, 100, 'right Y-axis locks cleanly to 0..100 without being squashed by 262.2');
+
+    const clamped = computeAxisBounds([50, 50], { yMin: 10, yMax: 10 });
+    assert.equal(clamped.minVal, 10);
+    assert.equal(clamped.maxVal, 11, 'degenerate yMin >= yMax safely expands to positive span');
+
+    const sfc = fs.readFileSync(path.join(rootDir, 'src/components/NanoTrendChart.vue'), 'utf8');
+    assert.ok(sfc.includes('nano-chart-axis-label-right'), 'NanoTrendChart renders right Y-axis labels');
+    assert.ok(sfc.includes('rightYAxisLabel'), 'NanoTrendChart supports right Y-axis title');
+
+    const docSfc = fs.readFileSync(path.join(rootDir, 'src/playground/docs/TrendChartDoc.vue'), 'utf8');
+    assert.ok(docSfc.includes('dualAxisSeries'), 'Playground TrendChartDoc exposes Dual Y-Axis preview');
   });
 });

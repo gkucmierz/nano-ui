@@ -21,6 +21,13 @@ import {
   clampFloatingBox2D,
   computeAnchoredOverlayPosition,
 } from '../../src/utils/selectPositioning.js';
+import { tooltipDirective } from '../../src/directives/tooltip.js';
+import {
+  tooltipState,
+  hideTooltip,
+  recordTooltipPointerDown,
+  recordTooltipKeyActivity,
+} from '../../src/composables/useTooltip.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const rootDir = path.resolve(__dirname, '../..');
@@ -191,5 +198,41 @@ describe('NanoLangPicker & navigateGrid — Desktop 2D Matrix + Mobile Vertical 
     });
     assert.equal(svgClamped.x, 10);
     assert.equal(svgClamped.y, 12);
+  });
+
+  it('never pops up a phantom tooltip on NanoLangPicker trigger when focus transfers after clicking a dropdown option', () => {
+    hideTooltip();
+    const handlers = {};
+    const triggerEl = {
+      isConnected: true,
+      nodeType: 1,
+      addEventListener(type, fn) {
+        handlers[type] = fn;
+      },
+      removeEventListener() {},
+      hasAttribute: () => true,
+      setAttribute() {},
+      matches: (sel) => sel === ':focus-visible',
+      getBoundingClientRect: () => ({ top: 12, left: 900, width: 88, height: 36, bottom: 48, right: 988 }),
+    };
+
+    tooltipDirective.mounted(triggerEl, { value: 'Cambiar idioma (L) · Español' });
+
+    // Simulate clicking an option inside the dropdown (global pointer activity, NOT on triggerEl)
+    recordTooltipPointerDown(Date.now());
+    handlers.focus();
+    assert.equal(
+      tooltipState.isVisible,
+      false,
+      'Programmatic focus after clicking a separate dropdown option must never pop up trigger tooltip'
+    );
+
+    // Simulate subsequent keyboard Tab navigation -> clears pointer suppression and shows focus tooltip
+    recordTooltipKeyActivity('Tab', Date.now());
+    handlers.focus();
+    assert.equal(tooltipState.isVisible, true);
+
+    tooltipDirective.unmounted(triggerEl);
+    hideTooltip();
   });
 });

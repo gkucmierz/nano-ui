@@ -32,7 +32,7 @@ describe('Memory Leak & Lifecycle Cleanup Audit (@gkucmierz/nano-ui)', () => {
     };
 
     tooltipDirective.mounted(mockEl, { value: 'Audit Tooltip' });
-    assert.equal(listeners.size, 9);
+    assert.equal(listeners.size, 11);
     assert.ok(mockEl._handleMouseEnter);
     assert.ok(mockEl._tooltipOptions);
 
