@@ -5,6 +5,9 @@ import {
   createKineticPoints,
   buildSplinePath,
   evaluateSplineY,
+  computeMonotoneTangents,
+  buildMonotoneSplinePath,
+  evaluateMonotoneSplineY,
 } from '../utils/kinetics.js';
 import {
   computeVerticalBands,
@@ -615,18 +618,25 @@ const renderedSeries = computed(() =>
     const pts = animatedSeriesMap.value[s.id]?.length
       ? animatedSeriesMap.value[s.id]
       : s.coords;
+    const isMonotone = props.curve === 'monotone';
     const isSpline = props.curve !== 'linear';
-    const linePath = isSpline
-      ? buildSplinePath(pts, { tension: props.tension })
-      : buildLinearPath(pts, null);
+    const tangents = isMonotone ? computeMonotoneTangents(pts) : null;
+    const linePath = isMonotone
+      ? buildMonotoneSplinePath(pts, { tangents })
+      : isSpline
+        ? buildSplinePath(pts, { tension: props.tension })
+        : buildLinearPath(pts, null);
     const areaPath = s.area
-      ? isSpline
-        ? buildSplinePath(pts, { tension: props.tension, groundY: groundY.value })
-        : buildLinearPath(pts, groundY.value)
+      ? isMonotone
+        ? buildMonotoneSplinePath(pts, { tangents, groundY: groundY.value })
+        : isSpline
+          ? buildSplinePath(pts, { tension: props.tension, groundY: groundY.value })
+          : buildLinearPath(pts, groundY.value)
       : '';
     return {
       ...s,
       pts,
+      tangents,
       linePath,
       areaPath,
       gradId: `nano-trend-grad-${instanceUid}-${s.id}`,
@@ -788,15 +798,18 @@ const activeHoverDots = computed(() => {
   const entry = activeSpineEntry.value;
   if (!entry) return [];
   const targetX = animatedTooltipX.value;
+  const isMonotone = props.curve === 'monotone';
   const isSpline = props.curve !== 'linear';
 
   return renderedSeries.value
     .map((s) => {
       const exactPt = s.coords.find((p) => p.key === entry.key);
       if (!exactPt) return null;
-      const y = isSpline
-        ? evaluateSplineY(s.pts, targetX, props.tension)
-        : evaluateLinearY(s.pts, targetX);
+      const y = isMonotone
+        ? evaluateMonotoneSplineY(s.pts, targetX, s.tangents)
+        : isSpline
+          ? evaluateSplineY(s.pts, targetX, props.tension)
+          : evaluateLinearY(s.pts, targetX);
       const formattedVal = props.formatValue
         ? props.formatValue(exactPt.value, s, exactPt)
         : defaultFormatY(exactPt.value);
