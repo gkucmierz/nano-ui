@@ -11,15 +11,29 @@ export const tooltipState = reactive({
 });
 
 let activeTargetEl = null;
+let activeTriggerSource = 'pointer'; // 'pointer' | 'focus' | 'touch'
 const lastPointerPos = { x: null, y: null };
 let lastNonEscapeKeyAt = 0;
+let lastPointerDownAt = 0;
+let pendingHideTimer = null;
 
 export function getActiveTooltipTarget() {
   return activeTargetEl;
 }
 
+export function getActiveTooltipSource() {
+  return activeTriggerSource;
+}
+
 export function isActiveTooltipTarget(el) {
   return Boolean(el && activeTargetEl === el && tooltipState.isVisible);
+}
+
+export function cancelPendingTooltipHide() {
+  if (pendingHideTimer !== null) {
+    clearTimeout(pendingHideTimer);
+    pendingHideTimer = null;
+  }
 }
 
 export function recordTooltipPointerPosition(x, y) {
@@ -29,10 +43,25 @@ export function recordTooltipPointerPosition(x, y) {
   }
 }
 
+export function recordTooltipPointerDown(now = Date.now()) {
+  if (Number.isFinite(now)) {
+    lastPointerDownAt = now;
+  }
+}
+
+export function wasRecentTooltipPointerDown(now = Date.now(), windowMs = 350) {
+  if (!Number.isFinite(now) || lastPointerDownAt <= 0) return false;
+  const age = now - lastPointerDownAt;
+  return age >= 0 && age <= windowMs;
+}
+
 export function recordTooltipKeyActivity(key, now = Date.now()) {
   if (key === 'Escape') {
     hideTooltip();
     return;
+  }
+  if (key === 'Tab' || String(key || '').startsWith('Arrow')) {
+    lastPointerDownAt = 0;
   }
   lastNonEscapeKeyAt = now;
   tooltipState.themeRevision += 1;
@@ -120,7 +149,7 @@ export function shouldSuppressSyntheticMouseLeave(el, event, options = {}) {
   return false;
 }
 
-export function showTooltip(el, options) {
+export function showTooltip(el, options, source = 'pointer') {
   if (!options || !el || el.isConnected === false) return;
 
   const isObj = isObjectRecord(options);
@@ -129,11 +158,14 @@ export function showTooltip(el, options) {
 
   if (!text) return;
 
+  cancelPendingTooltipHide();
+
   if (!el.hasAttribute('aria-label')) {
     el.setAttribute('aria-label', text);
   }
 
   activeTargetEl = el;
+  activeTriggerSource = source || 'pointer';
   const rect = el.getBoundingClientRect();
   tooltipState.targetRect = {
     top: rect.top,
@@ -157,25 +189,81 @@ export function hideTooltip(sourceEl) {
     return;
   }
 
+  cancelPendingTooltipHide();
   activeTargetEl = null;
+  activeTriggerSource = 'pointer';
   tooltipState.isVisible = false;
   tooltipState.targetRect = null;
+}
+
+export function scheduleHideTooltip(sourceEl, delayMs = 36) {
+  const isDomNodeGuard =
+    Boolean(sourceEl) &&
+    Boolean(sourceEl.nodeType || sourceEl.getBoundingClientRect) &&
+    !('preventDefault' in sourceEl);
+
+  if (isDomNodeGuard && activeTargetEl && sourceEl !== activeTargetEl) {
+    return;
+  }
+  if (!Number.isFinite(delayMs) || delayMs <= 0 || !globalThis.window) {
+    hideTooltip(sourceEl);
+    return;
+  }
+  cancelPendingTooltipHide();
+  pendingHideTimer = setTimeout(() => {
+    pendingHideTimer = null;
+    hideTooltip(sourceEl);
+  }, delayMs);
 }
 
 if (globalThis.window?.addEventListener) {
   // Hide tooltip on any scroll event to avoid floating detached tooltips
   globalThis.window.addEventListener('scroll', () => hideTooltip(), { passive: true, capture: true });
 
+  const handleGlobalPointerDown = (e) => {
+    if (e && e.type === 'click' && e.detail === 0) {
+      return;
+    }
+    recordTooltipPointerDown(Date.now());
+    if (e && Number.isFinite(e.clientX) && Number.isFinite(e.clientY)) {
+      recordTooltipPointerPosition(e.clientX, e.clientY);
+    }
+  };
+  globalThis.window.addEventListener('pointerdown', handleGlobalPointerDown, { passive: true, capture: true });
+  globalThis.window.addEventListener('mousedown', handleGlobalPointerDown, { passive: true, capture: true });
+  globalThis.window.addEventListener('pointerup', handleGlobalPointerDown, { passive: true, capture: true });
+  globalThis.window.addEventListener('mouseup', handleGlobalPointerDown, { passive: true, capture: true });
+  globalThis.window.addEventListener('click', handleGlobalPointerDown, { passive: true, capture: true });
+
   const handleGlobalPointerMove = (e) => {
+    const prevX = lastPointerPos.x;
+    const prevY = lastPointerPos.y;
+    const hasCoords = Number.isFinite(e.clientX) && Number.isFinite(e.clientY);
+    const movedDist =
+      hasCoords && prevX !== null && prevY !== null
+        ? Math.hypot(e.clientX - prevX, e.clientY - prevY)
+        : 0;
     recordTooltipPointerPosition(e.clientX, e.clientY);
+
     if (!tooltipState.isVisible || !activeTargetEl) return;
     if (activeTargetEl.isConnected === false) {
       hideTooltip();
       return;
     }
-    if (globalThis.document?.activeElement === activeTargetEl) return;
+
     const rect = activeTargetEl.getBoundingClientRect();
-    if (!isPointInsideRect(e.clientX, e.clientY, rect, 2)) {
+
+    // Keep keyboard-focused tooltip steady when pointer is stationary, but dismiss if user moves mouse elsewhere
+    if (activeTriggerSource === 'focus' && globalThis.document?.activeElement === activeTargetEl) {
+      if (movedDist >= 3 && !isPointInsideRect(e.clientX, e.clientY, rect, 4)) {
+        hideTooltip();
+      }
+      return;
+    }
+
+    // Allow micro-gap corridor bridging (e.g. 3px CSS grid gaps in NanoHeatmap) while pendingHideTimer is active
+    const tolerance = pendingHideTimer !== null ? 8 : 3;
+    if (!isPointInsideRect(e.clientX, e.clientY, rect, tolerance)) {
       hideTooltip();
     }
   };
@@ -189,6 +277,9 @@ if (globalThis.window?.addEventListener) {
       if (e.key === 'Escape') {
         if (tooltipState.isVisible) hideTooltip();
         return;
+      }
+      if (e.key === 'Tab' || String(e.key || '').startsWith('Arrow')) {
+        lastPointerDownAt = 0;
       }
       lastNonEscapeKeyAt = Date.now();
       if (tooltipState.isVisible && activeTargetEl) {
