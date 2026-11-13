@@ -362,6 +362,9 @@ import {
   createWeekdayBandConfig,
   computeVerticalBands,
   computeWeekendBands,
+  normalizeAxisSide,
+  computeAxisBounds,
+  computeDualAxisBounds,
 } from './utils/chart-bands.js';
 import {
   highlightCode,
@@ -811,6 +814,9 @@ export {
   createWeekdayBandConfig,
   computeVerticalBands,
   computeWeekendBands,
+  normalizeAxisSide,
+  computeAxisBounds,
+  computeDualAxisBounds,
   highlightCode,
   highlightGlsl,
   registerParser,
