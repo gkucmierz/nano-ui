@@ -13,9 +13,16 @@ const props = defineProps({
     default: '',
   },
   /**
-   * Language badge label (e.g. 'vue', 'bash', 'js', 'json')
+   * Language badge label (e.g. 'vue', 'bash', 'js', 'json', 'bpy')
    */
   lang: {
+    type: String,
+    default: '',
+  },
+  /**
+   * Optional alias for `lang`
+   */
+  language: {
     type: String,
     default: '',
   },
@@ -101,7 +108,7 @@ const hasTabs = computed(() => Boolean(props.tabs && props.tabs.length > 0));
 
 const currentLang = computed(() => {
   if (activeTab.value && activeTab.value.lang) return activeTab.value.lang;
-  return props.lang;
+  return props.lang || props.language;
 });
 
 const extractSlotText = (nodes) => {
@@ -203,7 +210,7 @@ onUnmounted(() => {
     :data-syntax-theme="syntaxTheme"
     :class="{ 'is-wrapped': isWrapped, 'has-tabs': hasTabs }"
   >
-    <div v-if="title || lang || hasTabs || $slots.header || allowWrap || allowCopy" class="code-block-header">
+    <div v-if="title || currentLang || hasTabs || $slots.header || allowWrap || allowCopy" class="code-block-header">
       <div class="code-block-title-group">
         <slot name="header">
           <div v-if="hasTabs" class="code-block-tabs">
