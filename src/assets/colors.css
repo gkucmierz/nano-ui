@@ -115,6 +115,9 @@
   --nano-lightbox-border: rgba(255, 255, 255, 0.16);
   --nano-lightbox-fg: #f8fafc;
   --nano-lightbox-muted: #cbd5e1;
+  --nano-lightbox-viewport-bg: rgba(2, 6, 23, 0.36);
+  --nano-lightbox-svg-bg: rgba(15, 23, 42, 0.82);
+  --nano-lightbox-svg-border: rgba(148, 163, 184, 0.18);
 
   /* Metric Card Colors - Dark Theme */
   --nano-metric-cyan: var(--nano-state-active);
@@ -549,10 +552,13 @@ html.light,
   /* NanoLightbox Tokens - Light Theme */
   --nano-lightbox-backdrop: rgba(15, 23, 42, 0.68);
   --nano-lightbox-blur: 20px;
-  --nano-lightbox-surface: rgba(255, 255, 255, 0.92);
+  --nano-lightbox-surface: rgba(255, 255, 255, 0.94);
   --nano-lightbox-border: rgba(15, 23, 42, 0.14);
   --nano-lightbox-fg: #0f172a;
   --nano-lightbox-muted: #475569;
+  --nano-lightbox-viewport-bg: rgba(241, 245, 249, 0.78);
+  --nano-lightbox-svg-bg: #ffffff;
+  --nano-lightbox-svg-border: rgba(15, 23, 42, 0.10);
 
   /* Metric Card Colors - Light Theme */
   --nano-metric-cyan: var(--nano-state-active);
