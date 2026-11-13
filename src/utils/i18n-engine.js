@@ -287,15 +287,15 @@ export function estimateVisualStringWidth(str) {
 export function resolveTranslation(dict, lang, keyPath, params = {}, fallbackLang = 'en') {
   if (!keyPath || typeof keyPath !== 'string') return '';
   const keys = keyPath.split('.');
-  let current = dict?.[lang];
+  let current = dict && typeof dict === 'object' && Object.hasOwn(dict, lang) ? dict[lang] : undefined;
 
   for (const k of keys) {
-    if (current && current[k] !== undefined) {
+    if (current && typeof current === 'object' && Object.hasOwn(current, k)) {
       current = current[k];
     } else {
-      let fb = dict?.[fallbackLang];
+      let fb = dict && typeof dict === 'object' && Object.hasOwn(dict, fallbackLang) ? dict[fallbackLang] : undefined;
       for (const fbKey of keys) {
-        if (fb && fb[fbKey] !== undefined) {
+        if (fb && typeof fb === 'object' && Object.hasOwn(fb, fbKey)) {
           fb = fb[fbKey];
         } else {
           return keyPath;
@@ -311,7 +311,8 @@ export function resolveTranslation(dict, lang, keyPath, params = {}, fallbackLan
   let text = current;
   if (params && typeof params === 'object' && !Array.isArray(params)) {
     for (const [k, v] of Object.entries(params)) {
-      text = text.replaceAll(`{${k}}`, v !== undefined && v !== null ? String(v) : '');
+      const replacement = v !== undefined && v !== null ? String(v) : '';
+      text = text.replaceAll(`{${k}}`, () => replacement);
     }
   }
   return text;
