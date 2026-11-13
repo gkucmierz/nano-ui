@@ -316,4 +316,25 @@ describe('NanoHeatmap SFC, Package Exports & CSS-HOVER-01 Stationary Invariant',
       );
     }
   });
+
+  it('enforces Light-Mode WCAG AA contrast tokens, KDE density tail floor, HeatmapDoc theme tokens, and M mute shortcut', () => {
+    const heatmapSrc = fs.readFileSync(path.join(rootDir, 'src/components/NanoHeatmap.vue'), 'utf8');
+    const docSrc = fs.readFileSync(path.join(rootDir, 'src/playground/docs/HeatmapDoc.vue'), 'utf8');
+    const appSrc = fs.readFileSync(path.join(rootDir, 'src/playground/App.vue'), 'utf8');
+    const plJson = fs.readFileSync(path.join(rootDir, 'src/locales/pl.json'), 'utf8');
+    const enJson = fs.readFileSync(path.join(rootDir, 'src/locales/en.json'), 'utf8');
+
+    assert.ok(heatmapSrc.includes('DENSITY_VISIBILITY_FLOOR_RATIO'), 'NanoHeatmap must filter Gaussian sub-cutoff tail noise in density mode');
+    assert.ok(heatmapSrc.includes('--nano-heatmap-muted: #475569'), 'Light mode muted text must meet WCAG AA contrast (#475569)');
+    assert.ok(heatmapSrc.includes('--nano-heatmap-axis-active-fg: #0369a1'), 'Light mode active axis/pill text must meet WCAG AA contrast (#0369a1)');
+
+    const docParsed = parse(docSrc, { filename: 'HeatmapDoc.vue' });
+    assert.equal(docParsed.errors.length, 0, 'HeatmapDoc.vue must parse without SFC errors');
+    assert.equal(docSrc.includes('rgba(15, 23, 42, 0.3)'), false, 'HeatmapDoc.vue must not hardcode dark-only rgba(15, 23, 42, 0.3) card backgrounds');
+    assert.ok(docSrc.includes('var(--nano-status-info-text'), 'HeatmapDoc.vue active pill text must use theme-reactive --nano-status-info-text');
+    assert.ok(docSrc.includes('variant="split"'), 'HeatmapDoc.vue steppers must use 32px split variant matching pill height');
+
+    assert.match(appSrc, /\bm:\s*toggleGlobalSound\b/, 'Playground App.vue must bind M shortcut to toggleGlobalSound');
+    assert.ok(plJson.includes('(M)') && enJson.includes('(M)'), 'Sound toggle locale labels must advertise (M) shortcut');
+  });
 });
