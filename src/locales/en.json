@@ -50,6 +50,7 @@
     "coverFlow": "Nano CoverFlow (3D Shelf)",
     "dropzone": "Nano Dropzone (Upload & Hover)",
     "heatmap": "Nano Heatmap (OKLCH & KDE)",
+    "langPicker": "Nano LangPicker & SVG Flags",
     "layoutDirectives": "Layout Directives, CSHR & Collapsible",
     "ripple": "v-ripple Directive",
     "tooltip": "v-tooltip Directive"
@@ -379,5 +380,17 @@
     "clearPointsBtn": "Clear Events (0)",
     "densityEmptyLabel": "Waiting for real pointer events — click or drag on the stage",
     "clickHint": "Click or drag on canvas to record real interaction events"
+  },
+  "langPickerDoc": {
+    "title": "NanoLangPicker & NanoFlag — Adaptive 2D Language Matrix, Mobile List & Vector Flags",
+    "desc": "Unified 36px SPA header language switcher pairing zero-dependency vector SVG flags (NanoFlag, 32 ISO 639-1 codes) with a responsive Desktop/Tablet 2D Matrix (powered by navigateGrid) and a sleek Mobile Vertical Dropdown List.",
+    "demosTitle": "1. Responsive Modes (Independent Demo States)",
+    "matrixCardTitle": "Desktop & Tablet 2D Matrix (4 × 2)",
+    "matrixCardDesc": "Opens a balanced 2D grid with full spatial ArrowLeft/Right/Up/Down navigation via navigateGrid.",
+    "listCardTitle": "Mobile / Portrait Vertical List",
+    "listCardDesc": "Touch-friendly 44px single-column dropdown with overscroll-behavior: contain and native BCP-47 lang tags.",
+    "bilingualCardTitle": "Bilingual Direct Toggle (PL/EN)",
+    "bilingualCardDesc": "When <= 2 languages are passed, clicking toggles directly in 1 click without opening a popover.",
+    "flagsTitle": "2. Built-in Vector SVG Flag Registry"
   }
 }
