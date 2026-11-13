@@ -1,11 +1,16 @@
 <script setup>
 import { ref, computed, watch, nextTick, onMounted, onBeforeUnmount, useId, useSlots } from 'vue';
 import vRipple from '../directives/ripple.js';
+import { getScopedStorageController, normalizeStorageMode } from '../utils/storage-controller.js';
 import {
   computeLightboxStageGeometry,
   parseSvgViewBoxDimensions,
   normalizeLightboxSvgMarkup,
 } from '../utils/lightboxGeometry.js';
+
+const nanoStorage = getScopedStorageController('nano-ui');
+const isPlainObject = (val) =>
+  Boolean(val) && Object.prototype.toString.call(val) === '[object Object]';
 
 const props = defineProps({
   modelValue: {
@@ -72,9 +77,30 @@ const props = defineProps({
     type: String,
     default: 'Przywróć rozmiar kompaktowy',
   },
+  storage: {
+    type: [String, Boolean],
+    default: 'ls',
+  },
+  storageKey: {
+    type: String,
+    default: 'lightbox_state',
+  },
+  appPrefix: {
+    type: String,
+    default: '',
+  },
+  persistIndex: {
+    type: Boolean,
+    default: false,
+  },
 });
 
-const emit = defineEmits(['update:modelValue', 'update:activeIndex', 'close']);
+const emit = defineEmits([
+  'update:modelValue',
+  'update:activeIndex',
+  'close',
+  'state-change',
+]);
 const slots = useSlots();
 const instanceUid = useId();
 
@@ -348,16 +374,113 @@ function supportsTopLayerExit() {
   return Boolean(win?.CSS?.supports?.('overlay', 'auto')) && canTransitionDisplay();
 }
 
+const resolvedStorageMode = computed(() => normalizeStorageMode(props.storage, 'ls'));
+
+const baseStorageKey = computed(() => String(props.storageKey || 'lightbox_state').trim());
+
+const effectiveStorageKey = computed(() => {
+  if (!baseStorageKey.value) return '';
+  return nanoStorage.resolveKey(baseStorageKey.value, {
+    appPrefix: props.appPrefix,
+  });
+});
+
+const readSavedState = () => {
+  if (!baseStorageKey.value || resolvedStorageMode.value === 'none') {
+    return null;
+  }
+  const saved = nanoStorage.get(baseStorageKey.value, null, {
+    mode: resolvedStorageMode.value,
+    appPrefix: props.appPrefix,
+  });
+  return isPlainObject(saved) ? saved : null;
+};
+
+const persistLightboxState = () => {
+  if (!baseStorageKey.value || resolvedStorageMode.value === 'none') {
+    emit('state-change', {
+      isZoomed: isZoomed.value,
+      activeIndex: currentIndex.value,
+      mode: resolvedStorageMode.value,
+      storageKey: effectiveStorageKey.value,
+    });
+    return;
+  }
+  const payload = { isZoomed: Boolean(isZoomed.value) };
+  if (props.persistIndex) {
+    payload.activeIndex = currentIndex.value;
+  }
+  nanoStorage.set(baseStorageKey.value, payload, {
+    mode: resolvedStorageMode.value,
+    appPrefix: props.appPrefix,
+  });
+  emit('state-change', {
+    ...payload,
+    activeIndex: currentIndex.value,
+    mode: resolvedStorageMode.value,
+    storageKey: effectiveStorageKey.value,
+  });
+};
+
+const restoreLightboxState = ({ applyIndex = true } = {}) => {
+  const saved = readSavedState();
+  const maxIdx = Math.max(0, normalizedItems.value.length - 1);
+  if (
+    applyIndex &&
+    props.persistIndex &&
+    saved &&
+    Number.isFinite(saved.activeIndex) &&
+    saved.activeIndex >= 0
+  ) {
+    const clampedSavedIdx = Math.max(0, Math.min(Math.trunc(saved.activeIndex), maxIdx));
+    currentIndex.value = clampedSavedIdx;
+    if (clampedSavedIdx !== props.activeIndex) {
+      emit('update:activeIndex', clampedSavedIdx);
+    }
+  } else if (applyIndex) {
+    currentIndex.value = Math.max(0, Math.min(Number(props.activeIndex) || 0, maxIdx));
+  }
+
+  if (saved && Object.prototype.hasOwnProperty.call(saved, 'isZoomed')) {
+    isZoomed.value = Boolean(saved.isZoomed);
+  } else {
+    isZoomed.value = resolveDefaultZoomForItem(activeItem.value);
+  }
+};
+
+const resetState = () => {
+  if (baseStorageKey.value && resolvedStorageMode.value !== 'none') {
+    nanoStorage.remove(baseStorageKey.value, {
+      mode: resolvedStorageMode.value,
+      appPrefix: props.appPrefix,
+    });
+  }
+  const maxIdx = Math.max(0, normalizedItems.value.length - 1);
+  currentIndex.value = Math.max(0, Math.min(Number(props.activeIndex) || 0, maxIdx));
+  isZoomed.value = resolveDefaultZoomForItem(activeItem.value);
+  emit('state-change', {
+    isZoomed: isZoomed.value,
+    activeIndex: currentIndex.value,
+    mode: resolvedStorageMode.value,
+    storageKey: effectiveStorageKey.value,
+  });
+};
+
 const selectIndex = (idx) => {
   const count = normalizedItems.value.length;
   if (count <= 0) return;
   const wrapped = ((idx % count) + count) % count;
   currentIndex.value = wrapped;
+  const saved = readSavedState();
+  const hasSavedZoom = Boolean(saved && Object.prototype.hasOwnProperty.call(saved, 'isZoomed'));
   const nextItem = normalizedItems.value[wrapped];
-  if (nextItem && Object.prototype.hasOwnProperty.call(nextItem, 'defaultZoomed')) {
+  if (!hasSavedZoom && nextItem && Object.prototype.hasOwnProperty.call(nextItem, 'defaultZoomed')) {
     isZoomed.value = Boolean(nextItem.defaultZoomed);
   }
   emit('update:activeIndex', wrapped);
+  if (props.persistIndex) {
+    persistLightboxState();
+  }
 };
 
 const stepPrev = () => selectIndex(currentIndex.value - 1);
@@ -365,6 +488,7 @@ const stepNext = () => selectIndex(currentIndex.value + 1);
 const toggleZoom = () => {
   syncViewportMetrics();
   isZoomed.value = !isZoomed.value;
+  persistLightboxState();
 };
 
 async function closeTopLayer() {
@@ -408,7 +532,12 @@ const handleNativeClose = () => {
     dlg.returnValue = '';
     dlg.removeAttribute('data-closing');
   }
-  isZoomed.value = resolveDefaultZoomForItem(activeItem.value);
+  const saved = readSavedState();
+  if (saved && Object.prototype.hasOwnProperty.call(saved, 'isZoomed')) {
+    isZoomed.value = Boolean(saved.isZoomed);
+  } else {
+    isZoomed.value = resolveDefaultZoomForItem(activeItem.value);
+  }
   isClosing = false;
   if (props.modelValue) {
     emit('update:modelValue', false);
@@ -454,10 +583,16 @@ const onDialogKeydown = (event) => {
   } else if (event.key === '+' || event.key === '=') {
     event.preventDefault();
     syncViewportMetrics();
-    isZoomed.value = true;
+    if (!isZoomed.value) {
+      isZoomed.value = true;
+      persistLightboxState();
+    }
   } else if (event.key === '-') {
     event.preventDefault();
-    isZoomed.value = false;
+    if (isZoomed.value) {
+      isZoomed.value = false;
+      persistLightboxState();
+    }
   }
 };
 
@@ -483,11 +618,21 @@ watch(
   (val) => {
     if (Number.isFinite(val) && val >= 0) {
       currentIndex.value = val;
+      const saved = readSavedState();
+      const hasSavedZoom = Boolean(saved && Object.prototype.hasOwnProperty.call(saved, 'isZoomed'));
       const nextItem = normalizedItems.value[val];
-      if (nextItem && Object.prototype.hasOwnProperty.call(nextItem, 'defaultZoomed')) {
+      if (!hasSavedZoom && nextItem && Object.prototype.hasOwnProperty.call(nextItem, 'defaultZoomed')) {
         isZoomed.value = Boolean(nextItem.defaultZoomed);
       }
     }
+  },
+  { immediate: true }
+);
+
+watch(
+  [resolvedStorageMode, baseStorageKey, () => props.appPrefix, () => props.persistIndex],
+  () => {
+    restoreLightboxState({ applyIndex: props.persistIndex });
   },
   { immediate: true }
 );
@@ -504,11 +649,7 @@ watch(
   () => props.modelValue,
   (open) => {
     if (open) {
-      currentIndex.value = Math.max(
-        0,
-        Math.min(Number(props.activeIndex) || 0, Math.max(0, normalizedItems.value.length - 1))
-      );
-      isZoomed.value = resolveDefaultZoomForItem(activeItem.value);
+      restoreLightboxState({ applyIndex: true });
     }
     syncOpenState(open);
   }
@@ -522,11 +663,7 @@ onMounted(() => {
     win.visualViewport?.addEventListener('resize', syncViewportMetrics, { passive: true });
   }
   if (props.modelValue) {
-    currentIndex.value = Math.max(
-      0,
-      Math.min(Number(props.activeIndex) || 0, Math.max(0, normalizedItems.value.length - 1))
-    );
-    isZoomed.value = resolveDefaultZoomForItem(activeItem.value);
+    restoreLightboxState({ applyIndex: true });
     syncOpenState(true);
   }
 });
@@ -541,6 +678,17 @@ onBeforeUnmount(() => {
   if (dlg?.open) {
     dlg.close();
   }
+});
+
+defineExpose({
+  open: () => emit('update:modelValue', true),
+  close: closeTopLayer,
+  toggleZoom,
+  resetState,
+  isZoomed,
+  currentIndex,
+  effectiveStorageKey,
+  resolvedStorageMode,
 });
 </script>
 
