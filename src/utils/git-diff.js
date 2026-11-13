@@ -44,6 +44,8 @@ const EXT_LANG_MAP = {
   wgsl: 'glsl',
   hlsl: 'glsl',
   shader: 'glsl',
+  bpy: 'bpy',
+  bmesh: 'bpy',
   '7uaudio': 'json',
   '7jap': 'json',
   meme: 'json',
@@ -306,6 +308,9 @@ export const detectLangFromPath = (filePath = '', explicitLang = '') => {
   const base = clean.split('/').pop() || '';
   const lowerBase = base.toLowerCase();
   if (lowerBase === 'dockerfile') return 'dockerfile';
+  if (lowerBase.endsWith('.bpy.py') || /(?:^|[._-])blender\.py$/.test(lowerBase)) {
+    return 'bpy';
+  }
   const dotIdx = lowerBase.lastIndexOf('.');
   if (dotIdx === -1) return '';
   const ext = lowerBase.slice(dotIdx + 1);
