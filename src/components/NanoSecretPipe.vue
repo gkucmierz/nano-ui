@@ -1,6 +1,6 @@
 <script setup>
 import { ref, computed, onMounted, onUnmounted, watch, nextTick } from 'vue';
-import { createSecretByteBuffer } from '../utils/secretPipe.js';
+import { createSecretByteBuffer, isPrintableSecretKeyEvent } from '../utils/secretPipe.js';
 
 defineOptions({
   name: 'NanoSecretPipe',
@@ -95,12 +95,20 @@ const submitSecret = async () => {
   try {
     if (typeof props.onSubmitBytes === 'function') {
       await props.onSubmitBytes(payload);
+    } else if (Array.isArray(props.onSubmitBytes)) {
+      for (const fn of props.onSubmitBytes) {
+        if (typeof fn === 'function') await fn(payload);
+      }
     } else {
       emit('submit-bytes', payload);
     }
   } finally {
-    if (typeof props.onSubmitBytes === 'function') {
+    if (typeof props.onSubmitBytes === 'function' || Array.isArray(props.onSubmitBytes)) {
       payload.fill(0);
+    } else {
+      Promise.resolve().then(() => {
+        payload.fill(0);
+      });
     }
     isSubmitting.value = false;
   }
@@ -109,7 +117,7 @@ const submitSecret = async () => {
 const handleKeydown = (e) => {
   if (props.disabled || props.loading || isSubmitting.value) return;
 
-  if (e.key === 'Enter') {
+  if (e.key === 'Enter' && !e.ctrlKey && !e.metaKey && !e.altKey) {
     e.preventDefault();
     e.stopPropagation();
     if (typeof e.stopImmediatePropagation === 'function') e.stopImmediatePropagation();
@@ -117,7 +125,7 @@ const handleKeydown = (e) => {
     return;
   }
 
-  if (e.key === 'Backspace') {
+  if ((e.key === 'Backspace' || e.key === 'Delete') && !e.ctrlKey && !e.metaKey && !e.altKey) {
     e.preventDefault();
     e.stopPropagation();
     if (typeof e.stopImmediatePropagation === 'function') e.stopImmediatePropagation();
@@ -150,7 +158,7 @@ const handleKeydown = (e) => {
     return;
   }
 
-  if (e.key.length === 1 && !e.ctrlKey && !e.metaKey && !e.altKey) {
+  if (isPrintableSecretKeyEvent(e)) {
     e.preventDefault();
     e.stopPropagation();
     if (typeof e.stopImmediatePropagation === 'function') e.stopImmediatePropagation();
@@ -170,6 +178,15 @@ const handlePaste = (e) => {
     syncCounts();
   }
 };
+
+watch(
+  () => props.disabled,
+  (isDisabled) => {
+    if (isDisabled && byteCount.value > 0) {
+      wipeBuffer();
+    }
+  }
+);
 
 watch(
   () => props.prompt,
@@ -254,6 +271,10 @@ defineExpose({
           @blur="isFocused = false"
           @keydown="handleKeydown"
           @paste="handlePaste"
+          @copy.prevent
+          @cut.prevent
+          @drop.prevent
+          @dragover.prevent
           @contextmenu.prevent
         >
           <span class="nano-secret-pipe__key" aria-hidden="true">🔑</span>
@@ -261,7 +282,7 @@ defineExpose({
             {{ placeholder }}
           </span>
           <span v-else-if="stealthMode" class="nano-secret-pipe__stealth">
-            [UNIX STEALTH BUFFER: {{ byteCount }} {{ byteCount === 1 ? 'byte' : 'bytes' }} ready]
+            [UNIX STEALTH BUFFER: ARMED • NO ECHO]
           </span>
           <span v-else class="nano-secret-pipe__bullets">{{ maskedBullets }}</span>
           <span class="nano-secret-pipe__cursor" :class="{ 'is-blinking': isFocused }">█</span>
