@@ -29,7 +29,8 @@ export default defineConfig(({ mode }) => {
           server.middlewares.use((req, res, next) => {
             const [pathname, query] = (req.url || '').split('?');
             if (pathname !== '/' && pathname.endsWith('/')) {
-              const cleanPath = pathname.replace(/\/+$/, '') + (query ? `?${query}` : '');
+              const safePath = '/' + pathname.replace(/^\/+/, '').replace(/\/+$/, '');
+              const cleanPath = safePath + (query ? `?${query}` : '');
               res.writeHead(301, { Location: cleanPath });
               return res.end();
             }
@@ -74,6 +75,7 @@ export default defineConfig(({ mode }) => {
             'parsers/api': resolve(__dirname, 'src/parsers/api.js'),
             'parsers/nanosound': resolve(__dirname, 'src/parsers/nanosound.js'),
             'parsers/glsl': resolve(__dirname, 'src/parsers/glsl.js'),
+            'parsers/blender': resolve(__dirname, 'src/parsers/blender.js'),
           },
           formats: ['es'],
           fileName: (format, entryName) => `${entryName}.js`,
