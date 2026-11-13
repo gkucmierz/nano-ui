@@ -1,5 +1,5 @@
 <script setup>
-import { tooltipState } from '../composables/useTooltip.js';
+import { tooltipState, getActiveTooltipTarget } from '../composables/useTooltip.js';
 import { buildTooltipBubbleGeometry, computeTightTooltipWidth } from '../utils/tooltipGeometry.js';
 import { ref, computed, watch, nextTick, onMounted, onUnmounted } from 'vue';
 
@@ -13,11 +13,51 @@ const boxHeight = ref(28);
 const boxRadius = ref(7);
 const isBottom = ref(false);
 const isPositioned = ref(false);
+const domThemeTick = ref(0);
 
 const GAP = 10;
 const BUBBLE_PAD = 8;
 
 let resizeObserver = null;
+let themeMutationObserver = null;
+
+const detectHostLightMode = () => {
+  // Touch reactive counters so pressing `T` or mutating `data-theme` / `.theme-light` re-evaluates immediately
+  void tooltipState.themeRevision;
+  void domThemeTick.value;
+  const doc = globalThis.document;
+  if (!doc) return false;
+
+  const target = getActiveTooltipTarget();
+  const scopedHost = target?.closest?.('[data-theme], .theme-light, .theme-dark, .light, .dark');
+  if (scopedHost) {
+    const dt = scopedHost.getAttribute?.('data-theme');
+    if (dt === 'light') return true;
+    if (dt === 'dark') return false;
+    if (scopedHost.classList?.contains('theme-light') || scopedHost.classList?.contains('light')) return true;
+    if (scopedHost.classList?.contains('theme-dark') || scopedHost.classList?.contains('dark')) return false;
+  }
+
+  const root = doc.documentElement;
+  if (root) {
+    const rootAttr = root.getAttribute('data-theme');
+    if (rootAttr === 'light') return true;
+    if (rootAttr === 'dark') return false;
+    if (root.classList.contains('theme-light') || root.classList.contains('light')) return true;
+    if (root.classList.contains('dark') || root.classList.contains('theme-dark')) return false;
+  }
+  const body = doc.body;
+  if (body && (body.classList.contains('theme-light') || body.classList.contains('light'))) {
+    return true;
+  }
+  return false;
+};
+
+const autoPolarityClass = computed(() => {
+  const custom = String(tooltipState.customClass || '');
+  if (/\btooltip-(dark|light|danger|error|success)\b/.test(custom)) return '';
+  return detectHostLightMode() ? 'tooltip-dark' : '';
+});
 
 const syncBoxDimensions = () => {
   const el = tooltipRef.value;
@@ -189,6 +229,21 @@ onMounted(() => {
     });
     resizeObserver.observe(tooltipRef.value);
   }
+  if (globalThis.MutationObserver && globalThis.document?.documentElement) {
+    themeMutationObserver = new globalThis.MutationObserver(() => {
+      domThemeTick.value += 1;
+    });
+    themeMutationObserver.observe(globalThis.document.documentElement, {
+      attributes: true,
+      attributeFilter: ['data-theme', 'class'],
+    });
+    if (globalThis.document.body) {
+      themeMutationObserver.observe(globalThis.document.body, {
+        attributes: true,
+        attributeFilter: ['data-theme', 'class'],
+      });
+    }
+  }
 });
 
 onUnmounted(() => {
@@ -196,6 +251,10 @@ onUnmounted(() => {
   if (resizeObserver) {
     resizeObserver.disconnect();
     resizeObserver = null;
+  }
+  if (themeMutationObserver) {
+    themeMutationObserver.disconnect();
+    themeMutationObserver = null;
   }
 });
 </script>
@@ -210,6 +269,7 @@ onUnmounted(() => {
         visible: tooltipState.isVisible && isPositioned,
         'tooltip-bottom': isBottom,
       },
+      autoPolarityClass,
       tooltipState.customClass,
     ]"
     :style="{
