@@ -93,6 +93,7 @@ export function createCoupledSelectionMachine(options = {}) {
     selectedId: options.initialSelectedId ?? null,
     hoveredId: options.initialHoveredId ?? null,
     suppressedHoverId: null,
+    pointerInCorridor: Boolean(options.corridor),
     lastClickPos: { x: 0, y: 0 },
   };
 
@@ -184,12 +185,27 @@ export function createCoupledSelectionMachine(options = {}) {
     return getSnapshot();
   }
 
+  function onCorridorEnter() {
+    state.pointerInCorridor = true;
+    return getSnapshot();
+  }
+
+  function onCorridorLeave() {
+    state.pointerInCorridor = false;
+    state.hoveredId = null;
+    state.suppressedHoverId = null;
+    return getSnapshot();
+  }
+
   function onPointerLeave(id = null) {
-    if (id === null || state.hoveredId === id) {
-      state.hoveredId = null;
-    }
     if (id === null || state.suppressedHoverId === id) {
       state.suppressedHoverId = null;
+    }
+    if (state.pointerInCorridor && id !== null) {
+      return getSnapshot();
+    }
+    if (id === null || state.hoveredId === id) {
+      state.hoveredId = null;
     }
     return getSnapshot();
   }
@@ -247,11 +263,20 @@ export function createCoupledSelectionMachine(options = {}) {
     };
   }
 
+  function bindCoupledCorridor() {
+    return {
+      onMouseenter: () => onCorridorEnter(),
+      onMouseleave: () => onCorridorLeave(),
+    };
+  }
+
   return {
     toggleSelect,
     stepSelection,
     selectNext,
     selectPrev,
+    onCorridorEnter,
+    onCorridorLeave,
     onPointerEnter,
     onPointerMove,
     onPointerLeave,
@@ -262,6 +287,7 @@ export function createCoupledSelectionMachine(options = {}) {
     getTriBorderClasses,
     triStateClasses: getTriBorderClasses,
     bindCoupledItem,
+    bindCoupledCorridor,
     getSnapshot,
   };
 }
@@ -285,6 +311,7 @@ export function useCoupledSelection(options = {}) {
   const selectedId = ref(options.initialSelectedId ?? null);
   const hoveredId = ref(options.initialHoveredId ?? null);
   const suppressedHoverId = ref(null);
+  const pointerInCorridor = ref(Boolean(options.corridor));
   const lastClickPos = ref({ x: 0, y: 0 });
 
   const effectiveActiveId = computed(() => {
@@ -388,12 +415,25 @@ export function useCoupledSelection(options = {}) {
     }
   }
 
+  function onCorridorEnter() {
+    pointerInCorridor.value = true;
+  }
+
+  function onCorridorLeave() {
+    pointerInCorridor.value = false;
+    hoveredId.value = null;
+    suppressedHoverId.value = null;
+  }
+
   function onPointerLeave(id = null) {
-    if (id === null || hoveredId.value === id) {
-      hoveredId.value = null;
-    }
     if (id === null || suppressedHoverId.value === id) {
       suppressedHoverId.value = null;
+    }
+    if (pointerInCorridor.value && id !== null) {
+      return;
+    }
+    if (id === null || hoveredId.value === id) {
+      hoveredId.value = null;
     }
   }
 
@@ -432,6 +472,13 @@ export function useCoupledSelection(options = {}) {
       onMousemove: (event) => onPointerMove(id, event),
       onMouseleave: () => onPointerLeave(id),
       onClick: (event) => toggleSelect(id, event),
+    };
+  }
+
+  function bindCoupledCorridor() {
+    return {
+      onMouseenter: () => onCorridorEnter(),
+      onMouseleave: () => onCorridorLeave(),
     };
   }
 
@@ -481,11 +528,14 @@ export function useCoupledSelection(options = {}) {
     selectedId,
     hoveredId,
     suppressedHoverId,
+    pointerInCorridor,
     effectiveActiveId,
     toggleSelect,
     stepSelection,
     selectNext,
     selectPrev,
+    onCorridorEnter,
+    onCorridorLeave,
     onPointerEnter,
     onPointerMove,
     onPointerLeave,
@@ -497,6 +547,7 @@ export function useCoupledSelection(options = {}) {
     getTriBorderClasses,
     triStateClasses: getTriBorderClasses,
     bindCoupledItem,
+    bindCoupledCorridor,
     bindKeyController,
     activateKeyboardScope,
   };
