@@ -22,6 +22,8 @@ import {
   NANOSOUND_COMPLETIONS,
   glslParser,
   GLSL_COMPLETIONS,
+  blenderParser,
+  BLENDER_COMPLETIONS,
 } from '../../parsers/index.js';
 import { t } from '../../locales.js';
 
@@ -57,6 +59,7 @@ const extraParsers = [
   dockerfileParser,
   nanosoundParser,
   glslParser,
+  blenderParser,
 ];
 
 const themeOptions = SYNTAX_THEMES.map((th) => ({
@@ -403,6 +406,31 @@ void main() {
   fragColor = vec4(col, 1.0);
 }`,
   },
+  bpy: {
+    filePath: 'scripts/generate_crystal_blender.py',
+    badge: 'Core',
+    importPath: '@gkucmierz/nano-ui/parsers/blender',
+    code: `# Blender 5.2.2 LTS — Headless CLI Procedural GLB Pipeline
+import bpy, bmesh
+from mathutils import Vector
+
+bpy.ops.mesh.primitive_uv_sphere_add(segments=48, ring_count=24, radius=1.0)
+orb = bpy.context.active_object
+mat = bpy.data.materials.new(name="QuartzCrystal")
+mat.use_nodes = True
+bsdf = mat.node_tree.nodes["Principled BSDF"]
+bsdf.inputs["Transmission Weight"].default_value = 1.0
+bsdf.inputs["Roughness"].default_value = 0.05
+bsdf.inputs["IOR"].default_value = 1.45
+bsdf.inputs["Coat Weight"].default_value = 1.0
+mod = orb.modifiers.new("FacetBevel", "BEVEL")
+bpy.ops.export_scene.gltf(
+    filepath="public/models/crystal-step-7.glb",
+    export_format="GLB",
+    export_apply=True,
+    export_yup=True,
+)`,
+  },
 };
 
 const selectedSampleLang = ref('glsl');
@@ -654,7 +682,7 @@ const codeTabs = createDocTabs({
         :file-path="languageSamples[selectedSampleLang]?.filePath || 'snippet.js'"
         :lang="selectedSampleLang"
         :parsers="extraParsers"
-        :completions="selectedSampleLang === 'nanosound' ? NANOSOUND_COMPLETIONS : (selectedSampleLang === 'glsl' ? GLSL_COMPLETIONS : null)"
+        :completions="selectedSampleLang === 'nanosound' ? NANOSOUND_COMPLETIONS : (selectedSampleLang === 'glsl' ? GLSL_COMPLETIONS : (selectedSampleLang === 'bpy' ? BLENDER_COMPLETIONS : null))"
         :show-theme-selector="true"
         mode="code"
         :editable="true"

@@ -20,7 +20,7 @@ import {
   compileNsdPreview,
   extractEmbeddedNsdSnippets,
 } from '../utils/nsd-preview.js';
-import { NANOSOUND_COMPLETIONS, GLSL_COMPLETIONS } from '../parsers/index.js';
+import { NANOSOUND_COMPLETIONS, GLSL_COMPLETIONS, BLENDER_COMPLETIONS } from '../parsers/index.js';
 import { tooltipDirective as vTooltip } from '../directives/tooltip.js';
 import {
   getScopedStorageController,
@@ -516,13 +516,55 @@ watch(
   { immediate: true }
 );
 
+const isSafePreviewUrl = (rawUrl, { allowDataImage = false } = {}) => {
+  const s = String(rawUrl || '').trim();
+  if (!s) return false;
+  const compact = s.replace(/[\x00-\x20]+/g, '').toLowerCase();
+  if (compact.startsWith('javascript:') || compact.startsWith('vbscript:') || compact.startsWith('data:text/html')) {
+    return false;
+  }
+  if (allowDataImage && /^data:image\/(?:png|jpeg|jpg|webp|gif|avif);/i.test(compact)) {
+    return true;
+  }
+  if (compact.startsWith('https://') || compact.startsWith('http://') || compact.startsWith('blob:')) {
+    return true;
+  }
+  if (s.startsWith('/') && !s.startsWith('//')) {
+    return true;
+  }
+  return !/^[a-z][a-z0-9+.-]*:/i.test(compact) && !s.startsWith('//');
+};
+
+const safePdfMediaUrl = computed(() => {
+  const url = effectiveMediaUrl.value;
+  if (!url || !isSafePreviewUrl(url)) return '';
+  if (props.mediaBlob && props.mediaBlob.type && props.mediaBlob.type !== 'application/pdf') {
+    return '';
+  }
+  return url;
+});
+
+let activeFontFace = null;
+let isEditorUnmounted = false;
+
+const releaseActiveFontFace = () => {
+  const doc = globalThis.document;
+  if (activeFontFace && doc && doc.fonts && typeof doc.fonts.delete === 'function') {
+    try {
+      doc.fonts.delete(activeFontFace);
+    } catch {}
+  }
+  activeFontFace = null;
+};
+
 // Dynamically load FontFace for .woff2 / .woff / .ttf / .otf font specimen previews
 watch(
   [() => props.filePath, effectiveMediaUrl, resolvedMediaType],
   async ([_fp, mUrl, mt]) => {
     const seq = ++fontLoadSeq;
     loadedFontFamily.value = '';
-    if (mt !== 'font' || !mUrl) return;
+    releaseActiveFontFace();
+    if (mt !== 'font' || !mUrl || !isSafePreviewUrl(mUrl)) return;
     const win = globalThis.window;
     const doc = globalThis.document;
     if (!win || !win.FontFace || !doc || !doc.fonts) return;
@@ -530,8 +572,10 @@ watch(
     try {
       const face = new win.FontFace(family, `url(${JSON.stringify(mUrl)})`);
       await face.load();
-      if (seq !== fontLoadSeq) return;
+      if (isEditorUnmounted || seq !== fontLoadSeq) return;
+      releaseActiveFontFace();
       doc.fonts.add(face);
+      activeFontFace = face;
       loadedFontFamily.value = family;
     } catch {
       // Keep system fallback if font binary fails to decode
@@ -920,6 +964,13 @@ const GLSL_LANG_IDS = new Set([
   'vs',
 ]);
 
+const BLENDER_LANG_IDS = new Set([
+  'bpy',
+  'blender',
+  'blender-python',
+  'bmesh',
+]);
+
 const effectiveCompletions = computed(() => {
   if (Array.isArray(props.completions)) return props.completions;
   if (resolvedLang.value === 'nanosound' || resolvedLang.value === 'nsd' || resolvedLang.value === 'sound') {
@@ -927,6 +978,9 @@ const effectiveCompletions = computed(() => {
   }
   if (GLSL_LANG_IDS.has(resolvedLang.value)) {
     return GLSL_COMPLETIONS;
+  }
+  if (BLENDER_LANG_IDS.has(resolvedLang.value)) {
+    return BLENDER_COMPLETIONS;
   }
   return [];
 });
@@ -1115,6 +1169,8 @@ watch(isWrapped, () => {
 });
 
 onUnmounted(() => {
+  isEditorUnmounted = true;
+  releaseActiveFontFace();
   stopCustomFormatPlayback();
   if (customTextAbortCtrl) {
     customTextAbortCtrl.abort();
@@ -1537,9 +1593,10 @@ defineExpose({
       <!-- PDF PREVIEW -->
       <template v-else-if="resolvedMediaType === 'pdf'">
         <iframe
-          v-if="effectiveMediaUrl"
-          :src="effectiveMediaUrl"
+          v-if="safePdfMediaUrl"
+          :src="safePdfMediaUrl"
           :title="filePath || 'PDF Preview'"
+          referrerpolicy="no-referrer"
           class="nce-pdf-frame"
         ></iframe>
       </template>
@@ -1685,9 +1742,10 @@ defineExpose({
             <div class="nce-meme-canvas">
               <div v-if="parsedMemeSpec.topCaption" class="nce-meme-caption is-top">{{ parsedMemeSpec.topCaption }}</div>
               <img
-                v-if="parsedMemeSpec.imageUrl"
+                v-if="parsedMemeSpec.imageUrl && isSafePreviewUrl(parsedMemeSpec.imageUrl, { allowDataImage: true })"
                 :src="parsedMemeSpec.imageUrl"
                 :alt="parsedMemeSpec.title"
+                referrerpolicy="no-referrer"
                 class="nce-preview-img"
               />
               <div v-if="parsedMemeSpec.panels.length > 0" class="nce-meme-panels">
