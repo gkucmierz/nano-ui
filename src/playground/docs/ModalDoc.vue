@@ -139,6 +139,12 @@ const hostAppPrefix = ref('dashboard-app');
 const customPropKey = ref('demo_geometry');
 const storageTick = ref(0);
 
+const lightboxRef = ref(null);
+const lightboxStorageMode = ref('ls');
+const lightboxAppPrefix = ref('science-blog');
+const lightboxStorageKey = ref('lightbox_state');
+const lightboxPersistIndex = ref(true);
+
 const nanoStorage = getScopedStorageController('nano-ui');
 let unsubscribeStorage = null;
 
@@ -152,9 +158,20 @@ onUnmounted(() => {
   if (unsubscribeStorage) unsubscribeStorage();
 });
 
-watch([storageMode, hostAppPrefix, customPropKey], () => {
-  storageTick.value += 1;
-});
+watch(
+  [
+    storageMode,
+    hostAppPrefix,
+    customPropKey,
+    lightboxStorageMode,
+    lightboxAppPrefix,
+    lightboxStorageKey,
+    lightboxPersistIndex,
+  ],
+  () => {
+    storageTick.value += 1;
+  }
+);
 
 const storageOptions = [
   {
@@ -178,6 +195,28 @@ const storageOptions = [
 ];
 
 const appPrefixPresets = ['dashboard-app', 'workflow-app', 'cv-app', 'nano-ui'];
+const lightboxPrefixPresets = ['science-blog', 'dashboard-app', 'workflow-app', 'nano-ui'];
+
+const lightboxStorageOptions = [
+  {
+    value: 'ls',
+    badge: 'ls',
+    label: 'localStorage (Trwały)',
+    desc: 'Persists [🔍+] zoom & optional slide index across restarts',
+  },
+  {
+    value: 'ss',
+    badge: 'ss',
+    label: 'sessionStorage (Ulotny)',
+    desc: 'Persists lightbox state only for the current browser tab',
+  },
+  {
+    value: 'none',
+    badge: 'none',
+    label: 'Brak zapisu (Disabled)',
+    desc: 'No Web Storage write — resets zoom to defaultZoomed on close',
+  },
+];
 
 const liveInspection = computed(() => {
   // Depend on reactive tick so drag/resize updates immediately
@@ -188,7 +227,19 @@ const liveInspection = computed(() => {
   });
 });
 
+const lightboxInspection = computed(() => {
+  const _tick = storageTick.value;
+  return nanoStorage.inspect(lightboxStorageKey.value, {
+    mode: lightboxStorageMode.value,
+    appPrefix: lightboxAppPrefix.value,
+  });
+});
+
 const handleGeometryChange = () => {
+  storageTick.value += 1;
+};
+
+const handleLightboxStateChange = () => {
   storageTick.value += 1;
 };
 
@@ -201,6 +252,19 @@ const handleResetSavedGeometry = () => {
       appPrefix: hostAppPrefix.value,
     });
   }
+  storageTick.value += 1;
+};
+
+const handleResetSavedLightboxState = () => {
+  if (lightboxRef.value) {
+    lightboxRef.value.resetState();
+  } else {
+    nanoStorage.remove(lightboxStorageKey.value, {
+      mode: lightboxStorageMode.value,
+      appPrefix: lightboxAppPrefix.value,
+    });
+  }
+  lightboxIdx.value = 0;
   storageTick.value += 1;
 };
 
@@ -255,6 +319,17 @@ const codeTabs = createDocTabs({
         'resetGeometry(): void - Clear saved position/size in active storage and recenter modal',
         'effectiveStorageKey / resolvedStorageMode: ComputedRef<String>',
         'isVisible / isMaximized / isDragging / isResizing: ComputedRef/Ref',
+      ],
+    },
+    {
+      title: 'NanoLightbox Storage Props & Methods',
+      items: [
+        'storage: "ls" | "ss" | "none" | Boolean (default: "ls") - Persist [🔍+] zoom (isZoomed) via getScopedStorageController("nano-ui")',
+        'storageKey: String (default: "lightbox_state") - Hierarchical suffix (<appPrefix>_nano-ui_<storageKey> -> SB_NU_lightbox_state)',
+        'appPrefix: String (default: "") - Optional host app prefix for acronym scoping',
+        'persistIndex: Boolean (default: false) - Also persist and restore activeIndex across reopens/reloads',
+        '@state-change: ({ isZoomed, activeIndex, mode, storageKey }) => void - Emitted when zoom/index state is saved or reset',
+        'resetState(): void - Clear saved lightbox state in active storage and restore defaultZoomed',
       ],
     },
   ],
@@ -492,12 +567,126 @@ const codeTabs = createDocTabs({
     </div>
 
     <div class="demo-section">
-      <h3>Blurred Backdrop Photo Lightbox (NanoLightbox)</h3>
-      <button class="demo-btn" @click="showLightbox = true">Open Photo Lightbox</button>
+      <h3>Blurred Backdrop Photo Lightbox &amp; Storage Persistence (<code>NanoLightbox</code>)</h3>
+      <p class="section-subtitle">
+        <code>NanoLightbox</code> persists the user&apos;s expand/compact zoom preference (<code>[🔍+]</code> / <code>isZoomed</code>)
+        and optional <code>activeIndex</code> (<code>persistIndex</code>) via the built-in <code>getScopedStorageController('nano-ui')</code>
+        singleton (<code>ls</code> / <code>ss</code> / <code>none</code>).
+      </p>
+
+      <div class="storage-playground-grid">
+        <div class="storage-mode-radios" role="radiogroup" aria-label="Lightbox Storage Persistence Mode">
+          <label
+            v-for="opt in lightboxStorageOptions"
+            :key="`lb-${opt.value}`"
+            class="storage-mode-card"
+            :class="{ active: lightboxStorageMode === opt.value }"
+          >
+            <input
+              :id="`nano-lightbox-storage-mode-${opt.value}`"
+              v-model="lightboxStorageMode"
+              type="radio"
+              name="nano-lightbox-storage-mode"
+              :value="opt.value"
+              class="sr-only-radio"
+            />
+            <div class="storage-mode-card-top">
+              <span class="storage-badge" :class="`badge-${opt.value}`">{{ opt.badge }}</span>
+              <span class="storage-label">{{ opt.label }}</span>
+            </div>
+            <span class="storage-desc">{{ opt.desc }}</span>
+          </label>
+        </div>
+
+        <div class="prefix-config-row">
+          <div class="prefix-field">
+            <span class="field-label">Host App Prefix (<code>appPrefix</code>):</span>
+            <div class="preset-chips">
+              <button
+                v-for="preset in lightboxPrefixPresets"
+                :key="`lb-preset-${preset}`"
+                type="button"
+                class="preset-chip"
+                :class="{ active: lightboxAppPrefix === preset }"
+                @click="lightboxAppPrefix = preset"
+              >
+                {{ preset }}
+              </button>
+            </div>
+          </div>
+
+          <div class="prefix-field">
+            <label class="field-label" for="lightbox-storage-key-input">
+              Prop Key Suffix (<code>storageKey</code>):
+            </label>
+            <input
+              id="lightbox-storage-key-input"
+              v-model="lightboxStorageKey"
+              name="lightbox-storage-key-input"
+              type="text"
+              class="key-input"
+              placeholder="lightbox_state"
+            />
+          </div>
+
+          <div class="prefix-field">
+            <label style="display: inline-flex; align-items: center; gap: 0.5rem; cursor: pointer; user-select: none;">
+              <NanoSwitch v-model="lightboxPersistIndex" size="sm" />
+              <span class="field-label">Persist slide index (<code>persistIndex</code>)</span>
+            </label>
+          </div>
+        </div>
+
+        <div class="storage-inspector-box">
+          <div class="inspector-header">
+            <div class="resolved-key-display">
+              <span class="inspector-caption">Resolved Acronym Key:</span>
+              <code
+                v-tooltip="`from ${lightboxInspection.verboseKey}`"
+                class="hierarchical-key-pill"
+                style="cursor: help;"
+              ><template v-if="lightboxInspection.displayAppSeg && lightboxInspection.displayAppSeg !== lightboxInspection.displayScopeSeg"><span class="seg-app">{{ lightboxInspection.displayAppSeg }}</span>_</template><span class="seg-lib">{{ lightboxInspection.displayScopeSeg }}</span>_<span class="seg-key">{{ lightboxInspection.rawKey }}</span></code>
+              <span class="inspector-caption">
+                (from <code>{{ lightboxInspection.verboseKey }}</code>)
+              </span>
+            </div>
+            <div class="inspector-badges">
+              <span class="status-pill" :class="lightboxInspection.mode === 'none' ? 'is-muted' : 'is-active'">
+                Backend: {{ lightboxInspection.backend }}
+              </span>
+              <span class="status-pill" :class="lightboxInspection.exists ? 'is-saved' : 'is-empty'">
+                {{ lightboxInspection.exists ? `Saved (${lightboxInspection.byteLength} B)` : 'Not saved yet' }}
+              </span>
+            </div>
+          </div>
+
+          <pre class="inspector-json">{{ lightboxInspection.exists ? JSON.stringify(lightboxInspection.parsedValue, null, 2) : (lightboxInspection.mode === 'none' ? '// Persistence disabled (storage="none")' : '// Open Lightbox and click [🔍+] (or switch slides) to persist { isZoomed, activeIndex }') }}</pre>
+
+          <div class="inspector-actions">
+            <button type="button" class="demo-btn" @click="showLightbox = true">
+              Open Photo Lightbox
+            </button>
+            <button
+              type="button"
+              class="demo-btn secondary-btn"
+              @click="handleResetSavedLightboxState"
+            >
+              Reset Saved Lightbox State
+            </button>
+          </div>
+        </div>
+      </div>
+
       <NanoLightbox
+        ref="lightboxRef"
         v-model="showLightbox"
         v-model:active-index="lightboxIdx"
         :items="demoLightboxItems"
+        :storage="lightboxStorageMode"
+        :app-prefix="lightboxAppPrefix"
+        :storage-key="lightboxStorageKey"
+        :persist-index="lightboxPersistIndex"
+        @state-change="handleLightboxStateChange"
       />
     </div>
 
