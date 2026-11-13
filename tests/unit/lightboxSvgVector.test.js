@@ -8,6 +8,7 @@ import * as Vue from 'vue';
 import { renderToString } from 'vue/server-renderer';
 import { parse, compileScript, compileTemplate } from 'vue/compiler-sfc';
 import vRipple from '../../src/directives/ripple.js';
+import * as storageControllerMod from '../../src/utils/storage-controller.js';
 import * as lightboxGeometryMod from '../../src/utils/lightboxGeometry.js';
 import {
   parseSvgViewBoxDimensions,
@@ -41,6 +42,10 @@ function loadCompiledNanoLightbox() {
       .replace(/import\s+\{([^}]+)\}\s+from\s+['"]vue['"];?/g, (_m, spec) => `const {${spec.replace(/\s+as\s+/g, ': ')}} = __vue;`)
       .replace(/import\s+(\w+)\s+from\s+['"]\.\.\/directives\/ripple\.js['"];?/g, 'const $1 = __vRipple;')
       .replace(
+        /import\s+\{([^}]+)\}\s+from\s+['"]\.\.\/utils\/storage-controller\.js['"];?/g,
+        (_m, spec) => `const {${spec.replace(/\s+as\s+/g, ': ')}} = __storageController;`
+      )
+      .replace(
         /import\s+\{([^}]+)\}\s+from\s+['"]\.\.\/utils\/lightboxGeometry\.js['"];?/g,
         (_m, spec) => `const {${spec.replace(/\s+as\s+/g, ': ')}} = __lightboxGeometry;`
       )
@@ -58,14 +63,17 @@ function loadCompiledNanoLightbox() {
   vm.runInNewContext(bundleCode, {
     __vue: Vue,
     __vRipple: vRipple,
+    __storageController: storageControllerMod,
     __lightboxGeometry: lightboxGeometryMod,
     __result: result,
     globalThis,
     Number,
+    String,
     Boolean,
     Array,
     Object,
     Math,
+    JSON,
     Promise,
     setTimeout,
   });
@@ -261,5 +269,108 @@ describe('NanoLightbox Universal Flat-Asset Vector & Raster Support (v1.8.31)', 
     );
     assert.ok(slotHtml.includes('class="custom-flat-asset"'));
     assert.ok(slotHtml.includes('data-zoomed="true"'));
+  });
+
+  it('persists and restores NanoLightbox zoom + optional activeIndex via getScopedStorageController("nano-ui") (ls / ss / none)', async () => {
+    const NanoLightbox = loadCompiledNanoLightbox();
+    const nanoStorage = storageControllerMod.getScopedStorageController('nano-ui');
+    const testKey = 'unit_lightbox_state';
+    const testPrefix = 'science-blog';
+
+    nanoStorage.remove(testKey, { mode: 'ls', appPrefix: testPrefix });
+    nanoStorage.remove(testKey, { mode: 'ss', appPrefix: testPrefix });
+
+    // 1. Pre-seed savedzoom + slide index in ls and verify SSR restoration
+    nanoStorage.set(
+      testKey,
+      { isZoomed: true, activeIndex: 1 },
+      { mode: 'ls', appPrefix: testPrefix }
+    );
+
+    const inspected = nanoStorage.inspect(testKey, { mode: 'ls', appPrefix: testPrefix });
+    assert.equal(inspected.resolvedKey, 'SB_NU_unit_lightbox_state');
+    assert.equal(inspected.exists, true);
+
+    const restoredHtml = await renderToString(
+      Vue.createSSRApp({
+        render: () =>
+          Vue.h(NanoLightbox, {
+            modelValue: true,
+            activeIndex: 0,
+            storage: 'ls',
+            appPrefix: testPrefix,
+            storageKey: testKey,
+            persistIndex: true,
+            items: [
+              { src: '/img/a.webp', alt: 'Slide A', caption: 'First Slide' },
+              { src: '/img/b.webp', alt: 'Slide B', caption: 'Restored Second Slide' },
+            ],
+          }),
+      })
+    );
+    assert.ok(restoredHtml.includes('nano-lightbox-dialog is-zoomed'), 'Saved isZoomed:true should restore zoomed class');
+    assert.ok(restoredHtml.includes('2 / 2'), 'Saved activeIndex:1 with persistIndex:true should restore slide 2');
+    assert.ok(restoredHtml.includes('Restored Second Slide'));
+
+    // 2. With storage="none", saved ls state is ignored and defaultZoomed (false) applies
+    const disabledHtml = await renderToString(
+      Vue.createSSRApp({
+        render: () =>
+          Vue.h(NanoLightbox, {
+            modelValue: true,
+            activeIndex: 0,
+            storage: 'none',
+            appPrefix: testPrefix,
+            storageKey: testKey,
+            persistIndex: true,
+            items: [
+              { src: '/img/a.webp', alt: 'Slide A', caption: 'First Slide' },
+              { src: '/img/b.webp', alt: 'Slide B', caption: 'Restored Second Slide' },
+            ],
+          }),
+      })
+    );
+    assert.ok(!disabledHtml.includes('nano-lightbox-dialog is-zoomed'), 'storage="none" must ignore persisted zoom');
+    assert.ok(disabledHtml.includes('1 / 2'), 'storage="none" must ignore persisted activeIndex');
+
+    // 3. Exposed toggleZoom() and resetState() mutate & clear storage cleanly
+    const emitted = [];
+    let vnode = null;
+    await renderToString(
+      Vue.createSSRApp({
+        render: () => {
+          vnode = Vue.h(NanoLightbox, {
+            modelValue: true,
+            storage: 'ss',
+            appPrefix: testPrefix,
+            storageKey: testKey,
+            src: '/img/a.webp',
+            'onState-change': (payload) => {
+              emitted.push({ event: 'state-change', payload });
+            },
+          });
+          return vnode;
+        },
+      })
+    );
+    const exposedApi = vnode?.component?.exposed;
+    assert.ok(exposedApi);
+    assert.equal(exposedApi.effectiveStorageKey.value, 'SB_NU_unit_lightbox_state');
+    assert.equal(exposedApi.resolvedStorageMode.value, 'ss');
+    assert.equal(exposedApi.isZoomed.value, false);
+
+    exposedApi.toggleZoom();
+    assert.equal(exposedApi.isZoomed.value, true);
+    assert.deepEqual(
+      nanoStorage.get(testKey, null, { mode: 'ss', appPrefix: testPrefix }),
+      { isZoomed: true }
+    );
+    assert.ok(emitted.some((e) => e.event === 'state-change' && e.payload?.isZoomed === true));
+
+    exposedApi.resetState();
+    assert.equal(exposedApi.isZoomed.value, false);
+    assert.equal(nanoStorage.get(testKey, null, { mode: 'ss', appPrefix: testPrefix }), null);
+
+    nanoStorage.remove(testKey, { mode: 'ls', appPrefix: testPrefix });
   });
 });
