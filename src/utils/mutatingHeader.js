@@ -13,22 +13,27 @@ export const DEFAULT_HEADER_TIER_WIDTHS = Object.freeze([1040, 860, 680, 520]);
  * `k` in `0..K` whose natural content width fits inside `containerWidth - safetyGapPx`
  * with zero DOM flex-shrink oscillation.
  *
- * @param {Object} params
- * @param {number} [params.containerWidth=1200] Available inner header width in px
- * @param {number[]} [params.tierRequiredWidths=[1040, 860, 680, 520]] Natural width required by each tier
- * @param {number} [params.safetyGapPx=24] Minimum breathing gap between #left, #center, #right
+ * Accepts either a single options object `{ containerWidth, tierRequiredWidths, safetyGapPx }`
+ * or positional `(containerWidth, { tierRequiredWidths | requiredWidths, safetyGapPx })`.
+ *
+ * @param {Object|number} [paramsOrWidth={}] Options object or numeric container width in px
+ * @param {Object} [maybeOptions={}] Secondary options when first argument is numeric width
  * @returns {{ tierIndex: number, requiredWidthPx: number, fits: boolean }}
  */
-export function resolveOptimalHeaderTier({
-  containerWidth = 1200,
-  tierRequiredWidths = DEFAULT_HEADER_TIER_WIDTHS,
-  safetyGapPx = 24,
-} = {}) {
+export function resolveOptimalHeaderTier(paramsOrWidth = {}, maybeOptions = {}) {
+  const isObjArg =
+    paramsOrWidth !== null &&
+    Object.prototype.toString.call(paramsOrWidth) === '[object Object]';
+  const opts = isObjArg ? paramsOrWidth : maybeOptions || {};
+  const containerWidth = isObjArg ? opts.containerWidth ?? 1200 : paramsOrWidth;
+  const rawTierWidths = opts.tierRequiredWidths ?? opts.requiredWidths ?? DEFAULT_HEADER_TIER_WIDTHS;
+  const safetyGapPx = opts.safetyGapPx ?? 24;
+
   const safeW = Math.max(0, Number(containerWidth) || 0);
   const gap = Math.max(0, Number(safetyGapPx) || 0);
   const budgets =
-    Array.isArray(tierRequiredWidths) && tierRequiredWidths.length > 0
-      ? tierRequiredWidths.map((v) => Math.max(0, Number(v) || 0))
+    Array.isArray(rawTierWidths) && rawTierWidths.length > 0
+      ? rawTierWidths.map((v) => Math.max(0, Number(v) || 0))
       : DEFAULT_HEADER_TIER_WIDTHS;
 
   const maxTierIdx = budgets.length - 1;
@@ -54,6 +59,25 @@ export function resolveOptimalHeaderTier({
     requiredWidthPx: reqW,
     fits: reqW + gap <= safeW,
   };
+}
+
+/**
+ * Picks the plain string label candidate for a pre-resolved `tierIndex` (`0..K`),
+ * clamping out-of-range indices safely to `[0, candidates.length - 1]`.
+ *
+ * @param {string[]} candidates Ordered from richest label (`0`) to shortest compact fallback
+ * @param {number} [tierIndex=0] Resolved compression tier index
+ * @returns {string}
+ */
+export function pickHeaderTierCandidate(candidates = [], tierIndex = 0) {
+  if (!Array.isArray(candidates) || candidates.length === 0) {
+    return '';
+  }
+  const rawIdx = Number(tierIndex);
+  const clampedIdx = Number.isFinite(rawIdx)
+    ? Math.max(0, Math.min(candidates.length - 1, Math.trunc(rawIdx)))
+    : 0;
+  return String(candidates[clampedIdx] ?? '');
 }
 
 /**
