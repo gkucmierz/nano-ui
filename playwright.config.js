@@ -1,5 +1,7 @@
 import { defineConfig, devices } from '@playwright/test';
 
+const requestedEngine = String(process.env.E2E_ENGINE || 'auto').trim().toLowerCase();
+
 export default defineConfig({
   testDir: './tests/e2e',
   fullyParallel: true,
@@ -11,12 +13,38 @@ export default defineConfig({
     baseURL: 'http://localhost:33164',
     trace: 'on-first-retry',
   },
-  projects: [
-    {
-      name: 'chromium',
-      use: { ...devices['Desktop Chrome'] },
-    },
-  ],
+  projects:
+    requestedEngine === 'obscura'
+      ? [
+        {
+          name: 'obscura-fast',
+          testMatch: /docs\/.*\.spec\.js$/,
+          use: {
+            ...devices['Desktop Chrome'],
+            e2eEngine: 'obscura',
+            obscuraPort: 43164,
+          },
+        },
+      ]
+      : [
+        {
+          name: 'obscura-fast',
+          testMatch: /docs\/.*\.spec\.js$/,
+          use: {
+            ...devices['Desktop Chrome'],
+            e2eEngine: requestedEngine === 'chromium' ? 'chromium' : 'auto',
+            obscuraPort: 43164,
+          },
+        },
+        {
+          name: 'chromium-visual',
+          testMatch: /components\/.*\.spec\.js$/,
+          use: {
+            ...devices['Desktop Chrome'],
+            e2eEngine: 'chromium',
+          },
+        },
+      ],
   webServer: {
     command: 'npm run dev',
     url: 'http://localhost:33164',
