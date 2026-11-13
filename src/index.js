@@ -117,6 +117,8 @@ import {
 } from './utils/heatmapScale.js';
 import {
   parseLightboxAspectRatio,
+  parseSvgViewBoxDimensions,
+  normalizeLightboxSvgMarkup,
   computeLightboxStageGeometry,
 } from './utils/lightboxGeometry.js';
 import {
@@ -611,6 +613,8 @@ export {
   normalizeHeatmapMatrixData,
   formatHeatmapCompactValue,
   parseLightboxAspectRatio,
+  parseSvgViewBoxDimensions,
+  normalizeLightboxSvgMarkup,
   computeLightboxStageGeometry,
   UNIX_TREE_GLYPHS,
   matchesTreeNodeQuery,
