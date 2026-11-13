@@ -50,6 +50,7 @@
     "coverFlow": "Nano CoverFlow (Karty 3D)",
     "dropzone": "Nano Dropzone (Upload & Hover)",
     "heatmap": "Nano Heatmap (OKLCH & KDE)",
+    "langPicker": "Nano LangPicker & Flagi SVG",
     "layoutDirectives": "Dyrektywy Układu, CSHR & Collapsible",
     "ripple": "Dyrektywa v-ripple",
     "tooltip": "Dyrektywa v-tooltip"
@@ -379,5 +380,17 @@
     "clearPointsBtn": "Wyczyść zdarzenia (0)",
     "densityEmptyLabel": "Oczekiwanie na rzeczywiste zdarzenia — kliknij lub przeciągnij na płótnie",
     "clickHint": "Klikaj lub rysuj kursorem po płótnie, aby rejestrować zdarzenia"
+  },
+  "langPickerDoc": {
+    "title": "NanoLangPicker & NanoFlag — Adaptacyjna Macierz 2D, Mobilna Lista i Wektorowe Flagi SVG",
+    "desc": "Zunifikowany przełącznik języków 36px łączący bez-zależnościowe wektorowe flagi SVG (NanoFlag, 32 kody ISO 639-1) z responsywną macierzą 2D na desktopie/tablecie (opartą na navigateGrid) oraz pionową listą rozwijaną na urządzeniach mobilnych.",
+    "demosTitle": "1. Tryby Responsywne (Niezależne Stany Demo)",
+    "matrixCardTitle": "Macierz 2D Desktop / Tablet (4 × 2)",
+    "matrixCardDesc": "Otwiera zbalansowaną siatkę 2D z pełną nawigacją przestrzenną strzałkami (ArrowLeft/Right/Up/Down) przez navigateGrid.",
+    "listCardTitle": "Pionowa Lista Mobilna (Portrait)",
+    "listCardDesc": "Wygodna dotykowo lista 1-kolumnowa (44px) z overscroll-behavior: contain i natywnymi atrybutami BCP-47 lang.",
+    "bilingualCardTitle": "Przełącznik Dwujęzyczny (PL/EN)",
+    "bilingualCardDesc": "Dla <= 2 języków kliknięcie przełącza język natychmiast jednym ruchem bez otwierania menu.",
+    "flagsTitle": "2. Wbudowany Rejestr Wektorowych Flag SVG"
   }
 }
