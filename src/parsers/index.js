@@ -15,6 +15,7 @@ import { diffParser } from './diff.js';
 import { apiParser } from './api.js';
 import { nanosoundParser, NANOSOUND_COMPLETIONS } from './nanosound.js';
 import { glslParser, GLSL_COMPLETIONS } from './glsl.js';
+import { blenderParser, BLENDER_COMPLETIONS } from './blender.js';
 
 export const CORE_PARSERS = [
   javascriptParser,
@@ -28,6 +29,7 @@ export const CORE_PARSERS = [
   apiParser,
   nanosoundParser,
   glslParser,
+  blenderParser,
 ];
 
 export const EXTRA_PARSERS = [
@@ -81,6 +83,10 @@ export const PARSER_MAP = {
   hlsl: glslParser,
   fs: glslParser,
   vs: glslParser,
+  bpy: blenderParser,
+  blender: blenderParser,
+  'blender-python': blenderParser,
+  bmesh: blenderParser,
 };
 
 export {
@@ -104,4 +110,6 @@ export {
   NANOSOUND_COMPLETIONS,
   glslParser,
   GLSL_COMPLETIONS,
+  blenderParser,
+  BLENDER_COMPLETIONS,
 };

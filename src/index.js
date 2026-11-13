@@ -369,6 +369,8 @@ import {
 import {
   highlightCode,
   highlightGlsl,
+  highlightBlender,
+  highlightBpy,
   registerParser,
   unregisterParser,
   isParserRegistered,
@@ -400,6 +402,8 @@ import {
   NANOSOUND_COMPLETIONS,
   glslParser,
   GLSL_COMPLETIONS,
+  blenderParser,
+  BLENDER_COMPLETIONS,
 } from './parsers/index.js';
 import {
   detectLangFromPath,
@@ -819,6 +823,8 @@ export {
   computeDualAxisBounds,
   highlightCode,
   highlightGlsl,
+  highlightBlender,
+  highlightBpy,
   registerParser,
   unregisterParser,
   isParserRegistered,
@@ -848,6 +854,8 @@ export {
   NANOSOUND_COMPLETIONS,
   glslParser,
   GLSL_COMPLETIONS,
+  blenderParser,
+  BLENDER_COMPLETIONS,
   detectLangFromPath,
   detectMediaTypeFromPath,
   extractSvgIntrinsicDimensions,
