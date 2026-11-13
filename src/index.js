@@ -26,7 +26,17 @@ import {
   computeSliderAcousticEvents,
 } from './utils/sound-controller.js';
 import { tooltipDirective } from './directives/tooltip.js';
-import { showTooltip, hideTooltip, tooltipState } from './composables/useTooltip.js';
+import {
+  showTooltip,
+  hideTooltip,
+  tooltipState,
+  getActiveTooltipTarget,
+  isActiveTooltipTarget,
+  recordTooltipPointerPosition,
+  recordTooltipKeyActivity,
+  refreshActiveTooltipTargetRect,
+  shouldSuppressSyntheticMouseLeave,
+} from './composables/useTooltip.js';
 import { buildTooltipBubbleGeometry } from './utils/tooltipGeometry.js';
 import {
   useDialog,
@@ -75,6 +85,16 @@ import NanoFieldset from './components/NanoFieldset.vue';
 import NanoLightbox from './components/NanoLightbox.vue';
 import NanoFitText from './components/NanoFitText.vue';
 import NanoHeatmap from './components/NanoHeatmap.vue';
+import NanoFlag from './components/NanoFlag.vue';
+import NanoLangPicker from './components/NanoLangPicker.vue';
+import {
+  LANG_CODE_ALIASES,
+  LANG_FLAG_REGISTRY,
+  normalizeLangCode,
+  resolveLangMeta,
+  normalizeLangOptions,
+  renderLangFlagSvg,
+} from './utils/langFlags.js';
 import {
   HEATMAP_SCALES,
   HEATMAP_PALETTES,
@@ -308,9 +328,31 @@ import {
   createKineticPoints,
   buildSplinePath,
   evaluateSplineY,
+  computeMonotoneTangents,
+  buildMonotoneSplinePath,
+  evaluateMonotoneSplineY,
   cubicHermite,
   sampleKinematics,
 } from './utils/kinetics.js';
+import {
+  ECOSYSTEM_PREFS_COOKIE,
+  ECOSYSTEM_PREFS_HASH_PARAM,
+  ECOSYSTEM_PREFS_LS_KEY,
+  ECOSYSTEM_ROOT_DOMAIN,
+  ECOSYSTEM_BRIDGE_URL,
+  ECOSYSTEM_EXTERNAL_DOMAINS,
+  classifyEcosystemHost,
+  isTrustedEcosystemOrigin,
+  normalizeEcosystemPrefs,
+  encodeEcosystemPrefsToken,
+  decodeEcosystemPrefsToken,
+  buildEcosystemCookieString,
+  readEcosystemPrefsFromCookieHeader,
+  resolveLwwEcosystemPrefs,
+  decorateEcosystemUrl,
+  extractAndStripEcosystemHash,
+  buildEcosystemSyncBounceUrl,
+} from './utils/ecosystemPrefs.js';
 import {
   DEFAULT_WEEKDAY_LABELS,
   SHORT_WEEKDAY_NAMES,
@@ -370,7 +412,12 @@ import {
   compileNsdPreview,
   extractEmbeddedNsdSnippets,
 } from './utils/nsd-preview.js';
-import { detectRenderedGridColumns } from './utils/grid.js';
+import {
+  navigateGrid,
+  detectGridColumns,
+  resolveAdaptiveMatrixColumns,
+  detectRenderedGridColumns,
+} from './utils/grid.js';
 import {
   findSafeSelectMount,
   findSafeAncestorMount,
@@ -462,6 +509,12 @@ export {
   showTooltip,
   hideTooltip,
   tooltipState,
+  getActiveTooltipTarget,
+  isActiveTooltipTarget,
+  recordTooltipPointerPosition,
+  recordTooltipKeyActivity,
+  refreshActiveTooltipTargetRect,
+  shouldSuppressSyntheticMouseLeave,
   buildTooltipBubbleGeometry,
   useDialog,
   showAlert,
@@ -531,6 +584,14 @@ export {
   NanoLightbox,
   NanoFitText,
   NanoHeatmap,
+  NanoFlag,
+  NanoLangPicker,
+  LANG_CODE_ALIASES,
+  LANG_FLAG_REGISTRY,
+  normalizeLangCode,
+  resolveLangMeta,
+  normalizeLangOptions,
+  renderLangFlagSvg,
   HEATMAP_SCALES,
   HEATMAP_PALETTES,
   HEATMAP_ZERO_COLOR_DARK,
@@ -715,8 +776,28 @@ export {
   createKineticPoints,
   buildSplinePath,
   evaluateSplineY,
+  computeMonotoneTangents,
+  buildMonotoneSplinePath,
+  evaluateMonotoneSplineY,
   cubicHermite,
   sampleKinematics,
+  ECOSYSTEM_PREFS_COOKIE,
+  ECOSYSTEM_PREFS_HASH_PARAM,
+  ECOSYSTEM_PREFS_LS_KEY,
+  ECOSYSTEM_ROOT_DOMAIN,
+  ECOSYSTEM_BRIDGE_URL,
+  ECOSYSTEM_EXTERNAL_DOMAINS,
+  classifyEcosystemHost,
+  isTrustedEcosystemOrigin,
+  normalizeEcosystemPrefs,
+  encodeEcosystemPrefsToken,
+  decodeEcosystemPrefsToken,
+  buildEcosystemCookieString,
+  readEcosystemPrefsFromCookieHeader,
+  resolveLwwEcosystemPrefs,
+  decorateEcosystemUrl,
+  extractAndStripEcosystemHash,
+  buildEcosystemSyncBounceUrl,
   DEFAULT_WEEKDAY_LABELS,
   SHORT_WEEKDAY_NAMES,
   getDateWeekdayInfo,
@@ -766,6 +847,9 @@ export {
   resolveEditorViewMode,
   compileNsdPreview,
   extractEmbeddedNsdSnippets,
+  navigateGrid,
+  detectGridColumns,
+  resolveAdaptiveMatrixColumns,
   detectRenderedGridColumns,
   findSafeSelectMount,
   findSafeAncestorMount,
@@ -910,5 +994,7 @@ export default {
     app.component(`${cp}NanoLightbox`, NanoLightbox);
     app.component(`${cp}NanoFitText`, NanoFitText);
     app.component(`${cp}NanoHeatmap`, NanoHeatmap);
+    app.component(`${cp}NanoFlag`, NanoFlag);
+    app.component(`${cp}NanoLangPicker`, NanoLangPicker);
   },
 };

@@ -39,6 +39,7 @@ import KineticAnimationsDoc from '../docs/KineticAnimationsDoc.vue';
 import CoverFlowDoc from '../docs/CoverFlowDoc.vue';
 import DropzoneDoc from '../docs/DropzoneDoc.vue';
 import HeatmapDoc from '../docs/HeatmapDoc.vue';
+import LangPickerDoc from '../docs/LangPickerDoc.vue';
 import LayoutDirectivesDoc from '../docs/LayoutDirectivesDoc.vue';
 import NotFoundDoc from '../docs/NotFoundDoc.vue';
 
@@ -492,6 +493,17 @@ export const routes = [
       componentName: 'NanoHeatmap',
       type: 'component',
       description: 'Perceptual OKLCH matrix and 2D KDE canvas heatmap with Zero-Value Invariant, log1p/p95 Pareto outlier scaling, and Coupled Selection (CSHR).',
+    },
+  },
+  {
+    path: '/docs/lang-picker',
+    name: 'LangPicker',
+    component: LangPickerDoc,
+    meta: {
+      title: 'NanoLangPicker & NanoFlag (2D Language Matrix & Vector Flags) | Nano UI',
+      componentName: 'NanoLangPicker',
+      type: 'component',
+      description: 'Adaptive 36px SPA language switcher with Desktop/Tablet 2D Matrix (navigateGrid), Mobile Vertical Dropdown, and 32 vector SVG flags.',
     },
   },
   {
