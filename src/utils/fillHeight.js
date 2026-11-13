@@ -163,21 +163,31 @@ export const useFillHeight = (elementRef, optionsOrExtraMargin = 0) => {
     }
   };
 
+  let isMounted = true;
+
   onMounted(() => {
     updateHeight();
     nextTick(() => {
+      if (!isMounted) return;
       updateHeight();
       attachObservers();
       if (globalThis.window) {
         globalThis.window.addEventListener('resize', updateHeight);
       }
     });
-    settleTimer = setTimeout(updateHeight, 120);
+    settleTimer = setTimeout(() => {
+      if (isMounted) updateHeight();
+    }, 120);
 
     watch(
       elementRef,
-      () => {
+      (_el, _prev, onCleanup) => {
+        let cancelled = false;
+        onCleanup(() => {
+          cancelled = true;
+        });
         nextTick(() => {
+          if (!isMounted || cancelled) return;
           updateHeight();
           attachObservers();
         });
@@ -186,6 +196,7 @@ export const useFillHeight = (elementRef, optionsOrExtraMargin = 0) => {
   });
 
   onUnmounted(() => {
+    isMounted = false;
     if (globalThis.window) {
       globalThis.window.removeEventListener('resize', updateHeight);
     }
@@ -211,13 +222,14 @@ export const useFillHeight = (elementRef, optionsOrExtraMargin = 0) => {
  */
 export const fillHeightDirective = {
   mounted(el, binding) {
-    const rawVal = binding?.value;
-    const opts =
-      rawVal && rawVal.constructor === Object
-        ? rawVal
-        : { bottomOffset: Number(rawVal) || 16 };
+    const resolveOpts = (val) =>
+      val && val.constructor === Object
+        ? val
+        : { bottomOffset: Number(val) || 16 };
+    el.__nanoFillHeightOpts = resolveOpts(binding?.value);
 
     const update = () => {
+      const opts = el.__nanoFillHeightOpts || { bottomOffset: 16 };
       const px = measureElementFillHeight(el, opts);
       if (px !== null && el.style) {
         if (opts.useMaxHeight) {
@@ -233,7 +245,7 @@ export const fillHeightDirective = {
     const RO = globalThis.ResizeObserver;
     if (RO) {
       ro = new RO(update);
-      const boundaryEl = resolveFillHeightBoundary(el, opts.boundarySelector || '');
+      const boundaryEl = resolveFillHeightBoundary(el, el.__nanoFillHeightOpts.boundarySelector || '');
       if (boundaryEl) ro.observe(boundaryEl);
       if (el.parentNode && el.parentNode.nodeType === 1) {
         ro.observe(el.parentNode);
@@ -255,7 +267,12 @@ export const fillHeightDirective = {
     };
     el.__nanoFillHeightUpdate = update;
   },
-  updated(el) {
+  updated(el, binding) {
+    const val = binding?.value;
+    el.__nanoFillHeightOpts =
+      val && val.constructor === Object
+        ? val
+        : { bottomOffset: Number(val) || 16 };
     if (el.__nanoFillHeightUpdate) {
       el.__nanoFillHeightUpdate();
     }
@@ -265,6 +282,7 @@ export const fillHeightDirective = {
       el.__nanoFillHeightCleanup();
       delete el.__nanoFillHeightCleanup;
       delete el.__nanoFillHeightUpdate;
+      delete el.__nanoFillHeightOpts;
     }
   },
 };
