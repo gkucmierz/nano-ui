@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed, watch, onMounted } from 'vue';
+import { ref, computed, watch, onMounted, useId } from 'vue';
 import { applyMask, parseMaskSteps } from '../utils/mask.js';
 
 const toStringTag = (val) => Object.prototype.toString.call(val);
@@ -78,13 +78,11 @@ const props = defineProps({
   },
 });
 
-let maskedUidSeq = 0;
-
 const emit = defineEmits(['update:modelValue', 'update:unmasked', 'complete', 'submit']);
 
-const autoId = `nu-masked-input-${++maskedUidSeq}`;
+const autoId = `nu-masked-input-${useId()}`;
 const resolvedId = computed(() => props.id || autoId);
-const resolvedName = computed(() => props.name || resolvedId.value);
+const resolvedName = computed(() => props.name || (props.masked ? undefined : resolvedId.value));
 const resolvedAriaLabel = computed(() => props.ariaLabel || `Masked input (${props.mask})`);
 
 const inputRef = ref(null);
@@ -126,9 +124,17 @@ const displayFormatted = computed(() => {
 const isValid = computed(() => {
   if (!maskResult.value.isComplete) return false;
   if (!props.regex) return true;
-  const pattern = props.regex instanceof RegExp
-    ? props.regex
-    : (isString(props.regex) ? new RegExp(props.regex) : null);
+  let pattern = null;
+  try {
+    if (props.regex instanceof RegExp) {
+      const safeFlags = props.regex.flags.replace(/[gy]/g, '');
+      pattern = new RegExp(props.regex.source, safeFlags);
+    } else if (isString(props.regex)) {
+      pattern = new RegExp(props.regex);
+    }
+  } catch {
+    return false;
+  }
   if (!pattern) return true;
   return pattern.test(maskResult.value.formatted) || pattern.test(maskResult.value.unmasked);
 });
@@ -249,9 +255,16 @@ defineExpose({
         autocorrect="off"
         autocapitalize="off"
         spellcheck="false"
+        data-1p-ignore="true"
+        data-lpignore="true"
+        data-bwignore="true"
+        :data-form-type="masked ? 'other' : undefined"
         @input="onInput"
         @paste="onPaste"
         @keydown="onKeyDown"
+        @copy="masked && $event.preventDefault()"
+        @cut="masked && $event.preventDefault()"
+        @dragstart="masked && $event.preventDefault()"
       />
     </div>
 
