@@ -80,6 +80,13 @@ const demoLightboxItems = [
     caption: 'Portrait 4:5 media — expanding (+) fills available screen height while respecting margins and 4:5 aspect ratio.',
     badge: 'Portrait 4:5',
   },
+  {
+    id: 'vector-mermaid-flow',
+    svg: '<svg id="demo-flow" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 560 220" style="max-width: 560px;"><defs><marker id="demo-arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M 0 1 L 10 5 L 0 9 z" fill="#6366f1"/></marker></defs><rect x="28" y="66" width="184" height="88" rx="16" fill="rgba(99, 102, 241, 0.16)" stroke="#6366f1" stroke-width="2"/><text x="120" y="116" text-anchor="middle" fill="currentColor" font-family="sans-serif" font-size="16" font-weight="700">Flat Asset AST</text><line x1="212" y1="110" x2="338" y2="110" stroke="#6366f1" stroke-width="2.5" marker-end="url(#demo-arrow)"/><rect x="348" y="66" width="184" height="88" rx="16" fill="rgba(16, 185, 129, 0.16)" stroke="#10b981" stroke-width="2"/><text x="440" y="116" text-anchor="middle" fill="currentColor" font-family="sans-serif" font-size="16" font-weight="700">NanoLightbox SVG</text></svg>',
+    alt: 'Flat Asset AST to NanoLightbox SVG Flow',
+    caption: 'Native vector SVG graph — inline max-width is stripped and <marker id> references are isolated automatically.',
+    badge: 'Vector SVG',
+  },
 ];
 
 const triggerInfoAlert = async () => {
