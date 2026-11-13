@@ -758,8 +758,10 @@ function redrawDensityCanvas() {
   ctx.putImageData(imgData, 0, 0);
 }
 
+let isHeatmapUnmounted = false;
+
 function scheduleDensityRedraw() {
-  if (props.mode !== 'density') return;
+  if (isHeatmapUnmounted || props.mode !== 'density') return;
   if (globalThis.requestAnimationFrame === undefined) {
     redrawDensityCanvas();
     return;
@@ -816,6 +818,7 @@ watch(
 );
 
 onMounted(() => {
+  isHeatmapUnmounted = false;
   syncDomThemeState();
   if (globalThis.MutationObserver !== undefined && globalThis.document?.documentElement) {
     themeObserver = new globalThis.MutationObserver(() => {
@@ -833,6 +836,7 @@ onMounted(() => {
 });
 
 onBeforeUnmount(() => {
+  isHeatmapUnmounted = true;
   if (themeObserver) {
     themeObserver.disconnect();
     themeObserver = null;
