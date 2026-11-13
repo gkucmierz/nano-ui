@@ -10,7 +10,9 @@ import {
   deviceOrientationToQuaternion,
   computeStabilizedWorldQuaternion,
   createInertialStabilizerEngine,
-} from '../../../algorithms-app/js/inertial_orientation_stabilizer.js';
+} from '../utils/inertialOrientationStabilizer.js';
+
+const isFn = (val) => Object.prototype.toString.call(val) === '[object Function]';
 
 export {
   IDENTITY_QUAT,
@@ -45,15 +47,12 @@ export {
  */
 export function useInertialStabilizer(options = {}) {
   const isEnabled = ref(options.enabled ?? options.autoStart ?? false);
-  const isSupported = ref(
-    typeof window !== 'undefined' && 'DeviceOrientationEvent' in window
-  );
+  const win = globalThis.window;
+  const isSupported = ref(Boolean(win && 'DeviceOrientationEvent' in win));
   const isSensorActive = ref(false);
   const isCalibrated = computed(() => isSensorActive.value);
   const needsPermission = ref(
-    typeof window !== 'undefined' &&
-      typeof window.DeviceOrientationEvent !== 'undefined' &&
-      typeof window.DeviceOrientationEvent.requestPermission === 'function'
+    Boolean(win && win.DeviceOrientationEvent && isFn(win.DeviceOrientationEvent.requestPermission)),
   );
   const permissionState = ref(needsPermission.value ? 'prompt' : 'granted');
 
@@ -68,12 +67,13 @@ export function useInertialStabilizer(options = {}) {
   });
 
   function getScreenOrientationDeg() {
-    if (typeof window === 'undefined') return 0;
-    if (window.screen?.orientation && typeof window.screen.orientation.angle === 'number') {
-      return window.screen.orientation.angle;
+    const w = globalThis.window;
+    if (!w) return 0;
+    if (w.screen?.orientation && Number.isFinite(w.screen.orientation.angle)) {
+      return w.screen.orientation.angle;
     }
-    if (typeof window.orientation === 'number') {
-      return window.orientation;
+    if (Number.isFinite(w.orientation)) {
+      return w.orientation;
     }
     return 0;
   }
@@ -96,13 +96,10 @@ export function useInertialStabilizer(options = {}) {
   }
 
   async function requestPermission() {
-    if (
-      typeof window !== 'undefined' &&
-      typeof window.DeviceOrientationEvent !== 'undefined' &&
-      typeof window.DeviceOrientationEvent.requestPermission === 'function'
-    ) {
+    const w = globalThis.window;
+    if (w && w.DeviceOrientationEvent && isFn(w.DeviceOrientationEvent.requestPermission)) {
       try {
-        const res = await window.DeviceOrientationEvent.requestPermission();
+        const res = await w.DeviceOrientationEvent.requestPermission();
         permissionState.value = res;
         needsPermission.value = res !== 'granted';
         if (res === 'granted') {
@@ -209,14 +206,16 @@ export function useInertialStabilizer(options = {}) {
 
   let listenersAttached = false;
   function attachListeners() {
-    if (listenersAttached || typeof window === 'undefined') return;
-    window.addEventListener('deviceorientation', handleDeviceOrientation, { passive: true });
+    const w = globalThis.window;
+    if (listenersAttached || !w) return;
+    w.addEventListener('deviceorientation', handleDeviceOrientation, { passive: true });
     listenersAttached = true;
   }
 
   function detachListeners() {
-    if (!listenersAttached || typeof window === 'undefined') return;
-    window.removeEventListener('deviceorientation', handleDeviceOrientation);
+    const w = globalThis.window;
+    if (!listenersAttached || !w) return;
+    w.removeEventListener('deviceorientation', handleDeviceOrientation);
     listenersAttached = false;
   }
 
