@@ -340,18 +340,50 @@ export const computeAdaptiveCardExpansion = ({
 };
 
 /**
- * Pure 2D bounding-box clamp that keeps a floating card / HUD element of size
- * `(2 * halfWidth, 2 * halfHeight)` centered at `(x, y)` strictly within `bounds`
- * (`{ minX, maxX, minY, maxY }`) with an inner `padding` margin.
+ * Pure 2D bounding-box clamp supporting two coordinate conventions:
+ * 1. Center-coordinate 3D/SVG stage mode:
+ *    `clampFloatingBox2D({ x, y, halfWidth, halfHeight, bounds: { minX, maxX, minY, maxY }, padding })`
+ *    -> `{ x, y, clampedX, clampedY }`
+ * 2. Top-left DOM viewport rect mode:
+ *    `clampFloatingBox2D({ left, top, width, height }, { left, top, right, bottom }, padding)`
+ *    -> `{ left, top, clampedLeft, clampedTop }`
  */
-export const clampFloatingBox2D = ({
-  x = 0,
-  y = 0,
-  halfWidth = 0,
-  halfHeight = 0,
-  bounds = { minX: -21, maxX: 53, minY: -6, maxY: 38 },
-  padding = 0.65,
-} = {}) => {
+export const clampFloatingBox2D = (box = {}, maybeBounds = null, maybePadding = undefined) => {
+  if (box && (box.left !== undefined || box.top !== undefined)) {
+    const pad = Math.max(0, Number(maybePadding ?? box.padding ?? 8) || 0);
+    const w = Math.max(0, Number(box.width) || 0);
+    const h = Math.max(0, Number(box.height) || 0);
+    const b = maybeBounds || box.bounds || {};
+    const minLeft = (Number.isFinite(b.left) ? b.left : 0) + pad;
+    const minTop = (Number.isFinite(b.top) ? b.top : 0) + pad;
+    const maxRight = (Number.isFinite(b.right) ? b.right : 1280) - pad;
+    const maxBottom = (Number.isFinite(b.bottom) ? b.bottom : 800) - pad;
+
+    const rawLeft = Number.isFinite(Number(box.left)) ? Number(box.left) : minLeft;
+    const rawTop = Number.isFinite(Number(box.top)) ? Number(box.top) : minTop;
+
+    const maxAllowedLeft = Math.max(minLeft, maxRight - w);
+    const maxAllowedTop = Math.max(minTop, maxBottom - h);
+
+    const clampedLeftVal = Math.max(minLeft, Math.min(maxAllowedLeft, rawLeft));
+    const clampedTopVal = Math.max(minTop, Math.min(maxAllowedTop, rawTop));
+
+    return {
+      left: Math.round(clampedLeftVal),
+      top: Math.round(clampedTopVal),
+      clampedLeft: Math.abs(clampedLeftVal - rawLeft) > 0.5,
+      clampedTop: Math.abs(clampedTopVal - rawTop) > 0.5,
+    };
+  }
+
+  const {
+    x = 0,
+    y = 0,
+    halfWidth = 0,
+    halfHeight = 0,
+    bounds = { minX: -21, maxX: 53, minY: -6, maxY: 38 },
+    padding = 0.65,
+  } = box || {};
   const pad = Math.max(0, Number(padding) || 0);
   const hw = Math.max(0, Number(halfWidth) || 0);
   const hh = Math.max(0, Number(halfHeight) || 0);
@@ -380,6 +412,61 @@ export const clampFloatingBox2D = ({
     y: Number(clampedY.toFixed(3)),
     clampedX: Math.abs(clampedX - (Number(x) || 0)) > 1e-3,
     clampedY: Math.abs(clampedY - (Number(y) || 0)) > 1e-3,
+  };
+};
+
+/**
+ * Computes finite `{ left, top, placement }` viewport coordinates for a fixed/teleported
+ * floating panel tethered to `triggerRect` (e.g. `NanoLangPicker`), flipping above the trigger
+ * when bottom space overflows and clamping strictly within `[paddingPx, viewport - size - paddingPx]`.
+ */
+export const computeAnchoredOverlayPosition = ({
+  triggerRect = {},
+  panelWidth = 240,
+  panelHeight = 160,
+  viewportWidth = 1280,
+  viewportHeight = 800,
+  gapPx = 6,
+  paddingPx = 8,
+  align = 'end',
+} = {}) => {
+  const vw = Math.max(64, Number(viewportWidth) || 1280);
+  const vh = Math.max(64, Number(viewportHeight) || 800);
+  const pw = Math.max(0, Number(panelWidth) || 0);
+  const ph = Math.max(0, Number(panelHeight) || 0);
+  const gap = Math.max(0, Number(gapPx) || 0);
+  const pad = Math.max(0, Number(paddingPx) || 0);
+
+  const trigLeft = Number.isFinite(Number(triggerRect?.left)) ? Number(triggerRect.left) : pad;
+  const trigRight = Number.isFinite(Number(triggerRect?.right))
+    ? Number(triggerRect.right)
+    : trigLeft + Math.max(0, Number(triggerRect?.width) || 0);
+  const trigTop = Number.isFinite(Number(triggerRect?.top)) ? Number(triggerRect.top) : pad;
+  const trigBottom = Number.isFinite(Number(triggerRect?.bottom))
+    ? Number(triggerRect.bottom)
+    : trigTop + Math.max(0, Number(triggerRect?.height) || 36);
+
+  const rawLeft =
+    align === 'start'
+      ? trigLeft
+      : align === 'center'
+        ? (trigLeft + trigRight - pw) * 0.5
+        : trigRight - pw;
+
+  const preferAbove =
+    trigBottom + gap + ph > vh - pad && trigTop - gap - ph >= pad;
+  const rawTop = preferAbove ? trigTop - gap - ph : trigBottom + gap;
+
+  const clamped = clampFloatingBox2D(
+    { left: rawLeft, top: rawTop, width: pw, height: ph },
+    { left: 0, top: 0, right: vw, bottom: vh },
+    pad
+  );
+
+  return {
+    left: clamped.left,
+    top: clamped.top,
+    placement: preferAbove ? 'top' : 'bottom',
   };
 };
 
