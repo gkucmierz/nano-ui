@@ -562,6 +562,182 @@ export const evaluateSplineY = (points, targetX, tension = 0.35) => {
   );
 };
 
+/**
+ * Computes Fritsch-Carlson (1980) monotone piecewise cubic Hermite tangents m_k = dy/dx.
+ * Guarantees C^1 smoothness with strictly zero overshoot/undershoot on step jumps, flat plateaus,
+ * and local extrema (recommended for empirical financial, FX, fuel, and telemetry series).
+ *
+ * @param {Array<{ x: number, y: number }>} points
+ * @returns {number[]} Slope array m[0..n-1]
+ */
+export const computeMonotoneTangents = (points) => {
+  if (!Array.isArray(points) || points.length === 0) return [];
+  const n = points.length;
+  if (n === 1) return [0];
+
+  const dx = new Array(n - 1);
+  const delta = new Array(n - 1);
+  for (let k = 0; k < n - 1; k++) {
+    const h = points[k + 1].x - points[k].x;
+    dx[k] = h;
+    delta[k] = Math.abs(h) > 1e-12 ? (points[k + 1].y - points[k].y) / h : 0;
+  }
+
+  const m = new Array(n).fill(0);
+  if (n === 2) {
+    m[0] = delta[0];
+    m[1] = delta[0];
+    return m;
+  }
+
+  for (let k = 1; k < n - 1; k++) {
+    const d0 = delta[k - 1];
+    const d1 = delta[k];
+    if (d0 * d1 <= 0) {
+      m[k] = 0;
+    } else {
+      const h0 = Math.abs(dx[k - 1]);
+      const h1 = Math.abs(dx[k]);
+      const w1 = 2 * h1 + h0;
+      const w2 = h1 + 2 * h0;
+      const denom = w1 / d0 + w2 / d1;
+      m[k] = Math.abs(denom) > 1e-15 ? (w1 + w2) / denom : 0.5 * (d0 + d1);
+    }
+  }
+
+  const clampEndpoint = (mEnd, dAdj, dNext) => {
+    if (dAdj === 0) return 0;
+    if (Math.sign(mEnd) !== Math.sign(dAdj)) return 0;
+    if (Math.sign(dAdj) !== Math.sign(dNext) && Math.abs(mEnd) > Math.abs(3 * dAdj)) {
+      return 3 * dAdj;
+    }
+    return mEnd;
+  };
+
+  const h0 = dx[0];
+  const h1 = dx[1];
+  const m0Raw = Math.abs(h0 + h1) > 1e-12
+    ? ((2 * h0 + h1) * delta[0] - h0 * delta[1]) / (h0 + h1)
+    : delta[0];
+  m[0] = clampEndpoint(m0Raw, delta[0], delta[1]);
+
+  const hn1 = dx[n - 2];
+  const hn2 = dx[n - 3];
+  const mnRaw = Math.abs(hn1 + hn2) > 1e-12
+    ? ((2 * hn1 + hn2) * delta[n - 2] - hn1 * delta[n - 3]) / (hn1 + hn2)
+    : delta[n - 2];
+  m[n - 1] = clampEndpoint(mnRaw, delta[n - 2], delta[n - 3]);
+
+  for (let k = 0; k < n - 1; k++) {
+    const dk = delta[k];
+    if (Math.abs(dk) <= 1e-15) {
+      m[k] = 0;
+      m[k + 1] = 0;
+    } else {
+      if (m[k] / dk < 0) m[k] = 0;
+      if (m[k + 1] / dk < 0) m[k + 1] = 0;
+      const radSq = (m[k] / dk) ** 2 + (m[k + 1] / dk) ** 2;
+      if (radSq > 9) {
+        const tau = 3 / Math.sqrt(radSq);
+        m[k] *= tau;
+        m[k + 1] *= tau;
+      }
+    }
+  }
+
+  return m;
+};
+
+/**
+ * Builds an SVG Cubic Bezier path (`M ... C ...`) from Fritsch-Carlson monotone Hermite tangents.
+ *
+ * @param {Array<{ x: number, y: number }>} points
+ * @param {Object} [options]
+ * @param {number|null} [options.groundY=null]
+ * @param {number[]|null} [options.tangents=null]
+ * @returns {string}
+ */
+export const buildMonotoneSplinePath = (points, { groundY = null, tangents = null } = {}) => {
+  if (!points || !points.length) return '';
+  const n = points.length;
+  const f = (v) => v.toFixed(2);
+
+  if (n === 1) {
+    const pt = points[0];
+    if (groundY !== null && groundY !== undefined) {
+      return `M ${f(pt.x)} ${f(pt.y)} L ${f(pt.x)} ${f(groundY)} Z`;
+    }
+    return `M ${f(pt.x)} ${f(pt.y)}`;
+  }
+
+  const m = Array.isArray(tangents) && tangents.length === n
+    ? tangents
+    : computeMonotoneTangents(points);
+
+  let d = `M ${f(points[0].x)} ${f(points[0].y)}`;
+  for (let k = 0; k < n - 1; k++) {
+    const p0 = points[k];
+    const p1 = points[k + 1];
+    const h = p1.x - p0.x;
+    const cp1x = p0.x + h / 3;
+    const cp1y = p0.y + (m[k] * h) / 3;
+    const cp2x = p1.x - h / 3;
+    const cp2y = p1.y - (m[k + 1] * h) / 3;
+    d += ` C ${f(cp1x)} ${f(cp1y)}, ${f(cp2x)} ${f(cp2y)}, ${f(p1.x)} ${f(p1.y)}`;
+  }
+
+  if (groundY !== null && groundY !== undefined) {
+    const first = points[0];
+    const last = points[n - 1];
+    d += ` L ${f(last.x)} ${f(groundY)} L ${f(first.x)} ${f(groundY)} Z`;
+  }
+
+  return d;
+};
+
+/**
+ * Evaluates exact Y on the Fritsch-Carlson monotone cubic Hermite curve at targetX.
+ * Because Hermite cubic X(t) = x_k + t * h is linear in t, no iterative inversion is required!
+ *
+ * @param {Array<{ x: number, y: number }>} points
+ * @param {number} targetX
+ * @param {number[]|null} [tangents=null]
+ * @returns {number}
+ */
+export const evaluateMonotoneSplineY = (points, targetX, tangents = null) => {
+  if (!points || !points.length) return 0;
+  const n = points.length;
+  if (n === 1 || targetX <= points[0].x) return points[0].y;
+  if (targetX >= points[n - 1].x) return points[n - 1].y;
+
+  const m = Array.isArray(tangents) && tangents.length === n
+    ? tangents
+    : computeMonotoneTangents(points);
+
+  let k = 0;
+  for (let j = 0; j < n - 1; j++) {
+    if (targetX >= points[j].x && targetX <= points[j + 1].x) {
+      k = j;
+      break;
+    }
+  }
+
+  const p0 = points[k];
+  const p1 = points[k + 1];
+  const h = p1.x - p0.x;
+  if (Math.abs(h) < 1e-6) return p0.y;
+
+  const t = Math.max(0, Math.min(1, (targetX - p0.x) / h));
+  const t2 = t * t;
+  const t3 = t2 * t;
+  const h00 = 2 * t3 - 3 * t2 + 1;
+  const h10 = t3 - 2 * t2 + t;
+  const h01 = -2 * t3 + 3 * t2;
+  const h11 = t3 - t2;
+
+  return h00 * p0.y + h10 * h * m[k] + h01 * p1.y + h11 * h * m[k + 1];
+};
+
 const sampleVelocityAtX = (points, targetX) => {
   if (!points || !points.length) return 0;
   const n = points.length;
