@@ -95,11 +95,16 @@ export function useInertialStabilizer(options = {}) {
     }
   }
 
+  let listenersAttached = false;
+  let isDisposed = false;
+
   async function requestPermission() {
+    if (isDisposed) return false;
     const w = globalThis.window;
     if (w && w.DeviceOrientationEvent && isFn(w.DeviceOrientationEvent.requestPermission)) {
       try {
         const res = await w.DeviceOrientationEvent.requestPermission();
+        if (isDisposed) return false;
         permissionState.value = res;
         needsPermission.value = res !== 'granted';
         if (res === 'granted') {
@@ -109,7 +114,7 @@ export function useInertialStabilizer(options = {}) {
         }
         return false;
       } catch {
-        permissionState.value = 'denied';
+        if (!isDisposed) permissionState.value = 'denied';
         return false;
       }
     }
@@ -204,10 +209,9 @@ export function useInertialStabilizer(options = {}) {
     };
   });
 
-  let listenersAttached = false;
   function attachListeners() {
     const w = globalThis.window;
-    if (listenersAttached || !w) return;
+    if (isDisposed || listenersAttached || !w) return;
     w.addEventListener('deviceorientation', handleDeviceOrientation, { passive: true });
     listenersAttached = true;
   }
@@ -220,12 +224,14 @@ export function useInertialStabilizer(options = {}) {
   }
 
   onMounted(() => {
+    isDisposed = false;
     if (options.autoStart !== false && !needsPermission.value) {
       attachListeners();
     }
   });
 
   onBeforeUnmount(() => {
+    isDisposed = true;
     detachListeners();
   });
 
