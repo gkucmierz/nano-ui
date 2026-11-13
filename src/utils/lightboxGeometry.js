@@ -4,6 +4,210 @@ const objTag = (v) => Object.prototype.toString.call(v);
 const isNum = (v) => objTag(v) === '[object Number]' && Number.isFinite(v);
 const isStr = (v) => objTag(v) === '[object String]';
 
+const ROOT_SVG_OPEN_TAG_RE = /<svg\b(?:[^>"']|"[^"]*"|'[^']*')*>/i;
+
+const readSvgTagAttr = (openTag, attrName) => {
+  const re = new RegExp(`(?<![-\\w:])${attrName}\\s*=\\s*(?:"([^"]*)"|'([^']*)'|([^\\s>"'=]+))`, 'i');
+  const match = openTag.match(re);
+  if (!match) return null;
+  return match[1] ?? match[2] ?? match[3] ?? null;
+};
+
+const setOrReplaceSvgTagAttr = (openTag, attrName, attrValue) => {
+  const attrRe = new RegExp(`(?<![-\\w:])${attrName}\\s*=\\s*(?:"[^"]*"|'[^']*'|[^\\s>"'=]+)`, 'i');
+  if (attrRe.test(openTag)) {
+    return openTag.replace(attrRe, `${attrName}="${attrValue}"`);
+  }
+  return openTag.replace(/(\/?)>$/, ` ${attrName}="${attrValue}"$1>`);
+};
+
+const parseExplicitSvgLength = (rawVal) => {
+  if (!isStr(rawVal)) return 0;
+  const trimmed = rawVal.trim();
+  if (!trimmed || trimmed.endsWith('%')) return 0;
+  const match = trimmed.match(/^\+?(\d+(?:\.\d+)?|\.\d+)(?:px)?$/i);
+  if (!match) return 0;
+  const parsed = Number(match[1]);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : 0;
+};
+
+/**
+ * Extracts intrinsic `{ width, height, aspectRatio }` from a root `<svg>` tag's
+ * `viewBox="minX minY width height"` attribute (supporting whitespace/comma separators,
+ * negative `minX`/`minY`, and decimals), falling back to explicit numeric `width` and
+ * `height` attributes on `<svg>` (ignoring `%` values such as `width="100%"`), or `null`.
+ */
+export const parseSvgViewBoxDimensions = (svgMarkup = '') => {
+  if (!isStr(svgMarkup) || !svgMarkup) return null;
+  const openMatch = svgMarkup.match(ROOT_SVG_OPEN_TAG_RE);
+  if (!openMatch) return null;
+  const openTag = openMatch[0];
+
+  const rawViewBox = readSvgTagAttr(openTag, 'viewBox');
+  if (isStr(rawViewBox) && rawViewBox.trim()) {
+    const nums = rawViewBox.trim().match(/[+-]?(?:\d+\.?\d*|\.\d+)(?:e[+-]?\d+)?/gi);
+    if (nums && nums.length >= 4) {
+      const minX = Number(nums[0]);
+      const minY = Number(nums[1]);
+      const width = Number(nums[2]);
+      const height = Number(nums[3]);
+      if (
+        Number.isFinite(minX) &&
+        Number.isFinite(minY) &&
+        Number.isFinite(width) &&
+        Number.isFinite(height) &&
+        width > 0 &&
+        height > 0
+      ) {
+        return {
+          width,
+          height,
+          aspectRatio: width / height,
+        };
+      }
+    }
+  }
+
+  const width = parseExplicitSvgLength(readSvgTagAttr(openTag, 'width'));
+  const height = parseExplicitSvgLength(readSvgTagAttr(openTag, 'height'));
+  if (width > 0 && height > 0) {
+    return {
+      width,
+      height,
+      aspectRatio: width / height,
+    };
+  }
+
+  return null;
+};
+
+/**
+ * Normalizes inline `<svg>` markup for crisp responsive rendering inside `<NanoLightbox>`:
+ * 1. Strips inline `max-width` / `max-height` from the root `<svg>` `style` attribute
+ *    (e.g. Mermaid v11's `style="max-width: 694px;"`).
+ * 2. Synthesizes `viewBox="0 0 W H"` when missing and explicit numeric `width`/`height` exist.
+ * 3. Ensures root `<svg>` has `width="100%"`, `height="100%"`, and `preserveAspectRatio="xMidYMid meet"`.
+ * 4. Safely suffixes internal `id="..."` attributes and matching references (`url(#...)`,
+ *    `href="#..."`, `xlink:href="#..."`, `aria-labelledby`, and `<style>` `#id` selectors)
+ *    with `-${uniqueSuffix}` so `<marker>` arrowheads, gradients, and clipPaths never collide
+ *    with inline `<svg>` instances on the underlying document.
+ */
+export const normalizeLightboxSvgMarkup = (svgMarkup = '', uniqueSuffix = 'lb') => {
+  if (!isStr(svgMarkup) || !svgMarkup.trim()) return '';
+  const openMatch = svgMarkup.match(ROOT_SVG_OPEN_TAG_RE);
+  if (!openMatch) return '';
+
+  let nextOpenTag = openMatch[0];
+
+  if (!readSvgTagAttr(nextOpenTag, 'viewBox')) {
+    const explicitDims = parseSvgViewBoxDimensions(nextOpenTag);
+    if (explicitDims && explicitDims.width > 0 && explicitDims.height > 0) {
+      nextOpenTag = setOrReplaceSvgTagAttr(
+        nextOpenTag,
+        'viewBox',
+        `0 0 ${explicitDims.width} ${explicitDims.height}`
+      );
+    }
+  }
+
+  const rawStyle = readSvgTagAttr(nextOpenTag, 'style');
+  if (isStr(rawStyle)) {
+    const keptDecls = rawStyle
+      .split(';')
+      .map((decl) => decl.trim())
+      .filter((decl) => {
+        if (!decl) return false;
+        const prop = decl.split(':')[0]?.trim().toLowerCase();
+        return prop !== 'max-width' && prop !== 'max-height';
+      });
+    const styleAttrRe = /\s*(?<![-\w:])style\s*=\s*(?:"[^"]*"|'[^']*'|[^\s>"'=]+)/i;
+    if (keptDecls.length > 0) {
+      nextOpenTag = nextOpenTag.replace(styleAttrRe, ` style="${keptDecls.join('; ')};"`);
+    } else {
+      nextOpenTag = nextOpenTag.replace(styleAttrRe, '');
+    }
+  }
+
+  nextOpenTag = setOrReplaceSvgTagAttr(nextOpenTag, 'width', '100%');
+  nextOpenTag = setOrReplaceSvgTagAttr(nextOpenTag, 'height', '100%');
+  nextOpenTag = setOrReplaceSvgTagAttr(nextOpenTag, 'preserveAspectRatio', 'xMidYMid meet');
+
+  let normalized =
+    svgMarkup.slice(0, openMatch.index) +
+    nextOpenTag +
+    svgMarkup.slice(openMatch.index + openMatch[0].length);
+
+  const safeSuffix = isStr(uniqueSuffix)
+    ? uniqueSuffix.trim().replace(/[^A-Za-z0-9_-]+/g, '-').replace(/^-+|-+$/g, '')
+    : '';
+
+  if (!safeSuffix) {
+    return normalized;
+  }
+
+  const idAttrRe = /(?<![-\w:])id\s*=\s*(?:"([^"]+)"|'([^']+)')/gi;
+  const declaredIds = new Set();
+  for (const m of normalized.matchAll(idAttrRe)) {
+    const rawId = (m[1] ?? m[2] ?? '').trim();
+    if (rawId) declaredIds.add(rawId);
+  }
+
+  if (declaredIds.size === 0) {
+    return normalized;
+  }
+
+  normalized = normalized.replace(idAttrRe, (full, dq, sq) => {
+    const rawId = (dq ?? sq ?? '').trim();
+    if (!rawId || !declaredIds.has(rawId)) return full;
+    const quote = dq !== undefined ? '"' : "'";
+    return `id=${quote}${rawId}-${safeSuffix}${quote}`;
+  });
+
+  normalized = normalized.replace(
+    /url\(\s*(["']?)#([^)\s"']+)\1\s*\)/gi,
+    (full, quote, refId) => (declaredIds.has(refId) ? `url(${quote}#${refId}-${safeSuffix}${quote})` : full)
+  );
+
+  normalized = normalized.replace(
+    /(?<![-\w:])((?:xlink:)?href)\s*=\s*(?:"(?:#([^"]+))"|'(?:#([^']+))')/gi,
+    (full, attrName, dqRef, sqRef) => {
+      const refId = (dqRef ?? sqRef ?? '').trim();
+      if (!declaredIds.has(refId)) return full;
+      const quote = dqRef !== undefined ? '"' : "'";
+      return `${attrName}=${quote}#${refId}-${safeSuffix}${quote}`;
+    }
+  );
+
+  normalized = normalized.replace(
+    /(?<![-\w:])(aria-(?:labelledby|describedby))\s*=\s*(?:"([^"]+)"|'([^']+)')/gi,
+    (full, attrName, dqVal, sqVal) => {
+      const rawVal = dqVal ?? sqVal ?? '';
+      const quote = dqVal !== undefined ? '"' : "'";
+      const updated = rawVal
+        .split(/(\s+)/)
+        .map((tok) => (declaredIds.has(tok) ? `${tok}-${safeSuffix}` : tok))
+        .join('');
+      return `${attrName}=${quote}${updated}${quote}`;
+    }
+  );
+
+  normalized = normalized.replace(
+    /(<style\b[^>]*>)([\s\S]*?)(<\/style>)/gi,
+    (full, openStyle, cssBody, closeStyle) => {
+      const rewrittenCss = cssBody.replace(/([^{}]+)\{/g, (_selChunk, selectorList) => {
+        const updatedSelectors = selectorList.replace(
+          /#([A-Za-z_][\w-]*)/g,
+          (idMatch, selId) => (declaredIds.has(selId) ? `#${selId}-${safeSuffix}` : idMatch)
+        );
+        return `${updatedSelectors}{`;
+      });
+      return `${openStyle}${rewrittenCss}${closeStyle}`;
+    }
+  );
+
+  return normalized;
+};
+
 /**
  * Parses an explicit aspect ratio (`16 / 9`, `"16/9"`, `"16:9"`, `"1.6"`, or `{ width, height }`)
  * into a positive finite `width / height` ratio, or `null` if unspecified/invalid.
@@ -51,6 +255,7 @@ export const computeLightboxStageGeometry = ({
   naturalWidth = 0,
   naturalHeight = 0,
   hasFooter = true,
+  isVector = false,
 } = {}) => {
   const vw = Math.max(320, Number(viewportWidth) || 1440);
   const vh = Math.max(280, Number(viewportHeight) || 900);
@@ -89,7 +294,8 @@ export const computeLightboxStageGeometry = ({
 
     // In non-zoomed mode, avoid upscaling tiny raster images past their intrinsic pixel width
     // when intrinsic raster dimensions are known and smaller than the compact stage.
-    if (!zoomed && naturalWidth > 0 && naturalHeight > 0 && naturalWidth < targetWidth) {
+    // Vector SVGs are resolution-independent and fill the comfortable stage cleanly.
+    if (!zoomed && !isVector && naturalWidth > 0 && naturalHeight > 0 && naturalWidth < targetWidth) {
       targetWidth = naturalWidth;
       targetHeight = naturalHeight;
     }
