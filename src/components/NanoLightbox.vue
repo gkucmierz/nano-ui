@@ -1,7 +1,11 @@
 <script setup>
-import { ref, computed, watch, nextTick, onMounted, onBeforeUnmount } from 'vue';
+import { ref, computed, watch, nextTick, onMounted, onBeforeUnmount, useId, useSlots } from 'vue';
 import vRipple from '../directives/ripple.js';
-import { computeLightboxStageGeometry } from '../utils/lightboxGeometry.js';
+import {
+  computeLightboxStageGeometry,
+  parseSvgViewBoxDimensions,
+  normalizeLightboxSvgMarkup,
+} from '../utils/lightboxGeometry.js';
 
 const props = defineProps({
   modelValue: {
@@ -13,6 +17,10 @@ const props = defineProps({
     default: () => [],
   },
   src: {
+    type: String,
+    default: '',
+  },
+  svg: {
     type: String,
     default: '',
   },
@@ -31,6 +39,10 @@ const props = defineProps({
   aspectRatio: {
     type: [Number, String],
     default: undefined,
+  },
+  defaultZoomed: {
+    type: Boolean,
+    default: false,
   },
   activeIndex: {
     type: Number,
@@ -63,12 +75,14 @@ const props = defineProps({
 });
 
 const emit = defineEmits(['update:modelValue', 'update:activeIndex', 'close']);
+const slots = useSlots();
+const instanceUid = useId();
 
 const dialogRef = ref(null);
 const frameRef = ref(null);
 const imgRef = ref(null);
 const currentIndex = ref(0);
-const isZoomed = ref(false);
+const isZoomed = ref(Boolean(props.defaultZoomed));
 const viewportSize = ref({
   width: Number(globalThis.window?.innerWidth) || 1440,
   height: Number(globalThis.window?.innerHeight) || 900,
@@ -82,6 +96,13 @@ const measuredMedia = ref({
 let pressedOutside = false;
 let isClosing = false;
 let supportsDisplayTransition;
+
+const resolveDefaultZoomForItem = (item) => {
+  if (item && Object.prototype.hasOwnProperty.call(item, 'defaultZoomed')) {
+    return Boolean(item.defaultZoomed);
+  }
+  return Boolean(props.defaultZoomed);
+};
 
 const syncViewportMetrics = () => {
   const win = globalThis.window;
@@ -120,6 +141,18 @@ const normalizedItems = computed(() => {
   if (Array.isArray(props.items) && props.items.length > 0) {
     return props.items;
   }
+  if (props.svg) {
+    return [
+      {
+        svg: props.svg,
+        alt: props.alt || props.caption || props.ariaLabel,
+        caption: props.caption,
+        badge: props.badge,
+        aspectRatio: props.aspectRatio,
+        defaultZoomed: props.defaultZoomed,
+      },
+    ];
+  }
   if (props.src) {
     return [
       {
@@ -128,6 +161,18 @@ const normalizedItems = computed(() => {
         caption: props.caption,
         badge: props.badge,
         aspectRatio: props.aspectRatio,
+        defaultZoomed: props.defaultZoomed,
+      },
+    ];
+  }
+  if (slots.media) {
+    return [
+      {
+        alt: props.alt || props.caption || props.ariaLabel,
+        caption: props.caption,
+        badge: props.badge,
+        aspectRatio: props.aspectRatio,
+        defaultZoomed: props.defaultZoomed,
       },
     ];
   }
@@ -137,6 +182,22 @@ const normalizedItems = computed(() => {
 const activeItem = computed(
   () => normalizedItems.value[currentIndex.value] || normalizedItems.value[0] || null
 );
+
+const isActiveVector = computed(() =>
+  Boolean(activeItem.value?.svg || activeItem.value?.isVector)
+);
+
+const parsedActiveSvgDims = computed(() => {
+  const rawSvg = activeItem.value?.svg;
+  if (!rawSvg) return null;
+  return parseSvgViewBoxDimensions(rawSvg);
+});
+
+const normalizedActiveSvg = computed(() => {
+  const rawSvg = activeItem.value?.svg;
+  if (!rawSvg) return '';
+  return normalizeLightboxSvgMarkup(rawSvg, `${instanceUid}-${currentIndex.value}`);
+});
 
 const resolvedAriaLabel = computed(
   () => activeItem.value?.alt || activeItem.value?.caption || props.ariaLabel
@@ -148,15 +209,34 @@ const hasFooter = computed(() => Boolean(activeItem.value?.caption || hasMultipl
 const resolvedNaturalDimensions = computed(() => {
   const item = activeItem.value;
   if (!item) return { width: 0, height: 0 };
-  if (measuredMedia.value.src === item.src && measuredMedia.value.width > 0 && measuredMedia.value.height > 0) {
+  if (
+    item.src &&
+    measuredMedia.value.src === item.src &&
+    measuredMedia.value.width > 0 &&
+    measuredMedia.value.height > 0
+  ) {
     return {
       width: measuredMedia.value.width,
       height: measuredMedia.value.height,
     };
   }
+  const explicitWidth = Number(item.width) || 0;
+  const explicitHeight = Number(item.height) || 0;
+  if (explicitWidth > 0 && explicitHeight > 0) {
+    return {
+      width: explicitWidth,
+      height: explicitHeight,
+    };
+  }
+  if (parsedActiveSvgDims.value) {
+    return {
+      width: parsedActiveSvgDims.value.width,
+      height: parsedActiveSvgDims.value.height,
+    };
+  }
   return {
-    width: Number(item.width) || 0,
-    height: Number(item.height) || 0,
+    width: explicitWidth,
+    height: explicitHeight,
   };
 });
 
@@ -165,10 +245,14 @@ const stageGeometry = computed(() =>
     viewportWidth: viewportSize.value.width,
     viewportHeight: viewportSize.value.height,
     zoomed: isZoomed.value,
-    aspectRatio: activeItem.value?.aspectRatio ?? props.aspectRatio,
+    aspectRatio:
+      activeItem.value?.aspectRatio ??
+      props.aspectRatio ??
+      parsedActiveSvgDims.value?.aspectRatio,
     naturalWidth: resolvedNaturalDimensions.value.width,
     naturalHeight: resolvedNaturalDimensions.value.height,
     hasFooter: hasFooter.value,
+    isVector: isActiveVector.value,
   })
 );
 
@@ -189,15 +273,17 @@ const frameDynamicStyle = computed(() => {
 
 const viewportDynamicStyle = computed(() => {
   const g = stageGeometry.value;
-  if (!isZoomed.value) {
+  if (!isZoomed.value && !isActiveVector.value) {
     return {
       maxHeight: `${g.availHeight}px`,
     };
   }
-  if (g.mediaWidth && g.mediaHeight) {
+  const w = g.mediaWidth || g.availWidth;
+  const h = g.mediaHeight || g.availHeight;
+  if (w && h) {
     return {
-      width: `${g.mediaWidth}px`,
-      height: `${g.mediaHeight}px`,
+      width: `${w}px`,
+      height: `${h}px`,
       maxHeight: `${g.availHeight}px`,
       aspectRatio: g.aspectRatio ? `${g.aspectRatio}` : undefined,
     };
@@ -210,6 +296,17 @@ const viewportDynamicStyle = computed(() => {
 
 const imgDynamicStyle = computed(() => {
   const g = stageGeometry.value;
+  if (isActiveVector.value) {
+    const w = g.mediaWidth || g.availWidth;
+    const h = g.mediaHeight || g.availHeight;
+    return {
+      width: `${w}px`,
+      height: `${h}px`,
+      maxWidth: `${g.availWidth}px`,
+      maxHeight: `${g.availHeight}px`,
+      aspectRatio: g.aspectRatio ? `${g.aspectRatio}` : undefined,
+    };
+  }
   if (!isZoomed.value) {
     return {
       maxWidth: `${g.availWidth}px`,
@@ -256,6 +353,10 @@ const selectIndex = (idx) => {
   if (count <= 0) return;
   const wrapped = ((idx % count) + count) % count;
   currentIndex.value = wrapped;
+  const nextItem = normalizedItems.value[wrapped];
+  if (nextItem && Object.prototype.hasOwnProperty.call(nextItem, 'defaultZoomed')) {
+    isZoomed.value = Boolean(nextItem.defaultZoomed);
+  }
   emit('update:activeIndex', wrapped);
 };
 
@@ -307,7 +408,7 @@ const handleNativeClose = () => {
     dlg.returnValue = '';
     dlg.removeAttribute('data-closing');
   }
-  isZoomed.value = false;
+  isZoomed.value = resolveDefaultZoomForItem(activeItem.value);
   isClosing = false;
   if (props.modelValue) {
     emit('update:modelValue', false);
@@ -382,6 +483,10 @@ watch(
   (val) => {
     if (Number.isFinite(val) && val >= 0) {
       currentIndex.value = val;
+      const nextItem = normalizedItems.value[val];
+      if (nextItem && Object.prototype.hasOwnProperty.call(nextItem, 'defaultZoomed')) {
+        isZoomed.value = Boolean(nextItem.defaultZoomed);
+      }
     }
   },
   { immediate: true }
@@ -403,7 +508,7 @@ watch(
         0,
         Math.min(Number(props.activeIndex) || 0, Math.max(0, normalizedItems.value.length - 1))
       );
-      isZoomed.value = false;
+      isZoomed.value = resolveDefaultZoomForItem(activeItem.value);
     }
     syncOpenState(open);
   }
@@ -417,6 +522,11 @@ onMounted(() => {
     win.visualViewport?.addEventListener('resize', syncViewportMetrics, { passive: true });
   }
   if (props.modelValue) {
+    currentIndex.value = Math.max(
+      0,
+      Math.min(Number(props.activeIndex) || 0, Math.max(0, normalizedItems.value.length - 1))
+    );
+    isZoomed.value = resolveDefaultZoomForItem(activeItem.value);
     syncOpenState(true);
   }
 });
@@ -539,7 +649,27 @@ onBeforeUnmount(() => {
           </svg>
         </button>
 
+        <div
+          v-if="activeItem.svg"
+          class="nano-lightbox-svg"
+          :class="{ 'is-zoomed': isZoomed }"
+          :style="imgDynamicStyle"
+          role="img"
+          :aria-label="activeItem.alt || activeItem.caption || ariaLabel"
+          @click="toggleZoom"
+          v-html="normalizedActiveSvg"
+        />
+
+        <slot
+          v-else-if="$slots.media"
+          name="media"
+          :item="activeItem"
+          :style="imgDynamicStyle"
+          :zoomed="isZoomed"
+        />
+
         <img
+          v-else
           ref="imgRef"
           class="nano-lightbox-img"
           :class="{ 'is-zoomed': isZoomed }"
@@ -579,7 +709,7 @@ onBeforeUnmount(() => {
         <div v-if="hasMultiple" class="nano-lightbox-pills" role="group">
           <button
             v-for="(item, idx) in normalizedItems"
-            :key="item.src || idx"
+            :key="item.id || item.src || idx"
             v-ripple
             type="button"
             class="nano-lightbox-pill"
@@ -701,7 +831,8 @@ onBeforeUnmount(() => {
   align-self: center;
   border-radius: 14px;
   overflow: hidden;
-  background: rgba(0, 0, 0, 0.22);
+  background: var(--nano-lightbox-viewport-bg, rgba(2, 6, 23, 0.36));
+  max-width: 100%;
   max-height: min(74dvh, 820px);
   transition:
     width 0.22s cubic-bezier(0.2, 0, 0, 1),
@@ -711,6 +842,41 @@ onBeforeUnmount(() => {
 
 .nano-lightbox-viewport.is-zoomed {
   max-height: calc(100dvh - var(--nano-lightbox-margin-y, 28px) * 2 - 124px);
+}
+
+.nano-lightbox-svg {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  padding: 18px;
+  border-radius: 12px;
+  background: var(--nano-lightbox-svg-bg, rgba(15, 23, 42, 0.82));
+  border: 1px solid var(--nano-lightbox-svg-border, rgba(148, 163, 184, 0.18));
+  max-width: 100%;
+  cursor: zoom-in;
+  user-select: none;
+  transition:
+    width 0.22s cubic-bezier(0.2, 0, 0, 1),
+    height 0.22s cubic-bezier(0.2, 0, 0, 1),
+    max-width 0.22s cubic-bezier(0.2, 0, 0, 1),
+    max-height 0.22s cubic-bezier(0.2, 0, 0, 1),
+    background-color 0.15s ease,
+    border-color 0.15s ease;
+}
+
+.nano-lightbox-svg.is-zoomed {
+  max-width: 100%;
+  max-height: 100%;
+  cursor: zoom-out;
+}
+
+.nano-lightbox-svg :deep(svg) {
+  width: 100% !important;
+  height: 100% !important;
+  max-width: none !important;
+  max-height: none !important;
+  display: block;
 }
 
 .nano-lightbox-img {
