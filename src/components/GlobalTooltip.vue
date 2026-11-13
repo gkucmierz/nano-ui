@@ -20,6 +20,7 @@ const BUBBLE_PAD = 8;
 
 let resizeObserver = null;
 let themeMutationObserver = null;
+let isSyncingBox = false;
 
 const detectHostLightMode = () => {
   // Touch reactive counters so pressing `T` or mutating `data-theme` / `.theme-light` re-evaluates immediately
@@ -63,66 +64,71 @@ const syncBoxDimensions = () => {
   const el = tooltipRef.value;
   if (!el) return false;
 
-  // 1. Reset inline width so CSS lays out natural max-content up to --nano-tooltip-max-width
-  el.style.width = '';
+  isSyncingBox = true;
+  try {
+    // 1. Reset inline width so CSS lays out natural max-content up to --nano-tooltip-max-width
+    el.style.width = '';
 
-  const naturalW = el.offsetWidth || el.getBoundingClientRect().width;
-  const naturalH = el.offsetHeight || el.getBoundingClientRect().height;
-  if (naturalW <= 0 || naturalH <= 0) return false;
+    const naturalW = el.offsetWidth || el.getBoundingClientRect().width;
+    const naturalH = el.offsetHeight || el.getBoundingClientRect().height;
+    if (naturalW <= 0 || naturalH <= 0) return false;
 
-  let padLeft = 10;
-  let padRight = 10;
-  let borderLeft = 0;
-  let borderRight = 0;
+    let padLeft = 10;
+    let padRight = 10;
+    let borderLeft = 0;
+    let borderRight = 0;
 
-  if (globalThis.window?.getComputedStyle) {
-    const cs = globalThis.window.getComputedStyle(el);
-    padLeft = parseFloat(cs.paddingLeft) || 0;
-    padRight = parseFloat(cs.paddingRight) || 0;
-    borderLeft = parseFloat(cs.borderLeftWidth) || 0;
-    borderRight = parseFloat(cs.borderRightWidth) || 0;
-    const parsedRadius =
-      parseFloat(cs.getPropertyValue('--nu-tooltip-radius')) || parseFloat(cs.borderTopLeftRadius);
-    if (Number.isFinite(parsedRadius) && parsedRadius >= 0) {
-      boxRadius.value = parsedRadius;
+    if (globalThis.window?.getComputedStyle) {
+      const cs = globalThis.window.getComputedStyle(el);
+      padLeft = parseFloat(cs.paddingLeft) || 0;
+      padRight = parseFloat(cs.paddingRight) || 0;
+      borderLeft = parseFloat(cs.borderLeftWidth) || 0;
+      borderRight = parseFloat(cs.borderRightWidth) || 0;
+      const parsedRadius =
+        parseFloat(cs.getPropertyValue('--nu-tooltip-radius')) || parseFloat(cs.borderTopLeftRadius);
+      if (Number.isFinite(parsedRadius) && parsedRadius >= 0) {
+        boxRadius.value = parsedRadius;
+      }
     }
-  }
 
-  // 2. Shrink-wrap around post-wrap balanced glyph lines (eliminates dead side margins when max-width triggers text-wrap: balance)
-  if (textRef.value && globalThis.document?.createRange) {
-    const range = globalThis.document.createRange();
-    range.selectNodeContents(textRef.value);
-    const glyphRect = range.getBoundingClientRect();
-    const tightW = computeTightTooltipWidth({
-      naturalWidth: naturalW,
-      glyphWidth: glyphRect.width,
-      padLeft,
-      padRight,
-      borderLeft,
-      borderRight,
-    });
-    if (tightW !== null) {
-      el.style.width = `${tightW}px`;
-      const postH = el.offsetHeight || el.getBoundingClientRect().height;
-      if (postH > naturalH + 1) {
-        if (tightW + 3 < naturalW) {
-          el.style.width = `${tightW + 3}px`;
-          const retryH = el.offsetHeight || el.getBoundingClientRect().height;
-          if (retryH > naturalH + 1) {
+    // 2. Shrink-wrap around post-wrap balanced glyph lines (eliminates dead side margins when max-width triggers text-wrap: balance)
+    if (textRef.value && globalThis.document?.createRange) {
+      const range = globalThis.document.createRange();
+      range.selectNodeContents(textRef.value);
+      const glyphRect = range.getBoundingClientRect();
+      const tightW = computeTightTooltipWidth({
+        naturalWidth: naturalW,
+        glyphWidth: glyphRect.width,
+        padLeft,
+        padRight,
+        borderLeft,
+        borderRight,
+      });
+      if (tightW !== null) {
+        el.style.width = `${tightW}px`;
+        const postH = el.offsetHeight || el.getBoundingClientRect().height;
+        if (postH > naturalH + 1) {
+          if (tightW + 3 < naturalW) {
+            el.style.width = `${tightW + 3}px`;
+            const retryH = el.offsetHeight || el.getBoundingClientRect().height;
+            if (retryH > naturalH + 1) {
+              el.style.width = '';
+            }
+          } else {
             el.style.width = '';
           }
-        } else {
-          el.style.width = '';
         }
       }
     }
-  }
 
-  const finalW = el.offsetWidth || el.getBoundingClientRect().width;
-  const finalH = el.offsetHeight || el.getBoundingClientRect().height;
-  boxWidth.value = Math.round(finalW * 2) / 2;
-  boxHeight.value = Math.round(finalH * 2) / 2;
-  return true;
+    const finalW = el.offsetWidth || el.getBoundingClientRect().width;
+    const finalH = el.offsetHeight || el.getBoundingClientRect().height;
+    boxWidth.value = Math.round(finalW * 2) / 2;
+    boxHeight.value = Math.round(finalH * 2) / 2;
+    return true;
+  } finally {
+    isSyncingBox = false;
+  }
 };
 
 const bubbleGeometry = computed(() =>
@@ -192,40 +198,71 @@ const computePlacementFromElement = () => {
   return true;
 };
 
-const updatePosition = async () => {
+const updatePosition = () => {
   if (!tooltipState.isVisible || !tooltipState.targetRect) {
     isPositioned.value = false;
+    if (tooltipRef.value) {
+      tooltipRef.value.style.width = '';
+    }
+    return;
+  }
+  if (!tooltipRef.value) {
+    nextTick(() => {
+      if (!tooltipState.isVisible || !tooltipRef.value || !tooltipState.targetRect) return;
+      const ok = computePlacementFromElement();
+      if (ok && tooltipRef.value) {
+        tooltipRef.value.style.transform = `translate3d(${x.value}px, ${y.value}px, 0)`;
+      }
+      isPositioned.value = ok;
+    });
     return;
   }
 
-  // Wait for DOM to finish rendering new text before revealing at exact target coordinates
-  await nextTick();
-  if (!tooltipState.isVisible || !tooltipRef.value || !tooltipState.targetRect) return;
-
-  computePlacementFromElement();
-  isPositioned.value = true;
+  const ok = computePlacementFromElement();
+  if (ok && tooltipRef.value) {
+    tooltipRef.value.style.transform = `translate3d(${x.value}px, ${y.value}px, 0)`;
+  }
+  isPositioned.value = ok;
 };
 
-// Reactively re-calculate position whenever visibility, text, or targetRect changes
+// Reset stale shrink-wrapped inline width BEFORE DOM text patch so longer copy never wraps at old width
 watch(
-  [() => tooltipState.isVisible, () => tooltipState.text, () => tooltipState.targetRect],
-  async ([visible]) => {
-    if (visible) {
-      await updatePosition();
-    } else {
-      isPositioned.value = false;
+  () => tooltipState.text,
+  () => {
+    if (tooltipRef.value) {
+      tooltipRef.value.style.width = '';
     }
   },
-  { deep: true }
+  { flush: 'sync' }
+);
+
+// Measure and anchor synchronously in post-flush phase (after text DOM patch, BEFORE browser paint)
+watch(
+  [() => tooltipState.isVisible, () => tooltipState.text, () => tooltipState.targetRect],
+  ([visible]) => {
+    if (visible) {
+      updatePosition();
+    } else {
+      isPositioned.value = false;
+      if (tooltipRef.value) {
+        tooltipRef.value.style.width = '';
+      }
+    }
+  },
+  { deep: true, flush: 'post' }
 );
 
 onMounted(() => {
   globalThis.window.addEventListener('resize', updatePosition, { passive: true });
   if (globalThis.ResizeObserver && tooltipRef.value) {
     resizeObserver = new globalThis.ResizeObserver(() => {
-      if (tooltipState.isVisible) {
-        computePlacementFromElement();
+      if (isSyncingBox || !tooltipState.isVisible || !tooltipRef.value) return;
+      const curW = Math.round((tooltipRef.value.offsetWidth || 0) * 2) / 2;
+      const curH = Math.round((tooltipRef.value.offsetHeight || 0) * 2) / 2;
+      if (Math.abs(curW - boxWidth.value) < 1 && Math.abs(curH - boxHeight.value) < 1) {
+        return;
       }
+      computePlacementFromElement();
     });
     resizeObserver.observe(tooltipRef.value);
   }
