@@ -562,3 +562,134 @@ export const computeVerticalBands = (points, leftBound, rightBound, options = {}
  */
 export const computeWeekendBands = (points, leftBound, rightBound, lang = 'pl') =>
   computeVerticalBands(points, leftBound, rightBound, createWeekdayBandConfig({ lang, days: [6, 0], mergeAdjacent: true }));
+
+/**
+ * Normalizes a Y-axis side token ('left' | 'right' | 'y1' | 'y2' | 'secondary').
+ *
+ * @param {string} [side='left']
+ * @returns {'left' | 'right'}
+ */
+export const normalizeAxisSide = (side = 'left') => {
+  const raw = String(side || 'left').trim().toLowerCase();
+  if (raw === 'right' || raw === 'y2' || raw === 'secondary') return 'right';
+  return 'left';
+};
+
+/**
+ * Computes positively-homogeneous vertical Y-axis bounds with optional explicit
+ * `yMin` / `yMax` clamping and `zeroBaseline` inclusion.
+ *
+ * @param {number[]} values
+ * @param {object} [options]
+ * @param {boolean} [options.zeroBaseline=false]
+ * @param {number|null} [options.yMin=null]
+ * @param {number|null} [options.yMax=null]
+ * @param {Function|null} [options.computeBounds=null]
+ * @returns {{ minVal: number, maxVal: number }}
+ */
+export const computeAxisBounds = (values = [], options = {}) => {
+  const {
+    zeroBaseline = false,
+    yMin = null,
+    yMax = null,
+    computeBounds = null,
+  } = options;
+
+  const finite = Array.isArray(values)
+    ? values.filter((v) => typeof v === 'number' && Number.isFinite(v))
+    : [];
+
+  let minVal = 0;
+  let maxVal = 10;
+
+  if (typeof computeBounds === 'function') {
+    const custom = computeBounds(finite);
+    if (custom && Number.isFinite(custom.minVal) && Number.isFinite(custom.maxVal)) {
+      minVal = custom.minVal;
+      maxVal = custom.maxVal;
+    } else if (finite.length > 0) {
+      minVal = Math.min(...finite);
+      maxVal = Math.max(...finite);
+    }
+  } else if (finite.length > 0) {
+    let dataMin = Math.min(...finite);
+    let dataMax = Math.max(...finite);
+    if (zeroBaseline) {
+      dataMin = Math.min(dataMin, 0);
+      dataMax = Math.max(dataMax, 0);
+    }
+    const rawSpan = dataMax - dataMin;
+    const refMag = Math.max(Math.abs(dataMax), Math.abs(dataMin));
+    const effectiveSpan = Math.max(rawSpan, refMag * 0.04, 1e-9);
+    const pad = effectiveSpan * 0.14;
+    minVal = dataMin >= 0 && !zeroBaseline ? Math.max(0, dataMin - pad) : dataMin - pad;
+    maxVal = dataMax + pad;
+  }
+
+  const hasMin = typeof yMin === 'number' && Number.isFinite(yMin);
+  const hasMax = typeof yMax === 'number' && Number.isFinite(yMax);
+  if (hasMin) minVal = yMin;
+  if (hasMax) maxVal = yMax;
+  if (maxVal <= minVal) {
+    maxVal = minVal + 1;
+  }
+
+  return { minVal, maxVal };
+};
+
+/**
+ * Partition multi-series & reference-line values across independent Left and Right Y-axes
+ * while sharing a single common X-axis spine.
+ *
+ * @param {Array} series
+ * @param {Array} [referenceLines=[]]
+ * @param {object} [options={}]
+ * @returns {{ hasRightAxis: boolean, leftBounds: { minVal: number, maxVal: number }, rightBounds: { minVal: number, maxVal: number } }}
+ */
+export const computeDualAxisBounds = (series = [], referenceLines = [], options = {}) => {
+  const leftVals = [];
+  const rightVals = [];
+  let hasRightSeriesOrRef = false;
+
+  for (const s of Array.isArray(series) ? series : []) {
+    const side = normalizeAxisSide(s?.yAxis);
+    if (side === 'right') hasRightSeriesOrRef = true;
+    const bucket = side === 'right' ? rightVals : leftVals;
+    for (const pt of Array.isArray(s?.points) ? s.points : []) {
+      const v = Number(pt?.value);
+      if (pt?.value !== null && pt?.value !== undefined && Number.isFinite(v)) {
+        bucket.push(v);
+      }
+    }
+  }
+
+  for (const r of Array.isArray(referenceLines) ? referenceLines : []) {
+    const side = normalizeAxisSide(r?.yAxis);
+    if (side === 'right') hasRightSeriesOrRef = true;
+    if (typeof r?.value === 'number' && Number.isFinite(r.value)) {
+      (side === 'right' ? rightVals : leftVals).push(r.value);
+    }
+  }
+
+  const leftBounds = computeAxisBounds(leftVals, {
+    zeroBaseline: Boolean(options.zeroBaseline),
+    yMin: options.yMin ?? null,
+    yMax: options.yMax ?? null,
+    computeBounds: options.computeBounds ?? null,
+  });
+
+  const rightBounds = hasRightSeriesOrRef
+    ? computeAxisBounds(rightVals, {
+      zeroBaseline: Boolean(options.rightZeroBaseline),
+      yMin: options.rightYMin ?? null,
+      yMax: options.rightYMax ?? null,
+      computeBounds: options.computeRightBounds ?? null,
+    })
+    : { ...leftBounds };
+
+  return {
+    hasRightAxis: hasRightSeriesOrRef,
+    leftBounds,
+    rightBounds,
+  };
+};
