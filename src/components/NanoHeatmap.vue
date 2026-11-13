@@ -503,6 +503,27 @@ function onCellPointerLeave(cell) {
   }
 }
 
+function onGridCorridorEnter() {
+  cshr.onCorridorEnter();
+}
+
+function onGridCorridorLeave() {
+  const prev = cshr.effectiveActiveId.value;
+  cshr.onCorridorLeave();
+  if (cshr.effectiveActiveId.value !== prev) {
+    emitHoverState();
+  }
+}
+
+function onGridNonCellEnter() {
+  if (cshr.hoveredId.value === null) return;
+  const prev = cshr.effectiveActiveId.value;
+  cshr.hoveredId.value = null;
+  if (cshr.effectiveActiveId.value !== prev) {
+    emitHoverState();
+  }
+}
+
 function applyToggleCell(cell, event = null) {
   if (!cell) return;
   focusedCoords.value = { r: cell.rowIndex, c: cell.colIndex };
@@ -862,16 +883,19 @@ defineExpose({
           role="grid"
           :aria-label="ariaLabel"
           :style="gridTemplateStyle"
+          @mouseenter="onGridCorridorEnter"
+          @mouseleave="onGridCorridorLeave"
         >
           <!-- Column Header Row -->
           <div class="nano-heatmap-row is-header-row" role="row">
-            <div class="nano-heatmap-corner" role="presentation" />
+            <div class="nano-heatmap-corner" role="presentation" @mouseenter="onGridNonCellEnter" />
             <div
               v-for="(col, cIdx) in normalizedMatrix.cols"
               :key="`col-${col.id}`"
               role="columnheader"
               class="nano-heatmap-col-header"
               :class="{ 'is-crosshair-axis': activeCrosshairCol === cIdx }"
+              @mouseenter="onGridNonCellEnter"
             >
               <span class="nano-heatmap-axis-label">{{ col.label }}</span>
               <span v-if="col.sublabel" class="nano-heatmap-axis-sublabel">{{ col.sublabel }}</span>
@@ -880,6 +904,7 @@ defineExpose({
               v-if="showTotals"
               role="columnheader"
               class="nano-heatmap-col-header is-total-axis"
+              @mouseenter="onGridNonCellEnter"
             >
               Σ
             </div>
@@ -896,6 +921,7 @@ defineExpose({
               role="rowheader"
               class="nano-heatmap-row-header"
               :class="{ 'is-crosshair-axis': activeCrosshairRow === rIdx }"
+              @mouseenter="onGridNonCellEnter"
             >
               <span class="nano-heatmap-axis-label">{{ row.label }}</span>
               <span v-if="row.sublabel" class="nano-heatmap-axis-sublabel">{{ row.sublabel }}</span>
@@ -941,6 +967,7 @@ defineExpose({
               role="gridcell"
               class="nano-heatmap-total-cell"
               :class="{ 'is-crosshair-axis': activeCrosshairRow === rIdx }"
+              @mouseenter="onGridNonCellEnter"
             >
               {{ formatHeatmapCompactValue(normalizedMatrix.rowTotals[rIdx], formatValue) }}
             </div>
@@ -952,7 +979,7 @@ defineExpose({
             class="nano-heatmap-row is-totals-row"
             role="row"
           >
-            <div role="rowheader" class="nano-heatmap-row-header is-total-axis">
+            <div role="rowheader" class="nano-heatmap-row-header is-total-axis" @mouseenter="onGridNonCellEnter">
               Σ
             </div>
             <div
@@ -961,10 +988,11 @@ defineExpose({
               role="gridcell"
               class="nano-heatmap-total-cell is-col-sum"
               :class="{ 'is-crosshair-axis': activeCrosshairCol === cIdx }"
+              @mouseenter="onGridNonCellEnter"
             >
               {{ formatHeatmapCompactValue(colTotal, formatValue) }}
             </div>
-            <div role="gridcell" class="nano-heatmap-total-cell is-grand-total">
+            <div role="gridcell" class="nano-heatmap-total-cell is-grand-total" @mouseenter="onGridNonCellEnter">
               {{ formatHeatmapCompactValue(normalizedMatrix.grandTotal, formatValue) }}
             </div>
           </div>
@@ -1197,6 +1225,12 @@ defineExpose({
   box-shadow:
     inset 0 0 0 2px var(--nano-heatmap-hover-ring),
     0 0 0 2px rgba(56, 189, 248, 0.35);
+}
+
+.nano-heatmap-cell.is-selected:focus-visible {
+  box-shadow:
+    inset 0 0 0 2px var(--nano-heatmap-select-ring),
+    0 0 0 2px rgba(56, 189, 248, 0.42);
 }
 
 .nano-heatmap-cell-value {
