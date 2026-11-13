@@ -418,6 +418,16 @@ export const PLAYGROUND_NAV_ITEMS = [
     componentTag: 'NanoHeatmap',
     keywords: 'heatmap mapa cieplna oklch viridis cyan-ruby log1p p95 pareto kde density gestosc matrix macierz cshr',
   },
+  {
+    id: '/docs/lang-picker',
+    to: '/docs/lang-picker',
+    sectionKey: 'nav.advanced3dViz',
+    navKey: 'nav.langPicker',
+    docFile: 'LangPickerDoc.vue',
+    localeKeys: ['langPickerDoc'],
+    componentTag: 'NanoLangPicker',
+    keywords: 'language jezyk flaga flag svg iso i18n matrix macierz navigateGrid dropdown NanoFlag NanoLangPicker',
+  },
   // Directives
   {
     id: '/docs/tooltip',
