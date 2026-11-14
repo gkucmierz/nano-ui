@@ -106,6 +106,9 @@ export const highlightCode = (code, lang = '') => {
   const normalizedLang = String(lang).toLowerCase().trim();
 
   try {
+    if (normalizedLang && !hljs.getLanguage(normalizedLang) && PARSER_MAP[normalizedLang]) {
+      registerParser(PARSER_MAP[normalizedLang]);
+    }
     if (normalizedLang && hljs.getLanguage(normalizedLang)) {
       return hljs.highlight(code, { language: normalizedLang, ignoreIllegals: true }).value;
     }
