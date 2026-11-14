@@ -5,6 +5,7 @@ import {
   NANO_TRI_BORDER_STATES,
   resolveTriStateBorder,
   resolveTriStateBorderClasses,
+  resolveTriBorderStyle,
   createCoupledSelectionMachine,
   useCoupledSelection,
 } from '../../src/utils/coupledSelection.js';
@@ -109,6 +110,9 @@ describe('Coupled Selection & Hover-Suppress-Rearm (CSHR) State Machine', () => 
     assert.strictEqual(resolveTriStateBorder(true, false), 'active');
     assert.strictEqual(resolveTriStateBorder(true, true), 'hover-active');
     assert.strictEqual(resolveTriStateBorderClasses(true, true)['is-hover-active'], true);
+    assert.deepStrictEqual(resolveTriBorderStyle('#10b981'), { '--nano-tri-slice-color': '#10b981' });
+    assert.deepStrictEqual(resolveTriBorderStyle(null), {});
+    assert.deepStrictEqual(resolveTriBorderStyle('   '), {});
   });
 
   it('provides bindCoupledItem(id) v-bind event object and triStateClasses alias on both machine and composable', () => {
