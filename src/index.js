@@ -165,6 +165,7 @@ import {
   resolveCoupledItemIds,
   resolveTriStateBorder,
   resolveTriStateBorderClasses,
+  resolveTriBorderStyle,
   createCoupledSelectionMachine,
   useCoupledSelection,
 } from './utils/coupledSelection.js';
@@ -655,6 +656,7 @@ export {
   resolveCoupledItemIds,
   resolveTriStateBorder,
   resolveTriStateBorderClasses,
+  resolveTriBorderStyle,
   createCoupledSelectionMachine,
   useCoupledSelection,
   NON_TEXT_INPUT_TYPES,
