@@ -148,7 +148,7 @@ const blenderGrammar = (hljsInstance) => {
       hljsInstance.QUOTE_STRING_MODE,
       {
         className: 'attr',
-        match: /\b(?:[A-Za-z_][A-Za-z0-9_]*(?==(?!=))|(?:filepath|export_[a-z0-9_]+|use_[a-z0-9_]+|segments|ring_count|radius[12]?|depth|vertices|subdivisions|levels|render_levels|shade_smooth|enter_editmode|calc_uvs|align|location|rotation|scale)(?=\s*=(?!=)))/,
+        match: /(?<!\.)\b(?:[A-Za-z_][A-Za-z0-9_]*(?==(?!=))|(?:filepath|export_[a-z0-9_]+|use_[a-z0-9_]+|segments|ring_count|radius[12]?|depth|vertices|subdivisions|levels|render_levels|shade_smooth|enter_editmode|calc_uvs|align|location|rotation|scale)(?=\s*=(?!=)))/,
       },
       {
         className: 'number',
@@ -160,7 +160,7 @@ const blenderGrammar = (hljsInstance) => {
       },
       {
         className: 'property',
-        match: /\.(?:context|data|ops|types|props|utils|app|path|msgbus|view_layer|scene|collection|objects|meshes|materials|lights|cameras|armatures|actions|images|textures|worlds|node_groups|modifiers|constraints|shape_keys|key_blocks|vertex_groups|uv_layers|color_attributes|cycles|eevee|render|world|node_tree|nodes|links|inputs|outputs|default_value|location|rotation_euler|rotation_quaternion|rotation_mode|scale|dimensions|matrix_world|matrix_local|verts|edges|faces|loops|normal|co|select|hide_viewport|hide_render|active_object|active|use_nodes|engine|device|samples|filepath|image_settings|file_format|mesh|object|curve|surface|metaball|font|armature|pose|lattice|empty|camera|light|material|texture|image|uv|anim|rigidbody|cloth|fluid|ptcache|particle|sculpt|paint|vertex_paint|weight_paint|export_scene|export_mesh|export_anim|import_scene|import_mesh|import_anim|wm|screen|transform|view3d|node|outliner|sound|sequencer|clip|mask|gpencil|grease_pencil|geometry|preferences|timers|handlers)\b(?!\s*\()/,
+        match: /\.(?:context|data|ops|types|props|utils|app|path|msgbus|view_layer|scene|collection|objects|meshes|materials|lights|cameras|armatures|actions|images|textures|worlds|node_groups|modifiers|constraints|shape_keys|key_blocks|vertex_groups|uv_layers|color_attributes|cycles|eevee|render|world|node_tree|nodes|links|inputs|outputs|default_value|location|rotation_euler|rotation_quaternion|rotation_mode|scale|dimensions|matrix_world|matrix_local|verts|edges|faces|loops|normal|co|select|hide_viewport|hide_render|active_object|active|use_nodes|engine|device|samples|filepath|image_settings|file_format|mesh|object|curve|surface|metaball|font|armature|pose|lattice|empty|camera|light|material|texture|image|uv|anim|rigidbody|cloth|fluid|ptcache|particle|sculpt|paint|vertex_paint|weight_paint|export_scene|export_mesh|export_anim|import_scene|import_mesh|import_anim|wm|screen|transform|view3d|node|outliner|sound|sequencer|clip|mask|gpencil|grease_pencil|geometry|preferences|timers|handlers|width|segments|levels|render_levels|thickness|offset|profile|operation|solver|x|y|z|w)\b(?!\s*\()/,
       },
       {
         className: 'literal',
@@ -176,7 +176,7 @@ const blenderGrammar = (hljsInstance) => {
       },
       {
         className: 'built_in',
-        match: /\b(?:abs|all|any|bin|bool|bytes|callable|chr|classmethod|compile|complex|delattr|dict|dir|divmod|enumerate|eval|exec|filter|float|format|frozenset|getattr|globals|hasattr|hash|help|hex|id|input|int|isinstance|issubclass|iter|len|list|locals|map|max|memoryview|min|next|object|oct|open|ord|pow|print|property|range|repr|reversed|round|set|setattr|slice|sorted|staticmethod|str|sum|super|tuple|type|vars|zip|primitive_[a-z0-9_]+_add|from_mesh|to_mesh|from_object|ensure_lookup_table|normal_update|calc_loop_triangles|recalc_face_normals|remove_doubles|subdivide_edges|bisect_plane|convex_hull|dissolve_limit|spin|extrude_face_region|extrude_edge_only|bevel|inset_individual|inset_region|translate|rotate|scale|bmesh_to_mesh|gltf|fbx|obj_export|save_as_mainfile|shade_smooth|shade_flat|modifier_add|modifier_apply)\b(?=\s*\()/,
+        match: /\b(?:abs|all|any|bin|bool|bytes|callable|chr|classmethod|compile|complex|delattr|dict|dir|divmod|enumerate|eval|exec|filter|float|format|frozenset|getattr|globals|hasattr|hash|help|hex|id|input|int|isinstance|issubclass|iter|len|list|locals|map|max|memoryview|min|next|object|oct|open|ord|pow|print|property|range|repr|reversed|round|set|setattr|slice|sorted|staticmethod|str|sum|super|tuple|type|vars|zip|primitive_[a-z0-9_]+_add|create_cube|create_uvsphere|create_icosphere|create_cone|create_circle|create_grid|create_monkey|from_mesh|to_mesh|from_object|ensure_lookup_table|normal_update|calc_loop_triangles|recalc_face_normals|remove_doubles|subdivide_edges|bisect_plane|convex_hull|dissolve_limit|spin|extrude_face_region|extrude_edge_only|bevel|inset_individual|inset_region|translate|rotate|scale|bmesh_to_mesh|gltf|fbx|obj_export|save_as_mainfile|shade_smooth|shade_flat|modifier_add|modifier_apply)\b(?=\s*\()/,
       },
       {
         scope: 'title.function',
