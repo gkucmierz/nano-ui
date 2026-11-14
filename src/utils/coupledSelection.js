@@ -69,6 +69,19 @@ export function resolveTriStateBorderClasses(selected, hovered) {
 }
 
 /**
+ * Returns deterministic Vue `:style` bindings injecting per-item/slice accent color
+ * (`--nano-tri-slice-color`) into `.nano-tri-border-card` orbiting conic-gradient borders.
+ */
+export function resolveTriBorderStyle(sliceColor = null) {
+  if (typeof sliceColor !== 'string') return {};
+  const trimmed = sliceColor.trim();
+  if (!trimmed) return {};
+  return {
+    '--nano-tri-slice-color': trimmed,
+  };
+}
+
+/**
  * Pure deterministic state machine for the **Coupled Selection & Hover-Suppress-Rearm (`CSHR`)** pattern,
  * including built-in modulo-wrapped `Left` / `Right` (`stepSelection`) list/grid stepping.
  *
