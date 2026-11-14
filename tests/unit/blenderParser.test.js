@@ -90,6 +90,13 @@ def build_crystal(radius=1.0):
     assert.match(html, /<span class="hljs-number">1\.45<\/span>/);
     assert.doesNotMatch(html, /<script>/);
     assert.match(html, /&lt;script&gt;alert\(1\)&lt;\/script&gt;/);
+
+    const bmeshTileSample = `bmesh.ops.create_cube(bm, size=1.0)\nbev.width, bev.segments = 0.042, 3\nf.normal.z > 0.9`;
+    const bmeshHtml = highlightCode(bmeshTileSample, 'bpy');
+    assert.match(bmeshHtml, /<span class="hljs-built_in">create_cube<\/span>/);
+    assert.match(bmeshHtml, /<span class="hljs-property">\.width<\/span>/);
+    assert.match(bmeshHtml, /<span class="hljs-property">\.segments<\/span>/);
+    assert.match(bmeshHtml, /<span class="hljs-property">\.z<\/span>/);
   });
 
   test('exports curated BLENDER_COMPLETIONS covering mesh ops, bmesh, Principled BSDF, modifiers, and GLB export', () => {

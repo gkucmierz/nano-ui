@@ -255,5 +255,17 @@ test('vue-url-cleaner integration strips fbclid, utm_*, and gclid on /showoff wh
       /^file:\.\/vendor-tarballs\/vue-url-cleaner.*\.tgz$/.test(urlCleanerSpec),
     `Expected vue-url-cleaner devDependency to be ^1.0.0 or Docker CI vendor tarball, got: ${urlCleanerSpec}`
   );
-  assert.equal(pkgJson.dependencies, undefined);
+  const findUnexpectedRuntimeDeps = (depsField) =>
+    Object.entries(depsField || {}).filter(
+      ([, spec]) => !/^file:\.\/vendor-tarballs\/[^\s'"]+\.tgz$/.test(String(spec))
+    );
+  assert.deepEqual(findUnexpectedRuntimeDeps(pkgJson.dependencies), []);
+  // Regression guard for Docker CI vendor-tarball staging (empty {} or file:./vendor-tarballs/*.tgz vs real dep)
+  assert.deepEqual(findUnexpectedRuntimeDeps(undefined), []);
+  assert.deepEqual(findUnexpectedRuntimeDeps({}), []);
+  assert.deepEqual(
+    findUnexpectedRuntimeDeps({ 'vue-url-cleaner': 'file:./vendor-tarballs/vue-url-cleaner.tgz' }),
+    []
+  );
+  assert.equal(findUnexpectedRuntimeDeps({ lodash: '^4.17.21' }).length, 1);
 });
