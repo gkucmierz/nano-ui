@@ -8,6 +8,7 @@ import NanoCodeBlock from '../../components/NanoCodeBlock.vue';
 import { createDocTabs } from '../docSnippets.js';
 import { normalizeAngle } from '../../utils/math.js';
 import { getOptimalRotationAngle } from '../../utils/chart-walls.js';
+import { useCoupledSelection, resolveTriBorderStyle } from '../../utils/coupledSelection.js';
 
 const codeTabs = createDocTabs({
   componentName: 'ThreeDDonutChart',
@@ -394,6 +395,54 @@ const networkData = [
   border-radius: 8px;
 }
 </style>`;
+
+const coupledLegendData = [
+  { id: 'compute', name: 'GPU Compute', value: 42, percentage: 42, color: '#6366f1', unit: '%' },
+  { id: 'nvme', name: 'NVMe Storage', value: 26, percentage: 26, color: '#10b981', unit: '%' },
+  { id: 'mesh', name: 'Mesh Ingress', value: 19, percentage: 19, color: '#06b6d4', unit: '%' },
+  { id: 'cache', name: 'Edge Cache', value: 13, percentage: 13, color: '#f59e0b', unit: '%' },
+];
+
+const coupledSel = useCoupledSelection({
+  items: coupledLegendData,
+  initialSelectedId: 'compute',
+  keyboardNavigation: false,
+});
+
+const coupledCardsCode = `<script setup>
+import { ThreeDDonutChart, useCoupledSelection, resolveTriBorderStyle } from '@gkucmierz/nano-ui';
+
+const slices = [
+  { id: 'compute', name: 'GPU Compute', value: 42, color: '#6366f1' },
+  { id: 'nvme', name: 'NVMe Storage', value: 26, color: '#10b981' },
+  { id: 'mesh', name: 'Mesh Ingress', value: 19, color: '#06b6d4' },
+  { id: 'cache', name: 'Edge Cache', value: 13, color: '#f59e0b' },
+];
+
+const cshr = useCoupledSelection({ items: slices, initialSelectedId: 'compute' });
+<\/script>
+
+<template>
+  <ThreeDDonutChart
+    :data="slices"
+    :is3D="true"
+    :selectable="true"
+    v-model:hovered-item-id="cshr.hoveredId.value"
+    v-model:selected-item-id="cshr.selectedId.value"
+  />
+  <div class="legend-grid" v-bind="cshr.bindCoupledCorridor()">
+    <button
+      v-for="item in slices"
+      :key="item.id"
+      type="button"
+      :class="cshr.getTriBorderClasses(item.id)"
+      :style="resolveTriBorderStyle(item.color)"
+      v-bind="cshr.bindCoupledItem(item.id)"
+    >
+      {{ item.name }} · {{ item.value }}%
+    </button>
+  </div>
+</template>`;
 </script>
 
 <template>
@@ -737,6 +786,15 @@ const networkData = [
               <NanoIcon name="layout-grid" :size="15" />
               <span>Compact Dashboards (3 Charts)</span>
             </button>
+            <button
+              type="button"
+              class="docked-tab-btn"
+              :class="{ active: showcaseTab === 'coupled-cards' }"
+              @click="showcaseTab = 'coupled-cards'"
+            >
+              <NanoIcon name="layers" :size="15" />
+              <span>Coupled Legend Cards (CSHR)</span>
+            </button>
           </div>
         </div>
 
@@ -940,6 +998,60 @@ const networkData = [
           </div>
 
           <NanoCodeBlock :code="kpiCode" lang="vue" title="Implementation Code (:showLabels=false)" :default-wrap="true" />
+        </div>
+
+        <!-- Tab 4: Coupled Legend Cards (CSHR + Orbiting Conic Borders) -->
+        <div v-else-if="showcaseTab === 'coupled-cards'" class="showcase-view-body">
+          <div class="showcase-desc-bar">
+            <div class="showcase-header-row">
+              <h4 class="showcase-title">Coupled Selection & Orbiting Conic Borders (.nano-tri-border-card)</h4>
+              <div class="desc-badge-group">
+                <span class="status-badge status-badge-success">
+                  Active: {{ coupledSel.effectiveActiveId.value || 'None' }}
+                </span>
+              </div>
+            </div>
+            <p class="showcase-text">
+              Synchronizes <code>&lt;ThreeDDonutChart&gt;</code> with external KPI cards via <code>useCoupledSelection</code> and <code>resolveTriBorderStyle(item.color)</code>. Locked cards animate a stationary (<code>CLS = 0</code>) orbiting conic-gradient border tinted with each slice's color, upgrading to a faster 2-color hover+slice orbit when hovered.
+            </p>
+          </div>
+
+          <div class="showcase-interactive-stage">
+            <div class="showcase-chart-panel">
+              <ThreeDDonutChart
+                :data="coupledLegendData"
+                :is3D="true"
+                :isExpanded="true"
+                :showLabels="true"
+                :selectable="true"
+                :animationDuration="280"
+                v-model:hovered-item-id="coupledSel.hoveredId.value"
+                v-model:selected-item-id="coupledSel.selectedId.value"
+                centerLabel="Cluster"
+              />
+            </div>
+
+            <div class="showcase-controls-panel" v-bind="coupledSel.bindCoupledCorridor()">
+              <h4>Coupled KPI Legend (CSHR)</h4>
+              <div class="cshr-legend-list">
+                <button
+                  v-for="item in coupledLegendData"
+                  :key="item.id"
+                  type="button"
+                  class="cshr-legend-card"
+                  :class="[coupledSel.getTriBorderClasses(item.id), { 'is-dimmed': coupledSel.isDimmed(item.id) }]"
+                  :style="resolveTriBorderStyle(item.color)"
+                  v-bind="coupledSel.bindCoupledItem(item.id)"
+                >
+                  <span class="cshr-swatch" :style="{ backgroundColor: item.color }"></span>
+                  <span class="cshr-card-name">{{ item.name }}</span>
+                  <span class="cshr-card-val">{{ item.value }}%</span>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <NanoCodeBlock :code="coupledCardsCode" lang="vue" title="Implementation Code (CSHR + Orbiting Borders)" :default-wrap="true" />
         </div>
       </div>
     </div>
@@ -1212,6 +1324,49 @@ h4 { margin: 0 0 0.5rem 0; color: var(--nano-text-secondary); font-size: 0.9rem;
   width: 100%;
   max-width: 220px;
   margin: 0 auto;
+}
+
+.cshr-legend-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 6px;
+}
+
+.cshr-legend-card {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 11px 14px;
+  border-radius: var(--nano-radius-md, 8px);
+  background: var(--nano-bg-card);
+  color: var(--nano-text-main);
+  cursor: pointer;
+  text-align: left;
+  font-size: 0.86rem;
+  font-weight: 600;
+  transition: opacity 0.16s ease, box-shadow 0.18s ease, border-color 0.16s ease;
+}
+
+.cshr-legend-card.is-dimmed {
+  opacity: 0.56;
+}
+
+.cshr-swatch {
+  width: 11px;
+  height: 11px;
+  border-radius: 3px;
+  flex-shrink: 0;
+}
+
+.cshr-card-name {
+  flex: 1;
+}
+
+.cshr-card-val {
+  font-family: monospace;
+  color: var(--nano-text-secondary);
 }
 
 .stage-container {
