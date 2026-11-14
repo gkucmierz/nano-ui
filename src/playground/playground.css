@@ -616,6 +616,46 @@ pre {
   overflow: hidden;
 }
 
+.playground-oss-footer {
+  margin-top: 1.75rem;
+  padding: 0.9rem 0.25rem 0.25rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  font-size: 0.82rem;
+  color: var(--nano-text-muted);
+}
+
+.oss-footer-sep {
+  opacity: 0.5;
+}
+
+.oss-footer-love {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.oss-heart-icon {
+  color: #f43f5e;
+  flex-shrink: 0;
+}
+
+.oss-serce-link {
+  color: var(--nano-text-main);
+  font-weight: 600;
+  text-decoration: none;
+  border-bottom: 1px dashed var(--nano-border-subtle);
+  transition: color var(--nano-transition-interactive), border-color var(--nano-transition-interactive);
+}
+
+.oss-serce-link:hover {
+  color: #f43f5e;
+  border-color: #f43f5e;
+}
+
 /* Global Documentation Code & Pre Overflow Protection */
 .component-section pre,
 .api-reference pre {
