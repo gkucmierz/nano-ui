@@ -14,6 +14,7 @@ const centerGap = ref(185);
 const stackSpacing = ref(56);
 const loopEnabled = ref(true);
 const animatedEnabled = ref(true);
+const activeOrbitBorder = ref(true);
 
 const sampleCards = [
   {
@@ -152,6 +153,11 @@ const codeTabs = createDocTabs({
           size="compact"
           :label="currentLang === 'pl' ? 'Animacje kinetyczne (C¹)' : 'Kinetic animations (C¹)'"
         />
+        <NanoSwitch
+          v-model="activeOrbitBorder"
+          size="compact"
+          :label="currentLang === 'pl' ? 'Orbitująca obwódka (.nano-orbit-border)' : 'Orbiting border (.nano-orbit-border)'"
+        />
         <div style="width: 190px">
           <div style="display: flex; justify-content: space-between; font-size: 0.75rem; color: var(--nano-text-muted); margin-bottom: 4px">
             <span>{{ currentLang === 'pl' ? 'Kąt obrotu kart' : 'Side fold angle' }}</span>
@@ -203,6 +209,7 @@ const codeTabs = createDocTabs({
         :stage-height="orientation === 'vertical' ? 420 : 320"
         :loop="loopEnabled"
         :animated="animatedEnabled"
+        :active-orbit-border="activeOrbitBorder"
         storage-key="coverflow_demo"
       />
     </div>

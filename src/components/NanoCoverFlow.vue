@@ -10,6 +10,7 @@ import { computeAdaptiveCardExpansion } from '../utils/selectPositioning.js';
 import { fitCardContentToHeight } from '../utils/fitText.js';
 import { createKineticTransition } from '../utils/kinetics.js';
 import { getScopedStorageController } from '../utils/storage-controller.js';
+import { resolveOrbitBorderStyle } from '../utils/coupledSelection.js';
 
 const props = defineProps({
   modelValue: {
@@ -146,6 +147,21 @@ const props = defineProps({
   innerContentScroll: {
     type: Boolean,
     default: false,
+  },
+  /**
+   * Renders the standalone orbiting conic-gradient border (`.nano-orbit-border.is-orbit-active`)
+   * around the active center card in both Dark and Light modes (CLS = 0).
+   */
+  activeOrbitBorder: {
+    type: Boolean,
+    default: true,
+  },
+  /**
+   * Optional custom accent color (`--nano-orbit-color`) for the active orbiting border.
+   */
+  activeOrbitColor: {
+    type: String,
+    default: '',
   },
   storageKey: {
     type: String,
@@ -668,6 +684,8 @@ defineExpose({
           <div
             class="nano-cf-card-surface"
             :class="{
+              'nano-orbit-border': activeOrbitBorder && entry.state.isActive,
+              'is-orbit-active': activeOrbitBorder && entry.state.isActive,
               'is-scrollable':
                 innerContentScroll &&
                 !autoFitContent &&
@@ -675,6 +693,11 @@ defineExpose({
                 entry.state.isActive &&
                 orientation === 'horizontal',
             }"
+            :style="
+              activeOrbitBorder && entry.state.isActive
+                ? resolveOrbitBorderStyle(entry.raw?.orbitColor || activeOrbitColor)
+                : undefined
+            "
           >
             <slot
               name="item"
@@ -875,7 +898,7 @@ defineExpose({
   scrollbar-width: thin;
 }
 
-.nano-cf-item.is-active .nano-cf-card-surface {
+.nano-cf-item.is-active .nano-cf-card-surface:not(.is-orbit-active) {
   background: var(
     --nano-coverflow-active-card-bg,
     color-mix(in srgb, var(--nano-bg-sidebar, #18181b) 94%, var(--nano-primary, #38bdf8) 6%)
@@ -886,15 +909,28 @@ defineExpose({
     0 0 0 1px rgba(56, 189, 248, 0.35);
 }
 
-[data-theme="light"] .nano-cf-item.is-active .nano-cf-card-surface,
-.light .nano-cf-item.is-active .nano-cf-card-surface,
-.theme-light .nano-cf-item.is-active .nano-cf-card-surface {
+[data-theme="light"] .nano-cf-item.is-active .nano-cf-card-surface:not(.is-orbit-active),
+.light .nano-cf-item.is-active .nano-cf-card-surface:not(.is-orbit-active),
+.theme-light .nano-cf-item.is-active .nano-cf-card-surface:not(.is-orbit-active) {
   background: var(--nano-coverflow-active-card-bg, #ffffff);
   border-color: var(--nano-primary, #0284c7);
   box-shadow:
     0 8px 20px -6px rgba(2, 132, 199, 0.12),
     0 3px 8px -3px rgba(15, 23, 42, 0.05),
     0 0 0 1px rgba(2, 132, 199, 0.28);
+}
+
+.nano-cf-item.is-active .nano-cf-card-surface.is-orbit-active {
+  --nano-orbit-bg: var(
+    --nano-coverflow-active-card-bg,
+    color-mix(in srgb, var(--nano-bg-sidebar, #18181b) 94%, var(--nano-primary, #38bdf8) 6%)
+  );
+}
+
+[data-theme="light"] .nano-cf-item.is-active .nano-cf-card-surface.is-orbit-active,
+.light .nano-cf-item.is-active .nano-cf-card-surface.is-orbit-active,
+.theme-light .nano-cf-item.is-active .nano-cf-card-surface.is-orbit-active {
+  --nano-orbit-bg: var(--nano-coverflow-active-card-bg, #ffffff);
 }
 
 .nano-cf-default-card {
