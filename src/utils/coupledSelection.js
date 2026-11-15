@@ -82,6 +82,29 @@ export function resolveTriBorderStyle(sliceColor = null) {
 }
 
 /**
+ * Returns deterministic Vue `:class` bindings for the standalone Orbiting Conic Border (`.nano-orbit-border`).
+ */
+export function resolveOrbitBorderClasses(active = false) {
+  return {
+    'nano-orbit-border': true,
+    'is-orbit-active': Boolean(active),
+  };
+}
+
+/**
+ * Returns deterministic Vue `:style` bindings injecting a custom accent color (`--nano-orbit-color`)
+ * into `.nano-orbit-border`.
+ */
+export function resolveOrbitBorderStyle(accentColor = null) {
+  if (typeof accentColor !== 'string') return {};
+  const trimmed = accentColor.trim();
+  if (!trimmed) return {};
+  return {
+    '--nano-orbit-color': trimmed,
+  };
+}
+
+/**
  * Pure deterministic state machine for the **Coupled Selection & Hover-Suppress-Rearm (`CSHR`)** pattern,
  * including built-in modulo-wrapped `Left` / `Right` (`stepSelection`) list/grid stepping.
  *
