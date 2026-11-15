@@ -5,6 +5,7 @@ import NanoSwitch from '../../components/NanoSwitch.vue';
 import NanoKnob from '../../components/NanoKnob.vue';
 import NanoIcon from '../../components/NanoIcon.vue';
 import NanoCodeBlock from '../../components/NanoCodeBlock.vue';
+import NanoColorPickerOklch from '../../components/NanoColorPickerOklch.vue';
 import { createDocTabs } from '../docSnippets.js';
 import { normalizeAngle } from '../../utils/math.js';
 import { getOptimalRotationAngle } from '../../utils/chart-walls.js';
@@ -112,9 +113,8 @@ const valueDecimals = computed(() => {
   return valueDecimalsRange.value === -1 ? undefined : valueDecimalsRange.value;
 });
 
-const hoveredItemId = ref(null);
 const selectable = ref(true);
-const selectedItemId = ref(null);
+const showCoupledList = ref(true);
 
 const testData = ref([
   { name: 'Russia', value: 17.1, color: '#3b82f6' },
@@ -144,6 +144,14 @@ const computedChartData = computed(() => {
     };
   });
 });
+
+const liveCshr = useCoupledSelection({
+  items: computedChartData,
+  initialSelectedId: 'Russia',
+  keyboardNavigation: false,
+});
+const hoveredItemId = liveCshr.hoveredId;
+const selectedItemId = liveCshr.selectedId;
 
 const centerValueFormatter = (val, item) => {
   const decs = valueDecimals.value !== undefined ? valueDecimals.value : 1;
@@ -456,6 +464,11 @@ const cshr = useCoupledSelection({ items: slices, initialSelectedId: 'compute' }
         <div class="preview-header">
           <h3>Live Preview</h3>
           <div class="preview-badges">
+            <NanoSwitch
+              v-model="showCoupledList"
+              size="compact"
+              label="Coupled CSHR List"
+            />
             <span v-if="selectable && selectedItemId" class="status-badge locked">
               Locked on: {{ selectedItemId }}
             </span>
@@ -468,35 +481,63 @@ const cshr = useCoupledSelection({ items: slices, initialSelectedId: 'compute' }
           </div>
         </div>
 
-        <div class="chart-container">
-          <ThreeDDonutChart 
-            v-model:hoveredItemId="hoveredItemId"
-            v-model:selectedItemId="selectedItemId"
-            :selectable="selectable"
-            :data="computedChartData"
-            :aspectRatio="selectedAspectRatio"
-            :isExpanded="isExpanded"
-            :showLabels="showLabels"
-            :labelFontSize="labelFontSize"
-            :labelDistance="labelDistance"
-            :animationDuration="chartAnimationDuration"
-            :is3D="is3D"
-            :rotationAngle="rotationAngle"
-            :autoRotate="autoRotate"
-            :slopeRatio="slopeRatio"
-            :thickness="thickness"
-            :depth="depth"
-            :showCenterText="showCenterText"
-            :centerTextZ="centerTextZ"
-            :aggregateOthers="aggregateOthers"
-            :othersThreshold="othersThreshold"
-            :othersLabel="othersLabel"
-            :othersColor="othersColor"
-            :valueDecimals="valueDecimals"
-            :centerValueFormatter="centerValueFormatter"
-            centerLabel="Total Area (M km²)"
-            emptyText="Add countries to render the 3D donut chart!"
-          />
+        <div class="live-stage-split" :class="{ 'has-coupled-list': showCoupledList }">
+          <div class="chart-container">
+            <ThreeDDonutChart 
+              v-model:hoveredItemId="hoveredItemId"
+              v-model:selectedItemId="selectedItemId"
+              :selectable="selectable"
+              :data="computedChartData"
+              :aspectRatio="selectedAspectRatio"
+              :isExpanded="isExpanded"
+              :showLabels="showLabels"
+              :labelFontSize="labelFontSize"
+              :labelDistance="labelDistance"
+              :animationDuration="chartAnimationDuration"
+              :is3D="is3D"
+              :rotationAngle="rotationAngle"
+              :autoRotate="autoRotate"
+              :slopeRatio="slopeRatio"
+              :thickness="thickness"
+              :depth="depth"
+              :showCenterText="showCenterText"
+              :centerTextZ="centerTextZ"
+              :aggregateOthers="aggregateOthers"
+              :othersThreshold="othersThreshold"
+              :othersLabel="othersLabel"
+              :othersColor="othersColor"
+              :valueDecimals="valueDecimals"
+              :centerValueFormatter="centerValueFormatter"
+              centerLabel="Total Area (M km²)"
+              emptyText="Add countries to render the 3D donut chart!"
+            />
+          </div>
+
+          <div
+            v-if="showCoupledList"
+            class="live-cshr-sidebar"
+            v-bind="liveCshr.bindCoupledCorridor()"
+          >
+            <div class="live-cshr-header">
+              <span>Coupled Selection (CSHR)</span>
+              <span class="live-cshr-hint">1× lock · 2× deselect</span>
+            </div>
+            <div class="live-cshr-grid">
+              <button
+                v-for="item in computedChartData"
+                :key="item.id"
+                type="button"
+                class="cshr-legend-card"
+                :class="[liveCshr.getTriBorderClasses(item.id), { 'is-dimmed': liveCshr.isDimmed(item.id) }]"
+                :style="resolveTriBorderStyle(item.color)"
+                v-bind="liveCshr.bindCoupledItem(item.id)"
+              >
+                <span class="cshr-swatch" :style="{ backgroundColor: item.color }"></span>
+                <span class="cshr-card-name">{{ item.name }}</span>
+                <span class="cshr-card-val">{{ item.percentage }}%</span>
+              </button>
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -510,7 +551,7 @@ const cshr = useCoupledSelection({ items: slices, initialSelectedId: 'compute' }
           <div v-for="(item, idx) in testData" :key="idx" class="slice-row">
             <input :id="`donut-slice-name-${idx}`" :name="`donut-slice-name-${idx}`" aria-label="Slice name" type="text" v-model="item.name" class="input-name" placeholder="Name" />
             <input :id="`donut-slice-val-${idx}`" :name="`donut-slice-val-${idx}`" aria-label="Slice value" type="number" v-model.number="item.value" class="input-value" min="0.01" step="0.01" placeholder="Value" />
-            <input :id="`donut-slice-color-${idx}`" :name="`donut-slice-color-${idx}`" aria-label="Slice color" type="color" v-model="item.color" class="input-color" />
+            <NanoColorPickerOklch :id="`donut-slice-color-${idx}`" :name="`donut-slice-color-${idx}`" aria-label="Slice color" v-model="item.color" format="hex" popover size="sm" />
             <button @click="removeItem(idx)" class="btn-remove" aria-label="Remove slice">
               <NanoIcon name="trash" :size="13" />
             </button>
@@ -741,7 +782,7 @@ const cshr = useCoupledSelection({ items: slices, initialSelectedId: 'compute' }
 
         <div class="input-row" :style="!aggregateOthers ? 'opacity: 0.4; pointer-events: none;' : ''" style="display: flex; gap: 8px; margin-top: 10px;">
           <input id="donut-ctrl-12" name="donut-ctrl-12" aria-label="Chart control 12" type="text" v-model="othersLabel" class="input-name" style="width: 100%;" placeholder="Other Label" />
-          <input id="donut-ctrl-13" name="donut-ctrl-13" aria-label="Chart control 13" type="color" v-model="othersColor" class="input-color" style="height: 32px;" />
+          <NanoColorPickerOklch id="donut-ctrl-13" name="donut-ctrl-13" aria-label="Other slice color" v-model="othersColor" format="hex" popover size="sm" :disabled="!aggregateOthers" />
         </div>
       </div>
     </div>
@@ -908,7 +949,7 @@ const cshr = useCoupledSelection({ items: slices, initialSelectedId: 'compute' }
 
               <div class="input-row" :style="!thresholdDemoAggregate ? 'opacity: 0.35; pointer-events: none;' : ''" style="display: flex; gap: 8px; margin-top: 10px;">
                 <input id="donut-ctrl-16" name="donut-ctrl-16" aria-label="Chart control 16" type="text" v-model="thresholdDemoLabel" class="input-name" placeholder="othersLabel" :disabled="!thresholdDemoAggregate" />
-                <input id="donut-ctrl-17" name="donut-ctrl-17" aria-label="Chart control 17" type="color" v-model="thresholdDemoColor" class="input-color" style="height: 32px;" :disabled="!thresholdDemoAggregate" />
+                <NanoColorPickerOklch id="donut-ctrl-17" name="donut-ctrl-17" aria-label="Threshold other slice color" v-model="thresholdDemoColor" format="hex" popover size="sm" :disabled="!thresholdDemoAggregate" />
               </div>
 
               <div class="showcase-info-box">
@@ -1814,5 +1855,50 @@ input[type="range"]::-moz-range-thumb:hover {
 .btn-step:hover {
   background: var(--nano-border-subtle);
   border-color: var(--nano-accent-primary);
+}
+
+.live-stage-split.has-coupled-list {
+  display: grid;
+  grid-template-columns: minmax(0, 1.45fr) minmax(250px, 0.95fr);
+  gap: 1.25rem;
+  align-items: center;
+}
+
+.live-cshr-sidebar {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+  padding: 0.85rem;
+  border-radius: 10px;
+  background: var(--nano-bg-muted);
+  border: 1px solid var(--nano-border-subtle);
+}
+
+.live-cshr-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--nano-text-secondary);
+}
+
+.live-cshr-hint {
+  font-size: 0.7rem;
+  font-weight: 500;
+  color: var(--nano-text-muted);
+}
+
+.live-cshr-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.5rem;
+}
+
+@media (max-width: 960px) {
+  .live-stage-split.has-coupled-list {
+    grid-template-columns: 1fr;
+  }
 }
 </style>
