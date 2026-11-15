@@ -94,6 +94,42 @@ export const highlightVue = (code) => highlightCode(code, 'vue');
 export const highlightGlsl = (code) => highlightCode(code, 'glsl');
 export const highlightBlender = (code) => highlightCode(code, 'bpy');
 export const highlightBpy = highlightBlender;
+export const highlightGlb = (code) => highlightCode(code, 'glb');
+
+/**
+ * Splits syntax-highlighted HTML into per-line HTML fragments while balancing any
+ * multi-line `<span ...>...</span>` tags across line boundaries so each row can
+ * render independently in a CSS Grid `[line-number | line-code]` layout.
+ *
+ * @param {string} html
+ * @returns {Array<string>}
+ */
+export const splitHighlightedHtmlIntoLines = (html) => {
+  if (html === null || html === undefined || html === '') return [];
+  const rawLines = String(html).split('\n');
+  const openStack = [];
+  const tagRe = /<\/?span\b[^>]*>/gi;
+  const out = [];
+
+  for (let i = 0; i < rawLines.length; i++) {
+    const prefix = openStack.join('');
+    const line = rawLines[i];
+    let match;
+    tagRe.lastIndex = 0;
+    while ((match = tagRe.exec(line)) !== null) {
+      const tag = match[0];
+      if (tag.charCodeAt(1) === 47) {
+        if (openStack.length > 0) openStack.pop();
+      } else if (tag.charCodeAt(tag.length - 2) !== 47) {
+        openStack.push(tag);
+      }
+    }
+    const suffix = openStack.length > 0 ? '</span>'.repeat(openStack.length) : '';
+    out.push(prefix + line + suffix);
+  }
+
+  return out;
+};
 
 /**
  * Highlights a code snippet using highlight.js with safe fallback to escaped HTML.
