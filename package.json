@@ -1,6 +1,6 @@
 {
   "name": "@gkucmierz/nano-ui",
-  "version": "1.8.39",
+  "version": "1.8.40",
   "license": "ISC",
   "author": "Grzegorz Kućmierz",
   "description": "High-performance, minimal footprint Vue 3 UI library, interactive 3D charts, and directives.",
@@ -31,7 +31,7 @@
     "dist"
   ],
   "scripts": {
-    "dev": "vite --mode app --port 33164",
+    "dev": "vite --mode app --port 33164 --host",
     "prebuild": "npm run test:unit && node scripts/generate-icons.mjs",
     "build": "vite build",
     "prebuild:app": "npm run test:unit && node scripts/generate-icons.mjs",
@@ -39,8 +39,8 @@
     "prebuild:ssg": "npm run test:unit && node scripts/generate-icons.mjs",
     "build:ssg": "vite build --mode ssg && node scripts/prerender.mjs",
     "prepublishOnly": "npm run test:unit && npm run build",
-    "preview:app": "vite preview --outDir dist-app --port 33164",
-    "preview:ssg": "vite preview --outDir dist-ssg --port 33164",
+    "preview:app": "vite preview --outDir dist-app --port 33164 --host",
+    "preview:ssg": "vite preview --outDir dist-ssg --port 33164 --host",
     "serve:ssg": "npm run build:ssg && npm run preview:ssg",
     "prerender": "node scripts/prerender.mjs",
     "icons": "node scripts/generate-icons.mjs",
@@ -70,7 +70,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://gitea.7u.pl/gkucmierz/nano-ui.git"
+    "url": "git@gitea.7u.pl:gkucmierz/nano-ui.git"
   },
   "homepage": "https://gitea.7u.pl/gkucmierz/nano-ui",
   "keywords": [

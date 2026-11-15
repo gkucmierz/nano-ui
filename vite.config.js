@@ -40,10 +40,12 @@ export default defineConfig(({ mode }) => {
       },
     ],
     server: {
+      host: true,
       port: 33164,
       strictPort: true,
     },
     preview: {
+      host: true,
       port: 33164,
       strictPort: true,
     },
@@ -76,6 +78,7 @@ export default defineConfig(({ mode }) => {
             'parsers/nanosound': resolve(__dirname, 'src/parsers/nanosound.js'),
             'parsers/glsl': resolve(__dirname, 'src/parsers/glsl.js'),
             'parsers/blender': resolve(__dirname, 'src/parsers/blender.js'),
+            'parsers/glb': resolve(__dirname, 'src/parsers/glb.js'),
           },
           formats: ['es'],
           fileName: (format, entryName) => `${entryName}.js`,
