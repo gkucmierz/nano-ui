@@ -3,6 +3,8 @@ import { ref, computed, provide, onMounted, onUnmounted, watch, nextTick } from 
 import {
   MUTATING_HEADER_META_KEY,
   normalizeHeaderSpread,
+  parseFloatingHorizontalInsetPx,
+  computeMutatingHeaderWidths,
   parseFloatingVerticalMargins,
   computeHeaderCompressionMeta,
 } from '../utils/mutatingHeader.js';
@@ -161,69 +163,41 @@ const resolvedStuckRadius = computed(() => {
 });
 
 /**
- * Resolves explicit pixel or calc expressions for both outer max-width and inner spread max-width
- * so CSS transitions interpolate smoothly in Chromium/WebKit/Gecko without mixed-unit snaps.
+ * Resolves exact pixel widths for both outer floating/stuck frames and `.header-inner`
+ * (taking BOTH `floatingWidth` horizontal inset AND `floatingMaxWidth` + `42px` horizontal
+ * padding/border chrome into account). When `spread === 0`, `innerFloatingMaxPx === innerStuckMaxPx`
+ * across all viewport widths (`320px..3840px`) and all transition frames `t in [0, 1]`,
+ * eliminating horizontal logo drift and vertical `margin-top` layout shift (`CLS = 0`).
  */
-const resolvedFloatingMaxPx = computed(() => {
-  const raw = props.floatingMaxWidth;
-  if (typeof raw === 'number' && Number.isFinite(raw)) {
-    return Math.min(raw, measuredParentWidth.value);
-  }
-  const str = String(raw || '100%').trim();
-  if (str.endsWith('px')) {
-    const px = parseFloat(str);
-    if (Number.isFinite(px)) {
-      return Math.min(px, measuredParentWidth.value);
-    }
-  }
-  return null;
-});
+const resolvedHeaderWidths = computed(() =>
+  computeMutatingHeaderWidths({
+    parentWidth: measuredParentWidth.value || 1440,
+    floatingWidth: props.floatingWidth,
+    floatingMaxWidth: props.floatingMaxWidth,
+    spreadPercent: normalizedSpreadObj.value.spreadPercent,
+    horizontalChromePx: 42,
+  })
+);
 
 const headerStyleVars = computed(() => {
-  const { spreadRatio } = normalizedSpreadObj.value;
-  const parentW = Math.max(320, measuredParentWidth.value || 1440);
-  const floatMaxPx = resolvedFloatingMaxPx.value;
-
-  const floatingMaxCss =
-    floatMaxPx !== null
-      ? `${Math.round(floatMaxPx)}px`
-      : typeof props.floatingMaxWidth === 'number'
-        ? `${props.floatingMaxWidth}px`
-        : String(props.floatingMaxWidth || '100%');
-
-  const stuckMaxCss = floatMaxPx !== null ? `${Math.round(parentW)}px` : '100%';
-
-  // Base inner content width (before spread) matches the floating inner width
-  let innerBaseMaxCss = '100%';
-  let innerStuckMaxCss = '100%';
-  if (floatMaxPx !== null) {
-    const innerFloatW = Math.max(240, floatMaxPx - 40);
-    const innerFullW = Math.max(innerFloatW, parentW - 48);
-    const innerSpreadW = Math.round(innerFloatW + spreadRatio * (innerFullW - innerFloatW));
-    innerBaseMaxCss = `${Math.round(innerFloatW)}px`;
-    innerStuckMaxCss = `${innerSpreadW}px`;
-  } else {
-    innerBaseMaxCss = '100%';
-    innerStuckMaxCss = '100%';
-  }
-
-  // When floatingMaxWidth is '100%' (default), Option 1 vs Option 2 controls how much of the
-  // horizontal padding/margin delta (e.g. 48px) is unlocked by `.header-inner` when stuck:
-  const stuckSideInsetFormula =
-    floatMaxPx === null
-      ? `calc(24px + (1 - ${spreadRatio}) * 16px)`
-      : '24px';
+  const {
+    floatingOuterMaxPx,
+    stuckOuterMaxPx,
+    innerFloatingMaxPx,
+    innerStuckMaxPx,
+    spreadRatio,
+  } = resolvedHeaderWidths.value;
 
   return {
     '--header-height': props.height,
     '--floating-margin-top': verticalMargins.value.top,
     '--floating-margin-bottom': verticalMargins.value.bottom,
     '--floating-width': props.floatingWidth,
-    '--floating-max-width': floatingMaxCss,
-    '--stuck-max-width': stuckMaxCss,
-    '--inner-floating-max-width': innerBaseMaxCss,
-    '--inner-stuck-max-width': innerStuckMaxCss,
-    '--stuck-padding-x': stuckSideInsetFormula,
+    '--floating-max-width': `${floatingOuterMaxPx}px`,
+    '--stuck-max-width': `${stuckOuterMaxPx}px`,
+    '--inner-floating-max-width': `${innerFloatingMaxPx}px`,
+    '--inner-stuck-max-width': `${innerStuckMaxPx}px`,
+    '--stuck-padding-x': '20px',
     '--spread-ratio': String(spreadRatio),
     '--floating-radius': props.floatingRadius,
     '--stuck-radius': resolvedStuckRadius.value,
@@ -238,14 +212,22 @@ const measureHeaderGeometry = () => {
   const innerEl = innerElRef.value;
   if (!headerEl || !innerEl) return;
 
+  const docClientW = globalThis.document?.documentElement?.clientWidth || 0;
   const parentEl = headerEl.parentElement;
-  if (parentEl && parentEl.clientWidth > 0) {
-    measuredParentWidth.value = parentEl.clientWidth;
-  } else if (typeof window !== 'undefined' && window.innerWidth > 0) {
-    measuredParentWidth.value = window.innerWidth;
+  const nextParentW =
+    parentEl && parentEl.clientWidth > 0
+      ? parentEl.clientWidth
+      : docClientW > 0
+        ? docClientW
+        : globalThis.window?.innerWidth > 0
+          ? globalThis.window.innerWidth
+          : 0;
+
+  if (nextParentW > 0 && nextParentW !== measuredParentWidth.value) {
+    measuredParentWidth.value = nextParentW;
   }
 
-  if (innerEl.clientWidth > 0) {
+  if (innerEl.clientWidth > 0 && innerEl.clientWidth !== measuredContainerWidth.value) {
     measuredContainerWidth.value = innerEl.clientWidth;
   }
 
@@ -502,11 +484,9 @@ defineExpose({
     color-mix(in srgb, var(--nano-bg-sidebar, #18181b) 88%, transparent)
   );
   color: var(--nano-text-main);
-  will-change: width, max-width, margin-top, margin-bottom, border-radius, border-color, padding, box-shadow;
+  will-change: width, max-width, border-radius, border-color, box-shadow;
   transition: width var(--nano-transition-header),
               max-width var(--nano-transition-header),
-              margin-top var(--nano-transition-header),
-              margin-bottom var(--nano-transition-header),
               border-radius var(--nano-transition-header),
               border-color var(--nano-transition-interactive),
               padding var(--nano-transition-header),
@@ -520,14 +500,18 @@ defineExpose({
 }
 
 .nano-mutating-header.is-stuck {
-  width: calc(100% - 0px);
+  width: 100%;
   max-width: var(--stuck-max-width, 100%);
-  margin: var(--stuck-margin, 0);
+  /* Keep vertical margins stable in normal document flow (CLS = 0): `position: sticky; top: 0`
+     already pins the border-box flush at y = 0px once scrollY >= margin-top without yanking
+     page content upward by 12px mid-scroll! */
+  margin-top: var(--stuck-margin, var(--floating-margin-top, 12px));
+  margin-bottom: var(--stuck-margin, var(--floating-margin-bottom, 0px));
   margin-left: auto;
   margin-right: auto;
   border-radius: var(--stuck-radius, 11px 11px 0 0);
   border-color: transparent transparent var(--nano-border-subtle, rgba(255, 255, 255, 0.1)) transparent;
-  padding: 0 var(--stuck-padding-x, 24px);
+  padding: 0 var(--stuck-padding-x, 20px);
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25);
 }
 
