@@ -980,3 +980,125 @@ export const createKineticPoints = (options = {}) => {
     isMoving: () => isMoving,
   };
 };
+
+/**
+ * Creates a timer-agnostic C¹-continuous physical impulse controller for repeatable
+ * interactive actions (e.g. "Step / Stomp", "Flick Ash", "Jump", "Bell Strike") where
+ * rapid multi-clicking MUST preserve instantaneous position (`Δx = 0`) and chain momentum
+ * smoothly instead of snapping animations back to `t = 0`.
+ *
+ * Integrates a damped second-order oscillator (`x'' + 2ζω₀ x' + ω₀² x = drive(t)`)
+ * using fixed micro-substeps (`<= 4ms`) for unconditional numerical stability at any FPS.
+ *
+ * @param {Object} [options]
+ * @param {number} [options.omega=16.5] Natural angular frequency ω₀ (rad/s)
+ * @param {number} [options.zeta=0.68] Damping ratio ζ (< 1 gives natural ground-strike rebound; >= 1 critically damped)
+ * @param {number} [options.impulseVelocity=8.5] Velocity injected per unit trigger strength
+ * @param {number} [options.maxValue=1.65] Soft saturation ceiling for displacement amplitude
+ * @param {number} [options.maxVelocity=24] Velocity clamp during rapid click bursts
+ * @param {number} [options.epsilon=0.0008] Rest threshold for position & velocity
+ * @returns {Object}
+ */
+export const createKineticImpulse = (options = {}) => {
+  const omega = Math.max(2, Number(options.omega) || 16.5);
+  const zeta = Math.max(0.15, Number(options.zeta) || 0.68);
+  const impulseVelocity = Number(options.impulseVelocity) || 8.5;
+  const maxValue = Math.max(0.2, Number(options.maxValue) || 1.65);
+  const maxVelocity = Math.max(1, Number(options.maxVelocity) || 24);
+  const epsilon = Math.max(1e-5, Number(options.epsilon) || 0.0008);
+
+  let value = 0;
+  let velocity = 0;
+  let active = false;
+  let comboCount = 0;
+  let lastStepMs = null;
+
+  const snapshot = () => ({
+    value,
+    velocity,
+    lift: Math.max(0, value),
+    recoil: Math.max(0, -value),
+    envelope: Math.min(1, Math.hypot(value, velocity / omega)),
+    isMoving: active,
+    comboCount,
+  });
+
+  const trigger = (strength = 1, { timestamp = undefined } = {}) => {
+    const s = Math.max(0.1, Math.min(3, Number(strength) || 1));
+    if (timestamp !== undefined && Number.isFinite(timestamp) && lastStepMs !== null) {
+      step(timestamp);
+    } else if (lastStepMs === null && timestamp !== undefined && Number.isFinite(timestamp)) {
+      lastStepMs = timestamp;
+    }
+    // C¹ continuity law: instantaneous position `value` NEVER jumps on trigger;
+    // only bounded forward velocity is injected, smoothly reversing a downward fall or boosting a lift.
+    const headroom = Math.max(0.25, 1 - Math.max(0, value) / maxValue);
+    const boostedVel = velocity < 0
+      ? velocity * 0.25 + impulseVelocity * s
+      : velocity + impulseVelocity * s * headroom;
+    velocity = Math.max(-maxVelocity, Math.min(maxVelocity, boostedVel));
+    comboCount += 1;
+    active = true;
+    return snapshot();
+  };
+
+  const step = (timestampOrDtSec) => {
+    if (!active) {
+      if (Number.isFinite(timestampOrDtSec) && timestampOrDtSec > 100) {
+        lastStepMs = timestampOrDtSec;
+      }
+      return snapshot();
+    }
+
+    let dtSec = 1 / 60;
+    if (Number.isFinite(timestampOrDtSec)) {
+      if (timestampOrDtSec > 100 || lastStepMs !== null) {
+        if (lastStepMs !== null) {
+          dtSec = Math.max(0, Math.min(0.1, (timestampOrDtSec - lastStepMs) / 1000));
+        }
+        lastStepMs = timestampOrDtSec;
+      } else {
+        dtSec = Math.max(0, Math.min(0.1, timestampOrDtSec));
+      }
+    }
+
+    if (dtSec > 0) {
+      const steps = Math.max(1, Math.ceil(dtSec / 0.004));
+      const h = dtSec / steps;
+      const twoZetaOmega = 2 * zeta * omega;
+      const omegaSq = omega * omega;
+
+      for (let i = 0; i < steps; i++) {
+        const accel = -twoZetaOmega * velocity - omegaSq * value;
+        velocity = Math.max(-maxVelocity, Math.min(maxVelocity, velocity + accel * h));
+        value = Math.max(-maxValue, Math.min(maxValue, value + velocity * h));
+      }
+
+      if (Math.abs(value) < epsilon && Math.abs(velocity) < epsilon * omega) {
+        value = 0;
+        velocity = 0;
+        active = false;
+        comboCount = 0;
+      }
+    }
+
+    return snapshot();
+  };
+
+  const reset = () => {
+    value = 0;
+    velocity = 0;
+    active = false;
+    comboCount = 0;
+    lastStepMs = null;
+    return snapshot();
+  };
+
+  return {
+    trigger,
+    step,
+    reset,
+    getState: snapshot,
+    isMoving: () => active,
+  };
+};
