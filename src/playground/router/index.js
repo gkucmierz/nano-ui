@@ -464,6 +464,7 @@ export const routes = [
   },
   {
     path: '/docs/coverflow',
+    alias: ['/docs/cover-flow'],
     name: 'CoverFlow',
     component: CoverFlowDoc,
     meta: {

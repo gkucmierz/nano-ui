@@ -1,5 +1,16 @@
 import pkg from '../package.json';
-import { initTheme, getZeroFoucScript, getZeroFoucStyle, getZeroFoucHtml } from './theme.js';
+import {
+  initTheme,
+  syncDocumentColorSchemeFromDom,
+  syncThemeWithHostDark,
+  getZeroFoucScript,
+  getZeroFoucStyle,
+  getZeroFoucHtml,
+} from './theme.js';
+import {
+  createAdaptiveFpsGovernor,
+  resolveHardwareQualitySeed,
+} from './utils/adaptiveFpsGovernor.js';
 import { useTheme, getNextTheme } from './composables/useTheme.js';
 import {
   useInertialStabilizer,
@@ -11,7 +22,7 @@ import {
   quatNormalize,
   quatSlerp,
 } from './composables/useInertialStabilizer.js';
-import Ripple, { computeRippleGeometry } from './directives/ripple.js';
+import Ripple, { computeRippleGeometry, resolveRippleOptions } from './directives/ripple.js';
 import {
   NANO_UI_SOUND_PRESETS,
   CONTROL_ACOUSTIC_MASS_PROFILES,
@@ -166,6 +177,8 @@ import {
   resolveTriStateBorder,
   resolveTriStateBorderClasses,
   resolveTriBorderStyle,
+  resolveOrbitBorderClasses,
+  resolveOrbitBorderStyle,
   createCoupledSelectionMachine,
   useCoupledSelection,
 } from './utils/coupledSelection.js';
@@ -329,6 +342,7 @@ import {
 import {
   createKineticTransition,
   createKineticPoints,
+  createKineticImpulse,
   buildSplinePath,
   evaluateSplineY,
   computeMonotoneTangents,
@@ -372,12 +386,22 @@ import {
   highlightGlsl,
   highlightBlender,
   highlightBpy,
+  highlightGlb,
+  splitHighlightedHtmlIntoLines,
   registerParser,
   unregisterParser,
   isParserRegistered,
   getRegisteredParsers,
   SYNTAX_THEMES,
 } from './utils/syntax-highlighter.js';
+import {
+  GLB_MAGIC_UINT32,
+  GLB_JSON_CHUNK_TYPE,
+  GLB_BIN_CHUNK_TYPE,
+  formatGlbHexPreview,
+  parseGlbHeaderAndChunks,
+  inspectGlbBinary,
+} from './utils/glb-inspector.js';
 import {
   CORE_PARSERS,
   EXTRA_PARSERS,
@@ -405,6 +429,8 @@ import {
   GLSL_COMPLETIONS,
   blenderParser,
   BLENDER_COMPLETIONS,
+  glbParser,
+  GLB_COMPLETIONS,
 } from './parsers/index.js';
 import {
   detectLangFromPath,
@@ -480,6 +506,8 @@ import {
   pickHeaderTierCandidate,
   pickAdaptiveHeaderLabel,
   normalizeHeaderSpread,
+  parseFloatingHorizontalInsetPx,
+  computeMutatingHeaderWidths,
   parseFloatingVerticalMargins,
   computeHeaderCompressionMeta,
   useMutatingHeaderMeta,
@@ -505,6 +533,7 @@ export {
   Ripple,
   Ripple as vRipple,
   computeRippleGeometry,
+  resolveRippleOptions,
   NANO_UI_SOUND_PRESETS,
   CONTROL_ACOUSTIC_MASS_PROFILES,
   resolveControlAcousticMass,
@@ -549,6 +578,8 @@ export {
   pickHeaderTierCandidate,
   pickAdaptiveHeaderLabel,
   normalizeHeaderSpread,
+  parseFloatingHorizontalInsetPx,
+  computeMutatingHeaderWidths,
   parseFloatingVerticalMargins,
   computeHeaderCompressionMeta,
   useMutatingHeaderMeta,
@@ -561,6 +592,7 @@ export {
   NanoSplitter,
   NanoIcon,
   NanoColorPickerOklch,
+  NanoColorPickerOklch as NanoColorPicker,
   NuMaskedInput,
   NuPinInput,
   NanoGlobe,
@@ -657,6 +689,8 @@ export {
   resolveTriStateBorder,
   resolveTriStateBorderClasses,
   resolveTriBorderStyle,
+  resolveOrbitBorderClasses,
+  resolveOrbitBorderStyle,
   createCoupledSelectionMachine,
   useCoupledSelection,
   NON_TEXT_INPUT_TYPES,
@@ -790,6 +824,7 @@ export {
   parseMaskSteps,
   createKineticTransition,
   createKineticPoints,
+  createKineticImpulse,
   buildSplinePath,
   evaluateSplineY,
   computeMonotoneTangents,
@@ -827,6 +862,14 @@ export {
   highlightGlsl,
   highlightBlender,
   highlightBpy,
+  highlightGlb,
+  splitHighlightedHtmlIntoLines,
+  GLB_MAGIC_UINT32,
+  GLB_JSON_CHUNK_TYPE,
+  GLB_BIN_CHUNK_TYPE,
+  formatGlbHexPreview,
+  parseGlbHeaderAndChunks,
+  inspectGlbBinary,
   registerParser,
   unregisterParser,
   isParserRegistered,
@@ -858,6 +901,8 @@ export {
   GLSL_COMPLETIONS,
   blenderParser,
   BLENDER_COMPLETIONS,
+  glbParser,
+  GLB_COMPLETIONS,
   detectLangFromPath,
   detectMediaTypeFromPath,
   extractSvgIntrinsicDimensions,
@@ -914,6 +959,10 @@ export {
   buildSphericalTimezoneBands,
   buildSphericalVariableWidthLinePolygon,
   initTheme,
+  syncDocumentColorSchemeFromDom,
+  syncThemeWithHostDark,
+  createAdaptiveFpsGovernor,
+  resolveHardwareQualitySeed,
   useTheme,
   getNextTheme,
   useInertialStabilizer,
@@ -987,6 +1036,7 @@ export default {
     app.component(`${cp}NanoSplitter`, NanoSplitter);
     app.component(`${cp}NanoIcon`, NanoIcon);
     app.component(`${cp}NanoColorPickerOklch`, NanoColorPickerOklch);
+    app.component(`${cp}NanoColorPicker`, NanoColorPickerOklch);
     app.component(`${cp}NuMaskedInput`, NuMaskedInput);
     app.component(`${cp}NuPinInput`, NuPinInput);
     app.component(`${cp}NanoGlobe`, NanoGlobe);
