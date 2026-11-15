@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed, watch, onMounted, onUnmounted } from 'vue';
+import { ref, computed, watch, nextTick, onMounted, onUnmounted } from 'vue';
 import {
   parseColor,
   formatHex,
@@ -11,6 +11,27 @@ import {
   getWcagContrastRatio,
 } from '../utils/colors.js';
 import { clamp, normalizeAngle } from '../utils/math.js';
+import {
+  findSafeSelectMount,
+  computeSelectDropdownLayout,
+  getPositionedReferenceEl,
+} from '../utils/selectPositioning.js';
+
+const isFn = (val) => Object.prototype.toString.call(val) === '[object Function]';
+const isNum = (val) => Object.prototype.toString.call(val) === '[object Number]' && Number.isFinite(val);
+
+const CURATED_OKLCH_PRESETS = [
+  { name: 'Indigo', l: 0.62, c: 0.19, h: 272 },
+  { name: 'Sky', l: 0.72, c: 0.15, h: 232 },
+  { name: 'Cyan', l: 0.78, c: 0.14, h: 198 },
+  { name: 'Emerald', l: 0.70, c: 0.17, h: 158 },
+  { name: 'Amber', l: 0.78, c: 0.16, h: 78 },
+  { name: 'Coral', l: 0.68, c: 0.18, h: 36 },
+  { name: 'Rose', l: 0.64, c: 0.20, h: 12 },
+  { name: 'Violet', l: 0.64, c: 0.21, h: 306 },
+  { name: 'Gold', l: 0.83, c: 0.15, h: 92 },
+  { name: 'Slate', l: 0.56, c: 0.03, h: 255 },
+];
 
 const props = defineProps({
   modelValue: {
@@ -21,6 +42,32 @@ const props = defineProps({
     type: String,
     default: 'oklch',
     validator: (v) => ['oklch', 'hex', 'rgb'].includes(v),
+  },
+  mode: {
+    type: String,
+    default: 'inline',
+    validator: (v) => ['inline', 'popover'].includes(v),
+  },
+  popover: {
+    type: Boolean,
+    default: false,
+  },
+  size: {
+    type: String,
+    default: 'md',
+    validator: (v) => ['sm', 'md', 'lg'].includes(v),
+  },
+  showValue: {
+    type: Boolean,
+    default: false,
+  },
+  showPresets: {
+    type: Boolean,
+    default: true,
+  },
+  showContrast: {
+    type: Boolean,
+    default: true,
   },
   maxChroma: {
     type: Number,
@@ -42,6 +89,18 @@ const props = defineProps({
     type: Boolean,
     default: false,
   },
+  id: {
+    type: String,
+    default: '',
+  },
+  name: {
+    type: String,
+    default: '',
+  },
+  ariaLabel: {
+    type: String,
+    default: '',
+  },
 });
 
 let oklchUidSeq = 0;
@@ -49,6 +108,9 @@ let oklchUidSeq = 0;
 const emit = defineEmits(['update:modelValue', 'update:format', 'change', 'copy']);
 
 const oklchAutoId = `nano-oklch-${++oklchUidSeq}`;
+const resolvedId = computed(() => props.id || oklchAutoId);
+const resolvedName = computed(() => props.name || resolvedId.value);
+const isPopoverMode = computed(() => props.popover || props.mode === 'popover');
 
 const activeFormat = ref(props.format || 'oklch');
 const lightness = ref(0.65);
@@ -58,9 +120,15 @@ const copied = ref(false);
 let copyTimer = null;
 let wheelRafId = 0;
 let lastEmittedModelValue = '';
+const rootRef = ref(null);
+const triggerRef = ref(null);
+const popoverPanelRef = ref(null);
 const discRef = ref(null);
 const wheelCanvasRef = ref(null);
 const isDraggingDisc = ref(false);
+const isOpen = ref(false);
+const teleportTarget = ref('body');
+const popoverStyle = ref({});
 
 const effectiveGamutMaxChroma = (lVal, hVal) => {
   const gamutCap = getMaxOklchChroma(lVal, hVal, Math.max(0.4, props.maxChroma));
@@ -104,6 +172,19 @@ const formattedValue = computed(() => {
   if (activeFormat.value === 'rgb') return rgbString.value;
   return oklchString.value;
 });
+
+const presetItems = computed(() =>
+  CURATED_OKLCH_PRESETS.map((item) => {
+    const safeC = Math.min(item.c, effectiveGamutMaxChroma(item.l, item.h));
+    const hex = formatHex({ l: item.l, c: safeC, h: item.h });
+    return {
+      ...item,
+      c: safeC,
+      hex,
+      isActive: hex.toLowerCase() === hexString.value.toLowerCase(),
+    };
+  })
+);
 
 const recommendedText = computed(() => getContrastTextColor(currentOklchObj.value, {
   light: props.lightText,
@@ -155,7 +236,7 @@ const lightnessGradient = computed(() => {
 const renderPolarWheelCanvas = () => {
   wheelRafId = 0;
   const canvas = wheelCanvasRef.value;
-  if (!canvas || typeof canvas.getContext !== 'function') return;
+  if (!canvas || !isFn(canvas.getContext)) return;
   const ctx = canvas.getContext('2d');
   if (!ctx) return;
 
@@ -171,7 +252,6 @@ const renderPolarWheelCanvas = () => {
   const radius = half - 0.5;
   const curL = clamp(lightness.value, 0, 1);
 
-  // Precompute max sRGB-displayable chroma across 360 integer hue degrees for O(1) pixel lookup
   const maxChromaLut = new Float32Array(360);
   for (let deg = 0; deg < 360; deg++) {
     maxChromaLut[deg] = effectiveGamutMaxChroma(curL, deg);
@@ -205,7 +285,7 @@ const renderPolarWheelCanvas = () => {
 };
 
 const scheduleWheelRender = () => {
-  if (typeof globalThis.requestAnimationFrame !== 'function') {
+  if (!isFn(globalThis.requestAnimationFrame)) {
     renderPolarWheelCanvas();
     return;
   }
@@ -213,12 +293,126 @@ const scheduleWheelRender = () => {
   wheelRafId = globalThis.requestAnimationFrame(renderPolarWheelCanvas);
 };
 
-onMounted(() => {
+const updatePopoverPosition = () => {
+  if (!isPopoverMode.value || !isOpen.value || !triggerRef.value || !globalThis.window) return;
+  const win = globalThis.window;
+  const { mountEl, viewportEl } = findSafeSelectMount(triggerRef.value, 368);
+  const useAncestorMount = Boolean(mountEl && mountEl.nodeType === 1);
+  teleportTarget.value = useAncestorMount ? mountEl : 'body';
+
+  const triggerRect = triggerRef.value.getBoundingClientRect();
+  const screenRect =
+    viewportEl && isFn(viewportEl.getBoundingClientRect)
+      ? viewportEl.getBoundingClientRect()
+      : {
+        top: 0,
+        left: 0,
+        right: win.innerWidth || 1024,
+        bottom: win.innerHeight || 768,
+        width: win.innerWidth || 1024,
+        height: win.innerHeight || 768,
+      };
+
+  const refEl = useAncestorMount ? getPositionedReferenceEl(mountEl) : null;
+  const refRect = refEl && isFn(refEl.getBoundingClientRect)
+    ? refEl.getBoundingClientRect()
+    : { top: 0, left: 0 };
+  const scrollLeft = useAncestorMount && refEl ? (refEl.scrollLeft || 0) : 0;
+  const scrollTop = useAncestorMount && refEl ? (refEl.scrollTop || 0) : 0;
+
+  const actualH = popoverPanelRef.value?.offsetHeight || 346;
+  const panelWidth = Math.min(348, Math.max(296, (screenRect.width || 360) - 16));
+  const layout = computeSelectDropdownLayout({
+    triggerRect,
+    screenRect,
+    mountRect: refRect,
+    mountScrollLeft: scrollLeft,
+    mountScrollTop: scrollTop,
+    searchable: false,
+    optionsCount: 8,
+    maxDropdownHeight: actualH,
+    actualDropdownHeight: actualH,
+    actualChromeHeight: 0,
+    optionsScrollHeight: actualH,
+    gap: 6,
+    edgeMargin: 8,
+  });
+
+  const maxLeft = useAncestorMount
+    ? Math.max(8, (screenRect.width || 1024) - panelWidth - 8)
+    : Math.max(8, (win.innerWidth || 1024) - panelWidth - 8);
+  const clampedLeft = Math.min(maxLeft, Math.max(8, Math.round(Number(layout.left) || 0)));
+
+  popoverStyle.value = {
+    position: useAncestorMount ? 'absolute' : 'fixed',
+    top: `${Math.round(Number(layout.top) || 0)}px`,
+    left: `${clampedLeft}px`,
+    width: `${panelWidth}px`,
+    zIndex: 10055,
+  };
+};
+
+const openPopover = async () => {
+  if (props.disabled || !isPopoverMode.value) return;
+  isOpen.value = true;
+  await nextTick();
+  updatePopoverPosition();
   renderPolarWheelCanvas();
+};
+
+const closePopover = () => {
+  isOpen.value = false;
+};
+
+const togglePopover = () => {
+  if (isOpen.value) {
+    closePopover();
+  } else {
+    openPopover();
+  }
+};
+
+const handleOutsidePointerDown = (event) => {
+  if (!isPopoverMode.value || !isOpen.value) return;
+  const target = event.target;
+  if (rootRef.value && rootRef.value.contains(target)) return;
+  if (popoverPanelRef.value && popoverPanelRef.value.contains(target)) return;
+  closePopover();
+};
+
+const handleWindowKeyDown = (event) => {
+  if (!isPopoverMode.value || !isOpen.value) return;
+  if (event.key === 'Escape') {
+    event.stopPropagation();
+    event.preventDefault();
+    closePopover();
+  }
+};
+
+onMounted(() => {
+  if (!isPopoverMode.value) {
+    renderPolarWheelCanvas();
+  }
+  if (globalThis.window) {
+    globalThis.window.addEventListener('pointerdown', handleOutsidePointerDown, true);
+    globalThis.window.addEventListener('keydown', handleWindowKeyDown, true);
+    globalThis.window.addEventListener('resize', updatePopoverPosition);
+    globalThis.window.addEventListener('scroll', updatePopoverPosition, true);
+  }
 });
 
 watch(() => [lightness.value, props.maxChroma], () => {
-  scheduleWheelRender();
+  if (!isPopoverMode.value || isOpen.value) {
+    scheduleWheelRender();
+  }
+});
+
+watch(isPopoverMode, async (nextPopover) => {
+  if (!nextPopover) {
+    isOpen.value = false;
+    await nextTick();
+    renderPolarWheelCanvas();
+  }
 });
 
 const emitUpdate = () => {
@@ -237,6 +431,14 @@ const emitUpdate = () => {
     wcagLight: wcagLightRatio.value,
     wcagDark: wcagDarkRatio.value,
   });
+};
+
+const selectPreset = (preset) => {
+  if (props.disabled) return;
+  lightness.value = clamp(preset.l, 0, 1);
+  hue.value = normalizeAngle(preset.h);
+  chroma.value = clamp(preset.c, 0, effectiveGamutMaxChroma(lightness.value, hue.value));
+  emitUpdate();
 };
 
 const updateFromPointer = (event) => {
@@ -345,7 +547,7 @@ const onTextChange = (event) => {
 const copyValue = async () => {
   const text = formattedValue.value;
   try {
-    if (globalThis.navigator && globalThis.navigator.clipboard && globalThis.navigator.clipboard.writeText) {
+    if (globalThis.navigator?.clipboard?.writeText) {
       await globalThis.navigator.clipboard.writeText(text);
     }
     copied.value = true;
@@ -365,22 +567,33 @@ onUnmounted(() => {
     clearTimeout(copyTimer);
     copyTimer = null;
   }
-  if (wheelRafId && typeof globalThis.cancelAnimationFrame === 'function') {
+  if (wheelRafId && isFn(globalThis.cancelAnimationFrame)) {
     globalThis.cancelAnimationFrame(wheelRafId);
     wheelRafId = 0;
   }
+  if (globalThis.window) {
+    globalThis.window.removeEventListener('pointerdown', handleOutsidePointerDown, true);
+    globalThis.window.removeEventListener('keydown', handleWindowKeyDown, true);
+    globalThis.window.removeEventListener('resize', updatePopoverPosition);
+    globalThis.window.removeEventListener('scroll', updatePopoverPosition, true);
+  }
 });
+
 const setOklch = (l, c, h) => {
   if (props.disabled) return;
-  if (typeof l === 'number') lightness.value = clamp(l, 0, 1);
-  if (typeof c === 'number') chroma.value = clamp(c, 0, props.maxChroma);
-  if (typeof h === 'number') hue.value = normalizeAngle(h);
+  if (isNum(l)) lightness.value = clamp(l, 0, 1);
+  if (isNum(c)) chroma.value = clamp(c, 0, props.maxChroma);
+  if (isNum(h)) hue.value = normalizeAngle(h);
   emitUpdate();
 };
 
 defineExpose({
   copyValue,
   setOklch,
+  openPopover,
+  closePopover,
+  togglePopover,
+  isOpen,
   lightness,
   chroma,
   hue,
@@ -392,132 +605,439 @@ defineExpose({
 </script>
 
 <template>
-  <div class="nano-oklch-picker" :class="{ 'is-disabled': disabled }">
-    <div class="nano-oklch-top">
-      <!-- Hue & Chroma Disc -->
-      <div
-        ref="discRef"
-        class="nano-oklch-disc"
-        role="slider"
-        tabindex="0"
-        aria-label="Hue and Chroma selector"
-        :aria-valuenow="Math.round(hue)"
-        aria-valuemin="0"
-        aria-valuemax="360"
-        @pointerdown="onDiscPointerDown"
-        @pointermove="onDiscPointerMove"
-        @pointerup="onDiscPointerUp"
-        @pointercancel="onDiscPointerUp"
-        @keydown="onDiscKeyDown"
+  <div
+    ref="rootRef"
+    class="nano-oklch-host"
+    :class="{
+      'is-popover-host': isPopoverMode,
+      'is-disabled': disabled,
+    }"
+  >
+    <!-- Compact Swatch Trigger (Popover Mode — replaces native input[type=color]) -->
+    <button
+      v-if="isPopoverMode"
+      :id="resolvedId"
+      ref="triggerRef"
+      :name="resolvedName"
+      type="button"
+      class="nano-oklch-swatch-trigger"
+      :class="[
+        `is-${size}`,
+        { 'has-value-label': showValue, 'is-open': isOpen, 'is-disabled': disabled }
+      ]"
+      :disabled="disabled"
+      :aria-expanded="isOpen"
+      :aria-label="ariaLabel || `Select color (${formattedValue})`"
+      @click="togglePopover"
+    >
+      <span class="nano-oklch-swatch-chip" :style="{ backgroundColor: hexString }"></span>
+      <span v-if="showValue" class="nano-oklch-swatch-code">{{ formattedValue }}</span>
+      <svg
+        v-if="showValue"
+        class="nano-oklch-swatch-chevron"
+        viewBox="0 0 12 12"
+        width="11"
+        height="11"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="1.8"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        aria-hidden="true"
       >
-        <div class="nano-oklch-disc-wheel">
-          <canvas ref="wheelCanvasRef" class="nano-oklch-disc-canvas" aria-hidden="true"></canvas>
-        </div>
-        <div class="nano-oklch-disc-marker" :style="markerStyle"></div>
-      </div>
+        <polyline points="2.5 4.5 6 8 9.5 4.5" />
+      </svg>
+    </button>
 
-      <!-- Live Contrast Preview Card -->
+    <!-- Teleported Floating Panel (Popover Mode) -->
+    <Teleport v-if="isPopoverMode" :to="teleportTarget">
       <div
-        class="nano-oklch-preview"
-        :class="isLightRecommended ? 'is-light-recommended' : 'is-dark-recommended'"
-        :style="{ backgroundColor: hexString, color: recommendedText }"
+        v-if="isOpen"
+        ref="popoverPanelRef"
+        class="nano-oklch-picker is-floating"
+        :class="{ 'is-disabled': disabled }"
+        :style="popoverStyle"
+        role="dialog"
+        aria-modal="false"
+        :aria-label="ariaLabel || 'OKLCH Color Picker'"
       >
-        <div class="nano-oklch-preview-header">
-          <span class="nano-oklch-preview-title">Live Contrast</span>
-          <span class="nano-oklch-recommended-pill">
-            {{ isLightRecommended ? 'Light' : 'Dark' }}
-          </span>
+        <div class="nano-oklch-top" :class="{ 'is-single-col': !showContrast }">
+          <div
+            ref="discRef"
+            class="nano-oklch-disc"
+            role="slider"
+            tabindex="0"
+            aria-label="Hue and Chroma selector"
+            :aria-valuenow="Math.round(hue)"
+            aria-valuemin="0"
+            aria-valuemax="360"
+            @pointerdown="onDiscPointerDown"
+            @pointermove="onDiscPointerMove"
+            @pointerup="onDiscPointerUp"
+            @pointercancel="onDiscPointerUp"
+            @keydown="onDiscKeyDown"
+          >
+            <div class="nano-oklch-disc-wheel">
+              <canvas ref="wheelCanvasRef" class="nano-oklch-disc-canvas" aria-hidden="true"></canvas>
+            </div>
+            <div class="nano-oklch-disc-marker" :style="markerStyle"></div>
+          </div>
+
+          <div
+            v-if="showContrast"
+            class="nano-oklch-preview"
+            :class="isLightRecommended ? 'is-light-recommended' : 'is-dark-recommended'"
+            :style="{ backgroundColor: hexString, color: recommendedText }"
+          >
+            <div class="nano-oklch-preview-header">
+              <span class="nano-oklch-preview-title">Live Contrast</span>
+              <span class="nano-oklch-recommended-pill">
+                {{ isLightRecommended ? 'Light' : 'Dark' }}
+              </span>
+            </div>
+
+            <div class="nano-oklch-samples">
+              <div
+                class="nano-oklch-sample-row is-dark-sample"
+                :class="{ 'is-optimal': !isLightRecommended }"
+                :style="{ color: darkText }"
+              >
+                <span class="sample-label">Dark Aa</span>
+                <span class="sample-ratio">{{ wcagDarkRatio.toFixed(1) }}:1 · {{ darkBadge }}</span>
+              </div>
+              <div
+                class="nano-oklch-sample-row is-light-sample"
+                :class="{ 'is-optimal': isLightRecommended }"
+                :style="{ color: lightText }"
+              >
+                <span class="sample-label">Light Aa</span>
+                <span class="sample-ratio">{{ wcagLightRatio.toFixed(1) }}:1 · {{ lightBadge }}</span>
+              </div>
+            </div>
+          </div>
         </div>
 
-        <div class="nano-oklch-samples">
-          <div
-            class="nano-oklch-sample-row is-dark-sample"
-            :class="{ 'is-optimal': !isLightRecommended }"
-            :style="{ color: darkText }"
-          >
-            <span class="sample-label">Dark Aa</span>
-            <span class="sample-ratio">{{ wcagDarkRatio.toFixed(1) }}:1 · {{ darkBadge }}</span>
+        <div class="nano-oklch-slider-block">
+          <div class="nano-oklch-slider-meta">
+            <span class="slider-label">Perceptual Lightness (L)</span>
+            <span class="slider-val">{{ Math.round(lightness * 100) }}%</span>
           </div>
-          <div
-            class="nano-oklch-sample-row is-light-sample"
-            :class="{ 'is-optimal': isLightRecommended }"
-            :style="{ color: lightText }"
-          >
-            <span class="sample-label">Light Aa</span>
-            <span class="sample-ratio">{{ wcagLightRatio.toFixed(1) }}:1 · {{ lightBadge }}</span>
+          <div class="nano-oklch-slider-track" :style="{ backgroundImage: lightnessGradient }">
+            <input
+              :id="`${resolvedId}-lightness`"
+              :name="`${resolvedName}-lightness`"
+              type="range"
+              class="nano-oklch-range"
+              min="0"
+              max="100"
+              step="0.5"
+              :value="Number((lightness * 100).toFixed(1))"
+              :disabled="disabled"
+              aria-label="Perceptual Lightness"
+              @input="onLightnessInput"
+            />
+          </div>
+        </div>
+
+        <div v-if="showPresets" class="nano-oklch-presets" role="group" aria-label="Perceptual color presets">
+          <button
+            v-for="preset in presetItems"
+            :key="preset.name"
+            type="button"
+            class="nano-oklch-preset-swatch"
+            :class="{ 'is-active': preset.isActive }"
+            :style="{ backgroundColor: preset.hex }"
+            :aria-label="`${preset.name} (${preset.hex})`"
+            :disabled="disabled"
+            @click="selectPreset(preset)"
+          ></button>
+        </div>
+
+        <div class="nano-oklch-controls">
+          <div class="nano-oklch-formats" role="tablist" aria-label="Color format">
+            <button
+              v-for="fmt in ['oklch', 'hex', 'rgb']"
+              :key="fmt"
+              type="button"
+              role="tab"
+              class="nano-oklch-format-btn"
+              :class="{ 'is-active': activeFormat === fmt }"
+              :aria-selected="activeFormat === fmt"
+              :disabled="disabled"
+              @click="setFormat(fmt)"
+            >
+              {{ fmt.toUpperCase() }}
+            </button>
+          </div>
+
+          <div class="nano-oklch-input-row">
+            <input
+              :id="`${resolvedId}-value`"
+              :name="`${resolvedName}-value`"
+              type="text"
+              class="nano-oklch-value-input"
+              :value="formattedValue"
+              :disabled="disabled"
+              aria-label="Formatted color value"
+              spellcheck="false"
+              @change="onTextChange"
+            />
+            <button
+              type="button"
+              class="nano-oklch-copy-btn"
+              :disabled="disabled"
+              aria-label="Copy color value"
+              @click="copyValue"
+            >
+              {{ copied ? 'Copied' : 'Copy' }}
+            </button>
           </div>
         </div>
       </div>
-    </div>
+    </Teleport>
 
-    <!-- Perceptual Lightness Slider (L) -->
-    <div class="nano-oklch-slider-block">
-      <div class="nano-oklch-slider-meta">
-        <span class="slider-label">Perceptual Lightness (L)</span>
-        <span class="slider-val">{{ Math.round(lightness * 100) }}%</span>
-      </div>
-      <div class="nano-oklch-slider-track" :style="{ backgroundImage: lightnessGradient }">
-        <input
-          :id="`${oklchAutoId}-lightness`"
-          :name="`${oklchAutoId}-lightness`"
-          type="range"
-          class="nano-oklch-range"
-          min="0"
-          max="100"
-          step="0.5"
-          :value="Number((lightness * 100).toFixed(1))"
-          :disabled="disabled"
-          aria-label="Perceptual Lightness"
-          @input="onLightnessInput"
-        />
-      </div>
-    </div>
-
-    <!-- Format Switcher & Value Copy Bar (CLS = 0) -->
-    <div class="nano-oklch-controls">
-      <div class="nano-oklch-formats" role="tablist" aria-label="Color format">
-        <button
-          v-for="fmt in ['oklch', 'hex', 'rgb']"
-          :key="fmt"
-          type="button"
-          role="tab"
-          class="nano-oklch-format-btn"
-          :class="{ 'is-active': activeFormat === fmt }"
-          :aria-selected="activeFormat === fmt"
-          :disabled="disabled"
-          @click="setFormat(fmt)"
+    <!-- Full Inline Studio Card (Default Mode) -->
+    <div v-else class="nano-oklch-picker" :class="{ 'is-disabled': disabled }">
+      <div class="nano-oklch-top" :class="{ 'is-single-col': !showContrast }">
+        <!-- Hue & Chroma Disc -->
+        <div
+          ref="discRef"
+          class="nano-oklch-disc"
+          role="slider"
+          tabindex="0"
+          aria-label="Hue and Chroma selector"
+          :aria-valuenow="Math.round(hue)"
+          aria-valuemin="0"
+          aria-valuemax="360"
+          @pointerdown="onDiscPointerDown"
+          @pointermove="onDiscPointerMove"
+          @pointerup="onDiscPointerUp"
+          @pointercancel="onDiscPointerUp"
+          @keydown="onDiscKeyDown"
         >
-          {{ fmt.toUpperCase() }}
-        </button>
+          <div class="nano-oklch-disc-wheel">
+            <canvas ref="wheelCanvasRef" class="nano-oklch-disc-canvas" aria-hidden="true"></canvas>
+          </div>
+          <div class="nano-oklch-disc-marker" :style="markerStyle"></div>
+        </div>
+
+        <!-- Live Contrast Preview Card -->
+        <div
+          v-if="showContrast"
+          class="nano-oklch-preview"
+          :class="isLightRecommended ? 'is-light-recommended' : 'is-dark-recommended'"
+          :style="{ backgroundColor: hexString, color: recommendedText }"
+        >
+          <div class="nano-oklch-preview-header">
+            <span class="nano-oklch-preview-title">Live Contrast</span>
+            <span class="nano-oklch-recommended-pill">
+              {{ isLightRecommended ? 'Light' : 'Dark' }}
+            </span>
+          </div>
+
+          <div class="nano-oklch-samples">
+            <div
+              class="nano-oklch-sample-row is-dark-sample"
+              :class="{ 'is-optimal': !isLightRecommended }"
+              :style="{ color: darkText }"
+            >
+              <span class="sample-label">Dark Aa</span>
+              <span class="sample-ratio">{{ wcagDarkRatio.toFixed(1) }}:1 · {{ darkBadge }}</span>
+            </div>
+            <div
+              class="nano-oklch-sample-row is-light-sample"
+              :class="{ 'is-optimal': isLightRecommended }"
+              :style="{ color: lightText }"
+            >
+              <span class="sample-label">Light Aa</span>
+              <span class="sample-ratio">{{ wcagLightRatio.toFixed(1) }}:1 · {{ lightBadge }}</span>
+            </div>
+          </div>
+        </div>
       </div>
 
-      <div class="nano-oklch-input-row">
-        <input
-          :id="`${oklchAutoId}-value`"
-          :name="`${oklchAutoId}-value`"
-          type="text"
-          class="nano-oklch-value-input"
-          :value="formattedValue"
-          :disabled="disabled"
-          aria-label="Formatted color value"
-          spellcheck="false"
-          @change="onTextChange"
-        />
+      <!-- Perceptual Lightness Slider (L) -->
+      <div class="nano-oklch-slider-block">
+        <div class="nano-oklch-slider-meta">
+          <span class="slider-label">Perceptual Lightness (L)</span>
+          <span class="slider-val">{{ Math.round(lightness * 100) }}%</span>
+        </div>
+        <div class="nano-oklch-slider-track" :style="{ backgroundImage: lightnessGradient }">
+          <input
+            :id="`${resolvedId}-lightness`"
+            :name="`${resolvedName}-lightness`"
+            type="range"
+            class="nano-oklch-range"
+            min="0"
+            max="100"
+            step="0.5"
+            :value="Number((lightness * 100).toFixed(1))"
+            :disabled="disabled"
+            aria-label="Perceptual Lightness"
+            @input="onLightnessInput"
+          />
+        </div>
+      </div>
+
+      <!-- Curated Perceptual Swatch Presets -->
+      <div v-if="showPresets" class="nano-oklch-presets" role="group" aria-label="Perceptual color presets">
         <button
+          v-for="preset in presetItems"
+          :key="preset.name"
           type="button"
-          class="nano-oklch-copy-btn"
+          class="nano-oklch-preset-swatch"
+          :class="{ 'is-active': preset.isActive }"
+          :style="{ backgroundColor: preset.hex }"
+          :aria-label="`${preset.name} (${preset.hex})`"
           :disabled="disabled"
-          aria-label="Copy color value"
-          @click="copyValue"
-        >
-          {{ copied ? 'Copied' : 'Copy' }}
-        </button>
+          @click="selectPreset(preset)"
+        ></button>
+      </div>
+
+      <!-- Format Switcher & Value Copy Bar (CLS = 0) -->
+      <div class="nano-oklch-controls">
+        <div class="nano-oklch-formats" role="tablist" aria-label="Color format">
+          <button
+            v-for="fmt in ['oklch', 'hex', 'rgb']"
+            :key="fmt"
+            type="button"
+            role="tab"
+            class="nano-oklch-format-btn"
+            :class="{ 'is-active': activeFormat === fmt }"
+            :aria-selected="activeFormat === fmt"
+            :disabled="disabled"
+            @click="setFormat(fmt)"
+          >
+            {{ fmt.toUpperCase() }}
+          </button>
+        </div>
+
+        <div class="nano-oklch-input-row">
+          <input
+            :id="`${resolvedId}-value`"
+            :name="`${resolvedName}-value`"
+            type="text"
+            class="nano-oklch-value-input"
+            :value="formattedValue"
+            :disabled="disabled"
+            aria-label="Formatted color value"
+            spellcheck="false"
+            @change="onTextChange"
+          />
+          <button
+            type="button"
+            class="nano-oklch-copy-btn"
+            :disabled="disabled"
+            aria-label="Copy color value"
+            @click="copyValue"
+          >
+            {{ copied ? 'Copied' : 'Copy' }}
+          </button>
+        </div>
       </div>
     </div>
   </div>
 </template>
 
 <style scoped>
+.nano-oklch-host {
+  display: inline-flex;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+.nano-oklch-host:not(.is-popover-host) {
+  display: flex;
+  width: 100%;
+  max-width: 360px;
+}
+
+.nano-oklch-swatch-trigger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 3px;
+  border-radius: var(--nano-radius-sm, 7px);
+  border: 1px solid var(--nano-border-card, rgba(255, 255, 255, 0.2));
+  background: var(--nano-bg-card, rgba(255, 255, 255, 0.05));
+  color: var(--nano-text-main, #f8fafc);
+  cursor: pointer;
+  outline: none;
+  box-sizing: border-box;
+  flex-shrink: 0;
+  user-select: none;
+  -webkit-user-select: none;
+  transition: border-color 140ms ease, box-shadow 140ms ease, background-color 140ms ease;
+}
+
+.nano-oklch-swatch-trigger.is-sm {
+  height: 32px;
+  min-width: 32px;
+}
+
+.nano-oklch-swatch-trigger.is-md {
+  height: 36px;
+  min-width: 36px;
+}
+
+.nano-oklch-swatch-trigger.is-lg {
+  height: 40px;
+  min-width: 40px;
+}
+
+.nano-oklch-swatch-trigger.has-value-label {
+  padding: 0 0.65rem 0 0.35rem;
+}
+
+.nano-oklch-swatch-trigger:hover:not(.is-disabled) {
+  border-color: var(--nano-border-hover, rgba(255, 255, 255, 0.42));
+  background: var(--nano-bg-hover, rgba(255, 255, 255, 0.08));
+}
+
+.nano-oklch-swatch-trigger.is-open,
+.nano-oklch-swatch-trigger:focus-visible {
+  border-color: var(--nano-state-active, #38bdf8);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--nano-state-active, #38bdf8) 28%, transparent);
+}
+
+.nano-oklch-swatch-trigger.is-disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.nano-oklch-swatch-chip {
+  width: 22px;
+  height: 22px;
+  border-radius: 5px;
+  border: 1px solid rgba(255, 255, 255, 0.24);
+  box-shadow: inset 0 0 0 1px rgba(15, 23, 42, 0.24);
+  flex-shrink: 0;
+}
+
+.nano-oklch-swatch-trigger.is-md .nano-oklch-swatch-chip {
+  width: 24px;
+  height: 24px;
+}
+
+.nano-oklch-swatch-trigger.is-lg .nano-oklch-swatch-chip {
+  width: 28px;
+  height: 28px;
+}
+
+.nano-oklch-swatch-code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 0.76rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.nano-oklch-swatch-chevron {
+  opacity: 0.68;
+  flex-shrink: 0;
+}
+
 .nano-oklch-picker,
 .nano-oklch-picker *,
 .nano-oklch-picker *::before,
@@ -528,17 +1048,24 @@ defineExpose({
 .nano-oklch-picker {
   display: flex;
   flex-direction: column;
-  gap: 0.875rem;
+  gap: 0.78rem;
   width: 100%;
   max-width: 360px;
-  padding: 1rem;
+  padding: 0.95rem;
   border-radius: var(--nano-radius-lg, 12px);
-  background: var(--nano-bg-card, rgba(255, 255, 255, 0.05));
+  background: var(--nano-bg-card, rgba(15, 23, 42, 0.94));
   border: 1px solid var(--nano-border-card, rgba(255, 255, 255, 0.15));
   color: var(--nano-text-main, #f8fafc);
   forced-color-adjust: none;
   user-select: none;
   -webkit-user-select: none;
+}
+
+.nano-oklch-picker.is-floating {
+  background: var(--nano-bg-card-elevated, var(--nano-bg-card, #0f172a));
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+  box-shadow: var(--nano-shadow-popover, 0 18px 42px rgba(2, 6, 23, 0.45));
 }
 
 .nano-oklch-picker.is-disabled {
@@ -551,6 +1078,11 @@ defineExpose({
   grid-template-columns: 128px 1fr;
   gap: 0.875rem;
   align-items: stretch;
+}
+
+.nano-oklch-top.is-single-col {
+  grid-template-columns: 1fr;
+  justify-items: center;
 }
 
 .nano-oklch-disc {
@@ -612,7 +1144,7 @@ defineExpose({
   display: flex;
   flex-direction: column;
   justify-content: space-between;
-  padding: 0.75rem;
+  padding: 0.72rem;
   border-radius: var(--nano-radius-md, 8px);
   border: 1px solid var(--nano-border-card, rgba(255, 255, 255, 0.15));
   min-height: 128px;
@@ -628,7 +1160,7 @@ defineExpose({
 }
 
 .nano-oklch-preview-title {
-  font-size: 0.76rem;
+  font-size: 0.74rem;
   font-weight: 700;
   letter-spacing: 0.04em;
   text-transform: uppercase;
@@ -671,7 +1203,7 @@ defineExpose({
   justify-content: space-between;
   padding: 0.28rem 0.5rem;
   border-radius: 6px;
-  font-size: 0.78rem;
+  font-size: 0.76rem;
   font-weight: 700;
   font-variant-numeric: tabular-nums;
   border: 1.5px solid transparent;
@@ -710,7 +1242,7 @@ defineExpose({
 .nano-oklch-slider-block {
   display: flex;
   flex-direction: column;
-  gap: 0.42rem;
+  gap: 0.4rem;
 }
 
 .nano-oklch-slider-meta {
@@ -767,11 +1299,11 @@ defineExpose({
   border: 2px solid #0f172a;
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.55), 0 0 0 1px rgba(255, 255, 255, 0.85);
   cursor: grab;
-  transition: transform 100ms ease, box-shadow 100ms ease;
+  transition: box-shadow 120ms ease;
 }
 
 .nano-oklch-range::-webkit-slider-thumb:hover {
-  transform: scale(1.1);
+  box-shadow: 0 1px 6px rgba(0, 0, 0, 0.65), 0 0 0 3px rgba(56, 189, 248, 0.35);
 }
 
 .nano-oklch-range::-moz-range-thumb {
@@ -782,13 +1314,43 @@ defineExpose({
   border: 2px solid #0f172a;
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.55), 0 0 0 1px rgba(255, 255, 255, 0.85);
   cursor: grab;
-  transition: transform 100ms ease, box-shadow 100ms ease;
+  transition: box-shadow 120ms ease;
+}
+
+.nano-oklch-presets {
+  display: grid;
+  grid-template-columns: repeat(10, 1fr);
+  gap: 0.35rem;
+  align-items: center;
+}
+
+.nano-oklch-preset-swatch {
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  min-height: 22px;
+  padding: 0;
+  border-radius: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  box-shadow: inset 0 0 0 1px rgba(15, 23, 42, 0.22);
+  cursor: pointer;
+  outline: none;
+  transition: border-color 120ms ease, box-shadow 120ms ease;
+}
+
+.nano-oklch-preset-swatch:hover:not(:disabled) {
+  border-color: #ffffff;
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.28);
+}
+
+.nano-oklch-preset-swatch.is-active {
+  border-color: #ffffff;
+  box-shadow: 0 0 0 2px var(--nano-state-active, #38bdf8);
 }
 
 .nano-oklch-controls {
   display: flex;
   flex-direction: column;
-  gap: 0.55rem;
+  gap: 0.52rem;
 }
 
 .nano-oklch-formats {
@@ -818,7 +1380,7 @@ defineExpose({
 
 .nano-oklch-format-btn:hover:not(.is-active) {
   color: var(--nano-text-main, #f8fafc);
-  background: rgba(255, 255, 255, 0.04);
+  background: rgba(255, 255, 255, 0.05);
 }
 
 .nano-oklch-format-btn.is-active {
@@ -874,15 +1436,11 @@ defineExpose({
   letter-spacing: 0.02em;
   cursor: pointer;
   outline: none;
-  transition: border-color 120ms ease, background-color 120ms ease, transform 80ms ease;
+  transition: border-color 120ms ease, background-color 120ms ease;
 }
 
 .nano-oklch-copy-btn:hover {
   background: rgba(255, 255, 255, 0.14);
   border-color: var(--nano-border-hover, rgba(255, 255, 255, 0.36));
-}
-
-.nano-oklch-copy-btn:active {
-  transform: translateY(1px);
 }
 </style>
