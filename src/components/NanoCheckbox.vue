@@ -159,7 +159,10 @@ const toggle = (event) => {
 }
 
 [data-theme="light"] .nano-checkbox,
-.light .nano-checkbox {
+[data-theme="light"].nano-checkbox,
+.light .nano-checkbox,
+.theme-light .nano-checkbox,
+.modal-light .nano-checkbox {
   color: var(--nano-text-main, #0f172a);
 }
 
@@ -192,7 +195,10 @@ const toggle = (event) => {
 }
 
 [data-theme="light"] .nano-checkbox-box,
-.light .nano-checkbox-box {
+[data-theme="light"].nano-checkbox .nano-checkbox-box,
+.light .nano-checkbox-box,
+.theme-light .nano-checkbox-box,
+.modal-light .nano-checkbox-box {
   background: #ffffff;
   border-color: #94a3b8;
   box-shadow: inset 0 1px 2px rgba(15, 23, 42, 0.06);
