@@ -20,7 +20,7 @@ import {
   compileNsdPreview,
   extractEmbeddedNsdSnippets,
 } from '../utils/nsd-preview.js';
-import { NANOSOUND_COMPLETIONS, GLSL_COMPLETIONS, BLENDER_COMPLETIONS } from '../parsers/index.js';
+import { NANOSOUND_COMPLETIONS, GLSL_COMPLETIONS, BLENDER_COMPLETIONS, GLB_COMPLETIONS } from '../parsers/index.js';
 import { tooltipDirective as vTooltip } from '../directives/tooltip.js';
 import {
   getScopedStorageController,
@@ -971,6 +971,12 @@ const BLENDER_LANG_IDS = new Set([
   'bmesh',
 ]);
 
+const GLB_LANG_IDS = new Set([
+  'glb',
+  'gltf',
+  'gltf-binary',
+]);
+
 const effectiveCompletions = computed(() => {
   if (Array.isArray(props.completions)) return props.completions;
   if (resolvedLang.value === 'nanosound' || resolvedLang.value === 'nsd' || resolvedLang.value === 'sound') {
@@ -981,6 +987,9 @@ const effectiveCompletions = computed(() => {
   }
   if (BLENDER_LANG_IDS.has(resolvedLang.value)) {
     return BLENDER_COMPLETIONS;
+  }
+  if (GLB_LANG_IDS.has(resolvedLang.value)) {
+    return GLB_COMPLETIONS;
   }
   return [];
 });
