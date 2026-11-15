@@ -10,6 +10,8 @@ import {
   pickHeaderTierCandidate,
   pickAdaptiveHeaderLabel,
   normalizeHeaderSpread,
+  parseFloatingHorizontalInsetPx,
+  computeMutatingHeaderWidths,
   parseFloatingVerticalMargins,
   computeHeaderCompressionMeta,
 } from '../../src/utils/mutatingHeader.js';
@@ -126,5 +128,60 @@ describe('MutatingHeader — Symmetric Centering, Inner Spread & Priority+ Compr
     assert.ok(sfc.includes('margin-right: auto;'));
     assert.ok(sfc.includes(':data-compression-level="headerMeta.compressionLevel"'));
     assert.ok(sfc.includes(':meta="headerMeta"'));
+    assert.ok(sfc.includes('var(--floating-margin-top, 12px)'));
+  });
+
+  test('computeMutatingHeaderWidths should guarantee 0.00px inner/logo horizontal shift across all viewports when spread === 0', () => {
+    assert.equal(parseFloatingHorizontalInsetPx('calc(100% - 48px)', 1200), 48);
+    assert.equal(parseFloatingHorizontalInsetPx('calc(100% - 2rem)', 1000, 16), 32);
+    assert.equal(parseFloatingHorizontalInsetPx('calc(100% - 2.5rem)', 1000, 16), 40);
+    assert.equal(parseFloatingHorizontalInsetPx('100%', 1000), 0);
+
+    for (const parentWidth of [375, 768, 1000, 1160, 1192, 1440, 2560]) {
+      for (const floatingWidth of ['calc(100% - 2rem)', 'calc(100% - 48px)', 'calc(100% - 2.5rem)']) {
+        for (const floatingMaxWidth of ['1160px', 1240, '100%']) {
+          const geom = computeMutatingHeaderWidths({
+            parentWidth,
+            floatingWidth,
+            floatingMaxWidth,
+            spreadPercent: 0,
+            horizontalChromePx: 42,
+          });
+          assert.equal(
+            geom.innerFloatingMaxPx,
+            geom.innerStuckMaxPx,
+            `Expected 0px inner width delta at parentWidth=${parentWidth}, floatingWidth=${floatingWidth}, floatingMaxWidth=${floatingMaxWidth}`
+          );
+
+          // Verify logo X stability across ALL intermediate transition frames t in [0, 1]
+          const logoXFloat =
+            (parentWidth - geom.floatingOuterMaxPx) / 2 +
+            21 +
+            (geom.floatingOuterMaxPx - 42 - geom.innerFloatingMaxPx) / 2;
+          for (const t of [0, 0.25, 0.5, 0.75, 1]) {
+            const outerW =
+              geom.floatingOuterMaxPx + t * (geom.stuckOuterMaxPx - geom.floatingOuterMaxPx);
+            const innerAvailW = outerW - 42;
+            const renderedInnerW = Math.min(innerAvailW, geom.innerStuckMaxPx);
+            const logoXT = (parentWidth - outerW) / 2 + 21 + (innerAvailW - renderedInnerW) / 2;
+            assert.ok(
+              Math.abs(logoXT - logoXFloat) < 1e-9,
+              `Logo X drifted at t=${t}, parentWidth=${parentWidth}: ${logoXT} vs ${logoXFloat}`
+            );
+          }
+        }
+      }
+    }
+
+    // Verify spread > 0 still expands smoothly when parentWidth > floatingOuterMaxPx
+    const spread50 = computeMutatingHeaderWidths({
+      parentWidth: 1440,
+      floatingWidth: 'calc(100% - 48px)',
+      floatingMaxWidth: '1160px',
+      spreadPercent: 50,
+    });
+    assert.equal(spread50.floatingOuterMaxPx, 1160);
+    assert.equal(spread50.innerFloatingMaxPx, 1118);
+    assert.equal(spread50.innerStuckMaxPx, 1258);
   });
 });

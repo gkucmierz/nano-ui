@@ -87,9 +87,9 @@ describe('MutatingHeader Component Architecture & Docked Border Radius', () => {
       assert.match(styleContent, /border-radius:\s*var\(--stuck-radius,\s*11px\s+11px\s+0\s+0\);/);
     });
 
-    test('should support container-level margin override via var(--stuck-margin, 0)', () => {
+    test('should support container-level margin override via var(--stuck-margin) while preserving CLS = 0 vertical flow', () => {
       const styleContent = descriptor.styles.map(s => s.content).join('\n');
-      assert.match(styleContent, /margin:\s*var\(--stuck-margin,\s*0\);/);
+      assert.match(styleContent, /margin-top:\s*var\(--stuck-margin,\s*var\(--floating-margin-top,\s*12px\)\);/);
     });
   });
 });
