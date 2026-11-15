@@ -25,9 +25,21 @@ export function resolveOptimalHeaderTier(paramsOrWidth = {}, maybeOptions = {}) 
     paramsOrWidth !== null &&
     Object.prototype.toString.call(paramsOrWidth) === '[object Object]';
   const opts = isObjArg ? paramsOrWidth : maybeOptions || {};
-  const containerWidth = isObjArg ? opts.containerWidth ?? 1200 : paramsOrWidth;
-  const rawTierWidths = opts.tierRequiredWidths ?? opts.requiredWidths ?? DEFAULT_HEADER_TIER_WIDTHS;
-  const safetyGapPx = opts.safetyGapPx ?? 24;
+  const containerWidth = isObjArg
+    ? (opts.containerWidth ?? opts.availableWidth ?? 1200)
+    : paramsOrWidth;
+  const legacyMinWidths =
+    Number.isFinite(opts.fullMinWidth) && Number.isFinite(opts.midMinWidth)
+      ? [
+        opts.fullMinWidth,
+        opts.midMinWidth,
+        ...(Number.isFinite(opts.compactMinWidth) ? [opts.compactMinWidth] : []),
+        0,
+      ]
+      : null;
+  const rawTierWidths =
+    opts.tierRequiredWidths ?? opts.requiredWidths ?? legacyMinWidths ?? DEFAULT_HEADER_TIER_WIDTHS;
+  const safetyGapPx = opts.safetyGapPx ?? (legacyMinWidths ? 0 : 24);
 
   const safeW = Math.max(0, Number(containerWidth) || 0);
   const gap = Math.max(0, Number(safetyGapPx) || 0);
@@ -80,13 +92,42 @@ export function pickHeaderTierCandidate(candidates = [], tierIndex = 0) {
   return String(candidates[clampedIdx] ?? '');
 }
 
+const attachLabelStringCoercion = (descriptor) => {
+  const str = String(descriptor.label ?? '');
+  Object.defineProperties(descriptor, {
+    toString: {
+      value: () => str,
+      enumerable: false,
+      configurable: true,
+    },
+    valueOf: {
+      value: () => str,
+      enumerable: false,
+      configurable: true,
+    },
+    [Symbol.toPrimitive]: {
+      value: () => str,
+      enumerable: false,
+      configurable: true,
+    },
+  });
+  return descriptor;
+};
+
 /**
  * Picks the richest (longest) label variant from `candidates` (ordered from longest
  * to shortest, e.g. `['Domena na sprzedaż / wynajem', 'Oferta domeny', 'Oferta']`)
  * that fits inside `availableWidthPx` using `naturalSearch`.
  *
+ * Dual-Contract Poka-Yoke:
+ * 1. If `widthOrTier` is a discrete tier index (`0 <= n <= 12` integer), selects
+ *    `candidates[min(maxIdx, n)]` directly instead of treating `0..3` as `0..3px`.
+ * 2. Defines non-enumerable `toString()` / `[Symbol.toPrimitive]` returning `label`
+ *    so Vue `{{ pickAdaptiveHeaderLabel(...) }}` interpolation renders the string
+ *    cleanly even if `.label` was omitted, while preserving `{ label, tierIndex, estimatedWidthPx }`.
+ *
  * @param {string[]} candidates Ordered from full label (index 0) to shortest fallback
- * @param {number} availableWidthPx Available horizontal budget for the button/pill in px
+ * @param {number} [widthOrTier=320] Available horizontal budget in px (`> 12`) OR discrete `tierIndex` (`0..12`)
  * @param {Object} [options]
  * @param {number} [options.charWidthPx=7.4] Average character width in px
  * @param {number} [options.horizontalChromePx=34] Dot + icon + horizontal padding in px
@@ -94,24 +135,46 @@ export function pickHeaderTierCandidate(candidates = [], tierIndex = 0) {
  */
 export function pickAdaptiveHeaderLabel(
   candidates = [],
-  availableWidthPx = 320,
+  widthOrTier = 320,
   { charWidthPx = 7.4, horizontalChromePx = 34 } = {}
 ) {
   if (!Array.isArray(candidates) || candidates.length === 0) {
-    return { label: '', tierIndex: 0, estimatedWidthPx: 0 };
+    return attachLabelStringCoercion({ label: '', tierIndex: 0, estimatedWidthPx: 0 });
   }
-  const availW = Math.max(0, Number(availableWidthPx) || 0);
   const cw = Math.max(4, Number(charWidthPx) || 7.4);
   const chrome = Math.max(0, Number(horizontalChromePx) || 34);
   const maxIdx = candidates.length - 1;
 
   const estimateW = (idx) => {
     const str = String(candidates[idx] ?? '');
-    return Math.round(str.length * cw + chrome);
+    return str.length === 0 ? chrome : Math.round(str.length * cw + chrome);
   };
 
+  const extractedArg =
+    widthOrTier !== null &&
+    Object.prototype.toString.call(widthOrTier) === '[object Object]' &&
+    Number.isFinite(widthOrTier.tierIndex)
+      ? widthOrTier.tierIndex
+      : widthOrTier;
+
+  const numArg = Number(extractedArg);
+  if (Number.isInteger(numArg) && numArg >= 0 && numArg <= 12) {
+    const chosenIdx = Math.min(maxIdx, numArg);
+    return attachLabelStringCoercion({
+      label: String(candidates[chosenIdx] ?? ''),
+      tierIndex: chosenIdx,
+      estimatedWidthPx: estimateW(chosenIdx),
+    });
+  }
+
+  const availW = Math.max(0, numArg || 0);
+
   if (estimateW(0) <= availW) {
-    return { label: String(candidates[0]), tierIndex: 0, estimatedWidthPx: estimateW(0) };
+    return attachLabelStringCoercion({
+      label: String(candidates[0]),
+      tierIndex: 0,
+      estimatedWidthPx: estimateW(0),
+    });
   }
 
   const step = naturalSearch(
@@ -125,11 +188,11 @@ export function pickAdaptiveHeaderLabel(
   );
 
   const chosenIdx = Math.max(0, Math.min(maxIdx, step - 1));
-  return {
+  return attachLabelStringCoercion({
     label: String(candidates[chosenIdx]),
     tierIndex: chosenIdx,
     estimatedWidthPx: estimateW(chosenIdx),
-  };
+  });
 }
 
 /**
@@ -154,6 +217,148 @@ export function normalizeHeaderSpread(value, fallback = 0) {
   return {
     spreadPercent: Math.round(clamped * 100) / 100,
     spreadRatio: Number((clamped / 100).toFixed(4)),
+  };
+}
+
+/**
+ * Parses the total horizontal outer inset (`parentWidth - floatingOuterWidth`) in pixels
+ * implied by a CSS `floatingWidth` expression such as `'calc(100% - 48px)'`,
+ * `'calc(100% - 2rem)'`, `'92%'`, or `'1120px'`.
+ *
+ * @param {string|number} [floatingWidth='calc(100% - 48px)']
+ * @param {number} [parentWidth=1440]
+ * @param {number} [rootFontSizePx=16]
+ * @returns {number}
+ */
+export function parseFloatingHorizontalInsetPx(
+  floatingWidth = 'calc(100% - 48px)',
+  parentWidth = 1440,
+  rootFontSizePx = 16
+) {
+  const safeParentW = Math.max(240, Number(parentWidth) || 1440);
+  const remPx = Math.max(10, Number(rootFontSizePx) || 16);
+
+  if (Number.isFinite(floatingWidth)) {
+    return Math.max(0, safeParentW - floatingWidth);
+  }
+
+  const raw = String(floatingWidth || 'calc(100% - 48px)').trim();
+  if (!raw || raw === '100%' || raw === 'auto') {
+    return 0;
+  }
+
+  // Match `calc(100% - 48px)` or `calc(100% - 2.5rem)`
+  const calcMatch = raw.match(
+    /^calc\(\s*100%\s*-\s*([0-9]*\.?[0-9]+)\s*(px|rem|em|%)\s*\)$/i
+  );
+  if (calcMatch) {
+    const val = parseFloat(calcMatch[1]);
+    const unit = calcMatch[2].toLowerCase();
+    if (Number.isFinite(val)) {
+      if (unit === 'px') return Math.max(0, val);
+      if (unit === 'rem' || unit === 'em') return Math.max(0, val * remPx);
+      if (unit === '%') return Math.max(0, safeParentW * (val / 100));
+    }
+  }
+
+  if (raw.endsWith('px')) {
+    const px = parseFloat(raw);
+    if (Number.isFinite(px)) return Math.max(0, safeParentW - px);
+  }
+
+  if (raw.endsWith('rem') || raw.endsWith('em')) {
+    const rem = parseFloat(raw);
+    if (Number.isFinite(rem)) return Math.max(0, safeParentW - rem * remPx);
+  }
+
+  if (raw.endsWith('%')) {
+    const pct = parseFloat(raw);
+    if (Number.isFinite(pct)) {
+      return Math.max(0, safeParentW * (1 - Math.max(0, Math.min(100, pct)) / 100));
+    }
+  }
+
+  return 0;
+}
+
+/**
+ * Computes exact pixel geometry for `<MutatingHeader>` outer and inner containers
+ * so that when `spreadPercent === 0`, `innerFloatingMaxPx === innerStuckMaxPx` across
+ * ALL viewport widths (`320px..3840px`) and ALL intermediate CSS transition frames `t in [0, 1]`,
+ * guaranteeing `0.00px` horizontal logo drift on scroll docking/undocking.
+ *
+ * @param {Object} [params]
+ * @param {number} [params.parentWidth=1440] Measured parent/viewport clientWidth in px
+ * @param {string|number} [params.floatingWidth='calc(100% - 48px)'] Outer floating width expression
+ * @param {string|number} [params.floatingMaxWidth='100%'] Outer floating max-width cap
+ * @param {number} [params.spreadPercent=0] Inner content spread percentage (0..100)
+ * @param {number} [params.horizontalChromePx=42] Sum of left+right padding (`40px`) + borders (`2px`)
+ * @param {number} [params.rootFontSizePx=16] Root rem size in px
+ * @returns {{
+ *   parentWidthPx: number,
+ *   floatingOuterMaxPx: number,
+ *   stuckOuterMaxPx: number,
+ *   innerFloatingMaxPx: number,
+ *   innerStuckMaxPx: number,
+ *   spreadRatio: number
+ * }}
+ */
+export function computeMutatingHeaderWidths({
+  parentWidth = 1440,
+  floatingWidth = 'calc(100% - 48px)',
+  floatingMaxWidth = '100%',
+  spreadPercent = 0,
+  horizontalChromePx = 42,
+  rootFontSizePx = 16,
+} = {}) {
+  const safeParentW = Math.max(240, Math.round(Number(parentWidth) || 1440));
+  const chromePx = Math.max(0, Number(horizontalChromePx) || 42);
+  const remPx = Math.max(10, Number(rootFontSizePx) || 16);
+  const { spreadRatio } = normalizeHeaderSpread(spreadPercent, 0);
+
+  const insetPx = parseFloatingHorizontalInsetPx(floatingWidth, safeParentW, remPx);
+  const widthFromFloatingProp = Math.max(180, safeParentW - insetPx);
+
+  let maxCapPx = safeParentW;
+  if (Number.isFinite(floatingMaxWidth)) {
+    maxCapPx = Math.max(180, floatingMaxWidth);
+  } else {
+    const rawMax = String(floatingMaxWidth || '100%').trim();
+    if (rawMax && rawMax !== '100%' && rawMax !== 'none') {
+      if (rawMax.endsWith('px')) {
+        const px = parseFloat(rawMax);
+        if (Number.isFinite(px)) maxCapPx = Math.max(180, px);
+      } else if (rawMax.endsWith('rem') || rawMax.endsWith('em')) {
+        const rem = parseFloat(rawMax);
+        if (Number.isFinite(rem)) maxCapPx = Math.max(180, rem * remPx);
+      } else if (rawMax.endsWith('%')) {
+        const pct = parseFloat(rawMax);
+        if (Number.isFinite(pct)) {
+          maxCapPx = Math.max(180, safeParentW * (Math.max(0, Math.min(100, pct)) / 100));
+        }
+      } else {
+        const num = Number(rawMax);
+        if (Number.isFinite(num) && num > 0) maxCapPx = Math.max(180, num);
+      }
+    }
+  }
+
+  const floatingOuterMaxPx = Math.round(Math.min(safeParentW, widthFromFloatingProp, maxCapPx));
+  const stuckOuterMaxPx = safeParentW;
+
+  const innerFloatingMaxPx = Math.max(140, Math.round(floatingOuterMaxPx - chromePx));
+  const innerFullMaxPx = Math.max(innerFloatingMaxPx, Math.round(safeParentW - chromePx));
+  const innerStuckMaxPx = Math.round(
+    innerFloatingMaxPx + spreadRatio * (innerFullMaxPx - innerFloatingMaxPx)
+  );
+
+  return {
+    parentWidthPx: safeParentW,
+    floatingOuterMaxPx,
+    stuckOuterMaxPx,
+    innerFloatingMaxPx,
+    innerStuckMaxPx,
+    spreadRatio,
   };
 }
 
