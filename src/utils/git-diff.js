@@ -46,6 +46,8 @@ const EXT_LANG_MAP = {
   shader: 'glsl',
   bpy: 'bpy',
   bmesh: 'bpy',
+  glb: 'glb',
+  gltf: 'glb',
   '7uaudio': 'json',
   '7jap': 'json',
   meme: 'json',
