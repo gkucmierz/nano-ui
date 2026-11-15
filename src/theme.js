@@ -3,10 +3,50 @@ import { getScopedStorageController, normalizeStorageMode, STORAGE_MODES } from 
 
 const themeStorageCtrl = getScopedStorageController('nano-ui');
 
-const normalizeThemeValue = (val) => {
-  if (!val) return null;
-  const clean = String(val).replace(/^"|"$/g, '').trim();
-  return clean === 'light' || clean === 'dark' ? clean : null;
+const normalizeThemeValue = (val) => (val === 'light' || val === 'dark' ? val : null);
+
+const detectHostExplicitTheme = () => {
+  if (typeof document === 'undefined' || !document.documentElement) return null;
+  const root = document.documentElement;
+  const attr = normalizeThemeValue(root.getAttribute('data-theme'));
+  if (attr) return attr;
+  if (root.classList?.contains('light') || root.classList?.contains('theme-light')) return 'light';
+  if (root.classList?.contains('dark') || root.classList?.contains('theme-dark')) return 'dark';
+  return null;
+};
+
+/**
+ * Synchronizes inline `document.documentElement.style.colorScheme` whenever a host app
+ * mutates `data-theme` or `.light`/`.dark` classes (prevents inline `color-scheme: dark`
+ * from rendering dark OS checkboxes/scrollbars inside Light Mode).
+ */
+export const syncDocumentColorSchemeFromDom = () => {
+  if (typeof document === 'undefined' || !document.documentElement?.style) return null;
+  const resolved = detectHostExplicitTheme() || 'dark';
+  if (document.documentElement.style.colorScheme !== resolved) {
+    document.documentElement.style.colorScheme = resolved;
+  }
+  return resolved;
+};
+
+let colorSchemeObserverInstalled = false;
+const ensureColorSchemeObserver = () => {
+  if (
+    colorSchemeObserverInstalled ||
+    typeof MutationObserver === 'undefined' ||
+    typeof document === 'undefined' ||
+    !document.documentElement
+  ) {
+    return;
+  }
+  colorSchemeObserverInstalled = true;
+  const obs = new MutationObserver(() => {
+    syncDocumentColorSchemeFromDom();
+  });
+  obs.observe(document.documentElement, {
+    attributes: true,
+    attributeFilter: ['data-theme', 'class'],
+  });
 };
 
 /**
@@ -51,8 +91,9 @@ export const initTheme = ({
       }
     }
 
+    const hostExplicit = detectHostExplicitTheme();
     const supportDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
-    const theme = saved || (supportDark ? 'dark' : defaultTheme || 'light');
+    const theme = saved || hostExplicit || (supportDark ? 'dark' : defaultTheme || 'light');
 
     if (theme === 'light') {
       document.documentElement.setAttribute('data-theme', 'light');
@@ -60,8 +101,11 @@ export const initTheme = ({
       document.documentElement.removeAttribute('data-theme');
     }
 
-    document.documentElement.style.colorScheme = theme;
-    document.documentElement.classList.add('preload');
+    if (document.documentElement.style) {
+      document.documentElement.style.colorScheme = theme;
+    }
+    document.documentElement.classList?.add('preload');
+    ensureColorSchemeObserver();
     return theme;
   } catch {
     return defaultTheme;
@@ -106,9 +150,10 @@ export const syncThemeWithHostDark = (isDark) => {
   return active;
 };
 
-// Immediate instant execution on module evaluation (respects VitePress host polarity when embedded)
+// Immediate instant execution on module evaluation (respects VitePress or host explicit polarity)
 if (isVitePressHost()) {
   syncThemeWithHostDark(document.documentElement.classList.contains('dark'));
+  ensureColorSchemeObserver();
 } else {
   initTheme();
 }
