@@ -1,8 +1,79 @@
 const MAX_CONCURRENT_RIPPLES = 4;
+const DEFAULT_RIPPLE_DURATION_MS = 540;
 const RIPPLE_EVENT = globalThis.PointerEvent ? 'pointerdown' : 'click';
 const isStr = (val) => Object.prototype.toString.call(val) === '[object String]';
-const isNum = (val) => Object.prototype.toString.call(val) === '[object Number]';
+const isNum = (val) => Object.prototype.toString.call(val) === '[object Number]' && Number.isFinite(val);
 const isFn = (val) => Object.prototype.toString.call(val) === '[object Function]';
+const isPlainObj = (val) => Object.prototype.toString.call(val) === '[object Object]';
+
+const clampNum = (val, min, max) => Math.min(max, Math.max(min, val));
+
+/**
+ * Normalizes any `v-ripple` binding value (`undefined`, `boolean`, color `string`, or config `object`)
+ * into a deterministic descriptor.
+ *
+ * Supported forms:
+ * - `v-ripple` -> `{ enabled: true, color: '', centered: false, duration: 540, opacity: null, onRipple: null }`
+ * - `v-ripple="false"` -> `{ enabled: false, ... }`
+ * - `v-ripple="'oklch(0.72 0.16 230)'"` -> `{ enabled: true, color: 'oklch(0.72 0.16 230)', ... }`
+ * - `v-ripple="{ color, centered, duration, opacity, disabled, onRipple }"`
+ *
+ * @param {unknown} rawValue
+ */
+export const resolveRippleOptions = (rawValue) => {
+  if (rawValue === false) {
+    return {
+      enabled: false,
+      color: '',
+      centered: false,
+      duration: DEFAULT_RIPPLE_DURATION_MS,
+      opacity: null,
+      onRipple: null,
+    };
+  }
+
+  if (isStr(rawValue)) {
+    return {
+      enabled: true,
+      color: rawValue.trim(),
+      centered: false,
+      duration: DEFAULT_RIPPLE_DURATION_MS,
+      opacity: null,
+      onRipple: null,
+    };
+  }
+
+  if (isPlainObj(rawValue)) {
+    const disabled = rawValue.disabled === true || rawValue.enabled === false;
+    const color = isStr(rawValue.color) ? rawValue.color.trim() : '';
+    const centered = rawValue.centered === true;
+    const duration = isNum(rawValue.duration)
+      ? Math.round(clampNum(rawValue.duration, 160, 2000))
+      : DEFAULT_RIPPLE_DURATION_MS;
+    const opacity = isNum(rawValue.opacity)
+      ? Number(clampNum(rawValue.opacity, 0.05, 1).toFixed(3))
+      : null;
+    const onRipple = isFn(rawValue.onRipple) ? rawValue.onRipple : null;
+
+    return {
+      enabled: !disabled,
+      color,
+      centered,
+      duration,
+      opacity,
+      onRipple,
+    };
+  }
+
+  return {
+    enabled: true,
+    color: '',
+    centered: false,
+    duration: DEFAULT_RIPPLE_DURATION_MS,
+    opacity: null,
+    onRipple: null,
+  };
+};
 
 /**
  * Computes exact Euclidean farthest-corner ripple geometry inside a bounding box `(width, height)`
@@ -37,6 +108,9 @@ export const computeRippleGeometry = (rect = {}, clientX = undefined, clientY = 
   return {
     x: Math.round(localX * 10) / 10,
     y: Math.round(localY * 10) / 10,
+    width: Math.round(w * 10) / 10,
+    height: Math.round(h * 10) / 10,
+    centered: !hasPointerCoords,
     radius,
     diameter,
     left: Math.round((localX - radius) * 10) / 10,
@@ -56,7 +130,8 @@ const cleanupCircleNode = (node) => {
 };
 
 const handleRippleTrigger = (e, el, binding) => {
-  if (binding && binding.value === false) return;
+  const opts = resolveRippleOptions(binding?.value);
+  if (!opts.enabled) return;
   if (e && isNum(e.button) && e.button > 0) return;
   if (el.disabled || el.getAttribute?.('aria-disabled') === 'true') return;
 
@@ -79,7 +154,9 @@ const handleRippleTrigger = (e, el, binding) => {
   }
 
   const rect = el.getBoundingClientRect();
-  const geom = computeRippleGeometry(rect, e?.clientX, e?.clientY);
+  const geom = opts.centered
+    ? computeRippleGeometry(rect)
+    : computeRippleGeometry(rect, e?.clientX, e?.clientY);
 
   const circle = doc.createElement('span');
   circle.style.width = `${geom.diameter}px`;
@@ -89,18 +166,36 @@ const handleRippleTrigger = (e, el, binding) => {
   circle.className = 'ripple';
   circle.setAttribute('aria-hidden', 'true');
 
-  // Allow custom color override via directive string value: v-ripple="'rgba(56, 189, 248, 0.35)'"
-  if (binding && binding.value && isStr(binding.value)) {
-    circle.style.setProperty('--nano-ripple-custom', binding.value);
-    circle.style.background = `radial-gradient(circle, ${binding.value} 0%, color-mix(in srgb, ${binding.value} 55%, transparent) 68%, transparent 100%)`;
+  if (opts.duration !== DEFAULT_RIPPLE_DURATION_MS) {
+    circle.style.animationDuration = `${opts.duration}ms`;
+  }
+
+  // Custom color & peak opacity override (supports OKLCH, HEX, RGB, or CSS vars)
+  if (opts.color || opts.opacity !== null) {
+    const baseTint = opts.color || 'currentColor';
+    const peakPct = opts.opacity !== null ? Math.round(opts.opacity * 100) : (opts.color ? 100 : 28);
+    const midPct = Math.max(4, Math.round(peakPct * 0.55));
+    if (opts.color) {
+      circle.style.setProperty('--nano-ripple-custom', opts.color);
+    }
+    circle.style.background = `radial-gradient(circle, color-mix(in srgb, ${baseTint} ${peakPct}%, transparent) 0%, color-mix(in srgb, ${baseTint} ${midPct}%, transparent) 66%, transparent 100%)`;
   }
 
   const cleanupCircle = () => cleanupCircleNode(circle);
 
   circle.addEventListener('animationend', cleanupCircle, { once: true });
-  circle._rippleTimer = setTimeout(cleanupCircle, 680);
+  circle._rippleTimer = setTimeout(cleanupCircle, opts.duration + 140);
 
   el.appendChild(circle);
+
+  if (opts.onRipple) {
+    opts.onRipple({
+      ...geom,
+      duration: opts.duration,
+      color: opts.color || 'currentColor',
+      opacity: opts.opacity,
+    });
+  }
 };
 
 const ensureRippleHostStyles = (el) => {
