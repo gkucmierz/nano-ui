@@ -1,6 +1,10 @@
 <script setup>
 import { ref, computed, watch, useSlots, onUnmounted } from 'vue';
 import { highlightCode } from '../utils/syntax-highlighter.js';
+import { escapeHtml, splitHighlightedHtmlIntoLines } from '../utils/syntax-highlighter.js';
+
+const isStr = (v) => Object.prototype.toString.call(v) === '[object String]';
+const isNum = (v) => Object.prototype.toString.call(v) === '[object Number]' && Number.isFinite(v);
 
 const slots = useSlots();
 
@@ -62,11 +66,32 @@ const props = defineProps({
     default: true,
   },
   /**
+   * Initial line-numbers gutter state (1..N)
+   */
+  defaultLineNumbers: {
+    type: Boolean,
+    default: true,
+  },
+  /**
+   * Whether to show the line-numbers (#) toggle button in header actions
+   */
+  allowLineNumbers: {
+    type: Boolean,
+    default: true,
+  },
+  /**
    * Whether to show the copy action button
    */
   allowCopy: {
     type: Boolean,
     default: true,
+  },
+  /**
+   * Optional fixed body height with internal vertical/horizontal scroll (keeps modal height constant across tab switches)
+   */
+  height: {
+    type: [Number, String],
+    default: null,
   },
   /**
    * Optional max height with vertical scroll
@@ -84,9 +109,10 @@ const props = defineProps({
   },
 });
 
-const emit = defineEmits(['update:wrap', 'update:modelValue', 'changeTab', 'copied']);
+const emit = defineEmits(['update:wrap', 'update:lineNumbers', 'update:modelValue', 'changeTab', 'copied']);
 
 const isWrapped = ref(props.defaultWrap);
+const showLineNumbers = ref(props.defaultLineNumbers);
 const copied = ref(false);
 const preRef = ref(null);
 let copyTimeout = null;
@@ -116,9 +142,9 @@ const extractSlotText = (nodes) => {
   let str = '';
   for (const node of nodes) {
     if (node == null) continue;
-    if (typeof node === 'string') {
+    if (isStr(node)) {
       str += node;
-    } else if (typeof node.children === 'string') {
+    } else if (isStr(node.children)) {
       str += node.children;
     } else if (Array.isArray(node.children)) {
       str += extractSlotText(node.children);
@@ -145,6 +171,21 @@ const highlightedCode = computed(() => {
   return highlightCode(currentCode.value, currentLang.value);
 });
 
+const codeLineHtmlRows = computed(() => {
+  if (highlightedCode.value) {
+    return splitHighlightedHtmlIntoLines(highlightedCode.value);
+  }
+  if (currentCode.value) {
+    return String(currentCode.value).split('\n').map((l) => escapeHtml(l));
+  }
+  return [];
+});
+
+const lineGutterWidthCh = computed(() => {
+  const digits = Math.max(2, String(codeLineHtmlRows.value.length || 1).length);
+  return `${digits + 1.4}ch`;
+});
+
 const selectTab = (idx) => {
   currentTabIndex.value = idx;
   emit('update:modelValue', idx);
@@ -154,6 +195,11 @@ const selectTab = (idx) => {
 const toggleWrap = () => {
   isWrapped.value = !isWrapped.value;
   emit('update:wrap', isWrapped.value);
+};
+
+const toggleLineNumbers = () => {
+  showLineNumbers.value = !showLineNumbers.value;
+  emit('update:lineNumbers', showLineNumbers.value);
 };
 
 const copyCode = async () => {
@@ -191,9 +237,14 @@ const copyCode = async () => {
   }
 };
 
+const containerHeight = computed(() => {
+  if (!props.height) return undefined;
+  return isNum(props.height) ? `${props.height}px` : props.height;
+});
+
 const containerMaxHeight = computed(() => {
   if (!props.maxHeight) return undefined;
-  return typeof props.maxHeight === 'number' ? `${props.maxHeight}px` : props.maxHeight;
+  return isNum(props.maxHeight) ? `${props.maxHeight}px` : props.maxHeight;
 });
 
 onUnmounted(() => {
@@ -210,7 +261,10 @@ onUnmounted(() => {
     :data-syntax-theme="syntaxTheme"
     :class="{ 'is-wrapped': isWrapped, 'has-tabs': hasTabs }"
   >
-    <div v-if="title || currentLang || hasTabs || $slots.header || allowWrap || allowCopy" class="code-block-header">
+    <div
+      v-if="title || currentLang || hasTabs || $slots.header || allowLineNumbers || allowWrap || allowCopy"
+      class="code-block-header"
+    >
       <div class="code-block-title-group">
         <slot name="header">
           <div v-if="hasTabs" class="code-block-tabs">
@@ -232,6 +286,22 @@ onUnmounted(() => {
 
       <div class="code-block-actions">
         <span v-if="hasTabs && currentLang" class="code-block-lang">{{ currentLang }}</span>
+        <button
+          v-if="allowLineNumbers"
+          type="button"
+          class="code-action-btn"
+          :class="{ active: showLineNumbers }"
+          @click="toggleLineNumbers"
+          :aria-label="showLineNumbers ? 'Hide line numbers' : 'Show line numbers'"
+          v-tooltip="showLineNumbers ? 'Hide line numbers (#)' : 'Show line numbers (#)'"
+        >
+          <svg class="action-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="4" y1="9" x2="20" y2="9" />
+            <line x1="4" y1="15" x2="20" y2="15" />
+            <line x1="10" y1="3" x2="8" y2="21" />
+            <line x1="16" y1="3" x2="14" y2="21" />
+          </svg>
+        </button>
         <button
           v-if="allowWrap"
           type="button"
@@ -274,8 +344,8 @@ onUnmounted(() => {
       </div>
     </div>
 
-    <div class="code-block-body" :style="{ maxHeight: containerMaxHeight }">
-      <pre ref="preRef" class="code-block-pre"><slot :name="activeTab?.id || `tab-${currentTabIndex}`"><code v-if="highlightedCode" class="nano-syntax-code" v-html="highlightedCode"></code><code v-else-if="currentCode">{{ currentCode }}</code><slot v-else /></slot></pre>
+    <div class="code-block-body" :style="{ height: containerHeight, maxHeight: containerMaxHeight, '--code-gutter-w': lineGutterWidthCh }">
+      <pre ref="preRef" class="code-block-pre"><slot :name="activeTab?.id || `tab-${currentTabIndex}`"><code v-if="showLineNumbers && codeLineHtmlRows.length > 0" class="nano-syntax-code has-line-numbers"><span v-for="(lineHtml, lineIdx) in codeLineHtmlRows" :key="lineIdx" class="code-line-row"><span class="code-line-num" aria-hidden="true">{{ lineIdx + 1 }}</span><span class="code-line-content" v-html="lineHtml"></span></span></code><code v-else-if="highlightedCode" class="nano-syntax-code" v-html="highlightedCode"></code><code v-else-if="currentCode">{{ currentCode }}</code><slot v-else /></slot></pre>
     </div>
   </div>
 </template>
@@ -510,6 +580,42 @@ onUnmounted(() => {
   color: inherit;
   font-family: inherit;
   font-size: inherit;
+}
+
+.code-block-pre code.has-line-numbers {
+  display: block;
+}
+
+.code-line-row {
+  display: grid;
+  grid-template-columns: var(--code-gutter-w, 3.4ch) minmax(0, 1fr);
+  column-gap: 12px;
+  align-items: start;
+  min-height: 1.6em;
+}
+
+.code-line-num {
+  text-align: right;
+  padding-right: 10px;
+  border-right: 1px solid var(--nano-code-header-border, var(--nano-border-card, rgba(255, 255, 255, 0.1)));
+  color: var(--hl-comment, var(--nano-text-muted, #64748b));
+  font-variant-numeric: tabular-nums;
+  user-select: none !important;
+  -webkit-user-select: none !important;
+  pointer-events: none;
+  opacity: 0.78;
+}
+
+.code-line-content {
+  min-width: 0;
+  min-height: 1.6em;
+  white-space: pre;
+}
+
+.is-wrapped .code-line-content {
+  white-space: pre-wrap !important;
+  word-break: break-word !important;
+  overflow-wrap: break-word !important;
 }
 
 .code-block-pre pre {
