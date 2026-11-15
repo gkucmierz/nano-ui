@@ -20,6 +20,31 @@ summary,
   -webkit-tap-highlight-color: transparent;
 }
 
+/* Ecosystem Color-Scheme & Native Checkbox/Radio Parity (Rule 1->0):
+   Guarantee light native form controls & scrollbars in Light Mode even if a host app toggles
+   [data-theme="light"] / .light without manually updating documentElement.style.colorScheme */
+html[data-theme="light"],
+html.light,
+html.theme-light,
+[data-theme="light"],
+.light,
+.theme-light,
+.modal-light {
+  color-scheme: light;
+}
+
+html[data-theme="dark"],
+html.dark,
+html.theme-dark {
+  color-scheme: dark;
+}
+
+input[type="checkbox"],
+input[type="radio"] {
+  accent-color: var(--nano-preset-primary, #0284c7);
+  color-scheme: inherit;
+}
+
 /* Ecosystem Poka-Yoke Reset: Strip native browser double focus outlines on form controls */
 input:focus,
 input:focus-visible,

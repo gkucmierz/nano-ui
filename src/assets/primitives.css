@@ -1223,6 +1223,80 @@ textarea.nano-input,
 }
 
 /* ==========================================================================
+   11b. Standalone Orbiting Conic Border (.nano-orbit-border)
+   Isolated reusable orbiting highlight for active cards (e.g. NanoCoverFlow,
+   active showcase tiles, KPI focus cards) without requiring full CSHR tri-state.
+   Stationary geometry (CLS = 0) with crisp Dark & Light theme polarity.
+   ========================================================================== */
+.nano-orbit-border {
+  --nano-orbit-bg: var(--nano-bg-surface, #18181b);
+  --nano-orbit-idle-border: var(--nano-border-card, rgba(148, 163, 184, 0.24));
+  --nano-orbit-color: var(--nano-primary, #38bdf8);
+  border: 1px solid var(--nano-orbit-idle-border);
+  box-sizing: border-box;
+  transition: border-color 0.18s ease, box-shadow 0.2s ease;
+}
+
+[data-theme="light"] .nano-orbit-border,
+.light .nano-orbit-border,
+.theme-light .nano-orbit-border {
+  --nano-orbit-bg: var(--nano-bg-surface, #ffffff);
+  --nano-orbit-idle-border: var(--nano-border-card, rgba(15, 23, 42, 0.12));
+  --nano-orbit-color: var(--nano-primary, #0284c7);
+}
+
+.nano-orbit-border.is-orbit-active {
+  border-color: transparent;
+  background:
+    linear-gradient(var(--nano-orbit-bg), var(--nano-orbit-bg)) padding-box,
+    conic-gradient(
+      from var(--nano-border-angle),
+      var(--nano-orbit-color) 0deg,
+      color-mix(in srgb, var(--nano-orbit-color) 26%, var(--nano-orbit-bg)) 145deg,
+      var(--nano-orbit-color) 260deg,
+      color-mix(in srgb, var(--nano-orbit-color) 52%, #ffffff) 315deg,
+      var(--nano-orbit-color) 360deg
+    ) border-box;
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, var(--nano-orbit-color) 32%, transparent),
+    0 8px 22px -4px color-mix(in srgb, var(--nano-orbit-color) 20%, transparent);
+  animation: nano-dual-border-spin 4.2s linear infinite;
+}
+
+[data-theme="light"] .nano-orbit-border.is-orbit-active,
+.light .nano-orbit-border.is-orbit-active,
+.theme-light .nano-orbit-border.is-orbit-active {
+  background:
+    linear-gradient(var(--nano-orbit-bg), var(--nano-orbit-bg)) padding-box,
+    conic-gradient(
+      from var(--nano-border-angle),
+      var(--nano-orbit-color) 0deg,
+      color-mix(in srgb, var(--nano-orbit-color) 20%, #e2e8f0) 145deg,
+      var(--nano-orbit-color) 260deg,
+      color-mix(in srgb, var(--nano-orbit-color) 65%, #38bdf8) 315deg,
+      var(--nano-orbit-color) 360deg
+    ) border-box;
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, var(--nano-orbit-color) 26%, transparent),
+    0 8px 20px -6px color-mix(in srgb, var(--nano-orbit-color) 16%, transparent);
+}
+
+[data-theme="light"] .nano-tri-border-card,
+.light .nano-tri-border-card,
+.theme-light .nano-tri-border-card {
+  --nano-tri-bg: var(--bg-panel, var(--nano-bg-card, #ffffff));
+  --nano-tri-idle-border: var(--border-color, var(--nano-border-card, rgba(15, 23, 42, 0.12)));
+  --nano-tri-hover-color: var(--accent-cyan, var(--nano-primary, #0284c7));
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .nano-orbit-border.is-orbit-active {
+    animation: none;
+    border-color: var(--nano-orbit-color);
+  }
+}
+
+/* ==========================================================================
    12. Semantic Fieldset & Legend Primitives (.nano-fieldset, .nano-legend)
    Preserves native <fieldset> + first-child <legend> accessibility naming while
    preventing long legends from overflowing rounded card borders.
