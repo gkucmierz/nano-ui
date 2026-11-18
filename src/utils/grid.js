@@ -336,3 +336,118 @@ export const detectRenderedGridColumns = (gridEl, itemSelector = ':scope > *', t
 
   return 1;
 };
+
+/**
+ * Returns `true` when `key` is a canonical keyboard commit/activation key (`Space` or `Enter`)
+ * for selectable 2D grids, option matrices, and listboxes (`GRID-SPACE-SELECT-01`).
+ *
+ * @param {string} key - `KeyboardEvent.key` value.
+ * @returns {boolean}
+ */
+export const isGridSelectKey = (key) =>
+  key === ' ' || key === 'Spacebar' || key === 'Enter';
+
+/**
+ * Deterministic keyboard controller for selectable 2D grids and 1D listboxes built on `navigateGrid`.
+ * Handles spatial `Arrow*` movement, `Home`/`End` jumps, `Escape` dismissal, and mandatory
+ * `Space` + `Enter` item selection (`preventDefault()` + `stopPropagation()` so global scene
+ * `Space` listeners never hijack focus inside an open grid).
+ *
+ * @param {KeyboardEvent} event
+ * @param {Object} [options={}]
+ * @param {number} [options.currentIndex=0]
+ * @param {number} [options.totalItems=0]
+ * @param {number|Function} [options.columns=1]
+ * @param {boolean} [options.wrap=true]
+ * @param {boolean} [options.wrapHorizontal]
+ * @param {boolean} [options.wrapVertical]
+ * @param {boolean} [options.rowStrict=false]
+ * @param {boolean} [options.spanLastRow=false]
+ * @param {number[]|Object|null} [options.colSpans=null]
+ * @param {number} [options.preferredCol]
+ * @param {boolean} [options.allowSpaceSelect=true]
+ * @param {Function} [options.onFocusIndex]
+ * @param {Function} [options.onSelectIndex]
+ * @param {Function} [options.onEscape]
+ * @returns {{ handled: boolean, action: 'navigate'|'home'|'end'|'select'|'escape'|null, index: number }}
+ */
+export const handleSelectableGridKeydown = (event, options = {}) => {
+  const total = Math.max(0, Math.floor(Number(options.totalItems) || 0));
+  const cur =
+    Number.isFinite(options.currentIndex) && options.currentIndex >= 0 && options.currentIndex < total
+      ? Math.floor(options.currentIndex)
+      : 0;
+
+  if (!event || event.metaKey || event.ctrlKey || event.altKey) {
+    return { handled: false, action: null, index: cur };
+  }
+
+  const key = event.key;
+
+  if (key === 'Escape' && isFn(options.onEscape)) {
+    if (isFn(event.preventDefault)) event.preventDefault();
+    if (isFn(event.stopPropagation)) event.stopPropagation();
+    options.onEscape(event);
+    return { handled: true, action: 'escape', index: cur };
+  }
+
+  if (total <= 0) {
+    return { handled: false, action: null, index: -1 };
+  }
+
+  if (
+    key === 'ArrowRight' ||
+    key === 'ArrowLeft' ||
+    key === 'ArrowDown' ||
+    key === 'ArrowUp'
+  ) {
+    if (isFn(event.preventDefault)) event.preventDefault();
+    if (isFn(event.stopPropagation)) event.stopPropagation();
+    const rawCols = isFn(options.columns) ? options.columns() : options.columns;
+    const cols = Math.max(1, Math.floor(Number(rawCols) || 1));
+    const nextIdx = navigateGrid(cur, total, key, cols, {
+      wrap: isBool(options.wrap) ? options.wrap : true,
+      wrapHorizontal: options.wrapHorizontal,
+      wrapVertical: options.wrapVertical,
+      rowStrict: Boolean(options.rowStrict),
+      spanLastRow: Boolean(options.spanLastRow),
+      colSpans: options.colSpans || null,
+      preferredCol: options.preferredCol,
+    });
+    if (nextIdx >= 0 && isFn(options.onFocusIndex)) {
+      options.onFocusIndex(nextIdx, event);
+    }
+    return { handled: true, action: 'navigate', index: nextIdx };
+  }
+
+  if (key === 'Home') {
+    if (isFn(event.preventDefault)) event.preventDefault();
+    if (isFn(event.stopPropagation)) event.stopPropagation();
+    if (isFn(options.onFocusIndex)) {
+      options.onFocusIndex(0, event);
+    }
+    return { handled: true, action: 'home', index: 0 };
+  }
+
+  if (key === 'End') {
+    const lastIdx = total - 1;
+    if (isFn(event.preventDefault)) event.preventDefault();
+    if (isFn(event.stopPropagation)) event.stopPropagation();
+    if (isFn(options.onFocusIndex)) {
+      options.onFocusIndex(lastIdx, event);
+    }
+    return { handled: true, action: 'end', index: lastIdx };
+  }
+
+  const allowSpace = options.allowSpaceSelect !== false;
+  const isSelect =
+    key === 'Enter' || (allowSpace && (key === ' ' || key === 'Spacebar'));
+  if (isSelect && isFn(options.onSelectIndex)) {
+    if (isFn(event.preventDefault)) event.preventDefault();
+    if (isFn(event.stopPropagation)) event.stopPropagation();
+    options.onSelectIndex(cur, event);
+    return { handled: true, action: 'select', index: cur };
+  }
+
+  return { handled: false, action: null, index: cur };
+};
