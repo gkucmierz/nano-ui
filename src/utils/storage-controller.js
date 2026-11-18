@@ -1,11 +1,13 @@
 /**
  * @gkucmierz/storage-controller (Nano UI bridge & Symbol.for global singleton)
  * Supports 'ls' (localStorage), 'ss' (sessionStorage), 'none' (no persistence),
- * and 'memory' fallback, with compact acronym hierarchical keys by default:
- *   `dashboard-app` + `nano-ui` + `demo_geometry` -> `DA_NU_demo_geometry`
+ * and 'memory' fallback, with compact acronym hierarchical keys by default
+ * and dynamic runtime acronym self-registration (`PKG-PURITY-01` — zero hardcoded consumer apps):
+ *   `acme-portal` + `nano-ui` + `demo_geometry` -> `AP_NU_demo_geometry`
  */
 
 const GLOBAL_REGISTRY_SYMBOL = Symbol.for('@gkucmierz/storage-controller.global');
+const GLOBAL_ACRONYM_SYMBOL = Symbol.for('@gkucmierz/storage-controller.acronyms');
 
 export const STORAGE_MODES = Object.freeze({
   LS: 'ls',
@@ -81,6 +83,14 @@ export const sanitizePrefixSegment = (rawSegment) => {
     .replace(/^[-_]+|[-_]+$/g, '');
 };
 
+const getRuntimeAcronymStore = () => {
+  const host = globalThis;
+  if (!isObjectLike(host[GLOBAL_ACRONYM_SYMBOL])) {
+    host[GLOBAL_ACRONYM_SYMBOL] = {};
+  }
+  return host[GLOBAL_ACRONYM_SYMBOL];
+};
+
 export const toAcronym = (rawSegment) => {
   if (!isString(rawSegment)) return '';
   const trimmed = rawSegment.trim();
@@ -94,41 +104,71 @@ export const toAcronym = (rawSegment) => {
   if (!clean) return '';
 
   const parts = clean.split(/[-_]+/).filter(Boolean);
-  if (parts.length >= 2) {
-    return parts.map((p) => p[0].toUpperCase()).join('');
+  const acronym =
+    parts.length >= 2 ? parts.map((p) => p[0].toUpperCase()).join('') : clean[0].toUpperCase();
+
+  if (acronym) {
+    const store = getRuntimeAcronymStore();
+    if (!store[acronym]) {
+      store[acronym] = clean;
+    }
   }
 
-  return clean[0].toUpperCase();
+  return acronym;
 };
 
-export const DEFAULT_ACRONYM_DICTIONARY = Object.freeze({
-  DA: 'dashboard-app',
-  WA: 'workflow-app',
-  HCA: 'home-control-app',
-  CA: 'cv-app',
-  TA: 'talk-app',
-  MA: 'money-app',
-  SA: 'screeny-app',
-  NU: 'nano-ui',
-  NS: 'nano-sound',
-  KC: 'key-controller',
-  SC: 'storage-controller',
-  KBE: 'knowledge-base-engine',
-  DL: 'db-lens',
-  SL: 'storage-lens',
-  EH: 'ext-hub',
-  RS: 'reel-shredder',
-  CF: 'clown-filter',
-});
+/**
+ * Pure building-block invariant (`PKG-PURITY-01`):
+ * Zero hardcoded downstream application names in shipped UI library code.
+ */
+export const DEFAULT_ACRONYM_DICTIONARY = Object.freeze({});
+
+export const createAcronymDictionaryFromNames = (names = []) => {
+  const dict = {};
+  if (!Array.isArray(names)) return dict;
+  for (const raw of names) {
+    const clean = sanitizePrefixSegment(raw);
+    if (!clean) continue;
+    const acr = toAcronym(clean);
+    if (acr && !dict[acr]) {
+      dict[acr] = clean;
+    }
+  }
+  return dict;
+};
+
+export const registerAcronyms = (entries = {}) => {
+  const store = getRuntimeAcronymStore();
+  if (Array.isArray(entries)) {
+    const built = createAcronymDictionaryFromNames(entries);
+    for (const [k, v] of Object.entries(built)) {
+      store[k] = v;
+    }
+  } else if (isObjectLike(entries)) {
+    for (const [k, v] of Object.entries(entries)) {
+      if (isString(k) && k.trim() && isString(v) && v.trim()) {
+        store[k.trim().toUpperCase()] = sanitizePrefixSegment(v) || v.trim();
+      }
+    }
+  }
+  return { ...store };
+};
+
+export const getRegisteredAcronyms = () => ({ ...getRuntimeAcronymStore() });
+
+export const clearRegisteredAcronyms = () => {
+  const host = globalThis;
+  host[GLOBAL_ACRONYM_SYMBOL] = {};
+};
 
 export const expandAcronymKey = (rawKey, customDictionary = {}, options = {}) => {
   const strKey = isString(rawKey) ? rawKey.trim() : '';
   const sep = isString(options.separator) && options.separator ? options.separator : '_';
-  const includeDefaults = options.includeDefaults !== false;
+  const includeRuntime = options.includeRuntime !== false && options.includeDefaults !== false;
 
   const dict = {};
-  if (includeDefaults) {
-    for (const [k, v] of Object.entries(DEFAULT_ACRONYM_DICTIONARY)) {
+  if (includeRuntime) {
+    for (const [k, v] of Object.entries(getRuntimeAcronymStore())) {
       dict[k.toUpperCase()] = v;
     }
   }
@@ -369,6 +409,15 @@ export const createStorageController = (options = {}) => {
 
   let explicitAppPrefix = isString(options.appPrefix) ? sanitizePrefixSegment(options.appPrefix) : '';
   const currentScopePrefix = isString(options.scopePrefix) ? sanitizePrefixSegment(options.scopePrefix) : '';
+  if (explicitAppPrefix) toAcronym(explicitAppPrefix);
+  if (currentScopePrefix) {
+    for (const seg of currentScopePrefix.split(separator).filter(Boolean)) {
+      toAcronym(seg);
+    }
+  }
+  if (isObjectLike(options.acronyms) || Array.isArray(options.acronyms)) {
+    registerAcronyms(options.acronyms);
+  }
   let defaultMode = normalizeStorageMode(options.defaultMode ?? options.mode, STORAGE_MODES.LS);
 
   const memoryFallbackStore = options.memoryStorage || createMemoryStorageAdapter();
@@ -410,6 +459,7 @@ export const createStorageController = (options = {}) => {
 
   const setAppPrefix = (nextPrefix) => {
     explicitAppPrefix = sanitizePrefixSegment(nextPrefix);
+    if (explicitAppPrefix) toAcronym(explicitAppPrefix);
     notify({ type: 'appPrefix', appPrefix: getAppPrefix(), scopePrefix: currentScopePrefix });
     return getAppPrefix();
   };
