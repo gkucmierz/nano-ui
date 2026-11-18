@@ -47,9 +47,16 @@ const decodeChunkTypeAscii = (typeUint32) => {
  * @param {{ maxBytes?: number, baseOffset?: number }} [options]
  * @returns {string}
  */
-export const formatGlbHexPreview = (bytes, { maxBytes = 128, baseOffset = 0 } = {}) => {
+export const formatGlbHexPreview = (
+  bytes,
+  { maxBytes = 128, baseOffset = 0, totalByteLength = null } = {}
+) => {
   const view = toUint8View(bytes);
   if (!view || view.byteLength === 0) return '// (empty BIN payload)';
+  const totalBytes =
+    Number.isFinite(Number(totalByteLength)) && Number(totalByteLength) > view.byteLength
+      ? Math.floor(Number(totalByteLength))
+      : view.byteLength;
   const limit = Math.min(view.byteLength, Math.max(16, Number(maxBytes) || 128));
   const lines = [];
 
@@ -73,9 +80,10 @@ export const formatGlbHexPreview = (bytes, { maxBytes = 128, baseOffset = 0 } = 
     lines.push(`${addr}:  ${leftHex}  ${rightHex}  |${ascii}|`);
   }
 
-  if (view.byteLength > limit) {
+  if (totalBytes > limit) {
+    const omitted = totalBytes - limit;
     lines.push(
-      `// ... +${(view.byteLength - limit).toLocaleString('en-US')} bytes (${formatBytesHuman(view.byteLength - limit)} binary geometry/animation buffers omitted)`
+      `// ... +${omitted.toLocaleString('en-US')} B (${formatBytesHuman(omitted)} BIN geometry/animation data omitted)`
     );
   }
   return lines.join('\n');
@@ -140,7 +148,7 @@ export const parseGlbHeaderAndChunks = (buffer) => {
       }
     } else if (chunkType === GLB_BIN_CHUNK_TYPE && binPreviewBytes === null) {
       binByteLength += slice.byteLength;
-      binPreviewBytes = slice.subarray(0, Math.min(slice.byteLength, 256));
+      binPreviewBytes = slice.subarray(0, Math.min(slice.byteLength, 4096));
       binDataOffset = dataStart;
     } else if (chunkType === GLB_BIN_CHUNK_TYPE) {
       binByteLength += slice.byteLength;
@@ -270,7 +278,7 @@ export const inspectGlbBinary = (
     jsonLines.length > capLines
       ? [
         ...jsonLines.slice(0, capLines),
-        `  // ... (${jsonLines.length - capLines} more JSON lines omitted for compact viewport inspection)`,
+        `  // ... (${jsonLines.length - capLines} JSON lines omitted)`,
         '}',
       ].join('\n')
       : prettyJson;
@@ -289,6 +297,7 @@ export const inspectGlbBinary = (
       formatGlbHexPreview(parsed.binPreviewBytes, {
         maxBytes: hexPreviewBytes,
         baseOffset: parsed.binDataOffset,
+        totalByteLength: parsed.binByteLength,
       })
     );
   }
