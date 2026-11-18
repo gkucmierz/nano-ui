@@ -134,27 +134,47 @@ export const compileNsdPreview = (rawDsl = '', options = {}) => {
       }
     } else if (waveMatch) {
       const inner = term.slice(term.indexOf('(', waveMatch.index) + 1);
-      const firstArg = inner.split(/[),]/)[0];
+      const closeIdx = inner.indexOf(')');
+      const argSlice = closeIdx >= 0 ? inner.slice(0, closeIdx) : inner;
+      const args = argSlice.split(',').map((s) => s.trim()).filter(Boolean);
+      const firstArg = args[0] || '';
+      const arrowMatch = firstArg.match(/^([0-9]+(?:\.[0-9]+)?\s*(?:khz|hz)?|[A-Ga-g][#bB]?-?[0-8])\s*->\s*([0-9]+(?:\.[0-9]+)?\s*(?:khz|hz)?|[A-Ga-g][#bB]?-?[0-8])$/i);
       if (wave === 'noise' || wave === 'pink') {
         glideMs = parseDurationMsToken(firstArg, 40);
+      } else if (arrowMatch) {
+        freqStart = parseFreqToken(arrowMatch[1]) || 440;
+        freqEnd = parseFreqToken(arrowMatch[2]) || freqStart;
+        glideMs = args[1] ? parseDurationMsToken(args[1], 40) : 40;
       } else {
         const parsedF = parseFreqToken(firstArg);
         if (parsedF) {
           freqStart = parsedF;
           freqEnd = parsedF;
         }
+        if (args[1]) {
+          glideMs = parseDurationMsToken(args[1], 0);
+        }
       }
     }
 
     const decayMatch = term.match(/expDecay\s*\(\s*([^)]+)\)/i);
-    const decayMs = decayMatch ? parseDurationMsToken(decayMatch[1], 45) : 55;
+    const decayMs = decayMatch
+      ? parseDurationMsToken(decayMatch[1], 45)
+      : glideMs > 0
+        ? Math.max(12, Math.round(glideMs * 0.85))
+        : 55;
+
+    const filterMatch = term.match(/\b(lpf|lp|hpf|hp|bpf|bp)\s*\(\s*([^,)]+)/i);
+    const rawFilter = filterMatch ? filterMatch[1].toLowerCase() : null;
+    const filterType =
+      rawFilter === 'lp' ? 'lpf'
+        : rawFilter === 'hp' ? 'hpf'
+          : rawFilter === 'bp' ? 'bpf'
+            : rawFilter;
+    const cutoffHz = filterMatch ? (parseFreqToken(filterMatch[2]) || 1600) : null;
 
     const delayMatch = term.match(/delay\s*\(\s*([^)]+)\)/i);
     const startMs = delayMatch ? parseDurationMsToken(delayMatch[1], 0) : 0;
-
-    const filterMatch = term.match(/\b(lpf|hpf|bpf)\s*\(\s*([^,)]+)/i);
-    const filterType = filterMatch ? filterMatch[1].toLowerCase() : null;
-    const cutoffHz = filterMatch ? (parseFreqToken(filterMatch[2]) || 1600) : null;
 
     const layerDurMs = Math.max(
       36,
