@@ -161,7 +161,7 @@ const glbGrammar = (hljsInstance) => ({
     },
     {
       className: 'number',
-      match: /-?\b\d+(?:\.\d+)?(?:[eE][+-]?\d+)?\b|\b[0-9A-Fa-f]{2}(?=\s+[0-9A-Fa-f]{2})/,
+      match: /-?\b\d+(?:\.\d+)?(?:[eE][+-]?\d+)?\b|\b[0-9A-Fa-f]{2}(?=\s+(?:[0-9A-Fa-f]{2}\b|\|)|$)/m,
     },
     {
       className: 'punctuation',
