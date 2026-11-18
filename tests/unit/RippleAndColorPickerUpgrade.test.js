@@ -7,6 +7,8 @@ import { fileURLToPath } from 'node:url';
 import { computeRippleGeometry, resolveRippleOptions } from '../../src/directives/ripple.js';
 import { pickAdaptiveHeaderLabel } from '../../src/utils/mutatingHeader.js';
 import { createKineticImpulse } from '../../src/utils/kinetics.js';
+import { dispatchGlobalShellShortcut } from '../../src/utils/key-controller.js';
+import { BUILTIN_ICONS } from '../../src/icons/index.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const SRC_DIR = path.resolve(__dirname, '../../src');
@@ -131,5 +133,49 @@ describe('v-ripple Structured Options, NanoColorPickerOklch Popover & C1 Kinetic
     assert.equal(latest.isMoving, false);
     assert.equal(latest.value, 0);
     assert.equal(latest.comboCount, 0);
+  });
+
+  test('ThreeDDonutChart pruneStaleSliceTransitions has zero undeclared processedData references and layout-grid icon resolves cleanly', () => {
+    const donutVue = fs.readFileSync(path.join(SRC_DIR, 'components/ThreeDDonutChart.vue'), 'utf8');
+    assert.doesNotMatch(donutVue, /\bprocessedData\b/, 'ThreeDDonutChart.vue must not reference undeclared processedData');
+    assert.match(donutVue, /normalizedData\.value/, 'pruneStaleSliceTransitions must inspect normalizedData.value');
+    assert.match(donutVue, /animatedItems\.value/, 'pruneStaleSliceTransitions must preserve outgoing animatedItems.value');
+
+    assert.ok(BUILTIN_ICONS['layout-grid'], 'BUILTIN_ICONS["layout-grid"] must resolve to a valid icon component');
+
+    const pickerVue = fs.readFileSync(path.join(SRC_DIR, 'components/NanoColorPickerOklch.vue'), 'utf8');
+    assert.match(pickerVue, /forceResolveMount:\s*true/, 'openPopover must resolve teleportTarget before mounting');
+    assert.match(pickerVue, /onWindowDiscPointerMove/, 'NanoColorPickerOklch must track circular wheel drags via window pointermove');
+    assert.match(pickerVue, /stopDiscDrag/, 'NanoColorPickerOklch must clean up window drag listeners on pointerup/unmount');
+
+    const miscCss = fs.readFileSync(path.join(SRC_DIR, 'assets/misc.css'), 'utf8');
+    assert.match(miscCss, /kbd\s*\{[\s\S]*?white-space:\s*nowrap/i, 'misc.css must enforce white-space: nowrap on <kbd>');
+  });
+
+  test('dispatchGlobalShellShortcut handles L/T/M/?/Escape even when modals are open while ignoring inputs and modifiers', () => {
+    const calls = [];
+    const handlers = {
+      onLocale: () => calls.push('locale'),
+      onTheme: () => calls.push('theme'),
+      onMute: () => calls.push('mute'),
+      onHelp: () => calls.push('help'),
+      onEscape: () => {
+        calls.push('escape');
+        return true;
+      },
+    };
+
+    assert.equal(dispatchGlobalShellShortcut({ key: 't', target: { tagName: 'DIV' } }, handlers), true);
+    assert.equal(dispatchGlobalShellShortcut({ key: 'L', shiftKey: true, target: { tagName: 'DIV' } }, handlers), true);
+    assert.equal(dispatchGlobalShellShortcut({ key: 'm', target: { tagName: 'DIV' } }, handlers), true);
+    assert.equal(dispatchGlobalShellShortcut({ key: '?', shiftKey: true, target: { tagName: 'DIV' } }, handlers), true);
+    assert.equal(dispatchGlobalShellShortcut({ key: 'Escape', target: { tagName: 'DIV' } }, handlers), true);
+    assert.deepEqual(calls, ['theme', 'locale', 'mute', 'help', 'escape']);
+
+    // Must ignore Ctrl/Meta/Alt combos (e.g. Cmd+T, Cmd+L) and editable inputs
+    assert.equal(dispatchGlobalShellShortcut({ key: 't', metaKey: true, target: { tagName: 'DIV' } }, handlers), false);
+    assert.equal(dispatchGlobalShellShortcut({ key: 'l', ctrlKey: true, target: { tagName: 'DIV' } }, handlers), false);
+    assert.equal(dispatchGlobalShellShortcut({ key: 't', target: { tagName: 'INPUT', type: 'text' } }, handlers), false);
+    assert.equal(calls.length, 5);
   });
 });

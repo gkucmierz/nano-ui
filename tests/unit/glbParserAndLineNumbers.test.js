@@ -90,6 +90,25 @@ test('glbParser registers out-of-the-box, maps .glb/.gltf paths, and highlights 
   const html = highlightGlb(inspected.code);
   assert.ok(html.includes('hljs-'), 'Expected highlight.js token spans in highlighted GLB output');
   assert.equal(html, highlightCode(inspected.code, 'glb'));
+
+  // Regression guard: >256B BIN chunk must report true (binByteLength - hexPreviewBytes) omitted bytes
+  // and highlight all 16 hex bytes per row (including the 16th byte before |ASCII|, e.g. 0xBE / 0x3F).
+  const largeBin = new Uint8Array(4096);
+  for (let i = 0; i < largeBin.length; i++) {
+    largeBin[i] = i % 16 === 15 ? 0xbe : 0x3f;
+  }
+  const largeGlb = buildSyntheticGlbBuffer({ asset: { version: '2.0' } }, largeBin);
+  const largeInspected = inspectGlbBinary(largeGlb, { fileName: 'deer-glade.glb', hexPreviewBytes: 128 });
+  assert.ok(
+    largeInspected.code.includes('+3,968 B (3.9 KB BIN geometry/animation data omitted)'),
+    `Expected +3,968 B omitted summary, got:\n${largeInspected.code}`
+  );
+  assert.ok(!largeInspected.code.includes('+128 '), 'Must not subtract from internal preview slice cap');
+  const largeHtml = highlightGlb(largeInspected.code);
+  assert.ok(
+    largeHtml.includes('<span class="hljs-number">BE</span>'),
+    '16th hex byte (BE) before |ASCII| gutter must be highlighted as hljs-number'
+  );
 });
 
 test('splitHighlightedHtmlIntoLines balances multi-line <span> tags cleanly for NanoCodeBlock line numbers', () => {

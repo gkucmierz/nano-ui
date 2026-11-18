@@ -16,6 +16,8 @@ import {
   navigateGrid,
   detectGridColumns,
   resolveAdaptiveMatrixColumns,
+  isGridSelectKey,
+  handleSelectableGridKeydown,
 } from '../../src/utils/grid.js';
 import {
   clampFloatingBox2D,
@@ -100,6 +102,88 @@ describe('NanoLangPicker & navigateGrid — Desktop 2D Matrix + Mobile Vertical 
     assert.equal(detectGridColumns([10, 10, 10, 10, 68, 68, 68, 68], (y) => y, 2), 4);
   });
 
+  it('commits focused language on BOTH Space and Enter via handleSelectableGridKeydown (GRID-SPACE-SELECT-01)', () => {
+    const langs16 = [
+      'pl', 'en', 'es', 'pt',
+      'de', 'fr', 'uk', 'ja',
+      'ko', 'it', 'zh', 'cs',
+      'tr', 'nl', 'id', 'sv',
+    ];
+    assert.equal(isGridSelectKey(' '), true);
+    assert.equal(isGridSelectKey('Spacebar'), true);
+    assert.equal(isGridSelectKey('Enter'), true);
+    assert.equal(isGridSelectKey('ArrowDown'), false);
+
+    // Start at IT (index 9 in 4x4 grid), press ArrowDown -> moves to NL (index 13), then press Space (' ') -> selects NL!
+    let focused = 9;
+    let selectedCode = null;
+    let escaped = false;
+    const mkEvent = (key) => {
+      let prevented = false;
+      let stopped = false;
+      return {
+        key,
+        metaKey: false,
+        ctrlKey: false,
+        altKey: false,
+        preventDefault() { prevented = true; },
+        stopPropagation() { stopped = true; },
+        get defaultPrevented() { return prevented; },
+        get propagationStopped() { return stopped; },
+      };
+    };
+
+    const downEv = mkEvent('ArrowDown');
+    const navRes = handleSelectableGridKeydown(downEv, {
+      currentIndex: focused,
+      totalItems: langs16.length,
+      columns: 4,
+      onFocusIndex: (idx) => { focused = idx; },
+      onSelectIndex: (idx) => { selectedCode = langs16[idx]; },
+    });
+    assert.equal(navRes.action, 'navigate');
+    assert.equal(focused, 13);
+    assert.equal(langs16[focused], 'nl');
+    assert.equal(downEv.defaultPrevented, true);
+    assert.equal(downEv.propagationStopped, true);
+
+    const spaceEv = mkEvent(' ');
+    const selRes = handleSelectableGridKeydown(spaceEv, {
+      currentIndex: focused,
+      totalItems: langs16.length,
+      columns: 4,
+      onFocusIndex: (idx) => { focused = idx; },
+      onSelectIndex: (idx) => { selectedCode = langs16[idx]; },
+    });
+    assert.equal(selRes.handled, true);
+    assert.equal(selRes.action, 'select');
+    assert.equal(selectedCode, 'nl');
+    assert.equal(spaceEv.defaultPrevented, true, 'Space must preventDefault to stop scroll and duplicate keyup click');
+    assert.equal(spaceEv.propagationStopped, true, 'Space must stopPropagation so global window Space shortcuts never hijack grid selection');
+
+    const enterEv = mkEvent('Enter');
+    let enterSelected = null;
+    handleSelectableGridKeydown(enterEv, {
+      currentIndex: 2,
+      totalItems: langs16.length,
+      columns: 4,
+      onSelectIndex: (idx) => { enterSelected = langs16[idx]; },
+    });
+    assert.equal(enterSelected, 'es');
+    assert.equal(enterEv.defaultPrevented, true);
+    assert.equal(enterEv.propagationStopped, true);
+
+    const escEv = mkEvent('Escape');
+    handleSelectableGridKeydown(escEv, {
+      currentIndex: focused,
+      totalItems: langs16.length,
+      columns: 4,
+      onEscape: () => { escaped = true; },
+    });
+    assert.equal(escaped, true);
+    assert.equal(escEv.propagationStopped, true);
+  });
+
   it('compiles NanoFlag.vue & NanoLangPicker.vue SFCs cleanly without :global(), native title, or hover translateY', () => {
     for (const rel of ['src/components/NanoFlag.vue', 'src/components/NanoLangPicker.vue']) {
       const fullPath = path.join(rootDir, rel);
@@ -142,7 +226,10 @@ describe('NanoLangPicker & navigateGrid — Desktop 2D Matrix + Mobile Vertical 
     );
     assert.ok(pickerSrc.includes(':lang="opt.code"'), 'Must apply BCP-47 :lang attribute to native endonyms');
     assert.ok(pickerSrc.includes('overscroll-behavior: contain'), 'Mobile list must contain scroll chaining');
-    assert.ok(pickerSrc.includes('navigateGrid('), 'Must wire navigateGrid for 2D keyboard navigation');
+    assert.ok(
+      pickerSrc.includes('handleSelectableGridKeydown('),
+      'Must wire handleSelectableGridKeydown for 2D navigation + Space/Enter selection'
+    );
   });
 
   it('computes finite non-NaN viewport coordinates for NanoLangPicker dropdowns and DOM-rect clampFloatingBox2D', () => {

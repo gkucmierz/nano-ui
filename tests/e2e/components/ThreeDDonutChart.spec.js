@@ -80,8 +80,11 @@ test.describe('3D Donut Chart Wall Geometry & Visibility Specs', () => {
     const dimmedCount = await dimmedCutGroups.count()
     for (let i = 0; i < dimmedCount; i++) {
       const dimmedEl = dimmedCutGroups.nth(i)
-      const opacity = await dimmedEl.evaluate((el) => window.getComputedStyle(el).opacity)
-      expect(Number(opacity)).toBeCloseTo(0.35, 1)
+      await expect
+        .poll(async () => Number(await dimmedEl.evaluate((el) => window.getComputedStyle(el).opacity)), {
+          timeout: 1500
+        })
+        .toBeCloseTo(0.35, 1)
     }
   })
 
@@ -199,5 +202,98 @@ test.describe('3D Donut Chart Wall Geometry & Visibility Specs', () => {
     expect(order.frontInnerIdx).toBeLessThan(order.frontOuterIdx)
     expect(order.frontOuterIdx).toBeLessThan(order.topFaceIdx)
     expect(order.topFaceIdx).toBeLessThan(order.centerIdx)
+  })
+
+  test('should switch all 4 Feature Showcases tabs cleanly with zero Vue runtime errors', async ({ page }) => {
+    const runtimeErrors = []
+    page.on('pageerror', (err) => runtimeErrors.push(`PAGEERROR: ${err.message}\n${err.stack || ''}`))
+    page.on('console', (msg) => {
+      if (msg.type() === 'error' || msg.text().includes('[Vue warn]')) {
+        runtimeErrors.push(`${msg.type().toUpperCase()}: ${msg.text()}`)
+      }
+    })
+
+    await page.goto('/docs/3d-donut-chart')
+    await page.waitForSelector('.docked-tab-btn')
+
+    const tabAutoRotate = page.locator('.docked-tab-btn', { hasText: 'Auto-Rotate' })
+    const tabThreshold = page.locator('.docked-tab-btn', { hasText: 'Threshold Aggregation' })
+    const tabCompact = page.locator('.docked-tab-btn', { hasText: 'Compact Dashboards' })
+    const tabCoupled = page.locator('.docked-tab-btn', { hasText: 'Coupled Legend Cards' })
+
+    await tabThreshold.scrollIntoViewIfNeeded()
+    await tabThreshold.click()
+    await expect(tabThreshold).toHaveClass(/active/)
+    await expect(page.locator('.showcase-title', { hasText: 'Long-Tail Consolidation' })).toBeVisible()
+
+    await tabCompact.click()
+    await expect(tabCompact).toHaveClass(/active/)
+    await expect(page.locator('.showcase-title', { hasText: 'Headless Metric Cards' })).toBeVisible()
+    await expect(page.locator('.kpi-showcase-card')).toHaveCount(3)
+
+    await tabCoupled.click()
+    await expect(tabCoupled).toHaveClass(/active/)
+    await expect(page.locator('.showcase-title', { hasText: 'Coupled Selection & Orbiting Conic Borders' })).toBeVisible()
+
+    await tabAutoRotate.click()
+    await expect(tabAutoRotate).toHaveClass(/active/)
+    await expect(page.locator('.showcase-title', { hasText: 'Bilateral Label Balancing' })).toBeVisible()
+
+    expect(runtimeErrors).toEqual([])
+  })
+
+  test('should smoothly drag NanoColorPickerOklch circular wheel handle in popover mode and update HEX value live', async ({ page }) => {
+    const runtimeErrors = []
+    page.on('pageerror', (err) => runtimeErrors.push(`PAGEERROR: ${err.message}\n${err.stack || ''}`))
+    page.on('console', (msg) => {
+      if (msg.type() === 'error' || msg.text().includes('[Vue warn]')) {
+        runtimeErrors.push(`${msg.type().toUpperCase()}: ${msg.text()}`)
+      }
+    })
+
+    await page.goto('/docs/3d-donut-chart')
+    const otherColorTrigger = page.locator('#donut-ctrl-13')
+    await otherColorTrigger.scrollIntoViewIfNeeded()
+    await expect(otherColorTrigger).toBeVisible()
+    await otherColorTrigger.click()
+
+    const floatingPicker = page.locator('.nano-oklch-picker.is-floating')
+    await expect(floatingPicker).toBeVisible()
+
+    const disc = floatingPicker.locator('.nano-oklch-disc')
+    const marker = floatingPicker.locator('.nano-oklch-disc-marker')
+    const valueInput = floatingPicker.locator('.nano-oklch-value-input')
+
+    const initialHex = await valueInput.inputValue()
+    const initialMarkerStyle = await marker.getAttribute('style')
+    const discBox = await disc.boundingBox()
+    expect(discBox).toBeTruthy()
+
+    // Press near current marker / center and drag across the wheel to upper-right saturated zone and lower-left zone
+    const startX = discBox.x + discBox.width * 0.48
+    const startY = discBox.y + discBox.height * 0.40
+    const midX = discBox.x + discBox.width * 0.84
+    const midY = discBox.y + discBox.height * 0.24
+    const endX = discBox.x + discBox.width * 0.22
+    const endY = discBox.y + discBox.height * 0.78
+
+    await page.mouse.move(startX, startY)
+    await page.mouse.down()
+    await page.mouse.move(midX, midY, { steps: 6 })
+
+    const midHex = await valueInput.inputValue()
+    const midMarkerStyle = await marker.getAttribute('style')
+    expect(midHex).not.toBe(initialHex)
+    expect(midMarkerStyle).not.toBe(initialMarkerStyle)
+
+    await page.mouse.move(endX, endY, { steps: 6 })
+    const endHex = await valueInput.inputValue()
+    const endMarkerStyle = await marker.getAttribute('style')
+    await page.mouse.up()
+
+    expect(endHex).not.toBe(midHex)
+    expect(endMarkerStyle).not.toBe(midMarkerStyle)
+    await expect(floatingPicker).toBeVisible()
+    expect(runtimeErrors).toEqual([])
   })
 })
