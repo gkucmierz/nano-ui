@@ -153,6 +153,16 @@ describe('OKLCH Perceptual Lightness & Contrast Utilities', () => {
       assert.match(descriptor.template.content, /nano-oklch-disc/);
       assert.match(descriptor.template.content, /nano-oklch-preview/);
       assert.match(descriptor.styles[0].content, /user-select:\s*none/);
+      assert.match(
+        descriptor.styles[0].content,
+        /--nano-colorpicker-popover-bg/,
+        'Floating popover must bind opaque --nano-colorpicker-popover-bg instead of 5% alpha card token'
+      );
+      assert.match(
+        descriptor.styles[0].content,
+        /\.nano-oklch-picker\.is-floating\.is-light-theme/,
+        'Teleported popover must declare explicit light-theme surface parity'
+      );
     });
   });
 });
