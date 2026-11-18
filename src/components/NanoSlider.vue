@@ -670,7 +670,7 @@ defineExpose({
   );
   --_slider-thumb-bg: var(
     --nano-slider-thumb-bg,
-    var(--bg-card, var(--nano-bg-card, #0b1322))
+    var(--nano-bg-surface, #0f172a)
   );
   --_slider-glow: var(
     --nano-slider-glow,
