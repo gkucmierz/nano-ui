@@ -8,6 +8,8 @@ import {
   navigateGrid,
   detectRenderedGridColumns,
   resolveAdaptiveMatrixColumns,
+  isGridSelectKey,
+  handleSelectableGridKeydown,
 } from '../utils/grid.js';
 import { computeAnchoredOverlayPosition } from '../utils/selectPositioning.js';
 
@@ -320,7 +322,14 @@ function resolveLiveGridColumns() {
 }
 
 function onTriggerKeydown(e) {
-  if (props.disabled || !isMultiPicker.value) return;
+  if (props.disabled) return;
+  if (isGridSelectKey(e.key)) {
+    e.preventDefault();
+    e.stopPropagation();
+    toggle();
+    return;
+  }
+  if (!isMultiPicker.value) return;
   if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
     e.preventDefault();
     e.stopPropagation();
@@ -337,43 +346,24 @@ function onPanelKeydown(e) {
   const total = normalizedLanguages.value.length;
   if (total <= 0) return;
 
-  if (e.key === 'Escape') {
-    e.preventDefault();
-    e.stopPropagation();
-    close({ restoreFocus: true });
-    return;
-  }
-
-  if (
-    e.key === 'ArrowRight' ||
-    e.key === 'ArrowLeft' ||
-    e.key === 'ArrowDown' ||
-    e.key === 'ArrowUp'
-  ) {
-    e.preventDefault();
-    e.stopPropagation();
-    const cols = resolveLiveGridColumns();
-    const nextIdx = navigateGrid(focusedIndex.value, total, e.key, cols, {
-      wrap: true,
-    });
-    if (nextIdx >= 0) {
+  handleSelectableGridKeydown(e, {
+    currentIndex: focusedIndex.value,
+    totalItems: total,
+    columns: () => resolveLiveGridColumns(),
+    wrap: true,
+    onFocusIndex: (nextIdx) => {
       focusOptionAt(nextIdx);
-    }
-    return;
-  }
-
-  if (e.key === 'Home') {
-    e.preventDefault();
-    e.stopPropagation();
-    focusOptionAt(0);
-    return;
-  }
-
-  if (e.key === 'End') {
-    e.preventDefault();
-    e.stopPropagation();
-    focusOptionAt(total - 1);
-  }
+    },
+    onSelectIndex: (idx) => {
+      const opt = normalizedLanguages.value[idx];
+      if (opt) {
+        selectLanguage(opt.code, null);
+      }
+    },
+    onEscape: () => {
+      close({ restoreFocus: true });
+    },
+  });
 }
 
 function onDocumentPointerDown(e) {
