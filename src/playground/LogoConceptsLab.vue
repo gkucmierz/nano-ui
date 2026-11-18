@@ -61,9 +61,13 @@ const isPointerDragging = ref(false);
 const hasUserInteractedAudio = ref(false);
 const stage3DBoxRef = ref(null);
 const stage3DSvgRef = ref(null);
+const labSectionRef = ref(null);
 const conceptsGridRef = ref(null);
 const conceptCardRefs = ref([]);
 const isConceptsFocused = ref(false);
+let visibilityObserver = null;
+let isLabIntersecting = true;
+let shouldResumeAutoOrbit = false;
 
 // Interactive Cursor Parallax & Holographic Field State (No Dragging Required!)
 const cursorField = ref({
@@ -803,6 +807,21 @@ const onConceptsGridFocusOut = (ev) => {
   isConceptsFocused.value = false;
 };
 
+const syncAutoOrbitVisibility = () => {
+  const docHidden = globalThis.document !== undefined && document.hidden === true;
+  const effectiveVisible = !docHidden && (isFullscreenPresentation.value || isLabIntersecting);
+  if (!effectiveVisible) {
+    if (isAutoOrbiting.value) {
+      shouldResumeAutoOrbit = true;
+      stopOrbitAnimation();
+      stopInteractive3DAudio();
+    }
+  } else if (shouldResumeAutoOrbit && !isAutoOrbiting.value && !isConverging.value) {
+    shouldResumeAutoOrbit = false;
+    startAutoOrbitLoop(false);
+  }
+};
+
 onMounted(() => {
   isMountedClient.value = true;
   if (globalThis.window !== undefined) {
@@ -810,6 +829,19 @@ onMounted(() => {
     window.addEventListener('resize', refreshSafeStageBounds);
     window.addEventListener('scroll', syncPointerFieldOnScroll, { passive: true, capture: true });
     document.addEventListener('fullscreenchange', onFullscreenChange);
+    document.addEventListener('visibilitychange', syncAutoOrbitVisibility);
+    if ('IntersectionObserver' in globalThis && labSectionRef.value) {
+      visibilityObserver = new IntersectionObserver(
+        (entries) => {
+          const entry = entries[0];
+          if (!entry) return;
+          isLabIntersecting = entry.isIntersecting;
+          syncAutoOrbitVisibility();
+        },
+        { threshold: 0.01 }
+      );
+      visibilityObserver.observe(labSectionRef.value);
+    }
     refreshSafeStageBounds();
     const keys = getGlobalKeyController();
     offKeyController = keys.bindAll(
@@ -834,6 +866,10 @@ onUnmounted(() => {
   stopInteractive3DAudio();
   stopAmbientBackgroundMusic();
   syncBodyScrollLock(false);
+  if (visibilityObserver) {
+    visibilityObserver.disconnect();
+    visibilityObserver = null;
+  }
   if (offKeyController) {
     offKeyController();
     offKeyController = null;
@@ -843,6 +879,7 @@ onUnmounted(() => {
     window.removeEventListener('resize', refreshSafeStageBounds);
     window.removeEventListener('scroll', syncPointerFieldOnScroll, { capture: true });
     document.removeEventListener('fullscreenchange', onFullscreenChange);
+    document.removeEventListener('visibilitychange', syncAutoOrbitVisibility);
   }
 });
 
@@ -882,6 +919,7 @@ const concepts = [
 <template>
   <Teleport to="body" :disabled="!isFullscreenPresentation || !isMountedClient">
     <section
+      ref="labSectionRef"
       class="logo-lab-card"
       :class="[
         `is-device-${deviceViewport}`,
