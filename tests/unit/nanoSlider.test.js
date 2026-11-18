@@ -130,4 +130,64 @@ describe('NanoSlider Component & Playground Integration', () => {
       }
     }
   });
+
+  it('implements ~2.2s progressive dynamic ArrowLeft/ArrowRight hold ramp, stopPropagation(), and zero focus-ring halo (Rule 3)', async () => {
+    const {
+      DEFAULT_SLIDER_FULL_SWEEP_SEC,
+      createDynamicSliderKeyState,
+      pressDynamicSliderKey,
+      releaseDynamicSliderKey,
+      stepDynamicSliderKeyHold,
+    } = await import('../../src/utils/sliderKeyboardDynamics.js');
+
+    assert.equal(DEFAULT_SLIDER_FULL_SWEEP_SEC, 2.2);
+    assert.ok(sliderSfc.includes('e.stopPropagation()'), 'NanoSlider must stopPropagation on arrow keys');
+    assert.ok(sliderSfc.includes('outline: none;'), 'NanoSlider must suppress browser focus outline');
+    assert.ok(!sliderSfc.includes('0 0 0 4px var(--_slider-glow)'), 'NanoSlider must not render 4px outer focus ring halo');
+
+    // Single tap steps cleanly by 1 step; OS key-repeat does not double-step
+    const tap = pressDynamicSliderKey(createDynamicSliderKeyState(), {
+      dir: 1,
+      currentValue: 0,
+      min: 0,
+      max: 100,
+      step: 2,
+      isRepeat: false,
+    });
+    assert.equal(tap.nextValue, 2);
+    assert.equal(tap.changed, true);
+
+    const repeat = pressDynamicSliderKey(tap.state, {
+      dir: 1,
+      currentValue: tap.nextValue,
+      min: 0,
+      max: 100,
+      step: 2,
+      isRepeat: true,
+    });
+    assert.equal(repeat.changed, false);
+
+    // Continuous 60 FPS hold sweeps 0 -> 100 progressively in ~2.1s..2.35s
+    let st = tap.state;
+    let cur = tap.nextValue;
+    let elapsed = 0;
+    const dt = 1 / 60;
+    while (cur < 100 && elapsed < 4) {
+      const stepRes = stepDynamicSliderKeyHold(st, {
+        currentValue: cur,
+        min: 0,
+        max: 100,
+        step: 0.5,
+        dtSec: dt,
+      });
+      st = stepRes.state;
+      cur = stepRes.nextValue;
+      elapsed += dt;
+    }
+    assert.equal(cur, 100);
+    assert.ok(elapsed >= 1.95 && elapsed <= 2.45, `Expected ~2.2s full sweep, got ${elapsed.toFixed(2)}s`);
+
+    const released = releaseDynamicSliderKey(st, 1);
+    assert.equal(released.dir, 0);
+  });
 });
