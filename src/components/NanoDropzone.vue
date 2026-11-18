@@ -4,6 +4,7 @@ import {
   createDropzoneStateMachine,
   validateDroppedFiles,
   formatDropzoneBytes,
+  inspectDataTransferMedia,
 } from '../utils/dropzoneState.js';
 
 const props = defineProps({
@@ -69,11 +70,12 @@ const props = defineProps({
   },
 });
 
-const emit = defineEmits(['files', 'drop-files', 'reject', 'drag-change']);
+const emit = defineEmits(['files', 'drop-files', 'reject', 'drag-change', 'drag-media']);
 
 const fileInputRef = ref(null);
 const machine = createDropzoneStateMachine({ disabled: props.disabled });
 const internalDragOver = ref(false);
+const draggedMedia = ref(inspectDataTransferMedia(null));
 const lastAcceptedFiles = ref([]);
 const lastError = ref('');
 
@@ -106,27 +108,36 @@ const resolvedOverlaySubtitle = computed(
   () => props.overlaySubtitle || resolvedBadgeText.value || props.subtitle
 );
 
-function syncState(st) {
+function syncState(st, event = null) {
   const prev = internalDragOver.value;
   internalDragOver.value = st.isDragOver;
+  if (st.isDragOver && event) {
+    const info = inspectDataTransferMedia(event);
+    draggedMedia.value = info;
+    emit('drag-media', info);
+  } else if (!st.isDragOver && prev) {
+    const cleared = inspectDataTransferMedia(null);
+    draggedMedia.value = cleared;
+    emit('drag-media', cleared);
+  }
   if (prev !== st.isDragOver) {
-    emit('drag-change', st.isDragOver);
+    emit('drag-change', st.isDragOver, draggedMedia.value);
   }
 }
 
 function handleDragEnter(e) {
   e.preventDefault();
-  syncState(machine.onDragEnter(e));
+  syncState(machine.onDragEnter(e), e);
 }
 
 function handleDragOver(e) {
   e.preventDefault();
-  syncState(machine.onDragOver(e));
+  syncState(machine.onDragOver(e), e);
 }
 
 function handleDragLeave(e) {
   e.preventDefault();
-  syncState(machine.onDragLeave(e));
+  syncState(machine.onDragLeave(e), e);
 }
 
 function processIncomingFiles(rawFileList, event) {
@@ -200,6 +211,7 @@ defineExpose({
   openFileDialog,
   reset,
   isDragOver,
+  draggedMedia,
   lastAcceptedFiles,
   lastError,
 });
