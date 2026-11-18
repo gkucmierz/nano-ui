@@ -422,6 +422,10 @@ showCompass: Boolean (default: true) - Show bottom-right rotating compass button
 showLocateControl: Boolean (default: true) - Show bottom-right GPS locate button (<NanoIcon name="locate-fixed" />)
 requestDeviceGpsOnLocate: Boolean (default: true) - Request navigator.geolocation.getCurrentPosition() when :gps prop is not provided
 enableLayerHotkeys: Boolean (default: true) - Enable keyboard shortcuts 1–9 for switching tile layers
+fitBounds: Boolean (default: false) - Auto-fit tracks/markers on mount (skips restored storage viewport when true)
+storage: 'ls' | 'ss' | 'none' | Boolean (default: 'none') - Persist { center, zoom, bearing, layerId } with 150ms debounce
+appPrefix: String (default: '') - Optional host app prefix for hierarchical storage key
+storageKey: String (default: 'map_viewport') - Storage key suffix for @gkucmierz/storage-controller
 
 // Exposed Methods (ref)
 zoomBy(delta: Number) - Increment or decrement zoom level within [minZoom, maxZoom]

@@ -17,6 +17,13 @@ import {
   clampLatitude,
   normalizeLongitude
 } from '../utils/map-engine.js';
+import {
+  resolveViewportStorageConfig,
+  sanitizeMapViewportPayload,
+  createViewportStorageManager,
+  MAP_VIEWPORT_DEBOUNCE_MS
+} from '../utils/viewport-storage.js';
+import { is, isCallable } from '../utils/type.js';
 
 const props = defineProps({
   center: {
@@ -125,6 +132,37 @@ const props = defineProps({
   enableLayerHotkeys: {
     type: Boolean,
     default: false
+  },
+  /**
+   * Explicit fitBounds override:
+   * - `true`: force fitting tracks/polygons/markers on mount (skips restoring saved viewport)
+   * - `false`: never auto-fit bounds on mount
+   * - `undefined` (default): restore saved viewport if `storageKey` has one; otherwise auto-fit tracks
+   */
+  fitBounds: {
+    type: Boolean,
+    default: undefined
+  },
+  /**
+   * Viewport storage backend when `storageKey` is provided (`'ls' | 'ss' | 'none' | Boolean`).
+   */
+  storage: {
+    type: [String, Boolean],
+    default: 'ls'
+  },
+  /**
+   * Optional host application prefix (e.g. `'dashboard-app'` -> `'DA_NU_<storageKey>'`).
+   */
+  appPrefix: {
+    type: String,
+    default: ''
+  },
+  /**
+   * Optional storage key persisting `{ center, zoom, bearing, layerId }` (debounced 150ms).
+   */
+  storageKey: {
+    type: String,
+    default: ''
   }
 });
 
@@ -135,6 +173,7 @@ const emit = defineEmits([
   'update:layer',
   'update:gps',
   'update:followGps',
+  'viewport-change',
   'marker-click',
   'polygon-click',
   'map-click',
@@ -145,7 +184,7 @@ const emit = defineEmits([
 const viewportRef = ref(null);
 const layerMenuRef = ref(null);
 const viewportWidth = ref(640);
-const viewportHeight = ref(typeof props.height === 'number' ? props.height : 360);
+const viewportHeight = ref(is(props.height, 'number') ? props.height : 360);
 
 const initialCenterNorm = normalizeGeoPoint(props.center) || { lat: 50.2991, lon: 18.6749 };
 const internalCenter = ref([initialCenterNorm.lat, initialCenterNorm.lon]);
@@ -461,8 +500,85 @@ const scaleBar = computed(() => {
 });
 
 const stageHeightStyle = computed(() => {
-  return typeof props.height === 'number' ? `${props.height}px` : String(props.height);
+  return is(props.height, 'number') ? `${props.height}px` : String(props.height);
 });
+
+const viewportStorageConfig = computed(() =>
+  resolveViewportStorageConfig({
+    storage: props.storage,
+    storageKey: props.storageKey,
+    appPrefix: props.appPrefix
+  })
+);
+
+const resolvedStorageKey = computed(() => viewportStorageConfig.value.resolvedKey);
+const resolvedStorageMode = computed(() => viewportStorageConfig.value.mode);
+
+let hasMountedViewport = false;
+
+const viewportStorageManager = createViewportStorageManager({
+  getConfig: () => viewportStorageConfig.value,
+  debounceMs: MAP_VIEWPORT_DEBOUNCE_MS
+});
+
+function buildViewportSnapshot() {
+  return {
+    center: [
+      Number(internalCenter.value[0].toFixed(6)),
+      Number(internalCenter.value[1].toFixed(6))
+    ],
+    zoom: Number(internalZoom.value.toFixed(2)),
+    bearing: Number(internalBearing.value.toFixed(1)),
+    layerId: activeLayerId.value
+  };
+}
+
+function scheduleViewportSave() {
+  if (!hasMountedViewport || !viewportStorageConfig.value.enabled) return;
+  const snapshot = buildViewportSnapshot();
+  viewportStorageManager.scheduleSave(snapshot);
+  emit('viewport-change', {
+    ...snapshot,
+    mode: resolvedStorageMode.value,
+    storageKey: resolvedStorageKey.value
+  });
+}
+
+function saveViewportState() {
+  if (!viewportStorageConfig.value.enabled) return false;
+  return viewportStorageManager.writeNow(buildViewportSnapshot());
+}
+
+function loadViewportState() {
+  if (!viewportStorageConfig.value.enabled) return false;
+  const rawSaved = viewportStorageManager.readSaved();
+  const validLayerIds = effectiveLayers.value.map((l) => l.id);
+  const sanitized = sanitizeMapViewportPayload(rawSaved, {
+    minZoom: props.minZoom,
+    maxZoom: props.maxZoom,
+    validLayerIds
+  });
+  if (!sanitized) return false;
+
+  internalCenter.value = [...sanitized.center];
+  emit('update:center', [...sanitized.center]);
+
+  internalZoom.value = sanitized.zoom;
+  emit('update:zoom', sanitized.zoom);
+
+  internalBearing.value = sanitized.bearing;
+  emit('update:bearing', sanitized.bearing);
+
+  if (sanitized.layerId && sanitized.layerId !== activeLayerId.value) {
+    activeLayerId.value = sanitized.layerId;
+    emit('update:layer', sanitized.layerId);
+  }
+  return true;
+}
+
+function resetViewportState() {
+  return viewportStorageManager.clearSaved();
+}
 
 function setCenterAndZoom(newCenter, newZoom) {
   if (Array.isArray(newCenter) && newCenter.length >= 2) {
@@ -475,12 +591,14 @@ function setCenterAndZoom(newCenter, newZoom) {
     internalZoom.value = clampedZ;
     emit('update:zoom', clampedZ);
   }
+  scheduleViewportSave();
 }
 
 function setBearing(deg) {
   const norm = ((((Number(deg) || 0) % 360) + 540) % 360) - 180;
   internalBearing.value = Math.abs(norm) < 0.2 ? 0 : Number(norm.toFixed(1));
   emit('update:bearing', internalBearing.value);
+  scheduleViewportSave();
 }
 
 function syncFollowCamera(pt = effectiveGpsPoint.value) {
@@ -520,6 +638,7 @@ function selectLayer(layerId) {
   activeLayerId.value = layerId;
   showLayerDropdown.value = false;
   emit('update:layer', layerId);
+  scheduleViewportSave();
 }
 
 function zoomIn() {
@@ -558,7 +677,7 @@ function handleLocateClick() {
     return;
   }
 
-  if (typeof navigator !== 'undefined' && navigator.geolocation) {
+  if (globalThis.navigator && globalThis.navigator.geolocation) {
     isLocatingDevice.value = true;
     navigator.geolocation.getCurrentPosition(
       (pos) => {
@@ -705,27 +824,43 @@ function updateDimensions() {
   if (h > 0) viewportHeight.value = h;
 }
 
+watch(
+  () => [props.storageKey, props.storage, props.appPrefix],
+  () => {
+    if (hasMountedViewport && props.fitBounds !== true) {
+      loadViewportState();
+    }
+  }
+);
+
 onMounted(() => {
   updateDimensions();
-  if (typeof ResizeObserver !== 'undefined' && viewportRef.value) {
+  if (isCallable(globalThis.ResizeObserver) && viewportRef.value) {
     resizeObserver = new ResizeObserver(() => updateDimensions());
     resizeObserver.observe(viewportRef.value);
   }
-  if (!props.followGps && normalizedTracks.value.length > 0) {
+  if (props.fitBounds === true) {
     fitBoundsToTracks();
+  } else {
+    const restored = loadViewportState();
+    if (!restored && !props.followGps && normalizedTracks.value.length > 0 && props.fitBounds !== false) {
+      fitBoundsToTracks();
+    }
   }
-  if (typeof document !== 'undefined') {
+  hasMountedViewport = true;
+  if (globalThis.document) {
     document.addEventListener('pointerdown', handleDocumentClick);
     window.addEventListener('keydown', handleKeydown);
   }
 });
 
 onBeforeUnmount(() => {
+  viewportStorageManager.cancelPending();
   if (resizeObserver) {
     resizeObserver.disconnect();
     resizeObserver = null;
   }
-  if (typeof document !== 'undefined') {
+  if (globalThis.document) {
     document.removeEventListener('pointerdown', handleDocumentClick);
     window.removeEventListener('keydown', handleKeydown);
   }
@@ -737,7 +872,12 @@ defineExpose({
   setBearing,
   selectLayer,
   fitBoundsToTracks,
-  handleLocateClick
+  handleLocateClick,
+  resolvedStorageKey,
+  resolvedStorageMode,
+  saveViewportState,
+  loadViewportState,
+  resetViewportState
 });
 </script>
 
