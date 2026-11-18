@@ -1,10 +1,13 @@
+import { playNanoUiSound } from '../utils/sound-controller.js';
+import { is, isCallable } from '../utils/type.js';
+
 const MAX_CONCURRENT_RIPPLES = 4;
 const DEFAULT_RIPPLE_DURATION_MS = 540;
 const RIPPLE_EVENT = globalThis.PointerEvent ? 'pointerdown' : 'click';
-const isStr = (val) => Object.prototype.toString.call(val) === '[object String]';
-const isNum = (val) => Object.prototype.toString.call(val) === '[object Number]' && Number.isFinite(val);
-const isFn = (val) => Object.prototype.toString.call(val) === '[object Function]';
-const isPlainObj = (val) => Object.prototype.toString.call(val) === '[object Object]';
+const isStr = (val) => is(val, 'string');
+const isNum = (val) => is(val, 'number');
+const isFn = (val) => isCallable(val);
+const isPlainObj = (val) => is(val, 'object');
 
 const clampNum = (val, min, max) => Math.min(max, Math.max(min, val));
 
@@ -129,11 +132,39 @@ const cleanupCircleNode = (node) => {
   }
 };
 
+const resolveRippleSoundTrigger = (rawValue, el) => {
+  if (el?.getAttribute?.('data-nano-sound-owner') === 'true') {
+    return { skip: true };
+  }
+  const propSound = isPlainObj(rawValue) && 'sound' in rawValue ? rawValue.sound : undefined;
+  const cls = String(el?.className || '');
+  const preset =
+    cls.includes('nano-btn-primary') || cls.includes('nano-btn-success') || cls.includes('nano-btn-danger')
+      ? 'ui-click-glass'
+      : 'ui-tap-soft';
+  const size = cls.includes('nano-btn-lg')
+    ? 'lg'
+    : cls.includes('nano-btn-sm')
+      ? 'sm'
+      : 'md';
+  return { skip: false, propSound, preset, size };
+};
+
 const handleRippleTrigger = (e, el, binding) => {
   const opts = resolveRippleOptions(binding?.value);
   if (!opts.enabled) return;
   if (e && isNum(e.button) && e.button > 0) return;
   if (el.disabled || el.getAttribute?.('aria-disabled') === 'true') return;
+
+  const soundMeta = resolveRippleSoundTrigger(binding?.value, el);
+  if (!soundMeta.skip) {
+    playNanoUiSound(soundMeta.preset, {
+      propSound: soundMeta.propSound,
+      size: soundMeta.size,
+      minIntervalMs: 24,
+      throttleKey: 'v-ripple-tap',
+    });
+  }
 
   const win = globalThis.window;
   if (win?.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches) {
