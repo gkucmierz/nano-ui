@@ -1,6 +1,7 @@
 import pkg from '../package.json';
 import {
   initTheme,
+  freezeThemeTransitions,
   syncDocumentColorSchemeFromDom,
   syncThemeWithHostDark,
   getZeroFoucScript,
@@ -24,13 +25,21 @@ import {
 } from './composables/useInertialStabilizer.js';
 import Ripple, { computeRippleGeometry, resolveRippleOptions } from './directives/ripple.js';
 import {
+  DEFAULT_NANO_SOUND_STORAGE_KEY,
+  NANO_SOUND_BROADCAST_CHANNEL,
+  VALID_NANO_SOUND_PRESETS,
   NANO_UI_SOUND_PRESETS,
   CONTROL_ACOUSTIC_MASS_PROFILES,
   resolveControlAcousticMass,
   configureNanoUiSound,
   getNanoUiSoundConfig,
   resetNanoUiSoundConfig,
+  useNanoSound,
   useNanoUiSound,
+  isNanoUiAudioUnlocked,
+  unlockNanoUiAudio,
+  readPersistedNanoSoundState,
+  setNanoUiSoundTestEnv,
   resolveComponentSoundConfig,
   playNanoUiSound,
   computeKnobDetentCrossings,
@@ -98,6 +107,89 @@ import NanoFitText from './components/NanoFitText.vue';
 import NanoHeatmap from './components/NanoHeatmap.vue';
 import NanoFlag from './components/NanoFlag.vue';
 import NanoLangPicker from './components/NanoLangPicker.vue';
+import NanoButton from './components/NanoButton.vue';
+import NanoAlert from './components/NanoAlert.vue';
+import NanoTextField from './components/NanoTextField.vue';
+import NanoProcessBadge from './components/NanoProcessBadge.vue';
+import NanoProcessButton from './components/NanoProcessButton.vue';
+import NanoMorph from './components/NanoMorph.vue';
+import NanoPanorama360 from './components/NanoPanorama360.vue';
+import {
+  BOUNDED_DRAG_BOUNDARY_ATTR,
+  DEFAULT_ISOLATED_BOUNDARY_SELECTORS,
+  OUT_OF_BOUNDS_MODES,
+  resolveHighestDragBoundary,
+  projectPointerToBox,
+  clipSegmentToUnitBox,
+  createBoundedPointerDrag,
+} from './utils/boundedPointerDrag.js';
+import { useBoundedPointerDrag } from './composables/useBoundedPointerDrag.js';
+import {
+  IDEAL_PANORAMA_ASPECT_RATIO,
+  PANORAMA_PREFERRED_RATIO_TOLERANCE,
+  DEFAULT_PANORAMA_KEYBOARD_SPEED_DEG,
+  DEFAULT_PANORAMA_ZOOM_SPEED_DEG,
+  DEFAULT_PANORAMA_ACCEL_MS,
+  DEFAULT_PANORAMA_DECEL_MS,
+  normalizeYawDeg,
+  formatCompassHeading,
+  resolvePanoramaProjectionMeta,
+  clampPanoramaCameraState,
+  projectViewPixelToPanoramaUv,
+  normalizePanoramaKeyToken,
+  isPanoramaNavigationKey,
+  resolvePanoramaKeyInputVector,
+  stepPanoramaKinematics,
+} from './utils/panorama360.js';
+import { Type, Types, is, of, same, isCallable } from './utils/type.js';
+import {
+  MAP_VIEWPORT_DEBOUNCE_MS,
+  resolveViewportStorageConfig,
+  sanitizeMapViewportPayload,
+  sanitizeGlobeViewportPayload,
+  createViewportStorageManager,
+} from './utils/viewport-storage.js';
+import {
+  insertDictationAtCursor,
+  computeTextareaAutoResize,
+  computeVoiceRmsBars,
+  isImeSafeEnterEvent,
+  createVoiceAdapterSession,
+} from './utils/textFieldVoice.js';
+import {
+  MAX_PROCESS_ERROR_CODE_LENGTH,
+  MODAL_PROCESS_STATES,
+  normalizeProcessStatus,
+  truncateProcessErrorCode,
+  normalizeModalProcessState,
+} from './utils/modalProcess.js';
+import {
+  NANO_MORPH_MODES,
+  DEFAULT_MORPH_DURATION_MS,
+  DEFAULT_MORPH_EASING,
+  parseCubicBezierEasing,
+  evaluateCubicBezierEasing,
+  measureElementMorphRect,
+  computeFlipInvertTransform,
+  interpolateMorphBox,
+  arcToCubicBeziers,
+  shapeToPathD,
+  pathToCubicBeziers,
+  splitCubicBezierAt,
+  estimateCubicBezierLength,
+  resampleCubicBeziers,
+  reverseCubicBezierLoop,
+  computeBezierLoopTwistCost,
+  alignCubicBezierLoops,
+  normalizeBezierPairForMorph,
+  interpolateCubicBeziers,
+  cubicBeziersToPathD,
+  textToContourBeziers,
+  captureCanvasFreezeSnapshot,
+  createDecimatedMorphStream,
+  createMorphStrategyGovernor,
+} from './utils/nanoMorph.js';
+import { useElementMorph } from './composables/useElementMorph.js';
 import {
   LANG_CODE_ALIASES,
   LANG_FLAG_REGISTRY,
@@ -142,6 +234,8 @@ import {
 } from './utils/unixTree.js';
 import {
   DROPZONE_MODES,
+  classifyMediaFile,
+  inspectDataTransferMedia,
   formatDropzoneBytes,
   matchesAcceptPattern,
   validateDroppedFiles,
@@ -154,6 +248,11 @@ import {
   getActiveModalScrollLockCount,
   resetModalScrollLocks,
 } from './utils/modalScrollLock.js';
+import {
+  extractFeatureTitleSlug,
+  resolveCssViewportPixels,
+  clampModalGeometryBox,
+} from './utils/modalGeometry.js';
 import {
   computeBoundedCenterScroll,
   computeCenteredScrollLeft,
@@ -195,6 +294,7 @@ import {
   getGroupInteractiveChildren,
   resolveInteractiveDomGroup,
   stepInteractiveDomGroup,
+  dispatchGlobalShellShortcut,
 } from './utils/key-controller.js';
 import {
   saveElementScrollPosition,
@@ -453,6 +553,8 @@ import {
   detectGridColumns,
   resolveAdaptiveMatrixColumns,
   detectRenderedGridColumns,
+  isGridSelectKey,
+  handleSelectableGridKeydown,
 } from './utils/grid.js';
 import {
   findSafeSelectMount,
@@ -518,6 +620,10 @@ import {
   sanitizePrefixSegment,
   toAcronym,
   DEFAULT_ACRONYM_DICTIONARY,
+  createAcronymDictionaryFromNames,
+  registerAcronyms,
+  getRegisteredAcronyms,
+  clearRegisteredAcronyms,
   expandAcronymKey,
   detectHostAppPrefix,
   buildHierarchicalKey,
@@ -534,13 +640,21 @@ export {
   Ripple as vRipple,
   computeRippleGeometry,
   resolveRippleOptions,
+  DEFAULT_NANO_SOUND_STORAGE_KEY,
+  NANO_SOUND_BROADCAST_CHANNEL,
+  VALID_NANO_SOUND_PRESETS,
   NANO_UI_SOUND_PRESETS,
   CONTROL_ACOUSTIC_MASS_PROFILES,
   resolveControlAcousticMass,
   configureNanoUiSound,
   getNanoUiSoundConfig,
   resetNanoUiSoundConfig,
+  useNanoSound,
   useNanoUiSound,
+  isNanoUiAudioUnlocked,
+  unlockNanoUiAudio,
+  readPersistedNanoSoundState,
+  setNanoUiSoundTestEnv,
   resolveComponentSoundConfig,
   playNanoUiSound,
   computeKnobDetentCrossings,
@@ -620,6 +734,8 @@ export {
   NanoCollapsible as NanoAccordion,
   NanoDropzone,
   DROPZONE_MODES,
+  classifyMediaFile,
+  inspectDataTransferMedia,
   formatDropzoneBytes,
   matchesAcceptPattern,
   validateDroppedFiles,
@@ -631,6 +747,58 @@ export {
   NanoHeatmap,
   NanoFlag,
   NanoLangPicker,
+  NanoButton,
+  NanoAlert,
+  NanoTextField,
+  NanoProcessBadge,
+  NanoProcessButton,
+  NanoMorph,
+  Type,
+  Types,
+  is,
+  of,
+  same,
+  isCallable,
+  MAP_VIEWPORT_DEBOUNCE_MS,
+  resolveViewportStorageConfig,
+  sanitizeMapViewportPayload,
+  sanitizeGlobeViewportPayload,
+  createViewportStorageManager,
+  insertDictationAtCursor,
+  computeTextareaAutoResize,
+  computeVoiceRmsBars,
+  isImeSafeEnterEvent,
+  createVoiceAdapterSession,
+  MAX_PROCESS_ERROR_CODE_LENGTH,
+  MODAL_PROCESS_STATES,
+  normalizeProcessStatus,
+  truncateProcessErrorCode,
+  normalizeModalProcessState,
+  NANO_MORPH_MODES,
+  DEFAULT_MORPH_DURATION_MS,
+  DEFAULT_MORPH_EASING,
+  parseCubicBezierEasing,
+  evaluateCubicBezierEasing,
+  measureElementMorphRect,
+  computeFlipInvertTransform,
+  interpolateMorphBox,
+  arcToCubicBeziers,
+  shapeToPathD,
+  pathToCubicBeziers,
+  splitCubicBezierAt,
+  estimateCubicBezierLength,
+  resampleCubicBeziers,
+  reverseCubicBezierLoop,
+  computeBezierLoopTwistCost,
+  alignCubicBezierLoops,
+  normalizeBezierPairForMorph,
+  interpolateCubicBeziers,
+  cubicBeziersToPathD,
+  textToContourBeziers,
+  captureCanvasFreezeSnapshot,
+  createDecimatedMorphStream,
+  createMorphStrategyGovernor,
+  useElementMorph,
   LANG_CODE_ALIASES,
   LANG_FLAG_REGISTRY,
   normalizeLangCode,
@@ -670,6 +838,9 @@ export {
   unlockModalBackgroundScroll,
   getActiveModalScrollLockCount,
   resetModalScrollLocks,
+  extractFeatureTitleSlug,
+  resolveCssViewportPixels,
+  clampModalGeometryBox,
   computeBoundedCenterScroll,
   computeCenteredScrollLeft,
   computeCenteredScrollTop,
@@ -705,6 +876,7 @@ export {
   getGroupInteractiveChildren,
   resolveInteractiveDomGroup,
   stepInteractiveDomGroup,
+  dispatchGlobalShellShortcut,
   saveElementScrollPosition,
   readElementScrollPosition,
   restoreElementScroll,
@@ -919,6 +1091,8 @@ export {
   detectGridColumns,
   resolveAdaptiveMatrixColumns,
   detectRenderedGridColumns,
+  isGridSelectKey,
+  handleSelectableGridKeydown,
   findSafeSelectMount,
   findSafeAncestorMount,
   computeSelectDropdownLayout,
@@ -959,6 +1133,7 @@ export {
   buildSphericalTimezoneBands,
   buildSphericalVariableWidthLinePolygon,
   initTheme,
+  freezeThemeTransitions,
   syncDocumentColorSchemeFromDom,
   syncThemeWithHostDark,
   createAdaptiveFpsGovernor,
@@ -985,6 +1160,10 @@ export {
   sanitizePrefixSegment,
   toAcronym,
   DEFAULT_ACRONYM_DICTIONARY,
+  createAcronymDictionaryFromNames,
+  registerAcronyms,
+  getRegisteredAcronyms,
+  clearRegisteredAcronyms,
   expandAcronymKey,
   detectHostAppPrefix,
   buildHierarchicalKey,
@@ -993,6 +1172,30 @@ export {
   getGlobalStorageController,
   configureGlobalStorage,
   getScopedStorageController,
+  NanoPanorama360,
+  IDEAL_PANORAMA_ASPECT_RATIO,
+  PANORAMA_PREFERRED_RATIO_TOLERANCE,
+  DEFAULT_PANORAMA_KEYBOARD_SPEED_DEG,
+  DEFAULT_PANORAMA_ZOOM_SPEED_DEG,
+  DEFAULT_PANORAMA_ACCEL_MS,
+  DEFAULT_PANORAMA_DECEL_MS,
+  normalizeYawDeg,
+  formatCompassHeading,
+  resolvePanoramaProjectionMeta,
+  clampPanoramaCameraState,
+  projectViewPixelToPanoramaUv,
+  normalizePanoramaKeyToken,
+  isPanoramaNavigationKey,
+  resolvePanoramaKeyInputVector,
+  stepPanoramaKinematics,
+  BOUNDED_DRAG_BOUNDARY_ATTR,
+  DEFAULT_ISOLATED_BOUNDARY_SELECTORS,
+  OUT_OF_BOUNDS_MODES,
+  resolveHighestDragBoundary,
+  projectPointerToBox,
+  clipSegmentToUnitBox,
+  createBoundedPointerDrag,
+  useBoundedPointerDrag,
 };
 
 export const version = pkg.version;
@@ -1008,7 +1211,9 @@ export default {
       configureGlobalStorage({ appPrefix, defaultMode: storageMode });
     }
     if (sound !== undefined) {
-      configureNanoUiSound(sound);
+      configureNanoUiSound(
+        is(sound, 'object') ? { hydrateFromStorage: true, ...sound } : sound
+      );
     }
     const dp = directivePrefix ? `${directivePrefix}-` : '';
     const cp = componentPrefix ? `${componentPrefix}` : '';
@@ -1070,5 +1275,13 @@ export default {
     app.component(`${cp}NanoHeatmap`, NanoHeatmap);
     app.component(`${cp}NanoFlag`, NanoFlag);
     app.component(`${cp}NanoLangPicker`, NanoLangPicker);
+    app.component(`${cp}NanoButton`, NanoButton);
+    app.component(`${cp}NanoAlert`, NanoAlert);
+    app.component(`${cp}NanoTextField`, NanoTextField);
+    app.component(`${cp}NanoProcessBadge`, NanoProcessBadge);
+    app.component(`${cp}NanoProcessButton`, NanoProcessButton);
+    app.component(`${cp}NanoMorph`, NanoMorph);
+    app.component(`${cp}NanoPanorama360`, NanoPanorama360);
+    app.component(`${cp}Panorama360`, NanoPanorama360);
   },
 };

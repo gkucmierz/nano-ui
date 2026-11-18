@@ -41,6 +41,9 @@ import DropzoneDoc from '../docs/DropzoneDoc.vue';
 import HeatmapDoc from '../docs/HeatmapDoc.vue';
 import LangPickerDoc from '../docs/LangPickerDoc.vue';
 import LayoutDirectivesDoc from '../docs/LayoutDirectivesDoc.vue';
+import TextFieldDoc from '../docs/TextFieldDoc.vue';
+import MorphDoc from '../docs/MorphDoc.vue';
+import Panorama360Doc from '../docs/Panorama360Doc.vue';
 import NotFoundDoc from '../docs/NotFoundDoc.vue';
 
 export const routes = [
@@ -516,6 +519,39 @@ export const routes = [
       componentName: 'LayoutDirectives',
       type: 'directive',
       description: 'Built-in layout directives (v-fill-height, v-fit-text, v-scroll-persist), coupled selection state machine (CSHR), bounded center scroll, and NanoCollapsible.',
+    },
+  },
+  {
+    path: '/docs/text-field',
+    name: 'TextField',
+    component: TextFieldDoc,
+    meta: {
+      title: 'NanoTextField & Voice Dictation | Nano UI',
+      componentName: 'NanoTextField',
+      type: 'component',
+      description: 'Unified input and locked-width multiline textarea with autoResize, non-breaking required asterisk, and stationary cursor-aware voice dictation.',
+    },
+  },
+  {
+    path: '/docs/morph',
+    name: 'Morph',
+    component: MorphDoc,
+    meta: {
+      title: 'NanoMorph & 3-Tier Morphing Engine | Nano UI',
+      componentName: 'NanoMorph',
+      type: 'component',
+      description: '3-tier FLIP DOM box, De Casteljau SVG/text cubic Bezier, and adaptive Canvas Freeze / OffscreenCanvas Worker morphing engine.',
+    },
+  },
+  {
+    path: '/docs/panorama-360',
+    name: 'Panorama360',
+    component: Panorama360Doc,
+    meta: {
+      title: 'NanoPanorama360 (2:1 Equirectangular Sphere & Aspect-Aware Dome) | Nano UI',
+      componentName: 'NanoPanorama360',
+      type: 'component',
+      description: 'WebGL1 & 2D Canvas 360° panoramic viewer preferring 2:1 equirectangular ratio while isotropically respecting arbitrary W:H photos without distortion.',
     },
   },
   {

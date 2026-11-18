@@ -247,6 +247,7 @@ export const BUILTIN_ICONS = {
   'book-open': BookOpen,
   book: BookOpen,
   layout: Layout,
+  'layout-grid': Layout,
   grid: Layout,
   shield: Shield,
   key: Key,
