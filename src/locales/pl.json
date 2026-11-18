@@ -2,7 +2,9 @@
   "app": {
     "title": "Nano UI",
     "subtitle": "Wysokowydajna biblioteka komponentów Vue 3 i wykresy 3D",
-    "playgroundDesc": "Środowisko testowe dla komponentów i dyrektyw biblioteki."
+    "playgroundDesc": "Środowisko testowe dla komponentów i dyrektyw biblioteki.",
+    "madeWith": "Stworzone z",
+    "madeWithLoveAria": "miłością"
   },
   "nav": {
     "gettingStarted": "Wprowadzenie",
@@ -51,6 +53,9 @@
     "dropzone": "Nano Dropzone (Upload & Hover)",
     "heatmap": "Nano Heatmap (OKLCH & KDE)",
     "langPicker": "Nano LangPicker & Flagi SVG",
+    "textField": "Nano TextField & Dyktowanie",
+    "morph": "Nano Morph (Silnik 3-Warstwowy)",
+    "panorama360": "Nano Panorama 360° (Sfera 2:1)",
     "layoutDirectives": "Dyrektywy Układu, CSHR & Collapsible",
     "ripple": "Dyrektywa v-ripple",
     "tooltip": "Dyrektywa v-tooltip"
