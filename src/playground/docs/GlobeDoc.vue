@@ -227,6 +227,10 @@ const codeTabs = createDocTabs({
         'solarTerminator: Boolean | "gradient" | "line" | "both" (default: false) - Physical Lambert cosine day/night terminator',
         'arcs: Array<{ from: [lon,lat], to: [lon,lat], dashed?: Boolean, width?: Number }> - Great-circle arcs',
         'markers: Array<{ id, lon, lat, type?: "dot"|"target", label?: String }> - Surface markers',
+        'zoom: Number (default: 1) - Orthographic sphere zoom factor (v-model:zoom)',
+        'storage: "ls" | "ss" | "none" | Boolean (default: "none") - Persist { rotLon, rotLat, zoom } on drag-end',
+        'appPrefix: String (default: "") - Optional host app prefix for hierarchical storage key',
+        'storageKey: String (default: "globe_viewport") - Storage key suffix for @gkucmierz/storage-controller',
       ],
     },
     {

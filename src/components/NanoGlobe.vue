@@ -20,6 +20,13 @@ import {
   buildSphericalTimezoneBands,
   buildSphericalVariableWidthLinePolygon
 } from '../utils/globe-geometry.js'
+import {
+  resolveViewportStorageConfig,
+  sanitizeGlobeViewportPayload,
+  createViewportStorageManager
+} from '../utils/viewport-storage.js'
+import { clamp } from '../utils/math.js'
+import { is, isCallable } from '../utils/type.js'
 
 const props = defineProps({
   /** SVG width/height in px */
@@ -115,11 +122,24 @@ const props = defineProps({
   /** Peak opacity at Earth surface for atmosphere radial halo gradient */
   atmospherePeakOpacity: { type: Number, default: 0.44 },
   /** Optional custom countries array (defaults to WORLD_COUNTRIES_LITE) */
-  countriesData: { type: Array, default: null }
+  countriesData: { type: Array, default: null },
+  /** Spherical scale zoom factor (1.0 = default fit) */
+  zoom: { type: Number, default: 1 },
+  /** Minimum spherical zoom factor */
+  minZoom: { type: Number, default: 0.5 },
+  /** Maximum spherical zoom factor */
+  maxZoom: { type: Number, default: 3 },
+  /** Viewport storage backend when `storageKey` is provided ('ls' | 'ss' | 'none' | Boolean) */
+  storage: { type: [String, Boolean], default: 'ls' },
+  /** Optional host app prefix (e.g. 'dashboard-app' -> 'DA_NU_<storageKey>') */
+  appPrefix: { type: String, default: '' },
+  /** Optional storage key persisting { rotLon, rotLat, zoom } on drag-end */
+  storageKey: { type: String, default: '' }
 })
 
 const emit = defineEmits([
   'update:center',
+  'update:zoom',
   'update:selectedCountries',
   'update:selectedHealpixPixels',
   'update:showGraticule',
@@ -128,6 +148,8 @@ const emit = defineEmits([
   'update:showTimezones',
   'update:timezoneMode',
   'update:activeTimezoneOffset',
+  'drag-end',
+  'viewport-change',
   'country-click',
   'country-hover',
   'polygon-click',
@@ -243,7 +265,7 @@ const effectiveAtmosphereMode = computed(() => {
   if (!props.showAtmosphere || props.showAtmosphere === 'off' || props.showAtmosphere === 'none') {
     return null
   }
-  if (typeof props.showAtmosphere === 'string') {
+  if (is(props.showAtmosphere, 'string')) {
     return props.showAtmosphere
   }
   return props.atmosphereMode || 'ring'
@@ -304,8 +326,8 @@ function transitionToLonLat(lon, lat, immediate = false) {
   const useKinetic =
     !immediate &&
     props.kinetic &&
-    typeof window !== 'undefined' &&
-    typeof requestAnimationFrame === 'function'
+    Boolean(globalThis.window) &&
+    isCallable(globalThis.requestAnimationFrame)
 
   if (!useKinetic) {
     lonKinetic.setTarget(nextLon, { immediate: true })
@@ -392,8 +414,8 @@ function updateTimezoneMorphTarget(immediate = false) {
     !immediate &&
     props.kinetic &&
     props.timezoneMorph === undefined &&
-    typeof window !== 'undefined' &&
-    typeof requestAnimationFrame === 'function'
+    Boolean(globalThis.window) &&
+    isCallable(globalThis.requestAnimationFrame)
   if (!useKinetic) {
     timezoneMorphKinetic.setTarget(target, { immediate: true })
     currentTimezoneMorph.value = target
@@ -735,7 +757,7 @@ function projectPolygonItems(polyList, trig, layerId = 'default', layerInteracti
     let poly = polyList[i]
     if (!poly || poly.visible === false) continue
     const id = poly.id ?? `${layerId}-poly-${i}`
-    let pathD = typeof poly.d === 'string' ? poly.d : ''
+    let pathD = is(poly.d, 'string') ? poly.d : ''
 
     // Generic support for variable-width spherical lines/ribbons passed via poly.line or poly.waypoints
     if (
@@ -911,7 +933,7 @@ const effectiveTerminatorMode = computed(() => {
   if (!props.solarTerminator || props.solarTerminator === 'off' || props.solarTerminator === 'none') {
     return null
   }
-  if (typeof props.solarTerminator === 'string') {
+  if (is(props.solarTerminator, 'string')) {
     return props.solarTerminator
   }
   return props.terminatorMode || 'gradient'
@@ -935,7 +957,7 @@ const renderedSolarTerminator = computed(() => {
 
 function onPolygonClick(poly) {
   if (dragMovedDistance > 5 || !poly.interactive) return
-  if (poly.raw && typeof poly.raw.offsetHours === 'number') {
+  if (poly.raw && is(poly.raw.offsetHours, 'number')) {
     localActiveTimezoneOffset.value = poly.raw.offsetHours
     emit('update:activeTimezoneOffset', poly.raw.offsetHours)
     emit('timezone-click', {
@@ -950,6 +972,91 @@ function onPolygonClick(poly) {
     name: poly.name,
     polygon: poly.raw
   })
+}
+
+const globeZoom = ref(clamp(Number(props.zoom) || 1, props.minZoom, props.maxZoom))
+
+watch(
+  () => props.zoom,
+  (nextZ) => {
+    if (Number.isFinite(Number(nextZ))) {
+      globeZoom.value = Number(clamp(Number(nextZ), props.minZoom, props.maxZoom).toFixed(3))
+    }
+  }
+)
+
+const globeStorageConfig = computed(() =>
+  resolveViewportStorageConfig({
+    storage: props.storage,
+    storageKey: props.storageKey,
+    appPrefix: props.appPrefix
+  })
+)
+
+const resolvedStorageKey = computed(() => globeStorageConfig.value.resolvedKey)
+const resolvedStorageMode = computed(() => globeStorageConfig.value.mode)
+
+const globeStorageManager = createViewportStorageManager({
+  getConfig: () => globeStorageConfig.value,
+  debounceMs: 0
+})
+
+function buildGlobeViewportSnapshot() {
+  return {
+    rotLon: Number(wrapLon180(rotLon.value).toFixed(3)),
+    rotLat: Number(clamp(rotLat.value, -85, 85).toFixed(3)),
+    zoom: Number(globeZoom.value.toFixed(3))
+  }
+}
+
+function saveGlobeViewport() {
+  if (!globeStorageConfig.value.enabled) return false
+  const snapshot = buildGlobeViewportSnapshot()
+  const ok = globeStorageManager.writeNow(snapshot)
+  emit('viewport-change', {
+    ...snapshot,
+    mode: resolvedStorageMode.value,
+    storageKey: resolvedStorageKey.value
+  })
+  return ok
+}
+
+function loadGlobeViewport() {
+  if (!globeStorageConfig.value.enabled) return false
+  const rawSaved = globeStorageManager.readSaved()
+  const sanitized = sanitizeGlobeViewportPayload(rawSaved, {
+    minZoom: props.minZoom,
+    maxZoom: props.maxZoom
+  })
+  if (!sanitized) return false
+
+  transitionToLonLat(sanitized.rotLon, sanitized.rotLat, true)
+  emit('update:center', [Number(sanitized.rotLon.toFixed(2)), Number(sanitized.rotLat.toFixed(2))])
+
+  globeZoom.value = sanitized.zoom
+  emit('update:zoom', sanitized.zoom)
+  return true
+}
+
+function resetGlobeViewport() {
+  return globeStorageManager.clearSaved()
+}
+
+function setZoom(nextZoom, { persist = true } = {}) {
+  const clamped = Number(clamp(Number(nextZoom) || 1, props.minZoom, props.maxZoom).toFixed(3))
+  globeZoom.value = clamped
+  emit('update:zoom', clamped)
+  if (persist) {
+    saveGlobeViewport()
+  }
+}
+
+function onWheel(e) {
+  if (!props.interactive) return
+  e.preventDefault()
+  const delta = -e.deltaY * 0.0018
+  if (Math.abs(delta) < 0.004) return
+  setZoom(globeZoom.value + delta)
 }
 
 // Drag interaction state (coalesced via requestAnimationFrame to prevent mid-frame SVG dirty-rect artifacts)
@@ -1000,7 +1107,7 @@ function onPointerMove(e) {
   const dy = e.clientY - dragStartY
   dragMovedDistance = Math.hypot(dx, dy)
 
-  const sensitivity = 180 / (effectiveSize.value * 0.85)
+  const sensitivity = 180 / (effectiveSize.value * 0.85 * Math.max(0.5, globeZoom.value))
   let nextLon = startLon - dx * sensitivity
   while (nextLon > 180) nextLon -= 360
   while (nextLon < -180) nextLon += 360
@@ -1008,9 +1115,9 @@ function onPointerMove(e) {
 
   pendingLon = nextLon
   pendingLat = nextLat
-  if (!dragRafId && typeof requestAnimationFrame === 'function') {
+  if (!dragRafId && isCallable(globalThis.requestAnimationFrame)) {
     dragRafId = requestAnimationFrame(flushPendingDrag)
-  } else if (typeof requestAnimationFrame !== 'function') {
+  } else if (!isCallable(globalThis.requestAnimationFrame)) {
     flushPendingDrag()
   }
 }
@@ -1029,6 +1136,9 @@ function onPointerUp(e) {
   if (e?.pointerId !== undefined) {
     e.currentTarget?.releasePointerCapture?.(e.pointerId)
   }
+  const snapshot = buildGlobeViewportSnapshot()
+  emit('drag-end', snapshot)
+  saveGlobeViewport()
 }
 
 function onCountryClick(country) {
@@ -1123,7 +1233,7 @@ function stepAutoRotate(ts) {
     Math.abs(effectiveAutoRotateSpeed.value) > 0.02 ||
     speedKinetic.isMoving()
 
-  if (stillActive && typeof requestAnimationFrame === 'function') {
+  if (stillActive && isCallable(globalThis.requestAnimationFrame)) {
     animFrameId = requestAnimationFrame(stepAutoRotate)
   } else {
     lastAnimTime = 0
@@ -1131,7 +1241,7 @@ function stepAutoRotate(ts) {
 }
 
 function ensureAutoRotateLoop() {
-  if (isUnmounted || typeof requestAnimationFrame !== 'function') return
+  if (isUnmounted || !isCallable(globalThis.requestAnimationFrame)) return
   const shouldRun =
     Math.abs(currentAutoRotateSpeed.value) > 0.02 ||
     Math.abs(effectiveAutoRotateSpeed.value) > 0.02 ||
@@ -1146,8 +1256,8 @@ function startOrStopAutoRotate() {
   const nextSpeed = effectiveAutoRotateSpeed.value
   const useKinetic =
     props.kinetic &&
-    typeof window !== 'undefined' &&
-    typeof requestAnimationFrame === 'function'
+    Boolean(globalThis.window) &&
+    isCallable(globalThis.requestAnimationFrame)
 
   if (!useKinetic) {
     speedKinetic.setTarget(nextSpeed, { immediate: true })
@@ -1173,11 +1283,20 @@ function rotateTo(lon, lat, options = {}) {
 
 function resetView() {
   rotateTo(props.center?.[0] ?? 19.0, props.center?.[1] ?? 50.0)
+  setZoom(props.zoom || 1)
 }
+
+watch(
+  () => [props.storageKey, props.storage, props.appPrefix],
+  () => {
+    loadGlobeViewport()
+  }
+)
 
 defineExpose({
   rotateTo,
   resetView,
+  setZoom,
   toggleGraticule: toggleGraticuleBtn,
   toggleHealpix: toggleHealpixBtn,
   setHealpixOrder: setOrderBtn,
@@ -1187,19 +1306,27 @@ defineExpose({
   clipRingToSvgPath,
   rotLon,
   rotLat,
+  globeZoom,
   currentAutoRotateSpeed,
   currentTurnsPerSec,
   currentTimezoneMorph,
   isDragging,
+  resolvedStorageKey,
+  resolvedStorageMode,
+  saveGlobeViewport,
+  loadGlobeViewport,
+  resetGlobeViewport,
 })
 
 onMounted(() => {
   isUnmounted = false
+  loadGlobeViewport()
   startOrStopAutoRotate()
 })
 
 onUnmounted(() => {
   isUnmounted = true
+  globeStorageManager.cancelPending()
   lonKinetic.destroy()
   latKinetic.destroy()
   speedKinetic.destroy()
@@ -1230,6 +1357,7 @@ onUnmounted(() => {
       @pointerup="onPointerUp"
       @pointercancel="onPointerUp"
       @lostpointercapture="onPointerUp"
+      @wheel="onWheel"
     >
       <defs>
         <!-- 3D Spherical Ocean Radial Gradient -->
@@ -1290,7 +1418,14 @@ onUnmounted(() => {
       </template>
 
       <!-- Spherical Layers (mathematically horizon-clipped to r <= R without offscreen SVG SaveLayer artifacts) -->
-      <g class="nano-globe-sphere-layers">
+      <g
+        class="nano-globe-sphere-layers"
+        :transform="
+          globeZoom !== 1
+            ? `translate(${CX} ${CY}) scale(${globeZoom}) translate(${-CX} ${-CY})`
+            : undefined
+        "
+      >
         <!-- Ocean Sphere Base -->
         <circle
           :cx="CX"
