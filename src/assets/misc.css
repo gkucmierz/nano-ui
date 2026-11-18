@@ -72,6 +72,10 @@ pre {
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
 }
 
+kbd {
+  white-space: nowrap;
+}
+
 pre {
   margin: 0;
   white-space: pre;

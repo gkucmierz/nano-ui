@@ -20,6 +20,20 @@ summary,
   -webkit-tap-highlight-color: transparent;
 }
 
+/* Ecosystem Zero-FOUC & Instant 0ms Theme Switching (THEME-INSTANT-01 / Rule 1->0):
+   Eliminate multi-frame CSS transition drift whenever boot preload or runtime theme toggle runs */
+html.preload,
+html.preload *,
+html.preload *::before,
+html.preload *::after,
+html.theme-switching,
+html.theme-switching *,
+html.theme-switching *::before,
+html.theme-switching *::after {
+  transition: none !important;
+  transition-duration: 0s !important;
+}
+
 /* Ecosystem Color-Scheme & Native Checkbox/Radio Parity (Rule 1->0):
    Guarantee light native form controls & scrollbars in Light Mode even if a host app toggles
    [data-theme="light"] / .light without manually updating documentElement.style.colorScheme */

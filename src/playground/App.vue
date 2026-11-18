@@ -469,6 +469,17 @@ onUnmounted(() => {
               <span v-if="searchQuery.trim()" class="nav-match-tag">{{ getComponentTag('/docs/inputs') }}</span>
             </span>
           </router-link>
+          <router-link v-show="isRouteVisible('/docs/text-field')" to="/docs/text-field" class="nav-link" :class="{ 'kbd-selected': isKeyboardSelected('/docs/text-field') }" active-class="active" v-tooltip="isNarrow ? t('nav.textField') : undefined">
+            <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M12 2a3 3 0 0 0-3 3v6a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/>
+              <path d="M19 10v1a7 7 0 0 1-14 0v-1"/>
+              <line x1="12" y1="18" x2="12" y2="22"/>
+            </svg>
+            <span class="nav-label-group">
+              <span class="nav-label">{{ t('nav.textField') }}</span>
+              <span v-if="searchQuery.trim()" class="nav-match-tag">{{ getComponentTag('/docs/text-field') }}</span>
+            </span>
+          </router-link>
           <router-link v-show="isRouteVisible('/docs/select')" to="/docs/select" class="nav-link" :class="{ 'kbd-selected': isKeyboardSelected('/docs/select') }" active-class="active" v-tooltip="isNarrow ? t('nav.select') : undefined">
             <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <rect x="3" y="5" width="18" height="14" rx="2"/>
@@ -835,6 +846,28 @@ onUnmounted(() => {
               <span v-if="searchQuery.trim()" class="nav-match-tag">{{ getComponentTag('/docs/heatmap') }}</span>
             </span>
           </router-link>
+          <router-link v-show="isRouteVisible('/docs/morph')" to="/docs/morph" class="nav-link" :class="{ 'kbd-selected': isKeyboardSelected('/docs/morph') }" active-class="active" v-tooltip="isNarrow ? t('nav.morph') : undefined">
+            <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <circle cx="7" cy="7" r="4"/>
+              <rect x="13" y="13" width="8" height="8" rx="2"/>
+              <path d="M11 8l4 4"/>
+            </svg>
+            <span class="nav-label-group">
+              <span class="nav-label">{{ t('nav.morph') }}</span>
+              <span v-if="searchQuery.trim()" class="nav-match-tag">{{ getComponentTag('/docs/morph') }}</span>
+            </span>
+          </router-link>
+          <router-link v-show="isRouteVisible('/docs/panorama-360')" to="/docs/panorama-360" class="nav-link" :class="{ 'kbd-selected': isKeyboardSelected('/docs/panorama-360') }" active-class="active" v-tooltip="isNarrow ? t('nav.panorama360') : undefined">
+            <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <circle cx="12" cy="12" r="9"/>
+              <ellipse cx="12" cy="12" rx="9" ry="4"/>
+              <path d="M12 3a14 14 0 0 1 0 18"/>
+            </svg>
+            <span class="nav-label-group">
+              <span class="nav-label">{{ t('nav.panorama360') }}</span>
+              <span v-if="searchQuery.trim()" class="nav-match-tag">{{ getComponentTag('/docs/panorama-360') }}</span>
+            </span>
+          </router-link>
           </div>
         </div>
 
@@ -951,13 +984,21 @@ onUnmounted(() => {
         <span class="oss-footer-copy">MIT Open Source · @gkucmierz/nano-ui</span>
         <span class="oss-footer-sep" aria-hidden="true">·</span>
         <span class="oss-footer-love">
-          Made with love
-          <svg class="oss-heart-icon" viewBox="0 0 24 24" width="14" height="14" aria-hidden="true">
+          <span>{{ t('app.madeWith') }}</span>
+          <svg
+            class="oss-heart-icon"
+            viewBox="0 0 24 24"
+            width="14"
+            height="14"
+            role="img"
+            :aria-label="t('app.madeWithLoveAria')"
+          >
             <path
               fill="currentColor"
               d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"
             />
           </svg>
+          <span class="oss-footer-sep" aria-hidden="true">·</span>
           <a
             href="https://serce.app"
             target="_blank"

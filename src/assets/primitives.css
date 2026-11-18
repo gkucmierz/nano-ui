@@ -1153,12 +1153,13 @@ textarea.nano-input,
 }
 
 .nano-tri-border-card {
-  --nano-tri-bg: var(--bg-panel, var(--nano-bg-surface, #121826));
+  --nano-tri-bg: var(--bg-panel, var(--nano-bg-card, var(--nano-bg-surface, #121826)));
   --nano-tri-idle-border: var(--border-color, var(--nano-border-card, rgba(56, 189, 248, 0.18)));
   --nano-tri-hover-color: var(--accent-cyan, var(--nano-state-active, #38bdf8));
   --nano-tri-active-color: var(--accent-amber, var(--nano-metric-amber, #fbbf24));
   --nano-tri-accent: var(--nano-tri-slice-color, var(--nano-tri-active-color));
-  border: 1px solid var(--nano-tri-idle-border);
+  background: var(--nano-tri-bg);
+  border: 1.5px solid var(--nano-tri-idle-border);
   box-sizing: border-box;
   transition:
     border-color 0.16s ease,
@@ -1175,9 +1176,11 @@ textarea.nano-input,
 
 /* State 2: Active / Selected Only (Persistent Orbiting Slice/Accent Conic Border — CLS = 0) */
 .nano-tri-border-card.is-selected:not(.is-hover-active) {
-  border-color: transparent;
-  background:
-    linear-gradient(var(--nano-tri-bg), var(--nano-tri-bg)) padding-box,
+  border-color: transparent !important;
+  background-origin: border-box !important;
+  background-clip: padding-box, border-box !important;
+  background-image:
+    linear-gradient(var(--nano-tri-bg), var(--nano-tri-bg)),
     conic-gradient(
       from var(--nano-border-angle),
       var(--nano-tri-accent) 0deg,
@@ -1185,7 +1188,7 @@ textarea.nano-input,
       var(--nano-tri-accent) 260deg,
       color-mix(in srgb, var(--nano-tri-accent) 45%, #ffffff) 315deg,
       var(--nano-tri-accent) 360deg
-    ) border-box;
+    ) !important;
   box-shadow:
     0 0 0 1px color-mix(in srgb, var(--nano-tri-accent) 34%, transparent),
     0 6px 20px color-mix(in srgb, var(--nano-tri-accent) 18%, transparent);
@@ -1193,10 +1196,13 @@ textarea.nano-input,
 }
 
 /* State 3: Hover + Active Simultaneously (2-Color Orbiting Conic-Gradient Border — CLS = 0) */
+.nano-tri-border-card.is-selected.is-hover-active,
 .nano-tri-border-card.is-hover-active {
-  border-color: transparent;
-  background:
-    linear-gradient(var(--nano-tri-bg), var(--nano-tri-bg)) padding-box,
+  border-color: transparent !important;
+  background-origin: border-box !important;
+  background-clip: padding-box, border-box !important;
+  background-image:
+    linear-gradient(var(--nano-tri-bg), var(--nano-tri-bg)),
     conic-gradient(
       from var(--nano-border-angle),
       var(--nano-tri-hover-color) 0deg,
@@ -1204,7 +1210,7 @@ textarea.nano-input,
       var(--nano-tri-hover-color) 240deg,
       var(--nano-tri-accent) 320deg,
       var(--nano-tri-hover-color) 360deg
-    ) border-box;
+    ) !important;
   box-shadow:
     0 0 0 1px color-mix(in srgb, var(--nano-tri-accent) 28%, var(--nano-tri-hover-color) 28%),
     0 8px 24px color-mix(in srgb, var(--nano-tri-hover-color) 18%, transparent);

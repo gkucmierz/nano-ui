@@ -641,6 +641,12 @@ pre {
 .oss-heart-icon {
   color: #f43f5e;
   flex-shrink: 0;
+  transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1), filter 0.2s ease;
+}
+
+.oss-footer-love:hover .oss-heart-icon {
+  transform: scale(1.16);
+  filter: drop-shadow(0 0 6px rgba(244, 63, 94, 0.45));
 }
 
 .oss-serce-link {
