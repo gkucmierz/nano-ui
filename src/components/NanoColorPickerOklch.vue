@@ -293,8 +293,8 @@ const scheduleWheelRender = () => {
   wheelRafId = globalThis.requestAnimationFrame(renderPolarWheelCanvas);
 };
 
-const updatePopoverPosition = () => {
-  if (!isPopoverMode.value || !isOpen.value || !triggerRef.value || !globalThis.window) return;
+const updatePopoverPosition = ({ forceResolveMount = false } = {}) => {
+  if (!isPopoverMode.value || (!isOpen.value && !forceResolveMount) || !triggerRef.value || !globalThis.window) return;
   const win = globalThis.window;
   const { mountEl, viewportEl } = findSafeSelectMount(triggerRef.value, 368);
   const useAncestorMount = Boolean(mountEl && mountEl.nodeType === 1);
@@ -354,13 +354,30 @@ const updatePopoverPosition = () => {
 
 const openPopover = async () => {
   if (props.disabled || !isPopoverMode.value) return;
+  updatePopoverPosition({ forceResolveMount: true });
   isOpen.value = true;
   await nextTick();
   updatePopoverPosition();
   renderPolarWheelCanvas();
 };
 
+const stopDiscDrag = (pointerId = undefined) => {
+  if (!isDraggingDisc.value) return;
+  isDraggingDisc.value = false;
+  if (pointerId !== undefined && discRef.value && discRef.value.releasePointerCapture) {
+    try {
+      discRef.value.releasePointerCapture(pointerId);
+    } catch {}
+  }
+  if (globalThis.window) {
+    globalThis.window.removeEventListener('pointermove', onWindowDiscPointerMove);
+    globalThis.window.removeEventListener('pointerup', onWindowDiscPointerUp);
+    globalThis.window.removeEventListener('pointercancel', onWindowDiscPointerUp);
+  }
+};
+
 const closePopover = () => {
+  stopDiscDrag();
   isOpen.value = false;
 };
 
@@ -459,13 +476,35 @@ const updateFromPointer = (event) => {
   emitUpdate();
 };
 
+const onWindowDiscPointerMove = (event) => {
+  if (!isDraggingDisc.value || props.disabled) return;
+  updateFromPointer(event);
+};
+
+const onWindowDiscPointerUp = (event) => {
+  stopDiscDrag(event?.pointerId);
+};
+
 const onDiscPointerDown = (event) => {
-  if (props.disabled) return;
+  if (props.disabled || (event.button !== undefined && event.button !== 0)) return;
+  if (isFn(event.preventDefault)) event.preventDefault();
+  if (discRef.value && isFn(discRef.value.focus)) {
+    try {
+      discRef.value.focus({ preventScroll: true });
+    } catch {
+      discRef.value.focus();
+    }
+  }
   isDraggingDisc.value = true;
   if (discRef.value && discRef.value.setPointerCapture) {
     try {
       discRef.value.setPointerCapture(event.pointerId);
     } catch {}
+  }
+  if (globalThis.window) {
+    globalThis.window.addEventListener('pointermove', onWindowDiscPointerMove);
+    globalThis.window.addEventListener('pointerup', onWindowDiscPointerUp);
+    globalThis.window.addEventListener('pointercancel', onWindowDiscPointerUp);
   }
   updateFromPointer(event);
 };
@@ -476,13 +515,7 @@ const onDiscPointerMove = (event) => {
 };
 
 const onDiscPointerUp = (event) => {
-  if (!isDraggingDisc.value) return;
-  isDraggingDisc.value = false;
-  if (discRef.value && discRef.value.releasePointerCapture) {
-    try {
-      discRef.value.releasePointerCapture(event.pointerId);
-    } catch {}
-  }
+  stopDiscDrag(event?.pointerId);
 };
 
 const onDiscKeyDown = (event) => {
@@ -563,6 +596,7 @@ const copyValue = async () => {
 };
 
 onUnmounted(() => {
+  stopDiscDrag();
   if (copyTimer) {
     clearTimeout(copyTimer);
     copyTimer = null;
