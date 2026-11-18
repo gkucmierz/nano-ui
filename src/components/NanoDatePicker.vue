@@ -6,6 +6,7 @@ import {
   computeSelectDropdownLayout,
   getPositionedReferenceEl,
 } from '../utils/selectPositioning.js';
+import { handleSelectableGridKeydown } from '../utils/grid.js';
 import {
   MONTH_NAMES,
   WEEKDAY_MONDAY_FIRST,
@@ -110,6 +111,8 @@ const resolvedName = computed(() => props.name || resolvedId.value);
 const rootRef = ref(null);
 const triggerRef = ref(null);
 const popoverRef = ref(null);
+const dayBtnRefs = ref([]);
+const focusedDayIndex = ref(0);
 const isOpen = ref(false);
 const teleportTarget = ref('body');
 const popoverStyle = ref({});
@@ -232,6 +235,35 @@ const updatePopoverPosition = () => {
   };
 };
 
+const focusDayAt = (idx) => {
+  const cells = calendarCells.value;
+  if (!cells.length) return;
+  const clamped = Math.max(0, Math.min(cells.length - 1, idx));
+  focusedDayIndex.value = clamped;
+  nextTick(() => {
+    dayBtnRefs.value[clamped]?.focus?.();
+  });
+};
+
+const onGridKeydown = (e) => {
+  const cells = calendarCells.value;
+  if (!isOpen.value || !cells.length) return;
+  handleSelectableGridKeydown(e, {
+    currentIndex: focusedDayIndex.value,
+    totalItems: cells.length,
+    columns: 7,
+    wrap: true,
+    onFocusIndex: (nextIdx) => focusDayAt(nextIdx),
+    onSelectIndex: (idx) => {
+      const cell = cells[idx];
+      if (cell && !cell.isDisabled) {
+        selectIsoDate(cell.iso, false);
+      }
+    },
+    onEscape: () => closePopover(),
+  });
+};
+
 const openPopover = async () => {
   if (props.disabled) return;
   const sel = parseIsoDate(props.modelValue) || parseIsoDate(getTodayIso());
@@ -239,7 +271,13 @@ const openPopover = async () => {
   viewMonth.value = sel.month;
   isOpen.value = true;
   await nextTick();
+  const activeIdx = calendarCells.value.findIndex((c) => c.isSelected);
+  const todayIdx = calendarCells.value.findIndex((c) => c.isToday);
+  const firstCurrentIdx = calendarCells.value.findIndex((c) => c.isCurrentMonth && !c.isDisabled);
+  focusedDayIndex.value =
+    activeIdx >= 0 ? activeIdx : todayIdx >= 0 ? todayIdx : Math.max(0, firstCurrentIdx);
   updatePopoverPosition();
+  focusDayAt(focusedDayIndex.value);
 };
 
 const closePopover = () => {
@@ -365,6 +403,7 @@ onUnmounted(() => {
         :aria-label="effectiveLang === 'en' ? 'Clear date' : 'Wyczyść datę'"
         @click.stop="clearDate"
         @keydown.enter.stop.prevent="clearDate"
+        @keydown.space.stop.prevent="clearDate"
       >
         ✕
       </span>
@@ -433,20 +472,26 @@ onUnmounted(() => {
           </span>
         </div>
 
-        <div class="ndp-grid">
+        <div class="ndp-grid" role="grid" @keydown="onGridKeydown">
           <button
-            v-for="cell in calendarCells"
+            v-for="(cell, idx) in calendarCells"
             :key="cell.iso"
+            :ref="(el) => { dayBtnRefs[idx] = el; }"
             type="button"
+            role="gridcell"
             class="ndp-day"
             :class="{
               'is-outside': !cell.isCurrentMonth,
               'is-today': cell.isToday,
               'is-selected': cell.isSelected,
+              'is-focused': idx === focusedDayIndex,
               'is-disabled': cell.isDisabled,
               'is-weekend': cell.isWeekend
             }"
+            :tabindex="idx === focusedDayIndex ? 0 : -1"
             :disabled="cell.isDisabled"
+            @focus="focusedDayIndex = idx"
+            @mouseenter="focusedDayIndex = idx"
             @click="selectIsoDate(cell.iso, cell.isDisabled)"
           >
             {{ cell.day }}
