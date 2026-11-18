@@ -487,4 +487,67 @@ export const stepInteractiveDomGroup = (boundaryEl, delta, preferredGroupEl = nu
   return false;
 };
 
+/**
+ * Dispatches workspace-standard global shell shortcuts (`MODAL-GLOBAL-SHORTCUTS-01`):
+ * - `Escape`: Closes the top-most open modal (`onEscape`).
+ * - `?`: Toggles or opens the keyboard-shortcuts help modal (`onHelp`).
+ * - `L` / `l`: Switches UI language (`onLocale`) — active even when a modal is open!
+ * - `T` / `t`: Switches Light/Dark theme (`onTheme`) — active even when a modal is open!
+ * - `M` / `m`: Toggles global `.nsd` audio mute (`onMute`) — active even when a modal is open!
+ *
+ * Automatically ignores editable inputs (`<input>`, `<textarea>`, `[contenteditable]`) and
+ * browser/OS modifier combinations (`Ctrl`, `Meta`, `Alt`) so `Cmd+T`, `Cmd+L`, `Cmd+C` are never hijacked.
+ *
+ * @param {KeyboardEvent} event
+ * @param {Object} handlers
+ * @param {Function} [handlers.onLocale]
+ * @param {Function} [handlers.onTheme]
+ * @param {Function} [handlers.onMute]
+ * @param {Function} [handlers.onHelp]
+ * @param {Function} [handlers.onEscape]
+ * @returns {boolean} `true` if a global shell shortcut was handled
+ */
+export const dispatchGlobalShellShortcut = (event, handlers = {}) => {
+  if (!event || !handlers) return false;
+  if (isEditableTextTarget(event.target)) return false;
+
+  if (event.key === 'Escape') {
+    if (typeof handlers.onEscape === 'function') {
+      const closed = handlers.onEscape(event);
+      if (closed !== false) {
+        if (typeof event.preventDefault === 'function') event.preventDefault();
+        return true;
+      }
+    }
+    return false;
+  }
+
+  if (event.ctrlKey || event.metaKey || event.altKey) return false;
+
+  if (event.key === '?' && typeof handlers.onHelp === 'function') {
+    if (typeof event.preventDefault === 'function') event.preventDefault();
+    handlers.onHelp(event);
+    return true;
+  }
+
+  const lower = String(event.key || '').toLowerCase();
+  if (lower === 'l' && typeof handlers.onLocale === 'function') {
+    if (typeof event.preventDefault === 'function') event.preventDefault();
+    handlers.onLocale(event);
+    return true;
+  }
+  if (lower === 't' && typeof handlers.onTheme === 'function') {
+    if (typeof event.preventDefault === 'function') event.preventDefault();
+    handlers.onTheme(event);
+    return true;
+  }
+  if (lower === 'm' && typeof handlers.onMute === 'function') {
+    if (typeof event.preventDefault === 'function') event.preventDefault();
+    handlers.onMute(event);
+    return true;
+  }
+
+  return false;
+};
+
 export default createKeyController;
