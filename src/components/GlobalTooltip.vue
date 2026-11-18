@@ -5,6 +5,8 @@ import { ref, computed, watch, nextTick, onMounted, onUnmounted } from 'vue';
 
 const tooltipRef = ref(null);
 const textRef = ref(null);
+const isMounted = ref(false);
+const fullscreenRevision = ref(0);
 const x = ref(0);
 const y = ref(0);
 const arrowX = ref(0);
@@ -14,6 +16,18 @@ const boxRadius = ref(7);
 const isBottom = ref(false);
 const isPositioned = ref(false);
 const domThemeTick = ref(0);
+
+const resolvedTooltipHost = computed(() => {
+  void tooltipState.isVisible;
+  void tooltipState.targetRect;
+  void tooltipState.text;
+  void fullscreenRevision.value;
+  return (
+    getActiveTooltipTarget()?.closest?.('dialog[open]') ||
+    globalThis.document?.fullscreenElement ||
+    'body'
+  );
+});
 
 const GAP = 10;
 const BUBBLE_PAD = 8;
@@ -252,9 +266,19 @@ watch(
   { deep: true, flush: 'post' }
 );
 
-onMounted(() => {
-  globalThis.window.addEventListener('resize', updatePosition, { passive: true });
-  if (globalThis.ResizeObserver && tooltipRef.value) {
+const syncTopLayerHost = () => {
+  fullscreenRevision.value += 1;
+  if (tooltipState.isVisible) {
+    nextTick(updatePosition);
+  }
+};
+
+const attachResizeObserver = (el) => {
+  if (resizeObserver) {
+    resizeObserver.disconnect();
+    resizeObserver = null;
+  }
+  if (el && globalThis.ResizeObserver) {
     resizeObserver = new globalThis.ResizeObserver(() => {
       if (isSyncingBox || !tooltipState.isVisible || !tooltipRef.value) return;
       const curW = Math.round((tooltipRef.value.offsetWidth || 0) * 2) / 2;
@@ -264,8 +288,22 @@ onMounted(() => {
       }
       computePlacementFromElement();
     });
-    resizeObserver.observe(tooltipRef.value);
+    resizeObserver.observe(el);
   }
+};
+
+watch(tooltipRef, (el) => {
+  attachResizeObserver(el);
+  if (el && tooltipState.isVisible) {
+    updatePosition();
+  }
+});
+
+onMounted(() => {
+  isMounted.value = true;
+  globalThis.window?.addEventListener?.('resize', updatePosition, { passive: true });
+  globalThis.document?.addEventListener?.('fullscreenchange', syncTopLayerHost);
+  globalThis.document?.addEventListener?.('toggle', syncTopLayerHost, true);
   if (globalThis.MutationObserver && globalThis.document?.documentElement) {
     themeMutationObserver = new globalThis.MutationObserver(() => {
       domThemeTick.value += 1;
@@ -284,7 +322,9 @@ onMounted(() => {
 });
 
 onUnmounted(() => {
-  globalThis.window.removeEventListener('resize', updatePosition);
+  globalThis.window?.removeEventListener?.('resize', updatePosition);
+  globalThis.document?.removeEventListener?.('fullscreenchange', syncTopLayerHost);
+  globalThis.document?.removeEventListener?.('toggle', syncTopLayerHost, true);
   if (resizeObserver) {
     resizeObserver.disconnect();
     resizeObserver = null;
@@ -297,56 +337,58 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <div
-    ref="tooltipRef"
-    role="tooltip"
-    :class="[
-      'global-tooltip',
-      {
-        visible: tooltipState.isVisible && isPositioned,
-        'tooltip-bottom': isBottom,
-      },
-      autoPolarityClass,
-      tooltipState.customClass,
-    ]"
-    :style="{
-      transform: `translate3d(${x}px, ${y}px, 0)`,
-      '--arrow-offset': `${bubbleGeometry.clampedArrowX}px`,
-    }"
-  >
-    <!-- Layer 1: Unified Glassmorphic Backdrop Blur clipped to exact speech-bubble + arrow contour -->
+  <Teleport v-if="isMounted" :to="resolvedTooltipHost">
     <div
-      class="global-tooltip-glass"
-      aria-hidden="true"
+      ref="tooltipRef"
+      role="tooltip"
+      :class="[
+        'global-tooltip',
+        {
+          visible: tooltipState.isVisible && isPositioned,
+          'tooltip-bottom': isBottom,
+        },
+        autoPolarityClass,
+        tooltipState.customClass,
+      ]"
       :style="{
-        top: `${-bubbleGeometry.pad}px`,
-        left: `${-bubbleGeometry.pad}px`,
-        width: `${bubbleGeometry.svgWidth}px`,
-        height: `${bubbleGeometry.svgHeight}px`,
-        clipPath: `path('${bubbleGeometry.clipPathD}')`,
-      }"
-    ></div>
-
-    <!-- Layer 2: Single Continuous C¹ Vector Speech-Bubble Fill + 1px Perimeter Stroke (zero base line under arrow) -->
-    <svg
-      class="global-tooltip-bubble-svg"
-      aria-hidden="true"
-      :width="bubbleGeometry.svgWidth"
-      :height="bubbleGeometry.svgHeight"
-      :viewBox="bubbleGeometry.viewBox"
-      :style="{
-        top: `${-bubbleGeometry.pad}px`,
-        left: `${-bubbleGeometry.pad}px`,
-        width: `${bubbleGeometry.svgWidth}px`,
-        height: `${bubbleGeometry.svgHeight}px`,
+        transform: `translate3d(${x}px, ${y}px, 0)`,
+        '--arrow-offset': `${bubbleGeometry.clampedArrowX}px`,
       }"
     >
-      <path class="global-tooltip-bubble-path" :d="bubbleGeometry.svgPathD" />
-    </svg>
+      <!-- Layer 1: Unified Glassmorphic Backdrop Blur clipped to exact speech-bubble + arrow contour -->
+      <div
+        class="global-tooltip-glass"
+        aria-hidden="true"
+        :style="{
+          top: `${-bubbleGeometry.pad}px`,
+          left: `${-bubbleGeometry.pad}px`,
+          width: `${bubbleGeometry.svgWidth}px`,
+          height: `${bubbleGeometry.svgHeight}px`,
+          clipPath: `path('${bubbleGeometry.clipPathD}')`,
+        }"
+      ></div>
 
-    <!-- Layer 3: Clamped Balanced Text Copy -->
-    <span ref="textRef" class="global-tooltip-text">{{ tooltipState.text }}</span>
-  </div>
+      <!-- Layer 2: Single Continuous C¹ Vector Speech-Bubble Fill + 1px Perimeter Stroke (zero base line under arrow) -->
+      <svg
+        class="global-tooltip-bubble-svg"
+        aria-hidden="true"
+        :width="bubbleGeometry.svgWidth"
+        :height="bubbleGeometry.svgHeight"
+        :viewBox="bubbleGeometry.viewBox"
+        :style="{
+          top: `${-bubbleGeometry.pad}px`,
+          left: `${-bubbleGeometry.pad}px`,
+          width: `${bubbleGeometry.svgWidth}px`,
+          height: `${bubbleGeometry.svgHeight}px`,
+        }"
+      >
+        <path class="global-tooltip-bubble-path" :d="bubbleGeometry.svgPathD" />
+      </svg>
+
+      <!-- Layer 3: Clamped Balanced Text Copy -->
+      <span ref="textRef" class="global-tooltip-text">{{ tooltipState.text }}</span>
+    </div>
+  </Teleport>
 </template>
 
 <style scoped>
