@@ -6,6 +6,8 @@ import {
   normalizeStorageMode,
   STORAGE_MODES,
 } from '../utils/storage-controller.js';
+import { playNanoUiSound } from '../utils/sound-controller.js';
+import { is, isCallable } from '../utils/type.js';
 
 const tabsStorageCtrl = getScopedStorageController('nano-ui');
 
@@ -66,6 +68,13 @@ const props = defineProps({
     type: String,
     default: '',
   },
+  /**
+   * Optional per-component `.nsd` sound override (`true | false | presetNameOrDsl | object`).
+   */
+  sound: {
+    type: [Boolean, String, Object],
+    default: undefined,
+  },
 });
 
 const emit = defineEmits(['update:modelValue', 'change']);
@@ -91,7 +100,7 @@ const resolvedStorageKey = computed(() => {
 const normalizedItems = computed(() => {
   const source = Array.isArray(props.items) && props.items.length > 0 ? props.items : (props.tabs || []);
   return source.map((raw, idx) => {
-    if (raw && typeof raw === 'object') {
+    if (is(raw, 'object')) {
       const id = raw.id !== undefined ? raw.id : raw.value !== undefined ? raw.value : String(idx);
       return {
         ...raw,
@@ -153,9 +162,9 @@ const loadSavedTab = () => {
     appPrefix: props.appPrefix || undefined,
   });
   const candidateId =
-    saved && typeof saved === 'object' && saved.activeTab !== undefined
+    is(saved, 'object') && saved.activeTab !== undefined
       ? saved.activeTab
-      : typeof saved === 'string' || typeof saved === 'number'
+      : is(saved, 'string') || is(saved, 'number')
         ? saved
         : null;
 
@@ -172,6 +181,12 @@ const selectTab = (item) => {
   if (!item || item.disabled) return;
   saveActiveTab(item.id);
   if (item.id !== props.modelValue) {
+    playNanoUiSound('tab-select', {
+      propSound: props.sound,
+      size: props.size,
+      minIntervalMs: 24,
+      throttleKey: 'nano-tabs',
+    });
     emit('update:modelValue', item.id);
     emit('change', item.id, item);
   }
@@ -227,7 +242,7 @@ const handleKeydown = (e, index) => {
     const targetItem = list[targetIdx];
     selectTab(targetItem);
     const btn = tabButtonRefs.value[targetIdx];
-    if (btn && typeof btn.focus === 'function') {
+    if (btn && isCallable(btn.focus)) {
       btn.focus();
     }
   }
@@ -252,6 +267,7 @@ const handleKeydown = (e, index) => {
       type="button"
       role="tab"
       class="nano-tab-btn"
+      data-nano-sound-owner="true"
       :class="{
         'is-active': modelValue === item.id,
         'is-disabled': item.disabled
