@@ -232,7 +232,7 @@ defineExpose({
     ]"
     :role="isBoxClickable ? 'button' : undefined"
     :tabindex="isBoxClickable ? 0 : undefined"
-    :aria-disabled="disabled ? 'true' : undefined"
+    :aria-disabled="disabled && mode === 'box' ? 'true' : undefined"
     @dragenter="handleDragEnter"
     @dragover="handleDragOver"
     @dragleave="handleDragLeave"
@@ -421,7 +421,7 @@ defineExpose({
   cursor: pointer;
 }
 
-.nano-dropzone.is-disabled {
+.nano-dropzone--box.is-disabled {
   opacity: 0.55;
   cursor: not-allowed;
 }
