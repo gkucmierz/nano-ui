@@ -107,6 +107,16 @@ export const PLAYGROUND_NAV_ITEMS = [
     keywords: 'input pole tekstowe form formularz prefix suffix addon group validation search filtr NanoFieldset fieldset legend',
   },
   {
+    id: '/docs/text-field',
+    to: '/docs/text-field',
+    sectionKey: 'nav.formControls',
+    navKey: 'nav.textField',
+    docFile: 'TextFieldDoc.vue',
+    localeKeys: [],
+    componentTag: 'NanoTextField',
+    keywords: 'textfield textarea multiline voice dictation stt speech mikrofon dyktowanie autoResize cursor selectionStart rms',
+  },
+  {
     id: '/docs/select',
     to: '/docs/select',
     sectionKey: 'nav.formControls',
@@ -427,6 +437,26 @@ export const PLAYGROUND_NAV_ITEMS = [
     localeKeys: ['langPickerDoc'],
     componentTag: 'NanoLangPicker',
     keywords: 'language jezyk flaga flag svg iso i18n matrix macierz navigateGrid dropdown NanoFlag NanoLangPicker',
+  },
+  {
+    id: '/docs/morph',
+    to: '/docs/morph',
+    sectionKey: 'nav.advanced3dViz',
+    navKey: 'nav.morph',
+    docFile: 'MorphDoc.vue',
+    localeKeys: [],
+    componentTag: 'NanoMorph',
+    keywords: 'morph morphing flip bezier de casteljau svg contour text freeze offscreencanvas worker useElementMorph',
+  },
+  {
+    id: '/docs/panorama-360',
+    to: '/docs/panorama-360',
+    sectionKey: 'nav.advanced3dViz',
+    navKey: 'nav.panorama360',
+    docFile: 'Panorama360Doc.vue',
+    localeKeys: [],
+    componentTag: 'NanoPanorama360',
+    keywords: 'panorama 360 equirectangular sphere sfera 2:1 insta360 vr dome webgl yaw pitch fov aspect ratio proporcje',
   },
   // Directives
   {
