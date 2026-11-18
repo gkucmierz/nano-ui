@@ -234,7 +234,12 @@
   --nano-tab-badge-color: #38bdf8;
   --nano-tab-badge-border: rgba(56, 189, 248, 0.28);
 
-  /* NanoDatePicker & NanoSecretPipe Tokens - Dark Theme */
+  /* NanoDatePicker, NanoColorPicker, NanoSlider & NanoSecretPipe Tokens - Dark Theme */
+  --nano-slider-thumb-bg: #0f172a;
+  --nano-popover-bg: rgba(18, 23, 35, 0.98);
+  --nano-colorpicker-popover-bg: rgba(18, 23, 35, 0.98);
+  --nano-colorpicker-popover-border: rgba(255, 255, 255, 0.20);
+  --nano-colorpicker-popover-shadow: 0 22px 48px rgba(2, 6, 23, 0.72), 0 0 0 1px rgba(15, 23, 42, 0.85);
   --nano-datepicker-bg: rgba(255, 255, 255, 0.05);
   --nano-datepicker-hover-bg: rgba(255, 255, 255, 0.08);
   --nano-datepicker-popover-bg: #18181b;
@@ -675,7 +680,12 @@ html.light,
   --nano-tab-badge-color: #0369a1;
   --nano-tab-badge-border: rgba(2, 132, 199, 0.32);
 
-  /* NanoDatePicker & NanoSecretPipe Tokens - Light Theme */
+  /* NanoDatePicker, NanoColorPicker, NanoSlider & NanoSecretPipe Tokens - Light Theme */
+  --nano-slider-thumb-bg: #ffffff;
+  --nano-popover-bg: rgba(255, 255, 255, 0.99);
+  --nano-colorpicker-popover-bg: rgba(255, 255, 255, 0.99);
+  --nano-colorpicker-popover-border: #cbd5e1;
+  --nano-colorpicker-popover-shadow: 0 18px 42px rgba(15, 23, 42, 0.18), 0 0 0 1px rgba(15, 23, 42, 0.05);
   --nano-datepicker-bg: #f8fafc;
   --nano-datepicker-hover-bg: #ffffff;
   --nano-datepicker-popover-bg: #ffffff;
