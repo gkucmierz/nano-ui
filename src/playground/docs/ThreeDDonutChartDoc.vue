@@ -147,7 +147,7 @@ const computedChartData = computed(() => {
 
 const liveCshr = useCoupledSelection({
   items: computedChartData,
-  initialSelectedId: 'Russia',
+  initialSelectedId: null,
   keyboardNavigation: false,
 });
 const hoveredItemId = liveCshr.hoveredId;
@@ -1072,9 +1072,9 @@ const cshr = useCoupledSelection({ items: slices, initialSelectedId: 'compute' }
               />
             </div>
 
-            <div class="showcase-controls-panel" v-bind="coupledSel.bindCoupledCorridor()">
+            <div class="showcase-controls-panel">
               <h4>Coupled KPI Legend (CSHR)</h4>
-              <div class="cshr-legend-list">
+              <div class="cshr-legend-list" v-bind="coupledSel.bindCoupledCorridor()">
                 <button
                   v-for="item in coupledLegendData"
                   :key="item.id"
@@ -1375,13 +1375,13 @@ h4 { margin: 0 0 0.5rem 0; color: var(--nano-text-secondary); font-size: 0.9rem;
 }
 
 .cshr-legend-card {
+  --nano-tri-bg: var(--nano-bg-card);
   display: flex;
   align-items: center;
   gap: 10px;
   width: 100%;
   padding: 11px 14px;
   border-radius: var(--nano-radius-md, 8px);
-  background: var(--nano-bg-card);
   color: var(--nano-text-main);
   cursor: pointer;
   text-align: left;

@@ -1632,7 +1632,10 @@ const updateGeometryImmediate = () => {
 let isChartUnmounted = false
 
 const pruneStaleSliceTransitions = () => {
-  const activeIds = new Set(processedData.value.map((d) => d.id))
+  const activeIds = new Set([
+    ...(normalizedData.value || []).map((d) => d.id),
+    ...(animatedItems.value || []).map((d) => d.id)
+  ])
   for (const [id, trans] of extrusionTransitions.entries()) {
     if (!activeIds.has(id)) {
       trans.destroy()
@@ -1917,10 +1920,10 @@ watch(() => props.showLabels, () => {
 })
 
 watch(() => props.hoveredItemId, (newId) => {
-  if (activeHoveredId.value !== newId) {
+  if (newId !== undefined && activeHoveredId.value !== newId) {
     activeHoveredId.value = newId
   }
-})
+}, { immediate: true })
 
 watch(activeHoveredId, (newId) => {
   if (props.hoveredItemId !== newId) {
@@ -2226,6 +2229,7 @@ defineExpose({
             :data-slice-id="slice.item.id"
             data-half="front"
             :data-sub-index="slice.subIndex"
+            @click="handleSliceClick(slice.item.id, $event)"
           >
             <path 
               v-if="isExpanded && slice.outerWallPath" 
@@ -2260,6 +2264,7 @@ defineExpose({
             :data-testid="'slice-' + slice.item.id"
             :data-slice-id="slice.item.id"
             data-layer="top-face"
+            @click="handleSliceClick(slice.item.id, $event)"
           >
             <path 
               :d="slice.topPath" 
