@@ -95,6 +95,7 @@ const {
   effectiveActiveId,
   stepSelection,
   bindCoupledItem,
+  bindCoupledCorridor,
   triStateClasses,
 } = useCoupledSelection({
   items: cshrNodes,
@@ -261,7 +262,7 @@ const codeTabs = createDocTabs({
           </span>
         </div>
 
-        <div class="cshr-grid">
+        <div class="cshr-grid" v-bind="bindCoupledCorridor()">
           <div
             v-for="node in cshrNodes"
             :key="`card-${node.id}`"
@@ -535,31 +536,12 @@ const codeTabs = createDocTabs({
 }
 
 .cshr-card {
+  --nano-tri-bg: var(--nano-bg-muted);
   padding: 14px;
   border-radius: 10px;
-  border: 1px solid var(--nano-border-card);
-  background: var(--nano-bg-muted);
   color: var(--nano-text-main);
   cursor: pointer;
   user-select: none;
-  transition: border-color 0.15s ease, box-shadow 0.15s ease, transform 0.15s ease, background-color 0.15s ease;
-}
-
-.cshr-card.is-hovered {
-  border-color: var(--nano-status-info, #38bdf8);
-  box-shadow: 0 0 16px rgba(56, 189, 248, 0.2);
-}
-
-.cshr-card.is-selected {
-  border-color: var(--nano-status-warn, #fbbf24);
-  box-shadow: 0 0 18px rgba(245, 158, 11, 0.22);
-}
-
-.cshr-card.is-hover-active {
-  border-color: var(--nano-status-info, #38bdf8);
-  box-shadow:
-    0 0 0 1px var(--nano-status-warn, #fbbf24),
-    0 0 22px rgba(56, 189, 248, 0.28);
 }
 
 .cshr-card-top {
