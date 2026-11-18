@@ -1,10 +1,18 @@
 <script setup>
 import { ref, computed, watch, onMounted, onUnmounted } from 'vue';
 import { clamp, countStepDecimals, quantizeStepValue } from '../utils/math.js';
+import { is } from '../utils/type.js';
 import {
   getSliderThumbOverhangPx,
   resolveSliderSafeInsets,
 } from '../utils/sliderPositioning.js';
+import {
+  DEFAULT_SLIDER_FULL_SWEEP_SEC,
+  createDynamicSliderKeyState,
+  pressDynamicSliderKey,
+  releaseDynamicSliderKey,
+  stepDynamicSliderKeyHold,
+} from '../utils/sliderKeyboardDynamics.js';
 import {
   playNanoUiSound,
   computeSliderAcousticEvents,
@@ -64,6 +72,10 @@ const props = defineProps({
     type: [Boolean, String, Object],
     default: undefined,
   },
+  fullSweepSec: {
+    type: Number,
+    default: DEFAULT_SLIDER_FULL_SWEEP_SEC,
+  },
 });
 
 const emit = defineEmits(['update:modelValue', 'change']);
@@ -74,6 +86,9 @@ const isDragging = ref(false);
 const activeThumbIndex = ref(0);
 const pendingOverlapResolve = ref(false);
 const sliderSoundKey = `nano-slider-${++sliderUidSeq}`;
+let keyHoldState = createDynamicSliderKeyState();
+let keyHoldRafId = null;
+let keyHoldLastMs = 0;
 
 const valueToPct = (val) => {
   const span = props.max - props.min;
@@ -85,7 +100,7 @@ const emitSliderSoundForTransition = (prevVal, nextVal, allowSwish = true) => {
   if (prevVal === nextVal || !Number.isFinite(prevVal) || !Number.isFinite(nextVal)) return;
   const prevPct = valueToPct(prevVal);
   const nextPct = valueToPct(nextVal);
-  const soundOpts = typeof props.sound === 'object' && props.sound !== null ? props.sound : {};
+  const soundOpts = is(props.sound, 'object') && props.sound !== null ? props.sound : {};
   const quartilesEnabled = soundOpts.quartiles !== false && props.showTicks;
   const swishEnabled = soundOpts.swish !== false && allowSwish;
 
@@ -145,14 +160,17 @@ watch(
 
 onMounted(() => {
   updateSafeInsetsFromAncestors();
-  if (typeof window !== 'undefined') {
-    window.addEventListener('resize', updateSafeInsetsFromAncestors, { passive: true });
+  if (is(globalThis.window, 'object')) {
+    globalThis.window.addEventListener('resize', updateSafeInsetsFromAncestors, { passive: true });
+    globalThis.window.addEventListener('blur', stopKeyHold);
   }
 });
 
 onUnmounted(() => {
-  if (typeof window !== 'undefined') {
-    window.removeEventListener('resize', updateSafeInsetsFromAncestors);
+  stopKeyHold(false);
+  if (is(globalThis.window, 'object')) {
+    globalThis.window.removeEventListener('resize', updateSafeInsetsFromAncestors);
+    globalThis.window.removeEventListener('blur', stopKeyHold);
   }
 });
 
@@ -353,67 +371,160 @@ function onPointerUp() {
   emit('change', props.modelValue);
 }
 
-function onKeydown(e) {
-  if (props.disabled) return;
-  const stepVal = props.step > 0 ? props.step : 1;
-  const delta = e.shiftKey ? stepVal * 10 : stepVal;
-
+function applyKeyboardValue(nextVal, allowSwish = true, emitChangeNow = false) {
   if (isRange.value) {
     const [low, high] = rangeValues.value;
     const idx = activeThumbIndex.value;
     const cur = idx === 0 ? low : high;
-    let nextVal = cur;
-
-    if (e.key === 'ArrowRight' || e.key === 'ArrowUp') {
-      e.preventDefault();
-      nextVal = quantizeValue(cur + delta);
-    } else if (e.key === 'ArrowLeft' || e.key === 'ArrowDown') {
-      e.preventDefault();
-      nextVal = quantizeValue(cur - delta);
-    } else if (e.key === 'Home') {
-      e.preventDefault();
-      nextVal = props.min;
-    } else if (e.key === 'End') {
-      e.preventDefault();
-      nextVal = props.max;
-    } else {
-      return;
-    }
-
     const nextPair =
       idx === 0
         ? [Math.min(nextVal, high), high]
         : [low, Math.max(nextVal, low)];
-    emitSliderSoundForTransition(cur, nextPair[idx], e.key !== 'Home' && e.key !== 'End');
-    emit('update:modelValue', nextPair);
-    emit('change', nextPair);
-    return;
+    if (nextPair[idx] !== cur) {
+      emitSliderSoundForTransition(cur, nextPair[idx], allowSwish);
+      emit('update:modelValue', nextPair);
+    }
+    if (emitChangeNow) {
+      emit('change', nextPair);
+    }
+    return nextPair[idx];
   }
 
   const cur = Number.isFinite(Number(props.modelValue)) ? Number(props.modelValue) : props.min;
+  if (nextVal !== cur) {
+    emitSliderSoundForTransition(cur, nextVal, allowSwish);
+    emit('update:modelValue', nextVal);
+  }
+  if (emitChangeNow) {
+    emit('change', nextVal);
+  }
+  return nextVal;
+}
 
+function getActiveKeyboardValueAndBounds() {
+  if (isRange.value) {
+    const [low, high] = rangeValues.value;
+    const idx = activeThumbIndex.value;
+    return {
+      cur: idx === 0 ? low : high,
+      minBound: idx === 0 ? props.min : low,
+      maxBound: idx === 0 ? high : props.max,
+    };
+  }
+  return {
+    cur: Number.isFinite(Number(props.modelValue)) ? Number(props.modelValue) : props.min,
+    minBound: props.min,
+    maxBound: props.max,
+  };
+}
+
+function stopKeyHold(emitFinalChange = true) {
+  const wasActive = keyHoldState.dir !== 0;
+  keyHoldState = createDynamicSliderKeyState();
+  if (keyHoldRafId !== null && is(globalThis.cancelAnimationFrame, 'function')) {
+    globalThis.cancelAnimationFrame(keyHoldRafId);
+  }
+  keyHoldRafId = null;
+  keyHoldLastMs = 0;
+  if (wasActive && emitFinalChange && !props.disabled) {
+    emit('change', isRange.value ? rangeValues.value : props.modelValue);
+  }
+}
+
+function tickKeyHold(nowMs) {
+  if (props.disabled || keyHoldState.dir === 0) {
+    stopKeyHold(false);
+    return;
+  }
+  const dtSec = keyHoldLastMs > 0 ? Math.min(0.1, Math.max(0, (nowMs - keyHoldLastMs) * 0.001)) : 1 / 60;
+  keyHoldLastMs = nowMs;
+
+  const { cur, minBound, maxBound } = getActiveKeyboardValueAndBounds();
+  const res = stepDynamicSliderKeyHold(keyHoldState, {
+    currentValue: cur,
+    min: minBound,
+    max: maxBound,
+    step: props.step > 0 ? props.step : 1,
+    dtSec,
+    fullSweepSec: props.fullSweepSec,
+  });
+  keyHoldState = res.state;
+  if (res.changed) {
+    applyKeyboardValue(res.nextValue, true, false);
+  }
+  if (is(globalThis.requestAnimationFrame, 'function')) {
+    keyHoldRafId = globalThis.requestAnimationFrame(tickKeyHold);
+  }
+}
+
+function startKeyHoldLoop() {
+  if (keyHoldRafId !== null || !is(globalThis.requestAnimationFrame, 'function')) return;
+  keyHoldLastMs = is(globalThis.performance?.now, 'function') ? globalThis.performance.now() : 0;
+  keyHoldRafId = globalThis.requestAnimationFrame(tickKeyHold);
+}
+
+function onKeydown(e) {
+  if (props.disabled) return;
+  const stepVal = props.step > 0 ? props.step : 1;
+
+  let dir = 0;
   if (e.key === 'ArrowRight' || e.key === 'ArrowUp') {
-    e.preventDefault();
-    const next = quantizeValue(cur + delta);
-    emitSliderSoundForTransition(cur, next, true);
-    emit('update:modelValue', next);
-    emit('change', next);
+    dir = 1;
   } else if (e.key === 'ArrowLeft' || e.key === 'ArrowDown') {
+    dir = -1;
+  }
+
+  if (dir !== 0) {
     e.preventDefault();
-    const next = quantizeValue(cur - delta);
-    emitSliderSoundForTransition(cur, next, true);
-    emit('update:modelValue', next);
-    emit('change', next);
-  } else if (e.key === 'Home') {
+    e.stopPropagation();
+    const { cur, minBound, maxBound } = getActiveKeyboardValueAndBounds();
+    const res = pressDynamicSliderKey(keyHoldState, {
+      dir,
+      currentValue: cur,
+      min: minBound,
+      max: maxBound,
+      step: stepVal,
+      shiftKey: Boolean(e.shiftKey),
+      isRepeat: Boolean(e.repeat),
+    });
+    keyHoldState = res.state;
+    if (res.changed) {
+      applyKeyboardValue(res.nextValue, true, true);
+    }
+    startKeyHoldLoop();
+    return;
+  }
+
+  if (e.key === 'Home') {
     e.preventDefault();
-    emitSliderSoundForTransition(cur, props.min, false);
-    emit('update:modelValue', props.min);
-    emit('change', props.min);
+    e.stopPropagation();
+    stopKeyHold(false);
+    const { minBound } = getActiveKeyboardValueAndBounds();
+    applyKeyboardValue(minBound, false, true);
   } else if (e.key === 'End') {
     e.preventDefault();
-    emitSliderSoundForTransition(cur, props.max, false);
-    emit('update:modelValue', props.max);
-    emit('change', props.max);
+    e.stopPropagation();
+    stopKeyHold(false);
+    const { maxBound } = getActiveKeyboardValueAndBounds();
+    applyKeyboardValue(maxBound, false, true);
+  }
+}
+
+function onKeyup(e) {
+  let dir = 0;
+  if (e.key === 'ArrowRight' || e.key === 'ArrowUp') {
+    dir = 1;
+  } else if (e.key === 'ArrowLeft' || e.key === 'ArrowDown') {
+    dir = -1;
+  } else {
+    return;
+  }
+  e.stopPropagation();
+  const nextState = releaseDynamicSliderKey(keyHoldState, dir);
+  if (nextState.dir === 0) {
+    stopKeyHold(true);
+  } else {
+    keyHoldState = nextState;
   }
 }
 
@@ -481,6 +592,8 @@ defineExpose({
     @pointerup="onPointerUp"
     @pointercancel="onPointerUp"
     @keydown="onKeydown"
+    @keyup="onKeyup"
+    @blur="stopKeyHold()"
   >
     <div ref="trackRef" class="nano-slider-rail">
       <div class="nano-slider-track">
@@ -573,9 +686,15 @@ defineExpose({
   display: flex;
   align-items: center;
   cursor: pointer;
+  outline: none;
   user-select: none;
   -webkit-user-select: none;
   touch-action: none;
+}
+
+.nano-slider:focus,
+.nano-slider:focus-visible {
+  outline: none;
 }
 
 .nano-slider--sm {
@@ -690,8 +809,9 @@ defineExpose({
 .nano-slider:not(.is-range).is-dragging .nano-slider-thumb,
 .nano-slider:focus-visible .nano-slider-thumb.is-active-thumb,
 .nano-slider:not(.is-range):focus-visible .nano-slider-thumb {
-  box-shadow: 0 0 0 4px var(--_slider-glow);
-  transform: translate(-50%, -50%) scale(1.06);
+  border-color: var(--_slider-secondary);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.34);
+  transform: translate(-50%, -50%);
 }
 
 .nano-slider-thumb-core {
