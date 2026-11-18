@@ -2,7 +2,9 @@
   "app": {
     "title": "Nano UI",
     "subtitle": "High-performance Vue 3 UI library & 3D charts",
-    "playgroundDesc": "Testing ground for all library components and directives."
+    "playgroundDesc": "Testing ground for all library components and directives.",
+    "madeWith": "Made with",
+    "madeWithLoveAria": "love"
   },
   "nav": {
     "gettingStarted": "Getting Started",
@@ -51,6 +53,9 @@
     "dropzone": "Nano Dropzone (Upload & Hover)",
     "heatmap": "Nano Heatmap (OKLCH & KDE)",
     "langPicker": "Nano LangPicker & SVG Flags",
+    "textField": "Nano TextField & Dictation",
+    "morph": "Nano Morph (3-Tier Engine)",
+    "panorama360": "Nano Panorama 360° (2:1 Sphere)",
     "layoutDirectives": "Layout Directives, CSHR & Collapsible",
     "ripple": "v-ripple Directive",
     "tooltip": "v-tooltip Directive"
