@@ -2,9 +2,11 @@
 import { ref, computed, watch, useSlots, onUnmounted } from 'vue';
 import { highlightCode } from '../utils/syntax-highlighter.js';
 import { escapeHtml, splitHighlightedHtmlIntoLines } from '../utils/syntax-highlighter.js';
+import { playNanoUiSound } from '../utils/sound-controller.js';
+import { is } from '../utils/type.js';
 
-const isStr = (v) => Object.prototype.toString.call(v) === '[object String]';
-const isNum = (v) => Object.prototype.toString.call(v) === '[object Number]' && Number.isFinite(v);
+const isStr = (v) => is(v, 'string');
+const isNum = (v) => is(v, 'number');
 
 const slots = useSlots();
 
@@ -107,6 +109,13 @@ const props = defineProps({
     type: String,
     default: 'nano',
   },
+  /**
+   * Optional per-component `.nsd` sound override (`true | false | presetNameOrDsl | object`)
+   */
+  sound: {
+    type: [Boolean, String, Object],
+    default: undefined,
+  },
 });
 
 const emit = defineEmits(['update:wrap', 'update:lineNumbers', 'update:modelValue', 'changeTab', 'copied']);
@@ -187,6 +196,13 @@ const lineGutterWidthCh = computed(() => {
 });
 
 const selectTab = (idx) => {
+  if (idx !== currentTabIndex.value) {
+    playNanoUiSound('tab-select', {
+      propSound: props.sound,
+      minIntervalMs: 24,
+      throttleKey: 'nano-code-tab',
+    });
+  }
   currentTabIndex.value = idx;
   emit('update:modelValue', idx);
   emit('changeTab', idx, props.tabs[idx]);
@@ -226,6 +242,11 @@ const copyCode = async () => {
     }
 
     copied.value = true;
+    playNanoUiSound('copy-chime', {
+      propSound: props.sound,
+      minIntervalMs: 40,
+      throttleKey: 'nano-code-copy',
+    });
     emit('copied', textToCopy);
 
     if (copyTimeout) clearTimeout(copyTimeout);
@@ -404,6 +425,10 @@ onUnmounted(() => {
   display: flex;
   align-items: stretch;
   height: 100%;
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow-x: auto;
+  scrollbar-width: none;
   gap: 0;
   padding: 0;
   margin: 0;
@@ -414,10 +439,14 @@ onUnmounted(() => {
   -webkit-user-select: none;
 }
 
+.code-block-tabs::-webkit-scrollbar {
+  display: none;
+}
+
 .code-tab-btn {
   height: 100%;
   margin: 0;
-  padding: 0 16px;
+  padding: 0 14px;
   border: none;
   border-right: 1px solid var(--nano-code-header-border, var(--nano-border-card, rgba(255, 255, 255, 0.08)));
   border-radius: 0;
@@ -425,6 +454,8 @@ onUnmounted(() => {
   color: var(--nano-text-muted, #94a3b8);
   font-size: 0.76rem;
   font-weight: 600;
+  white-space: nowrap;
+  flex-shrink: 0;
   cursor: pointer;
   display: inline-flex;
   align-items: center;
