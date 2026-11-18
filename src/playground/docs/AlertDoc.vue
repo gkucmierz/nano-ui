@@ -1,5 +1,6 @@
 <script setup>
 import { ref, computed } from 'vue';
+import NanoAlert from '../../components/NanoAlert.vue';
 import NanoCodeBlock from '../../components/NanoCodeBlock.vue';
 import NanoSwitch from '../../components/NanoSwitch.vue';
 import { t } from '../../locales.js';
@@ -105,25 +106,17 @@ const cssApiDoc = `/* Nano UI Alert & Banner Primitives */
     <div class="sandbox-container">
       <div class="sandbox-preview">
         <div class="preview-area">
-          <div v-if="!isDismissed" :class="[
-            'nano-alert',
-            `nano-alert-${selectedVariant}`,
-            isAccentLeft ? 'nano-alert-accent-left' : '',
-            isBanner ? 'nano-alert-banner' : ''
-          ]">
-            <div v-if="hasIcon" class="nano-alert-icon">
-              <NanoIcon :name="selectedVariant" :size="18" />
-            </div>
-
-            <div class="nano-alert-content">
-              <strong v-if="hasTitle" class="nano-alert-title">{{ alertTitle }}</strong>
-              <p class="nano-alert-desc">{{ alertMessage }}</p>
-            </div>
-
-            <button v-if="hasClose" class="nano-alert-close" aria-label="Dismiss alert" @click="isDismissed = true">
-              <NanoIcon name="close" :size="16" />
-            </button>
-          </div>
+          <NanoAlert
+            v-if="!isDismissed"
+            :variant="selectedVariant"
+            :icon="hasIcon"
+            :title="hasTitle ? alertTitle : ''"
+            :description="alertMessage"
+            :dismissible="hasClose"
+            :accent-left="isAccentLeft"
+            :banner="isBanner"
+            @dismiss="isDismissed = true"
+          />
 
           <div v-else class="dismissed-restore-box">
             <span>Alert dismissed.</span>
