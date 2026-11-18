@@ -128,7 +128,26 @@ const wheelCanvasRef = ref(null);
 const isDraggingDisc = ref(false);
 const isOpen = ref(false);
 const teleportTarget = ref('body');
+const popoverTheme = ref('dark');
 const popoverStyle = ref({});
+
+const resolveHostPopoverTheme = () => {
+  const el = triggerRef.value || rootRef.value;
+  if (el && isFn(el.closest)) {
+    const themed = el.closest('[data-theme], .light, .dark');
+    if (themed) {
+      const attr = themed.getAttribute?.('data-theme');
+      if (attr === 'light' || themed.classList?.contains('light')) return 'light';
+      if (attr === 'dark' || themed.classList?.contains('dark')) return 'dark';
+    }
+  }
+  const docEl = globalThis.document?.documentElement;
+  if (docEl) {
+    const attr = docEl.getAttribute?.('data-theme');
+    if (attr === 'light' || docEl.classList?.contains('light')) return 'light';
+  }
+  return 'dark';
+};
 
 const effectiveGamutMaxChroma = (lVal, hVal) => {
   const gamutCap = getMaxOklchChroma(lVal, hVal, Math.max(0.4, props.maxChroma));
@@ -295,6 +314,7 @@ const scheduleWheelRender = () => {
 
 const updatePopoverPosition = ({ forceResolveMount = false } = {}) => {
   if (!isPopoverMode.value || (!isOpen.value && !forceResolveMount) || !triggerRef.value || !globalThis.window) return;
+  popoverTheme.value = resolveHostPopoverTheme();
   const win = globalThis.window;
   const { mountEl, viewportEl } = findSafeSelectMount(triggerRef.value, 368);
   const useAncestorMount = Boolean(mountEl && mountEl.nodeType === 1);
@@ -689,7 +709,8 @@ defineExpose({
         v-if="isOpen"
         ref="popoverPanelRef"
         class="nano-oklch-picker is-floating"
-        :class="{ 'is-disabled': disabled }"
+        :class="{ 'is-disabled': disabled, 'is-light-theme': popoverTheme === 'light' }"
+        :data-theme="popoverTheme"
         :style="popoverStyle"
         role="dialog"
         aria-modal="false"
@@ -1096,10 +1117,40 @@ defineExpose({
 }
 
 .nano-oklch-picker.is-floating {
-  background: var(--nano-bg-card-elevated, var(--nano-bg-card, #0f172a));
-  backdrop-filter: blur(18px);
-  -webkit-backdrop-filter: blur(18px);
-  box-shadow: var(--nano-shadow-popover, 0 18px 42px rgba(2, 6, 23, 0.45));
+  background: var(--nano-colorpicker-popover-bg, var(--nano-popover-bg, rgba(18, 23, 35, 0.98)));
+  border-color: var(--nano-colorpicker-popover-border, rgba(255, 255, 255, 0.20));
+  backdrop-filter: blur(22px) saturate(140%);
+  -webkit-backdrop-filter: blur(22px) saturate(140%);
+  box-shadow: var(--nano-colorpicker-popover-shadow, var(--nano-shadow-popover, 0 22px 48px rgba(2, 6, 23, 0.72)));
+}
+
+.nano-oklch-picker.is-floating.is-light-theme {
+  background: var(--nano-colorpicker-popover-bg, rgba(255, 255, 255, 0.99));
+  border-color: var(--nano-colorpicker-popover-border, #cbd5e1);
+  color: #0f172a;
+  box-shadow: var(--nano-colorpicker-popover-shadow, 0 18px 42px rgba(15, 23, 42, 0.18));
+}
+
+.nano-oklch-picker.is-floating.is-light-theme .nano-oklch-slider-meta {
+  color: #475569;
+}
+
+.nano-oklch-picker.is-floating.is-light-theme .nano-oklch-slider-meta .slider-val,
+.nano-oklch-picker.is-floating.is-light-theme .nano-oklch-format-btn.is-active,
+.nano-oklch-picker.is-floating.is-light-theme .nano-oklch-value-input,
+.nano-oklch-picker.is-floating.is-light-theme .nano-oklch-copy-btn {
+  color: #0f172a;
+}
+
+.nano-oklch-picker.is-floating.is-light-theme .nano-oklch-formats,
+.nano-oklch-picker.is-floating.is-light-theme .nano-oklch-value-input {
+  background: #f1f5f9;
+  border-color: #cbd5e1;
+}
+
+.nano-oklch-picker.is-floating.is-light-theme .nano-oklch-copy-btn {
+  background: #e2e8f0;
+  border-color: #cbd5e1;
 }
 
 .nano-oklch-picker.is-disabled {
