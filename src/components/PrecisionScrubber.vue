@@ -1,6 +1,8 @@
 <script setup>
 import { ref, computed, onMounted, onUnmounted } from 'vue';
 import { clamp, countStepDecimals, quantizeStepValue } from '../utils/math.js';
+import { playNanoUiSound } from '../utils/sound-controller.js';
+import { isCallable } from '../utils/type.js';
 
 defineOptions({
   inheritAttrs: false
@@ -14,7 +16,7 @@ onMounted(() => {
 
 onUnmounted(() => {
   isScrubbing.value = false;
-  if (typeof document !== 'undefined') {
+  if (globalThis.document) {
     document.removeEventListener('mousemove', handleScrubMove);
     document.removeEventListener('mouseup', stopScrubbing);
   }
@@ -51,6 +53,10 @@ const props = defineProps({
   },
   formatValue: {
     type: Function,
+    default: undefined
+  },
+  sound: {
+    type: [Boolean, String, Object],
     default: undefined
   }
 })
@@ -102,11 +108,21 @@ const formatNum = (num, decimals = stepDecimals.value) => {
 }
 
 const formattedValue = computed(() => {
-  if (typeof props.formatValue === 'function') {
+  if (isCallable(props.formatValue)) {
     return props.formatValue(props.modelValue)
   }
   return `${formatNum(props.modelValue)}${props.unit || ''}`
 })
+
+const emitScrubberTickIfChanged = (prevVal, nextVal) => {
+  if (nextVal !== prevVal) {
+    playNanoUiSound('scrubber-tick', {
+      propSound: props.sound,
+      minIntervalMs: 22,
+      throttleKey: 'precision-scrubber'
+    })
+  }
+}
 
 const getCoarseResolutionLabel = () => {
   if (!props.fineTune) {
@@ -204,6 +220,7 @@ const handleScrubMove = (e) => {
     const stepChange = Math.round(-sign * baseStep * multiplier)
     
     const nextVal = quantizeValue(scrubStartIndex.value + stepChange * stepVal)
+    emitScrubberTickIfChanged(props.modelValue, nextVal)
     emit('update:modelValue', nextVal)
     
     const instStep = baseStep * (1 + Math.pow(b, activeDeltaY) * Math.log(b)) * stepVal
@@ -222,6 +239,7 @@ const handleScrubMove = (e) => {
     const trackWidth = Math.max(1, rect.width - 2 * padding)
     const ratio = Math.min(1, Math.max(0, (e.clientX - rect.left - padding) / trackWidth))
     const nextVal = quantizeValue(props.min + ratio * range)
+    emitScrubberTickIfChanged(props.modelValue, nextVal)
     emit('update:modelValue', nextVal)
     scrubResolutionText.value = getCoarseResolutionLabel()
   }
@@ -238,6 +256,7 @@ const stopScrubbing = (e) => {
       const trackWidth = Math.max(1, rect.width - 2 * padding)
       const ratio = Math.min(1, Math.max(0, (e.clientX - rect.left - padding) / trackWidth))
       finalVal = quantizeValue(props.min + ratio * range)
+      emitScrubberTickIfChanged(props.modelValue, finalVal)
       emit('update:modelValue', finalVal)
     }
   }
@@ -250,6 +269,7 @@ const stopScrubbing = (e) => {
 
 function setValue(val) {
   const next = quantizeValue(val)
+  emitScrubberTickIfChanged(props.modelValue, next)
   emit('update:modelValue', next)
   emit('change', next)
 }
