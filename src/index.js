@@ -123,6 +123,13 @@ import {
   clipSegmentToUnitBox,
   createBoundedPointerDrag,
 } from './utils/boundedPointerDrag.js';
+import {
+  DEFAULT_SLIDER_FULL_SWEEP_SEC,
+  createDynamicSliderKeyState,
+  pressDynamicSliderKey,
+  releaseDynamicSliderKey,
+  stepDynamicSliderKeyHold,
+} from './utils/sliderKeyboardDynamics.js';
 import { useBoundedPointerDrag } from './composables/useBoundedPointerDrag.js';
 import {
   IDEAL_PANORAMA_ASPECT_RATIO,
@@ -1196,6 +1203,11 @@ export {
   clipSegmentToUnitBox,
   createBoundedPointerDrag,
   useBoundedPointerDrag,
+  DEFAULT_SLIDER_FULL_SWEEP_SEC,
+  createDynamicSliderKeyState,
+  pressDynamicSliderKey,
+  releaseDynamicSliderKey,
+  stepDynamicSliderKeyHold,
 };
 
 export const version = pkg.version;
