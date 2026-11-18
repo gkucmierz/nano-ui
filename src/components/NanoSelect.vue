@@ -7,6 +7,7 @@ import {
   computeSelectDropdownLayout,
   getPositionedReferenceEl,
 } from '../utils/selectPositioning.js';
+import { playNanoUiSound } from '../utils/sound-controller.js';
 
 const normalizeSearchText = (str) => {
   if (!str) return '';
@@ -186,6 +187,13 @@ const props = defineProps({
     type: String,
     default: 'auto',
     validator: (v) => v === 'auto' || v === 'light' || v === 'dark',
+  },
+  /**
+   * Optional per-component `.nsd` sound override (`true | false | presetNameOrDsl | object`)
+   */
+  sound: {
+    type: [Boolean, String, Object],
+    default: undefined,
   },
 });
 
@@ -467,6 +475,13 @@ function toggleDropdown() {
 function selectOption(opt) {
   if (!opt || opt.disabled || props.disabled) return;
 
+  playNanoUiSound('tab-select', {
+    propSound: props.sound,
+    size: props.size,
+    minIntervalMs: 24,
+    throttleKey: 'nano-select',
+  });
+
   if (props.multiple) {
     const current = Array.isArray(props.modelValue) ? [...props.modelValue] : [];
     const idx = current.indexOf(opt.value);
@@ -517,12 +532,15 @@ function moveFocus(step) {
 function onKeydown(e) {
   if (props.disabled) return;
   if (!isOpen.value) {
-    if (e.key === 'Enter' || e.key === ' ' || e.key === 'ArrowDown') {
+    if (e.key === 'Enter' || e.key === ' ' || e.key === 'Spacebar' || e.key === 'ArrowDown') {
       e.preventDefault();
+      e.stopPropagation();
       openDropdown();
     }
     return;
   }
+
+  const isTypingInSearch = Boolean(e.target && e.target.tagName === 'INPUT');
 
   if (e.key === 'Escape') {
     e.preventDefault();
@@ -530,12 +548,18 @@ function onKeydown(e) {
     closeDropdown();
   } else if (e.key === 'ArrowDown') {
     e.preventDefault();
+    e.stopPropagation();
     moveFocus(1);
   } else if (e.key === 'ArrowUp') {
     e.preventDefault();
+    e.stopPropagation();
     moveFocus(-1);
-  } else if (e.key === 'Enter') {
+  } else if (
+    e.key === 'Enter' ||
+    ((e.key === ' ' || e.key === 'Spacebar') && !isTypingInSearch)
+  ) {
     e.preventDefault();
+    e.stopPropagation();
     const target = filteredOptions.value[focusedIndex.value];
     if (target && !target.disabled) {
       selectOption(target);
