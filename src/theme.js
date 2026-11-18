@@ -16,13 +16,45 @@ const detectHostExplicitTheme = () => {
 };
 
 /**
+ * Freezes all CSS transitions for 2 animation frames during a theme polarity switch
+ * (`THEME-INSTANT-01`), guaranteeing instant 0ms light/dark switching without muddied
+ * intermediate color/border/backdrop transitions.
+ */
+export const freezeThemeTransitions = (doc = typeof document !== 'undefined' ? document : null) => {
+  const root = doc?.documentElement;
+  if (!root?.classList) return;
+  if (root.classList.contains('theme-switching')) return;
+  root.classList.add('theme-switching');
+  // Force synchronous style recalc before double-RAF cleanup
+  void root.offsetHeight;
+  const raf = typeof requestAnimationFrame === 'function' ? requestAnimationFrame : null;
+  if (raf) {
+    raf(() => {
+      raf(() => {
+        root.classList.remove('theme-switching');
+      });
+    });
+  } else if (typeof setTimeout === 'function') {
+    setTimeout(() => root.classList.remove('theme-switching'), 32);
+  } else {
+    root.classList.remove('theme-switching');
+  }
+};
+
+/**
  * Synchronizes inline `document.documentElement.style.colorScheme` whenever a host app
  * mutates `data-theme` or `.light`/`.dark` classes (prevents inline `color-scheme: dark`
- * from rendering dark OS checkboxes/scrollbars inside Light Mode).
+ * from rendering dark OS checkboxes/scrollbars inside Light Mode), and automatically freezes
+ * CSS transitions (`THEME-INSTANT-01`) when theme polarity flips at runtime.
  */
+let lastObservedThemePolarity = null;
 export const syncDocumentColorSchemeFromDom = () => {
   if (typeof document === 'undefined' || !document.documentElement?.style) return null;
   const resolved = detectHostExplicitTheme() || 'dark';
+  if (lastObservedThemePolarity !== null && lastObservedThemePolarity !== resolved) {
+    freezeThemeTransitions(document);
+  }
+  lastObservedThemePolarity = resolved;
   if (document.documentElement.style.colorScheme !== resolved) {
     document.documentElement.style.colorScheme = resolved;
   }
