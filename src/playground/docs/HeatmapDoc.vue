@@ -75,34 +75,6 @@ const RECORDED_INTERACTION_SAMPLE = [
 const densityPalette = ref('viridis');
 const densityRadius = ref(2.6);
 const densityPoints = ref([...RECORDED_INTERACTION_SAMPLE]);
-const isDrawingDensity = ref(false);
-
-function recordStageEvent(event) {
-  const target = event?.currentTarget;
-  if (!target || !target.getBoundingClientRect) return;
-  const rect = target.getBoundingClientRect();
-  if (rect.width <= 0 || rect.height <= 0) return;
-  const x = Math.min(1, Math.max(0, (event.clientX - rect.left) / rect.width));
-  const y = Math.min(1, Math.max(0, (event.clientY - rect.top) / rect.height));
-  densityPoints.value = [
-    ...densityPoints.value.slice(-240),
-    { x: Number(x.toFixed(4)), y: Number(y.toFixed(4)), weight: 2 },
-  ];
-}
-
-function onStagePointerDown(event) {
-  isDrawingDensity.value = true;
-  recordStageEvent(event);
-}
-
-function onStagePointerMove(event) {
-  if (!isDrawingDensity.value) return;
-  recordStageEvent(event);
-}
-
-function stopStageDrawing() {
-  isDrawingDensity.value = false;
-}
 
 function loadSamplePoints() {
   densityPoints.value = [...RECORDED_INTERACTION_SAMPLE];
@@ -147,7 +119,9 @@ const codeTabs = createDocTabs({
         'rows: Array<{ id, label, sublabel? } | string> — Row descriptors for matrix mode',
         'cols: Array<{ id, label, sublabel? } | string> — Column descriptors for matrix mode',
         'data: number[][] | Array<{ rowId, colId, value, meta? }> | Record<string, any> — Matrix data source',
-        'points: Array<{ x, y, weight? }> — Normalized [0..1] empirical points for mode="density"',
+        'points: Array<{ x, y, weight? }> — Normalized [0..1] empirical points for mode="density" (supports v-model:points)',
+        'interactive: Boolean (default: false) — Enables unbroken BOUNDED-DRAG-01 pointer painting across out-of-bounds excursions (resolveHighestDragBoundary + Liang-Barsky edge-pause)',
+        'paintWeight / maxPoints / dragBoundary — Optional interactive density brush weight, rolling buffer cap, and explicit containment boundary',
         'scale: "log1p" | "p95" | "sqrt" | "linear" (default: "log1p") — Heavy-tailed Pareto normalization mode',
         'clampPercentile: Number (default: 0.95) — Upper percentile ceiling used in "p95" mode',
         'buckets: Number (default: 0) — Discrete quantization steps (e.g. 5 GitHub steps; 0 = continuous)',
@@ -351,27 +325,22 @@ const codeTabs = createDocTabs({
         </div>
       </div>
 
-      <div
-        class="density-collector-wrap"
-        @pointerdown="onStagePointerDown"
-        @pointermove="onStagePointerMove"
-        @pointerup="stopStageDrawing"
-        @pointerleave="stopStageDrawing"
+      <NanoHeatmap
+        v-model:points="densityPoints"
+        mode="density"
+        interactive
+        :paint-weight="2"
+        :max-points="240"
+        :palette="densityPalette"
+        :density-radius="densityRadius"
+        :density-height="240"
+        :empty-label="t('heatmapDoc.densityEmptyLabel')"
+        allow-scale-switch
       >
-        <NanoHeatmap
-          mode="density"
-          :points="densityPoints"
-          :palette="densityPalette"
-          :density-radius="densityRadius"
-          :density-height="240"
-          :empty-label="t('heatmapDoc.densityEmptyLabel')"
-          allow-scale-switch
-        >
-          <div v-if="densityPoints.length > 0" class="density-hud-badge">
-            {{ densityPoints.length }} pts · {{ t('heatmapDoc.clickHint') }}
-          </div>
-        </NanoHeatmap>
-      </div>
+        <div v-if="densityPoints.length > 0" class="density-hud-badge">
+          {{ densityPoints.length }} pts · {{ t('heatmapDoc.clickHint') }}
+        </div>
+      </NanoHeatmap>
     </div>
 
     <NanoCodeBlock :tabs="codeTabs" />
@@ -525,12 +494,6 @@ const codeTabs = createDocTabs({
 .readout-empty {
   color: var(--nano-text-muted, #64748b);
   opacity: 0.8;
-}
-
-.density-collector-wrap {
-  cursor: crosshair;
-  user-select: none;
-  touch-action: none;
 }
 
 .density-hud-badge {

@@ -9,6 +9,7 @@ import {
 } from 'vue';
 import { tooltipDirective } from '../directives/tooltip.js';
 import { useTheme } from '../composables/useTheme.js';
+import { useBoundedPointerDrag } from '../composables/useBoundedPointerDrag.js';
 import { useCoupledSelection } from '../utils/coupledSelection.js';
 import { clamp } from '../utils/math.js';
 import {
@@ -69,6 +70,22 @@ const props = defineProps({
   densityHeight: {
     type: Number,
     default: 240,
+  },
+  interactive: {
+    type: Boolean,
+    default: false,
+  },
+  paintWeight: {
+    type: Number,
+    default: 2,
+  },
+  maxPoints: {
+    type: Number,
+    default: 240,
+  },
+  dragBoundary: {
+    type: [String, Object, Function],
+    default: undefined,
   },
   scale: {
     type: String,
@@ -141,8 +158,12 @@ const props = defineProps({
 const emit = defineEmits([
   'update:selectedCell',
   'update:scale',
+  'update:points',
   'select',
   'hover',
+  'paint',
+  'paint-start',
+  'paint-end',
 ]);
 
 const rootRef = ref(null);
@@ -155,6 +176,38 @@ const domIsLight = ref(false);
 const localScale = ref(HEATMAP_SCALES.includes(props.scale) ? props.scale : 'log1p');
 const focusedCoords = ref({ r: 0, c: 0 });
 const stageSize = ref({ width: 0, height: 0 });
+
+const densityDrag = useBoundedPointerDrag({
+  outOfBoundsMode: 'edge-pause',
+  getElement: () => densityStageRef.value,
+  boundary: () => props.dragBoundary,
+  onStart(sample) {
+    emit('paint-start', sample);
+  },
+  onMove(sample) {
+    if (props.mode !== 'density' || !props.interactive) return;
+    const weightVal = Number(props.paintWeight);
+    const pt = {
+      x: Number(sample.x.toFixed(4)),
+      y: Number(sample.y.toFixed(4)),
+      weight: Number.isFinite(weightVal) && weightVal > 0 ? weightVal : 2,
+    };
+    const maxCap = Math.trunc(Number(props.maxPoints) || 0);
+    const current = Array.isArray(props.points) ? props.points : [];
+    const nextPoints =
+      maxCap > 0 ? [...current.slice(-(maxCap - 1)), pt] : [...current, pt];
+    emit('paint', { point: pt, sample });
+    emit('update:points', nextPoints);
+  },
+  onEnd(summary) {
+    emit('paint-end', summary);
+  },
+});
+
+function onDensityStagePointerDown(event) {
+  if (props.mode !== 'density' || !props.interactive) return;
+  densityDrag.onPointerDown(event);
+}
 
 let themeObserver = null;
 let resizeObserver = null;
@@ -856,6 +909,8 @@ defineExpose({
   selectCellByKey,
   redrawDensityCanvas,
   scaleStats,
+  isPainting: densityDrag.isDragging,
+  cancelPainting: densityDrag.cancelDrag,
 });
 </script>
 
@@ -1009,7 +1064,12 @@ defineExpose({
       <div
         ref="densityStageRef"
         class="nano-heatmap-density-stage"
+        :class="{
+          'is-interactive': interactive,
+          'is-dragging': densityDrag.isDragging.value,
+        }"
         :style="{ height: `${resolvedDensityHeight}px` }"
+        @pointerdown="onDensityStagePointerDown"
       >
         <canvas
           ref="densityCanvasRef"
@@ -1275,6 +1335,13 @@ defineExpose({
   overflow: hidden;
   box-sizing: border-box;
   box-shadow: inset 0 0 0 1px var(--nano-heatmap-cell-border);
+}
+
+.nano-heatmap-density-stage.is-interactive {
+  cursor: crosshair;
+  touch-action: none;
+  -webkit-user-select: none;
+  user-select: none;
 }
 
 .nano-heatmap-density-canvas {
