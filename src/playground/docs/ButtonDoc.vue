@@ -1,5 +1,6 @@
 <script setup>
 import { ref, computed } from 'vue';
+import NanoButton from '../../components/NanoButton.vue';
 import NanoCodeBlock from '../../components/NanoCodeBlock.vue';
 import NanoSwitch from '../../components/NanoSwitch.vue';
 import { t } from '../../locales.js';
@@ -99,34 +100,32 @@ const cssApiDoc = `/* Nano UI Button Primitives & Modifiers */
     <div class="sandbox-container">
       <div class="sandbox-preview">
         <div class="preview-area">
-          <button
-            :class="[
-              'nano-btn',
-              `nano-btn-${selectedVariant}`,
-              selectedSize !== 'default' ? `nano-btn-${selectedSize}` : '',
-              isOutline && selectedVariant !== 'ghost' ? 'nano-btn-outline' : ''
-            ]"
+          <NanoButton
+            :variant="selectedVariant"
+            :size="selectedSize === 'default' ? 'md' : selectedSize"
+            :outline="isOutline && selectedVariant !== 'ghost'"
             :disabled="isDisabled"
-            v-ripple="hasRipple"
+            :ripple="hasRipple"
             @click="handleClick"
           >
-            <svg
-              v-if="hasIcon"
-              viewBox="0 0 24 24"
-              width="16"
-              height="16"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="2"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-            >
-              <polyline points="13 17 18 12 13 7"></polyline>
-              <polyline points="6 17 11 12 6 7"></polyline>
-            </svg>
+            <template v-if="hasIcon" #icon>
+              <svg
+                viewBox="0 0 24 24"
+                width="16"
+                height="16"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <polyline points="13 17 18 12 13 7"></polyline>
+                <polyline points="6 17 11 12 6 7"></polyline>
+              </svg>
+            </template>
             <span>Interactive Button</span>
             <span class="badge" v-if="clickCount > 0">{{ clickCount }}</span>
-          </button>
+          </NanoButton>
         </div>
 
         <NanoCodeBlock :code="generatedCode" lang="html" title="Generated Markup" :default-wrap="true" />
