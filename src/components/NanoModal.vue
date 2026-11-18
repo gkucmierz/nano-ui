@@ -1,21 +1,44 @@
 <script setup>
 import { ref, watch, onMounted, onUnmounted, nextTick, computed, useSlots, getCurrentInstance } from 'vue';
 import NanoIcon from './NanoIcon.vue';
+import NanoProcessBadge from './NanoProcessBadge.vue';
 import vRipple from '../directives/ripple.js';
 import { getScopedStorageController, normalizeStorageMode } from '../utils/storage-controller.js';
 import { lockModalBackgroundScroll, unlockModalBackgroundScroll } from '../utils/modalScrollLock.js';
+import { normalizeModalProcessState } from '../utils/modalProcess.js';
+import { extractFeatureTitleSlug, clampModalGeometryBox } from '../utils/modalGeometry.js';
+import { playNanoUiSound } from '../utils/sound-controller.js';
+import { is } from '../utils/type.js';
 
 const nanoStorage = getScopedStorageController('nano-ui');
 const modalScrollLockToken = Symbol('nano-modal-scroll-lock');
 let modalInstanceCounter = 0;
 
 const isMounted = ref(false);
+const activeFullscreenHost = ref(null);
 const slots = useSlots();
 const instance = getCurrentInstance();
 const modalTitleId = `nano-modal-title-${++modalInstanceCounter}`;
 
+function syncFullscreenHost() {
+  const fsEl = is(globalThis.document, Object) ? document.fullscreenElement : null;
+  activeFullscreenHost.value = fsEl && fsEl.isConnected !== false ? fsEl : null;
+}
+
 onMounted(() => {
+  syncFullscreenHost();
+  if (is(globalThis.document, Object)) {
+    document.addEventListener('fullscreenchange', syncFullscreenHost);
+  }
   isMounted.value = true;
+});
+
+const MODAL_SIZE_WIDTHS = Object.freeze({
+  sm: 440,
+  md: 600,
+  lg: 860,
+  xl: 1020,
+  full: '94vw',
 });
 
 const props = defineProps({
@@ -23,7 +46,8 @@ const props = defineProps({
   modelValue: { type: Boolean, default: undefined },
   show: { type: Boolean, default: undefined },
   title: { type: String, default: '' },
-  width: { type: [String, Number], default: 600 },
+  size: { type: String, default: undefined },
+  width: { type: [String, Number], default: undefined },
   height: { type: [String, Number], default: 'auto' },
 
   showHeader: { type: Boolean, default: true },
@@ -48,8 +72,20 @@ const props = defineProps({
   appPrefix: { type: String, default: '' },
 
   minWidth: { type: Number, default: 300 },
-  minHeight: { type: Number, default: 200 }
+  minHeight: { type: Number, default: 200 },
+
+  process: { type: [Object, String], default: null },
+  processState: { type: String, default: undefined },
+  processLabel: { type: String, default: undefined },
+  processErrorCode: { type: String, default: undefined },
+  processTooltip: { type: String, default: undefined },
+  teleportTo: { type: [String, Object], default: undefined },
+  sound: { type: [Boolean, String, Object], default: undefined }
 });
+
+const resolvedTeleportTarget = computed(
+  () => props.teleportTo || activeFullscreenHost.value || 'body'
+);
 
 const emit = defineEmits(['close', 'ok', 'cancel', 'update:modelValue', 'update:visible', 'update:show', 'geometry-change']);
 
@@ -59,6 +95,15 @@ const isVisible = computed(() => {
   if (props.show !== undefined) return props.show;
   return false;
 });
+
+const normalizedProcess = computed(() =>
+  normalizeModalProcessState(props.process, {
+    processState: props.processState,
+    processLabel: props.processLabel,
+    processErrorCode: props.processErrorCode,
+    processTooltip: props.processTooltip,
+  })
+);
 
 const computedShowFooter = computed(() => {
   if (props.showFooter !== undefined) return props.showFooter;
@@ -87,20 +132,25 @@ const parentComponentName =
   instance?.parent?.type?.name ||
   'app';
 
-const initialTitleSlug = String(props.title || '')
-  .split(/\s+[—–-]\s+|\s*\(/)[0]
-  .trim()
-  .toLowerCase()
-  .replace(/[^a-z0-9]+/g, '_')
-  .replace(/^_+|_+$/g, '');
+const featureTitleSlug = computed(() => extractFeatureTitleSlug(props.title));
 
 const resolvedStorageMode = computed(() => normalizeStorageMode(props.storage, 'ls'));
+
+const resolvedWidth = computed(() => {
+  if (props.width !== undefined && props.width !== null && props.width !== '') {
+    return props.width;
+  }
+  if (props.size && MODAL_SIZE_WIDTHS[props.size] !== undefined) {
+    return MODAL_SIZE_WIDTHS[props.size];
+  }
+  return 600;
+});
 
 const baseStorageKey = computed(() => {
   if (props.storageKey) return props.storageKey;
   if (!props.draggable && !props.resizable) return '';
-  const slug = initialTitleSlug || 'modal';
-  return `modal_geom_${parentComponentName}_${props.width}x${props.height}_${slug}`;
+  const slug = featureTitleSlug.value || 'modal';
+  return `modal_geom_${parentComponentName}_${resolvedWidth.value}x${props.height}_${slug}`;
 });
 
 const effectiveStorageKey = computed(() => {
@@ -142,12 +192,13 @@ const computedWindowStyle = computed(() => {
 
   const styles = {};
 
-  // Apply explicit width/height if resizing or passed as Number
+  // Apply explicit width/height if resizing or passed as Number / size preset
   if (curWidth.value !== null) {
     styles.width = `${curWidth.value}px`;
     styles.maxWidth = 'none';
   } else {
-    styles.maxWidth = typeof props.width === 'number' ? `${props.width}px` : props.width;
+    const w = resolvedWidth.value;
+    styles.maxWidth = is(w, 'number') ? `${w}px` : w;
     styles.width = '100%';
   }
 
@@ -155,7 +206,7 @@ const computedWindowStyle = computed(() => {
     styles.height = `${curHeight.value}px`;
     styles.maxHeight = 'none';
   } else if (props.height !== 'auto') {
-    styles.height = typeof props.height === 'number' ? `${props.height}px` : props.height;
+    styles.height = is(props.height, 'number') ? `${props.height}px` : props.height;
   }
 
   // Apply position if dragging
@@ -239,11 +290,13 @@ const startResize = (e) => {
 
   const rect = modalWindow.value.getBoundingClientRect();
 
-  // Lock position if not locked
+  // Lock position and dimensions if not yet locked so a no-move click never saves null width/height
   if (posX.value === null) {
     posX.value = rect.left;
     posY.value = rect.top;
   }
+  if (curWidth.value === null) curWidth.value = rect.width;
+  if (curHeight.value === null) curHeight.value = rect.height;
 
   initialWidth = rect.width;
   initialHeight = rect.height;
@@ -282,30 +335,16 @@ const stopResize = () => {
 };
 
 function clampScalarBox(box) {
-  const vw = (typeof window !== 'undefined' && window.innerWidth) || 1280;
-  const vh = (typeof window !== 'undefined' && window.innerHeight) || 800;
-
-  let w = typeof box?.width === 'number' && Number.isFinite(box.width) ? box.width : null;
-  let h = typeof box?.height === 'number' && Number.isFinite(box.height) ? box.height : null;
-
-  if (w !== null) {
-    w = Math.max(props.minWidth, Math.min(w, Math.max(props.minWidth, vw - 16)));
-  }
-  if (h !== null) {
-    h = Math.max(props.minHeight, Math.min(h, Math.max(props.minHeight, vh - 16)));
-  }
-
-  let x = typeof box?.x === 'number' && Number.isFinite(box.x) ? box.x : null;
-  let y = typeof box?.y === 'number' && Number.isFinite(box.y) ? box.y : null;
-
-  if (x !== null && y !== null) {
-    const effectiveW = w || (typeof props.width === 'number' ? props.width : 600);
-    const effectiveH = h || (typeof props.height === 'number' ? props.height : 460);
-    x = Math.max(0, Math.min(x, Math.max(0, vw - Math.min(effectiveW, vw))));
-    y = Math.max(0, Math.min(y, Math.max(0, vh - Math.min(effectiveH, vh))));
-  }
-
-  return { x, y, width: w, height: h };
+  const vw = (is(globalThis.window, Object) && window.innerWidth) || 1280;
+  const vh = (is(globalThis.window, Object) && window.innerHeight) || 800;
+  return clampModalGeometryBox(box, {
+    viewportWidth: vw,
+    viewportHeight: vh,
+    minWidth: props.minWidth,
+    minHeight: props.minHeight,
+    fallbackWidth: resolvedWidth.value,
+    fallbackHeight: props.height,
+  });
 }
 
 function persistGeometry() {
@@ -437,9 +476,23 @@ function handleHeaderDblClick(e) {
 }
 
 // Global ESC
+const hasActiveInnerFullscreen = () =>
+  Boolean(
+    is(globalThis.document, Object) &&
+      modalOverlay.value &&
+      ((document.fullscreenElement && modalOverlay.value.contains(document.fullscreenElement)) ||
+        modalOverlay.value.querySelector('.is-css-fullscreen'))
+  );
+
 const onGlobalKeyDown = (e) => {
   if (isVisible.value && e.key === 'Escape') {
-    if (typeof document !== 'undefined' && modalOverlay.value) {
+    if (is(globalThis.document, Object) && modalOverlay.value) {
+      if (
+        (document.fullscreenElement && modalOverlay.value.contains(document.fullscreenElement)) ||
+        modalOverlay.value.querySelector('.is-css-fullscreen')
+      ) {
+        return;
+      }
       const overlays = document.querySelectorAll('.nano-modal-overlay');
       const topOverlay = overlays.length > 0 ? overlays[overlays.length - 1] : null;
       if (topOverlay && topOverlay !== modalOverlay.value) {
@@ -455,13 +508,28 @@ const onGlobalKeyDown = (e) => {
   }
 };
 
-watch(isVisible, async (newVal) => {
+watch(effectiveStorageKey, (nextKey, prevKey) => {
+  if (isVisible.value && nextKey !== prevKey) {
+    restoreGeometry();
+  }
+});
+
+watch(isVisible, async (newVal, oldVal) => {
+  syncFullscreenHost();
+  if (oldVal !== undefined && newVal !== oldVal) {
+    playNanoUiSound(newVal ? 'modal-open' : 'modal-close', {
+      propSound: props.sound,
+      size: props.size,
+      minIntervalMs: 40,
+      throttleKey: 'nano-modal',
+    });
+  }
   if (newVal) {
     // Restore saved geometry from localStorage (if storageKey provided) or reset to centered default
     restoreGeometry();
 
     lockModalBackgroundScroll(modalScrollLockToken);
-    if (typeof window !== 'undefined') {
+    if (is(globalThis.window, Object)) {
       window.addEventListener('keydown', onGlobalKeyDown, { capture: true });
     }
     await nextTick();
@@ -472,7 +540,7 @@ watch(isVisible, async (newVal) => {
     }
   } else {
     unlockModalBackgroundScroll(modalScrollLockToken);
-    if (typeof window !== 'undefined') {
+    if (is(globalThis.window, Object)) {
       window.removeEventListener('keydown', onGlobalKeyDown, { capture: true });
     }
     stopDrag();
@@ -482,7 +550,10 @@ watch(isVisible, async (newVal) => {
 
 onUnmounted(() => {
   unlockModalBackgroundScroll(modalScrollLockToken);
-  if (typeof window !== 'undefined') {
+  if (is(globalThis.document, Object)) {
+    document.removeEventListener('fullscreenchange', syncFullscreenHost);
+  }
+  if (is(globalThis.window, Object)) {
     window.removeEventListener('keydown', onGlobalKeyDown, { capture: true });
   }
   stopDrag();
@@ -523,6 +594,7 @@ const resetGeometry = () => {
   });
 };
 const handleBackdropClick = () => { if (props.closeOnBackdrop) closeModal(); };
+const handleOverlayEsc = () => { if (!hasActiveInnerFullscreen()) closeModal(); };
 const handleOk = () => emit('ok');
 const handleCancel = () => { emit('cancel'); closeModal(); };
 
@@ -535,6 +607,8 @@ defineExpose({
   restoreGeometry,
   effectiveStorageKey,
   resolvedStorageMode,
+  resolvedTeleportTarget,
+  normalizedProcess,
   isVisible,
   isMaximized,
   isDragging,
@@ -543,10 +617,10 @@ defineExpose({
 </script>
 
 <template>
-  <Teleport v-if="isMounted" to="body">
+  <Teleport v-if="isMounted" :to="resolvedTeleportTarget">
     <transition name="nano-modal-fade">
       <div v-if="isVisible" class="nano-modal-overlay" :class="{ 'nano-glass': glassmorphism }"
-        @click.self="handleBackdropClick" @keydown.esc.stop="closeModal" tabindex="-1" ref="modalOverlay">
+        @click.self="handleBackdropClick" @keydown.esc.stop="handleOverlayEsc" tabindex="-1" ref="modalOverlay">
         <div
           class="nano-modal-window"
           :class="{ 'is-dragging': isDragging, 'is-resizing': isResizing, 'is-maximized': isMaximized }"
@@ -566,9 +640,18 @@ defineExpose({
             @mousedown="startDrag"
             @dblclick="handleHeaderDblClick"
           >
-            <slot name="header">
-              <h2 :id="modalTitleId" class="nano-modal-title">{{ title }}</h2>
-            </slot>
+            <div class="nano-modal-header-main">
+              <slot name="header">
+                <h2 :id="modalTitleId" class="nano-modal-title">{{ title }}</h2>
+              </slot>
+              <slot name="header-process" :process="normalizedProcess">
+                <NanoProcessBadge
+                  v-if="normalizedProcess.isActive"
+                  class="nano-modal-process-badge"
+                  :process="normalizedProcess"
+                />
+              </slot>
+            </div>
             <button type="button" class="nano-modal-close-btn" @click.stop="closeModal" aria-label="Close" @mousedown.stop>
               <NanoIcon name="close" :size="20" />
             </button>
@@ -688,9 +771,19 @@ defineExpose({
   display: flex;
   justify-content: space-between;
   align-items: center;
+  gap: 12px;
   background: var(--nano-modal-header-bg);
   user-select: none;
   flex-shrink: 0;
+}
+
+.nano-modal-header-main {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  min-width: 0;
+  flex: 1;
 }
 
 .nano-modal-header.nano-glass-header {

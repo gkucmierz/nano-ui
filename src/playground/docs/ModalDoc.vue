@@ -3,6 +3,8 @@ import { ref, computed, onMounted, onUnmounted, watch } from 'vue';
 import NanoModal from '../../components/NanoModal.vue';
 import NanoDialog from '../../components/NanoDialog.vue';
 import NanoLightbox from '../../components/NanoLightbox.vue';
+import NanoProcessBadge from '../../components/NanoProcessBadge.vue';
+import NanoProcessButton from '../../components/NanoProcessButton.vue';
 import { useDialog } from '../../composables/useDialog.js';
 import NanoCodeBlock from '../../components/NanoCodeBlock.vue';
 import NanoSwitch from '../../components/NanoSwitch.vue';
@@ -12,9 +14,51 @@ import { createDocTabs } from '../docSnippets.js';
 
 const { showAlert, showConfirm } = useDialog();
 const showBasic = ref(false);
+const showProcessModal = ref(false);
 const showAdvanced = ref(false);
 const showCustom = ref(false);
 const showLightbox = ref(false);
+
+const processDemoMode = ref('pending');
+let processCycleTimer = null;
+
+const processPresets = {
+  pending: {
+    status: 'pending',
+    label: 'AI WORKING (3)',
+    errorCode: '',
+    tooltip: '3 autonomous workers auditing packages and unit suites',
+  },
+  success: {
+    status: 'success',
+    label: 'Build #112 Passed',
+    errorCode: '',
+    tooltip: 'All 107 test suites and production Vite bundle succeeded',
+  },
+  failed: {
+    status: 'failed',
+    label: 'CI Pipeline Failed',
+    errorCode: 'EXIT_1: test:unit:govern:extra-long-suffix',
+    tooltip: 'Step test:unit exited with code 1 in @gkucmierz/nano-ui (assertion mismatch on line 42)',
+  },
+  idle: {
+    status: 'idle',
+    label: 'AI IDLE',
+    errorCode: '',
+    tooltip: 'No background build or audit jobs running',
+  },
+};
+
+const liveProcess = computed(() => processPresets[processDemoMode.value] || processPresets.idle);
+
+const runSimulatedCiCycle = () => {
+  if (processCycleTimer) clearTimeout(processCycleTimer);
+  processDemoMode.value = 'pending';
+  processCycleTimer = setTimeout(() => {
+    processDemoMode.value = 'success';
+    processCycleTimer = null;
+  }, 1600);
+};
 const glassHeaderDemo = ref(true);
 const glassFooterDemo = ref(false);
 const lastDialogOutcome = ref('Waiting for dialog interaction...');
@@ -156,6 +200,7 @@ onMounted(() => {
 
 onUnmounted(() => {
   if (unsubscribeStorage) unsubscribeStorage();
+  if (processCycleTimer) clearTimeout(processCycleTimer);
 });
 
 watch(
@@ -300,6 +345,9 @@ const codeTabs = createDocTabs({
         'glassmorphism: Boolean (default: false) - Enable backdrop blur overlay',
         'glassHeader / glassFooter: Boolean (default: false) - Frosted backdrop-filter blur on modal header / footer',
         'okVariant: "primary" | "danger" | "success" (default: "primary") - Semantic OK button color & safe Cancel focus on danger',
+        'process: Object | String (default: null) - Shared SSoT { status: "pending"|"success"|"failed"|"idle", label, errorCode, tooltip } mirrored into .nano-modal-header',
+        'processState / processLabel / processErrorCode / processTooltip: String - Declarative flat overrides for header NanoProcessBadge (errorCode auto-truncated <= 24 mono chars)',
+        'sound: Boolean | String | Object (default: undefined) - Semantic modal-open / modal-close sound override',
       ],
     },
     {
@@ -354,6 +402,71 @@ const codeTabs = createDocTabs({
       >
         <template #body>
           <p>This is a standard modal with default settings. Press ESC or click outside to close.</p>
+        </template>
+      </NanoModal>
+    </div>
+
+    <div class="demo-section">
+      <h3>Trigger-to-Modal Process Continuity (<code>NanoProcessButton</code> &rarr; <code>NanoModal :process</code>)</h3>
+      <p class="section-subtitle">
+        When a topbar or card trigger button represents a live background job (<code>pending</code>, <code>success</code>, <code>failed</code>),
+        passing the same <code>:process</code> SSoT object into both <code>&lt;NanoProcessButton&gt;</code> and <code>&lt;NanoModal&gt;</code>
+        mirrors the spinning ring, emerald completion pill, or truncated crimson mono <code>errorCode</code> (&le; 24 chars with full <code>v-tooltip</code>) directly in <code>.nano-modal-header</code>.
+      </p>
+
+      <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 0.75rem; margin-bottom: 1rem;">
+        <NanoProcessButton :process="liveProcess" @click="showProcessModal = true">
+          Interactive AI / CI Stream
+        </NanoProcessButton>
+
+        <button
+          v-for="modeKey in ['pending', 'success', 'failed', 'idle']"
+          :key="modeKey"
+          type="button"
+          class="preset-chip"
+          :class="{ active: processDemoMode === modeKey }"
+          @click="processDemoMode = modeKey"
+        >
+          State: {{ modeKey }}
+        </button>
+
+        <button type="button" class="demo-btn secondary-btn" @click="runSimulatedCiCycle">
+          Simulate 1.6s Build
+        </button>
+      </div>
+
+      <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 0.65rem;">
+        <NanoProcessBadge status="pending" label="Probing 19 packages…" />
+        <NanoProcessBadge status="success" label="✓ Build #112 Passed" />
+        <NanoProcessBadge
+          status="failed"
+          error-code="ERR_NPM_404_REGISTRY_UNREACHABLE_TIMEOUT"
+          tooltip="GET https://gitea.7u.pl/api/packages/gkucmierz/npm/@gkucmierz/nano-ui returned HTTP 404"
+        />
+      </div>
+
+      <NanoModal
+        v-model="showProcessModal"
+        title="Interactive AI Thought Graph & CI Stream"
+        :process="liveProcess"
+        @ok="showProcessModal = false"
+      >
+        <template #body>
+          <p style="margin-top: 0;">
+            Even while the underlying trigger button is covered by the modal backdrop, the header badge stays synchronized in real time with the shared <code>liveProcess</code> state:
+          </p>
+          <div style="display: flex; flex-wrap: wrap; gap: 0.5rem;">
+            <button
+              v-for="modeKey in ['pending', 'success', 'failed', 'idle']"
+              :key="`inside-${modeKey}`"
+              type="button"
+              class="preset-chip"
+              :class="{ active: processDemoMode === modeKey }"
+              @click="processDemoMode = modeKey"
+            >
+              Switch to {{ modeKey }}
+            </button>
+          </div>
         </template>
       </NanoModal>
     </div>
